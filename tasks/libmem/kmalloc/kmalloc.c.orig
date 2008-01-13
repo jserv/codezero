@@ -1,0 +1,457 @@
+/*
+ * Kernel memory allocator.
+ *
+ * Copyright (C) 2007 Bahadir Balban
+ *
+ */
+#include <stdio.h>
+#include <string.h>
+#include <l4/config.h>
+#include <l4/macros.h>
+#include <l4/types.h>
+#include INC_GLUE(memory.h)
+#include INC_GLUE(memlayout.h)
+#include INC_SUBARCH(mm.h)
+#include <l4lib/arch/syscalls.h>
+#include <l4/lib/list.h>
+#include <kmalloc/kmalloc.h>
+#include <mm/alloc_page.h>
+
+/* Initial free area descriptor.
+ *
+ * Basic description of how free areas are tracked:
+ *
+ * A subpage_area marked as head_of_pages means it is located at the beginning
+ * of a new page allocation, and it is the first struct to describe those
+ * allocated page(s).
+ *
+ * If, for all subpage_areas, head_of_pages = {SA, SB, ..., SZ}, and `fragments
+ * of head_of_pages' = {sa(n), sb(n), ..., sz(n)} where n is the sequence number
+ * of that fragment, and for each SX, SX = sx(1), and "->" denotes "next"
+ * pointer relationship, on a random occasion, the areas could look like this:
+ *
+ * SA->sa(2)->sa(3)->SB->sb(2)->SC->SD->SE->se(2)->se(3)->se(4)
+ *
+ * With regard to all alloc/free functions defined below, in this example's
+ * context, sa(1..3) can merge if any adjacent pair of them are free. Whereas if
+ * adjacent(SC,SD) were true, SC and SD cannot be merged even if they are both
+ * free, because they are head_of_pages. Also, for each SX, it can be freed IFF
+ * it is the only element in SX, and it is free. For instance, each of SC or SD
+ * can be individually freed, provided they are marked unused.
+ *
+ * We could have used a bucket for each, e.g:
+ *
+ * SA->sa(2)->sa(3)
+ * |
+ * v
+ * SB->sb(2)->sb(3)
+ * |
+ * v
+ * SC
+ * |
+ * v
+ * SD
+ *
+ * etc. But the original is simple enough for now and does the job.
+ *
+ */
+
+struct subpage_area km_areas;
+
+/* Initialises a subpage area descriptor according to the free area parameters
+ * supplied along with it. @ppage = pointer to start of free memory.
+ * @npages = number of pages the region contains. @areas = head of the list of
+ * subpage_areas on the system that belongs to kmalloc. */
+void kmalloc_add_new_pages(void *ppage, int npages, struct subpage_area **areas)
+{
+	struct subpage_area *new = (struct subpage_area *)ppage;
+
+	new->vaddr = (unsigned int)ppage + sizeof(struct subpage_area);
+	new->size = (npages * PAGE_SIZE) - sizeof(struct subpage_area);
+	new->used = 0;
+	new->head_of_pages = npages;
+	INIT_LIST_HEAD(&new->list);
+
+	/* The first entry is a head_of_pages. Adding the new head_of_pages
+	 * in tail ensures each head_of_pages are adjacent, and their
+	 * children are never intermixed */
+	list_add_tail(&new->list, &(*areas)->list);
+}
+
+#define KMALLOC_INITIAL_PAGES			3
+void kmalloc_init()
+{
+	/* Initially allocated pages with one big free km_area */
+	void *ppage = alloc_page(KMALLOC_INITIAL_PAGES);
+
+	ppage = l4_map_helper(ppage, KMALLOC_INITIAL_PAGES);
+	struct subpage_area *new = (struct subpage_area *)ppage;
+	BUG_ON(!new);
+	new->vaddr = (unsigned int)ppage + sizeof(struct subpage_area);
+	new->size = (KMALLOC_INITIAL_PAGES * PAGE_SIZE)
+		    - sizeof(struct subpage_area);
+	new->used = 0;
+	new->head_of_pages = KMALLOC_INITIAL_PAGES;
+	INIT_LIST_HEAD(&new->list);
+	/* Assign the first area to global list pointer */
+	km_areas = new;
+
+	/* NOTE: If needed, initialise mutex here */
+}
+
+/* Given a free list, finds a free region of requested size plus one subpage
+ * area descriptor. Allocates and initialises the new descriptor, adds it to
+ * the list and returns it.
+ */
+static struct subpage_area *
+find_free_subpage_area(int size, struct subpage_area **areas)
+{
+	struct subpage_area *new;
+	struct subpage_area *cur = *areas;
+	const unsigned int alignment_extra_max = SZ_WORD - 1;
+	unsigned int alignment_used = 0, alignment_unused = 0;
+
+	/* The minimum size needed if the area will be divided into two */
+	int dividable_size = size + sizeof(struct subpage_area)
+			     + alignment_extra_max;
+
+	/* Is this a free region that fits? */
+	if ((cur->size) >= dividable_size && !cur->used) {
+		unsigned int addr, addr_aligned;
+		/* Cut the free area as much as we want to used */
+		cur->size -= size + sizeof(struct subpage_area);
+
+		addr = (cur->vaddr + cur->size);
+		addr_aligned = align_up(addr, SZ_WORD);
+		alignment_used = addr_aligned - addr;
+		alignment_unused = alignment_extra_max - alignment_used;
+
+		/* Add the extra bit that's skipped for alignment to original subpage */
+		cur->size += alignment_used;
+
+		/* Allocate the new link structure at the end
+		 * of the free area shortened previously. */
+		new = (struct subpage_area *)addr_aligned;
+
+		/* Actual allocated memory starts after subpage descriptor */
+		new->vaddr = (unsigned int)new + sizeof(struct subpage_area);
+		new->size = size + sizeof(struct subpage_area) + alignment_unused;
+		new->used = 1;
+		new->head_of_pages = 0; /* Divides other allocated page(s) */
+		/* Add used region to the subpage_area list */
+		INIT_LIST_HEAD(&new->list);
+		list_add(&new->list, &cur->list);
+		return new;
+
+	} else if (cur->size < dividable_size &&
+		   cur->size >= size && !cur->used) {
+		/* The area can't be divided, but has enough room for the
+		 * actual allocation, it just misses the few bytes for a
+		 * new subpage_area for splitting. In this case the current
+		 * page area is simply marked used and returned. This is a
+		 * rare but important case, because on-demand free page
+		 * allocations don't ensure new free areas are sufficiently
+		 * large to be divisable. */
+		cur->used = 1;
+		return cur;
+	}
+	/* Do the same for all other entries */
+	list_for_each_entry (cur, &(*areas)->list, list) {
+	  	/* Is this a free region that fits? */
+		if ((cur->size) >= dividable_size && !cur->used) {
+			unsigned int addr, addr_aligned;
+			/* Cut the free area from the end, as much as
+			 * we want to use */
+			cur->size -= size + sizeof(struct subpage_area);
+
+			addr = (cur->vaddr + cur->size);
+			addr_aligned = align_up(addr, SZ_WORD);
+			alignment_used = addr_aligned - addr;
+			alignment_unused = alignment_extra_max
+					   - alignment_used;
+
+			/* Add the extra bit that's skipped for alignment
+			 * to original subpage */
+			cur->size += alignment_used;
+
+			/* Allocate the new link structure at the end
+			 * of the free area shortened previously. */
+			new = (struct subpage_area *)addr_aligned;
+
+			/* Actual allocated memory starts after subpage
+			 * descriptor */
+			new->vaddr = (unsigned int)new
+				     + sizeof(struct subpage_area);
+			new->size = size + sizeof(struct subpage_area)
+				    + alignment_unused;
+			new->used = 1;
+			/* Divides other allocated page(s) */
+			new->head_of_pages = 0;
+			/* Add used region to the page area list */
+			INIT_LIST_HEAD(&new->list);
+			list_add(&new->list, &cur->list);
+			return new;
+
+		} else if (cur->size < dividable_size &&
+			   cur->size >= size && !cur->used) {
+			/* Area not at dividable size but can satisfy request,
+			 * so it's simply returned. */
+			cur->used = 1;
+			return cur;
+		}
+	}
+	/* Traversed all areas and can't satisfy request. */
+	return 0;
+}
+
+/* Allocate, initialise a subpage area along with its free
+ * memory of minimum size as @size, and add it to subpage list. */
+static int
+kmalloc_get_free_pages(int size, struct subpage_area **areas)
+{
+	int totalsize = size + sizeof(struct subpage_area) * 2;
+	int npages = totalsize / PAGE_SIZE;
+	void *ppage;
+
+	if (totalsize & PAGE_MASK)
+		npages++;
+
+	if ((ppage = l4_map_helper(alloc_page(npages), npages))
+	    == 0)
+		/* TODO: Return specific error code, e.g. ENOMEM */
+		return -1;
+
+	BUG_ON((npages * PAGE_SIZE) < (size + sizeof(struct subpage_area)));
+
+	kmalloc_add_new_pages(ppage, npages, areas);
+	return 0;
+}
+
+/* Linked list based subpage allocator. This has the simplicity of allocating
+ * list structures together with the requested memory area. This can't be done
+ * with the page allocator, because it works in page-size chunks. In kmalloc
+ * we can allocate more fine-grain sizes, so a link structure can also be
+ * embedded together with requested data.
+ */
+
+/* Allocates given @size, requests more free pages if free areas depleted. */
+void *kmalloc(int size)
+{
+	struct subpage_area *new_area;
+	void *allocation;
+
+	/* NOTE: If needed, lock mutex here */
+	new_area = find_free_subpage_area(size, &km_areas);
+	if (!new_area) {
+		if (kmalloc_get_free_pages(size, &km_areas) < 0) {
+			allocation = 0;
+			goto out;
+		}
+		else
+			new_area = find_free_subpage_area(size, &km_areas);
+	}
+	BUG_ON(!new_area);
+ 	allocation = (void *)new_area->vaddr;
+out:
+	/* NOTE: If locked, unlock mutex here */
+	return allocation;
+}
+
+/* kmalloc with zero initialised memory */
+void *kzalloc(int size)
+{
+	void *mem = kmalloc(size);
+	if (mem)
+		memset(mem, 0, size);
+	return mem;
+}
+
+void km_free_empty_pages(struct subpage_area *free_area,
+			 struct subpage_area **start)
+{
+	unsigned int wholesize;
+	if (!free_area->head_of_pages)
+		return; /* Not allocated from page allocator */
+
+	if (free_area == *start)
+		return; /* First subpage area is allocated at
+			   initialisation and never deallocated */
+
+	/* A head of page: */
+
+	/* Can't be the only element, start is always there. */
+	BUG_ON(list_empty(&free_area->list));
+	/* Must be on a page boundary */
+	BUG_ON((unsigned int)free_area & PAGE_MASK);
+	/* Must be unused */
+	BUG_ON(free_area->used);
+
+	/* Furthermore, a head of page that can be freed must be whole:
+	 * Total number of pages when as a whole, is kept in [31:1] */
+	wholesize = free_area->head_of_pages * PAGE_SIZE;
+	if ((free_area->size + sizeof(struct subpage_area)) < wholesize)
+		return;
+
+	/* Must have at least PAGE_SIZE size, when itself included */
+	BUG_ON(free_area->size < (PAGE_SIZE - sizeof(struct subpage_area)));
+
+	/* Its size must be a multiple of PAGE_SIZE, when itself included */
+//	BUG_ON((free_area->size + sizeof(struct subpage_area)) & PAGE_MASK);
+	if ((free_area->size + sizeof(struct subpage_area)) & PAGE_MASK) {
+		printk("Error: free_area->size: 0x%x, with subpage: 0x%x, PAGE_MASK: 0x%x\n",
+		       free_area->size, free_area->size + sizeof(struct subpage_area), PAGE_MASK);
+		BUG();
+	}
+	list_del(&free_area->list);
+
+	/* And finally must be freed without problems */
+	if (free_page(l4_unmap_helper(free_area, wholesize)) < 0)
+		BUG();
+	return;
+}
+
+static int
+km_merge_with_prev_subpage(struct subpage_area *start,
+			   struct subpage_area *this,
+			   struct subpage_area *prev)
+{
+	BUG_ON(this == prev);
+	BUG_ON(this->used);
+
+	/* Can't merge used and unused regions */
+	if (prev->used)
+		return 0;
+
+	/* At the beginning. this is head, prev is tail. Can't merge. */
+	if (start == this)
+		return 0;
+
+	/* Can't merge head descriptors of page allocations. They
+	 * are to be returned back to the page allocator on their own. */
+	if (this->head_of_pages)
+		return 0;
+
+	/* Subpage areas can be non-contiguous, if they are not a part of
+	 * the same page(s) allocation. This usually holds if prev and this
+	 * are fragments from the same page allocation. */
+	if (prev->vaddr + prev->size != (unsigned int)this)
+		return 0;
+
+	/* Remember that subpage_area structures are at the beginning of
+	 * the memory areas they describe. By simply merging them with
+	 * another area they're effectively freed. */
+	prev->size += this->size + sizeof(struct subpage_area);
+	list_del(&this->list);
+	return 1;
+}
+
+static int
+km_merge_with_next_subpage(struct subpage_area *start,
+			   struct subpage_area *this,
+			   struct subpage_area *next)
+{
+	BUG_ON(this == next);
+	BUG_ON(this->used);
+
+	/* At the end. this is tail, next is head. Can't merge. */
+	if (start == next)
+		return 0;
+
+	/* Can't merge used and unused regions */
+	if (next->used)
+		return 0;
+
+	/* Can't merge head descriptors of page allocations. They
+	 * are to be returned back to the page allocator on their own. */
+	if (next->head_of_pages)
+		return 0;
+
+	/* Subpage areas can be non-contiguous, if they are not a part of
+	 * the same head_of_page(s) allocation. This usually holds if next
+	 * and this are fragments from the same head_of_page. */
+	if (this->vaddr + this->size != (unsigned int)next)
+		return 0;
+
+	/* Remember that subpage_area structures are at the beginning of
+	 * the memory areas they describe. By simply merging them with
+	 * another area they're effectively freed. */
+	this->size += next->size + sizeof(struct subpage_area);
+	list_del(&next->list);
+	return 1;
+}
+
+int find_and_free_subpage_area(void *vaddr, struct subpage_area **areas)
+{
+	struct subpage_area *cur = *areas;
+
+	if (!vaddr)		/* A well-known invalid address */
+		return -1;
+
+	if (cur->vaddr == (unsigned int)vaddr) {
+		struct subpage_area *prev, *next;
+		BUG_ON(!cur->used);
+		cur->used = 0;
+		if (!list_empty(&cur->list)) {
+			prev = list_entry(cur->list.prev,
+					  struct subpage_area,
+					  list);
+			if (km_merge_with_prev_subpage(*areas, cur, prev))
+				cur = prev;
+
+			if (!list_empty(&cur->list)) {
+				/* Last merge did not reduce to last
+				 * element. */
+				next = list_entry(cur->list.next,
+						  struct subpage_area,
+						  list);
+				km_merge_with_next_subpage(*areas, cur, next);
+			}
+		}
+		km_free_empty_pages(cur, areas);
+		return 0;
+	}
+	list_for_each_entry(cur, &(*areas)->list, list) {
+		if (cur->vaddr == (unsigned int)vaddr) {
+			struct subpage_area *prev, *next;
+			BUG_ON(!cur->used);
+			cur->used = 0;
+			if (!list_empty(&cur->list)) {
+				prev = list_entry(cur->list.prev,
+						  struct subpage_area,
+						  list);
+				if (km_merge_with_prev_subpage(*areas,
+							       cur, prev))
+					cur = prev;
+
+				if (!list_empty(&cur->list)) {
+					/* Last merge did not reduce to last
+					 * element. */
+					next = list_entry(cur->list.next,
+							  struct subpage_area,
+							  list);
+					km_merge_with_next_subpage(*areas, cur,
+								   next);
+				}
+			}
+			/* After freeing and all possible merging, try
+			 * returning region back to page allocator. */
+			km_free_empty_pages(cur, areas);
+			return 0;
+		}
+	}
+	/* TODO, Return a specific error code. Here, this is a
+	 * serious error. (Trying to free non-existing memory) */
+	return -1;
+}
+
+int kfree(void *vaddr)
+{
+	int ret;
+
+	/* NOTE: If needed, lock mutex here */
+	ret = find_and_free_subpage_area(vaddr, &km_areas);
+	/* NOTE: If locked, unlock mutex here */
+
+	return ret;
+}
+

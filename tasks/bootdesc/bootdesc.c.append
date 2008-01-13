@@ -1,0 +1,23 @@
+
+struct bootdesc bootdesc = {
+	.desc_size = sizeof(struct bootdesc) + sizeof(struct svc_image) * 3,
+	.total_images = 3,
+	.images = {
+		[0] = {
+			.name = "mm0",
+			.phys_start = 0x208000,
+			.phys_end = 0x213140,
+		},
+		[1] = {
+			.name = "test0",
+			.phys_start = 0x218000,
+			.phys_end = 0x21aedc,
+		},
+		[2] = {
+			.name = "romfs",
+			.phys_start = 0x220000,
+			.phys_end = 0x268800,
+		},
+
+	},
+};

@@ -1,0 +1,39 @@
+
+
+/* Supervisor task at load time. */
+struct svc_image {
+	char name[16];
+	unsigned int phys_start;
+	unsigned int phys_end;
+} __attribute__((__packed__));
+
+/* Supervisor task descriptor at load time */
+struct bootdesc {
+	int desc_size;
+	int total_images;
+	struct svc_image images[];
+} __attribute__((__packed__));
+
+
+struct bootdesc bootdesc = {
+	.desc_size = sizeof(struct bootdesc) + sizeof(struct svc_image) * 3,
+	.total_images = 3,
+	.images = {
+		[0] = {
+			.name = "inittask",
+			.phys_start = 0x208000,
+			.phys_end = 0x213260,
+		},
+		[1] = {
+			.name = "roottask",
+			.phys_start = 0x218000,
+			.phys_end = 0x21b344,
+		},
+		[2] = {
+			.name = "testtask",
+			.phys_start = 0x220000,
+			.phys_end = 0x223344,
+		},
+
+	},
+};

@@ -1,0 +1,22 @@
+
+rm -f cscope.*
+rm -f tags
+# Put all sources into a file list.
+find ./src -name '*.cc' > tagfilelist
+find ./src -name '*.c' >> tagfilelist
+find ./src -name '*.h' >> tagfilelist
+find ./src -name '*.s' >> tagfilelist
+find ./src -name '*.S' >> tagfilelist
+find ./src -name '*.lds' >> tagfilelist
+
+find ./include -name '*.h' >> tagfilelist
+find ./include -name '*.s' >> tagfilelist
+find ./include -name '*.S' >> tagfilelist
+find ./include -name '*.lds' >> tagfilelist
+
+# Use file list to include in tags.
+ctags --languages=C,Asm --recurse -Ltagfilelist
+
+cscope -q -k -R -i tagfilelist
+# Remove file list.
+rm -f tagfilelist

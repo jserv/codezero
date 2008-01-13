@@ -1,0 +1,10 @@
+
+
+# Inherit global environment
+Import('env')
+
+# The set of source files associated with this SConscript file.
+src_local = ['mm.c', 'mmu_ops.S', 'mutex.S']
+
+obj = env.Object(src_local)
+Return('obj')

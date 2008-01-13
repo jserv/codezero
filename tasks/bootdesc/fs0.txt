@@ -1,0 +1,3 @@
+fs0
+image_start 0x218000
+image_end 0x21B26C

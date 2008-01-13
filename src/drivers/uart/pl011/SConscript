@@ -1,0 +1,10 @@
+
+
+# Inherit global environment
+Import('env')
+
+# The set of source files associated with this SConscript file.
+src_local = ['pl011_uart.c']
+
+obj = env.Object(src_local)
+Return('obj')

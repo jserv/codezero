@@ -1,0 +1,78 @@
+
+		Codezero Microkernel 'Toy' release
+
+		Copyright (C) 2007 Bahadir Balban
+
+
+What is Codezero?
+
+Codezero is a small microkernel based on the L4 microkernel principles and has
+its own interpretation of the L4 microkernel API. In addition, it has server
+tasks that implement memory management, a virtual filesystem layer, and these
+servers currently support a small but essential subset of the POSIX API.
+
+Codezero project is an effort to implement a modern, open source operating
+system based on the latest technology in microkernel design. It targets
+realtime, high-end embedded systems and has an emphasis on the ARM architecture.
+
+It is quite common to see open source projects developed in a closed-doors
+fashion. Codezero project goes beyond just publishing source code as open source
+but also uses the latest open source development practices such as those used by
+the Linux Kernel.
+
+
+Why the name Codezero?
+
+The project focuses on simplicity, elegance, cleanliness, which are assets
+usually hard to achieve in software engineering. The philosophy is to implement
+a structurally complete system with most modern and complex operating system
+features while retaining simplicity in the implementation as much as possible.
+Avoidance of code bloat is a short way to put it. This objective also fits well
+with embedded platforms, which usually have rigorous memory and performance
+requirements.
+
+
+License:
+
+The current 'Toy' release is distributed under GNU General Public License
+Version 3 and this version only. Any next version will be released in the same
+license, but there are intentions to keep the project in a dual-licensed manner.
+In any case, the project source code will always be released as open source with
+copyleft clauses.
+
+The third party source code under the directories loader/ tools/ libs/c libs/elf
+have their own copyright and licenses, separate from this project. All third
+party source code is open source in the OSI definition. Please check these
+directories for their respective licenses.
+
+
+Why yet another Posix (micro) kernel?
+
+There are many open source Posix operating systems with advanced features such
+as *BSD and Linux. However these were originally not designed for embedded
+systems. Unix itself and all the tools built upon weren't meant for using on
+small devices. Besides, these operating systems naturally contain a lot of
+historical code. Linux is well established, and targets a broad range of
+platforms and uses, but consequently embedded platforms don't always get enough
+emphasis. Also such well established, mature systems tend to oppose major design
+overhauls, which limits innovation to a certain extent. In addition, their code
+base is so big, that it gets more and more difficult to understand how the
+system works. Usually %95 of the code is irrelevant to the problem, in case of
+embedded systems. Codezero is written from scratch to solely target embedded
+systems and as such the source code is %100 relevant. It is small and free from
+legacy code. Finally monolithic kernels may have issues with dependability due
+to much of the code sharing the same address space. Being a microkernel design,
+Codezero aims to defeat this problem and increase dependability.
+
+Other than these modern kernels, there is systems software targeting embedded
+devices. Most of them are proprietary, with their own users. Some of the open
+source ones are structurally too simplistic, and lack modern features such as
+paging. There are certainly existing well-designed embedded operating systems,
+but Codezero provides an alternative that will follow the open source
+development principles more closely. Finally, there are new ideas in OS
+literature that would improve Unix but aren't implemented either because they
+have no existing users or may break compatibility somewhat. (E.g. some are
+presented in Plan 9, or ReiserFS 4). As well as practising realistic development
+methodologies, Codezero project aims to keep up with the latest OS literature
+and provide the opportunity to incorporate the latest ideas in OS technology.
+

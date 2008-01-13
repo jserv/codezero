@@ -1,0 +1,6 @@
+
+for filename in `find ./ -name '*.[ch]'`
+do
+sed -i -e "s/ORIGINAL/REPLACEMENT/g" $filename
+done
+

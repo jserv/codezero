@@ -1,0 +1,43 @@
+#
+# Binary to elf build script
+# Works by including a binary in an assembler file and linking it.
+#
+# Copyright (C) 2007 Bahadir Balban
+#
+import os
+import sys
+import shutil
+from os.path import join
+from glob import glob
+
+elfimg_name = "romfs"
+
+# The root directory of the repository where this file resides:
+project_root = "../.."
+tools_root = join(project_root, "tools")
+prev_image = join(project_root, "tasks/test0/test0.axf")
+ld_script = "include/linker.lds"
+physical_base_ld_script = "include/physical_base.lds"
+
+def get_physical_base(source, target, env):
+	os.system(join(tools_root, "pyelf/readelf.py --first-free-page " + \
+		  prev_image + " >> " + physical_base_ld_script))
+
+# The kernel build environment:
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+		  # We don't use -nostdinc because sometimes we need standard headers,
+		  # such as stdarg.h e.g. for variable args, as in printk().
+		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
+		  LINKFLAGS = ['-nostdlib', '-T' + ld_script],
+		  ASFLAGS = ['-D__ASSEMBLY__'],
+		  PROGSUFFIX = '.axf',			# The suffix to use for final executable
+		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
+		  CPPFLAGS = "-D__USERSPACE__",
+		  CPPPATH = ['#include'])
+
+src = [glob("*.S")]
+objs = env.Object(src)
+physical_base = env.Command(physical_base_ld_script, prev_image, get_physical_base)
+task = env.Program(elfimg_name, objs)
+env.Alias(elfimg_name, task)
+env.Depends(task, physical_base)

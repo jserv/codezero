@@ -1,0 +1,76 @@
+Import("*")
+import os
+import glob
+from os.path import join
+
+arch = "arm"
+platform = "pb926"
+
+variant1 = "userspace"
+variant2 = "baremetal"
+
+builddir_var1 = join("build", variant1)
+builddir_var2 = join("build", variant2)
+crt0bdir_var1 = join("build", "crt")
+crt0bdir_var2 = join("build", "crt")
+
+BuildDir(builddir_var1, "src")
+BuildDir(builddir_var2, "src")
+BuildDir(crt0bdir_var1, "crt")
+BuildDir(crt0bdir_var2, "crt")
+
+headers_var1 = ["#include", "#include/sys-%s/arch-%s" % (variant1, arch)]
+headers_var2 = ["#include", "#include/sys-%s/arch-%s" % (variant2, arch)]
+
+env_var1 = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+		  CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding'],
+		  LINKFLAGS = ['-nostdlib'],
+		  ENV = {'PATH' : os.environ['PATH']},
+		  LIBS = 'gcc',
+		  CPPPATH = headers_var1)
+
+env_var2 = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+		       	CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding'],
+			LINKFLAGS = ['-nostdlib'],
+			ENV = {'PATH' : os.environ['PATH']},
+			LIBS = 'gcc',
+			CPPPATH = headers_var2)
+
+def src_glob(src_base, src_paths, builddir):
+    """Src glob is used to find source files easily e.g: src_glob("src/*.c"),
+    the reason we can't just use glob is due to the way SCons handles out
+    of directory builds."""
+    search = os.path.join(src_base, src_paths)
+    dir = os.path.dirname(search)
+    if dir != "":
+        dir = dir + os.sep
+    src_path = Dir('.').srcnode().abspath
+    files = glob.glob(src_path + os.sep + search)
+    files = map(os.path.basename, files)
+    ret_files = []
+    for file in files:
+        ret_files.append(builddir + dir[len(src_base):] + file)
+    return ret_files
+
+src_var1 = src_glob("src", "*.c", builddir_var1) + \
+	src_glob("src", "sys-%s/*.c" % variant1, builddir_var1) + \
+	src_glob("src", "sys-%s/arch-%s/*.c" % (variant1, arch), builddir_var1) + \
+	src_glob("src", "sys-%s/arch-%s/plat-%s/*.c" % (variant1, arch, platform), builddir_var1) + \
+	src_glob("src", "arch-%s/*.S" % arch, builddir_var1) + \
+	src_glob("src", "arch-%s/*.c" % arch, builddir_var1)
+
+src_var2 = src_glob("src", "*.c", builddir_var2) + \
+	src_glob("src", "sys-%s/*.c" % variant2, builddir_var2) + \
+	src_glob("src", "sys-%s/arch-%s/*.c" % (variant2, arch), builddir_var2) + \
+	src_glob("src", "sys-%s/arch-%s/plat-%s/*.c" % (variant2, arch, platform), builddir_var2) + \
+	src_glob("src", "arch-%s/*.S" % arch, builddir_var2) + \
+	src_glob("src", "arch-%s/*.c" % arch, builddir_var2)
+
+crt_var1 = env_var1.StaticObject(src_glob("crt", \
+		"sys-%s/arch-%s/crt0.S" % (variant1, arch), crt0bdir_var1), ASFLAGS=env_var1["CCFLAGS"])
+
+crt_var2 = env_var2.StaticObject(src_glob("crt", \
+		"sys-%s/arch-%s/crt0.S" % (variant2, arch), crt0bdir_var2), ASFLAGS=env_var2["CCFLAGS"])
+
+libc_var1 = env_var1.StaticLibrary(join("build",variant1) + "/c-" + variant1, src_var1)
+libc_var2 = env_var2.StaticLibrary(join("build",variant2) + "/c-" + variant2, src_var2)

@@ -1,0 +1,3 @@
+inittask
+image_start 0x208000
+image_end 0x213260

@@ -1,0 +1,12 @@
+/*
+ * Kernel preemption functions.
+ */
+#ifndef __PREEMPT_H__
+#define __PREEMPT_H__
+
+void preempt_enable(void);
+void preempt_disable(void);
+int preemptive(void);
+int preempt_count(void);
+
+#endif /* __PREEMPT_H__ */

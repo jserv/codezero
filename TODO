@@ -1,0 +1,408 @@
+
+Build System:
+=============
+1) Pass on configuration parameters to scons from a configuration file: (Platform name, CPP defines.)
+2) Build files in a separate directory.						- DONE
+3) Build files in subdirectories depending on CPP defines for the files in
+   those subdirectories.
+
+CML2 will cover mostly for (1) and (3)
+
+What to do next:
+1) Define a more interesting linker script.
+2) Add uart code to get immediate printfs. (For both loader + payload image)
+3) Try linking with the loader and loading the payload image with the loader.
+
+What to do next:
+4) Define a KIP structure and page.
+5) Implement a page table section.
+6) Implement routines to modify page tables.
+7) Define a platform memory description (Peripherals, memory pool).
+8) Define a mapper.
+9) Map platform peripheral memory.
+10) Implement a memory allocator.
+11) Implement a page fault handler for kernel page faults.
+12) Implement arch-specific cache and tlb operations
+
+The Big TODOs:
+--------------
+1) A memory manager
+2) System calls and IPC calls.
+3) Scheduler/Context switching.
+4) Virtual memory support for v5 and v6.
+
+The key approach:
+-----------------
+Progressing with minimal steps at a time.
+Progress Log:
+-------------
+
+1) Don't forget to modify control register to enable high-vectors.
+2) Investigate ROM/System bits, access permissions and domains.
+3) Don't forget to map page tables region as unbufferable/uncacheable.
+
+---- Done ----
+
+1) Enable caches/wb after jumping to virtual memory. See if this helps.
+2) Flush caches/wb right after jumping before any data references. See if this
+   also helps.
+
+*) Don't forget to modify control register to enable high-vectors.
+---- Done ----
+
+1) Test printascii and printk
+
+*) Don't forget to modify control register to enable high-vectors.
+
+Was not accessing the right uart offset, which caused precise external aborts.
+
+---- Done ----
+
+1) Implement a boot memory allocator
+2) Allocate memory for secondary level page tables -> At least to describe
+   kernel memory. For example:
+
+   first level table
+   ------>>> section
+   ------>>> section	second level table
+   ------>>>>>>>>>>>>>>>---------->>>>>>>>>>>>> Timer Page
+   ------>>> section	---------->>>>>>>>>>>>> UART Page
+			---------->>>>>>>>>>>>> VIC Page
+   Here, one secondary table would be enough to map devices with page
+   granularity. This would be the table that describes the first IO region.
+3) Add add/remove mapping functions with page size granularity.
+
+*) Don't forget to modify control register to enable high-vectors.
+
+---- Done ----
+
+1) Add remove_mapping() function to remove early boot one-to-one mapping etc.
+(This might internally handle both section and page mappings depending on
+ given size)
+
+2) Test kmalloc/alloc_page. Implement solution for their dependency on each
+other.
+
+---- Done ---
+
+1) Make sure to build 3 main executables, for kmalloc/alloc_page/memcache
+
+2) Make sure to be able to pass parameters as arguments to each test.
+
+3) Write python scripts that look for expected output.
+   (Determine criteria other than init_state == end_state)
+
+---- Done ----
+
+Reading python script output by hand works well for now.
+
+1) Must allocate PGD's from a memcache? i.e. a cache with 10 pgds (175K)
+should suffice.
+
+2) Must allocate PMD's from a memcache? a cache with ~100 pmds, should suffice
+(100K).
+
+These must be allocated as unmapped/uncached. (use __alloc_page()?) Don't
+think they need phys_to_ptab kind of conversion. They can have regular virtual
+offsets as long as they're mapped with correct settings. (AP's and c/b bits)
+
+3) Implement tcbs. User-space thread spawning and scheduler. -> Tough one!
+
+- tcb's must keep track of the pgd_ptr of each task. which in turn are connected
+  to their pmds.
+- each new pgd must copy all kernel-space pmds.
+- each pgd has distinct pmds for userspace area and same pmds for kernel area.
+
+
+How to initiate a svc task, switch back and forth with the kernel:
+
+- Load the task.
+- Kernel is aware of where it is loaded.
+
+
+TODO:
+- Load qemu/insight tutorial to wikia
+- Try loader on a board and/or qemu
+- Add bootdesc to kernel image, and try reading it and discovering inittask
+  from it.
+
+NEXT:
+- Try jumping to inittask from init.c
+- Create a syscall page.
+
+Done the inittask jumping. About to create syscalls.
+TODO:
+Link the inittask with l4lib. This will reveal what it exactly does
+in userspace to call the system calls. i.e. what offset it jumps to,
+and what it fills its registers with.
+
+Then use this information to implement the first system call.
+
+e.g. it would call a dummy system call by reading the kip.
+the system call could then dump the state of all registers to see
+what it passed to the kernel.
+
+We need to do all this checking because it seems there's no syscall 
+page but just kip.
+
+Hints:
+See user.S. Implemented in kernel, it ensures sp contains syscall offset.
+this is then checked in the syscall. Both implemented in kernel means
+this can be changed without breaking users. e.g. it could be
+the direct vector address in kip (like 0xFFFFFF00), they could all be swi's,
+SVC and USR LR's determine where they came from and where to return.
+
+Wrote the syscall page. Test from userspace each system call, i.e. detect
+hat is called etc.
+
+TODO:
+
+Done all of above. Variety of system calls can be called. However,
+it fails in various ways. Must fix this. qemu works up to some 4 system calls.
+It is unknown why any more causes weird exceptions. 
+
+Real hardware fails in any setup, with Invalid CPU state. needs investigating.
+
+TODO:
+
+Fixed everything, wasn't saving context upon context switch. kernel corrupted
+the registers.
+
+TODO:
+
+Fixed anything that wasn't there. Added irqs and scheduler. Now. We need to
+sort out per process kernel context.
+
+^
+| Userspace
+V
+...
+sp_svc
+^
+|
+|
+|
+| 4 KB Page
+|
+|
+|
+V
+tcb
+
+I think every process must have unique virtual page for stack + ktcb.
+If the same page is used (but different physical pages) Then  I can't keep track
+of ktcbs when they aren't runnable.
+
+Now the paths.
+
+-> USR running. (USR Mode)
+	-> System call occurs. (USR Mode -> SVC Mode)
+	   - Save user context, (in the ktcb) load sp_svc, continue.
+		-> IRQ occurs ((USR Mode, SVC Mode, or IRQ Mode) -> IRQ Mode)
+		   - If from USR Mode, save user context into ktcb->user_context.
+		   - If from SVC Mode, save kernel context in the ktcb->kernel_context.
+		   - If from IRQ Mode, save irq context in the irq stack.
+			-> Scheduling occurs (IRQ Mode -> (USR Mode or SVC Mode))
+			   - Restore user context
+
+
+
+CHANGES:
+Forget above design. Each interrupter saves the context of interruptee on its
+stack. E.g. svc saves usr, irq saves svc, or usr. Only that because irqs are
+reentrant, irqs change to svc and save context to svc stack. Only upon context
+switches the context is restored from the stack and pushed to ktcb context
+frame. This way at any one time a non-runnable thread could have svc or usr
+context in its frame depending on what mode it was interrupted and blocked.
+
+TODO:
+- 8-byte aligned stack on irq handler.
+- What do those cpsr_fcxt flags mean? When are they needed?
+
+Done:
+- Tie up jump_usr(). Also check whether calling void schedule(void) push
+  anything to stack. It really shouldn't.  (But I'm sure it pushes
+  r0-r3,r12,lr.) Need to rewind those.
+- Is current macro correct? Check.
+
+
+TODO:
+- 8-byte aligned stack on irq handler.
+- What do those cpsr_fcxt flags mean? When are they needed?
+- Limit irq nesting so that it never overflows irq stack.
+
+Things to do next:
+------------------
+
+- Add new tasks. - Done (Added a compile-time roottask)
+- Add multi-page task support. (With data/text/bss sections transferred to bootdesc.)
+- Implement all 9 system calls.
+- Remove malformed linked lists from allocators.
+- Add vfs task.
+- Add 6 major POSIX calls. (open/close/read/write/creat/seek)
+- Add microwindows/Keyboard/Mouse/CLCD support.
+- Add FAT32? filesystem.
+- Add Device driver framework. (Bus support, device probe/matching)
+- Add ethernet + lwip stack.
+
+Things to do right now:
+-----------------------
+readelf is broken for finding --lma-start-end and --find-firstpage. Fix those.
+- Fixed in half an hour.
+
+More quick TODOs:
+-----------------
+- Pass variable arguments, to every syscall with right args.
+
+Previous stuff is done. Now to add:
+------------------------------------
+
+- I am implementing IPC system call. Currently utcb's are copied from one
+thread to another (not even compiled but the feature is there), but no
+synchronisation is implemented.
+- TODO: Add waitqueues for ipc operations. E.g. a thread that does ipc_send()
+  waits for the thread that does ipc_receive() to wake it up or vice versa.
+- Looks like every ipc instance between 2 unique threads requires a unique
+  waitqueue.
+- If there are n threads, there could be a maximum of n(n-1) / 2 ipc instances
+ (e.g. a mesh) if simultaneous ipcs are allowed. wait, its not allowed, so,
+ for n threads there can be n / 2 ipc instances, which is better! for
+ waitqueue complexity.
+
+Done:
+- Some hash tables to keep ipc rendezvous. - Not working with lists yet.
+
+TODO:
+- At least wait_event() must be a macro and the sleep condition must be
+ checked after the spinlock is acquired (and before the sleepers++ in case the
+ condition is the sleepers count). Currently there is a race about this.
+- Figure the problem with lists.
+
+TODO:
+- MAPPINGS: There must be an update_mappings() function that updates all new
+physical to virtual mappings that are common for every process. For example,
+any common kernel mapping that can be accessed by any process requires this.
+Currently add_mapping() adds the mapping for the current process only.
+
+
+We need a storyline for initialisation and interaction of critical server
+tasks after the microkernel is finished initialising.
+
+The Storyline:
+--------------
+Microkernel initialises itself.
+Microkernel has filled in page_map array.
+Microkernel has filled in physmem descriptor.
+Microkernel reads bootdesc.
+Microkernel allocates, maps, starts mm0.	(Memory manager)
+Microkernel allocates, maps, starts name0.	(Naming server)
+Microkernel allocates, maps, starts pm0.	(Process manager)
+	== Servers Start ==
+name0 waiting for start message from mm0.
+pm0 waiting for start message from mm0.
+mm0 invokes request_bootdesc on Microkernel.
+mm0 invokes request_pagemap on Microkernel.
+mm0 initialises the page allocator.
+mm0 initialises the page_map arrays.
+	== mm0 in full control of name0 and pm0 address spaces, and can serve memory requests. ==
+mm0 starts pm0.
+pm0 invokes request_procdesc on Microkernel.	(Learn what processes are running, and relationships)
+	== pm0 in full control of name0 and pm0 process information, and can serve process requests. ==
+mm0 starts name0.
+name0 initialises its naming service.
+name0 waiting for advertise_method_list.
+	== Method Advertise Stage ==
+mm0 invokes advertise_method_list to name0.	(Tell who can invoke what method on mm0)
+pm0 invokes advertise_method_list to name0.	(Tell who can invoke what method on pm0)
+	== name0 in full control of what all servers can invoke on each other. ==
+	== Method Request Stage ==
+pm0 invokes request_method_list on name0.	(Learn what method pm0 can invoke on who)
+pm0 initialises its remote method array.
+mm0 invokes request_method_list on name0.	(Learn what method pm0 can invoke on who)
+mm0 initialises its remote method array.
+	== All servers in full awareness of what methods they can invoke on other servers ==
+
+
+Remote methods:
+---------------
+Remote methods can pass up to the architecture-defined number of bytes without
+copying to/from each other, and setting up a connection. Alternatively for
+larger data sizes, a connection is set-up (a shared memory area) and a *single
+structure* of arbitrary size can be read/written. Remote method invocation
+semantics typically forbid using data types any more complex than a single raw
+structure of arbitrary size. This greatly simplifies the communication
+semantics and data transfer requirements. For a readily set-up connection, the
+remote method invocation cost is the cost of a single ipc, (i.e. context
+switch to server and back to client.) also the shared memory is currently
+uncached. RMI in the usual case does *not* copy data. There's no object-level
+support, e.g. no marshalling, no dynamic type discovery or any other object
+oriented programming bloat. Objects *are* policy anyway. There's no support
+for network-transparent communication either. If all these things were
+supported the system would end up becoming large and complex like Chorus or
+Sprite and guaranteed to fail.
+
+Context Switch between servers:
+-------------------------------
+It is the intention that context switches between the critical servers have
+minimal overhead. For example, the single-address-space linux kernel can
+switch between kernel threads quite cheaply, because there's no need to change
+page table mappings and therefore no cache/tlb trashing.
+
+The idea is to link and run critical servers in non-overlapping address space
+areas (e.g. simply link at its physical address,
+
+
+Quick todo:
+-----------
+1) Fix page allocator as a library.		- Done
+2) Reduce physmem descriptor's fields.		- Done
+3) Export memcache as a library.		- Done
+4) Fix the problem of unmapping multiply-mapped pages.
+5) Fix the problem of assuming a free() always occurs from kernel virtual addresses.
+   4-5) Hint: Set up the physical page array with mapping information.
+6) Sort out how to map virt-to-phys phys-to-virt in tasks. Kernel virt-to-phys
+   must be replaced.
+
+7) Refactor ipc_send()/ipc_recv() add_mapping/add_mapping_pgd(). Remove some
+gotos.
+
+The revised storyline, with no naming yet:
+--------------
+Microkernel initialises itself.
+Microkernel has filled in page_map array.
+Microkernel has filled in physmem descriptor.
+Microkernel reads bootdesc.			(3 tasks: mm0, pm0, task3)
+Microkernel allocates, maps, starts mm0.	(Memory manager)
+Microkernel allocates, maps, starts pm0.	(Process manager)
+	== Servers Start ==
+pm0 waiting for start message from mm0.
+mm0 invokes request_bootdesc on Microkernel.
+mm0 invokes request_pagemap on Microkernel.
+mm0 initialises the page allocator.
+mm0 initialises the memory bank and page descriptors.
+mm0 sets up its own address space temporarily.
+	== mm0 is somewhat initialised and can serve memory requests. ==
+mm0 starts pm0.
+pm0 invokes request_procdesc on Microkernel.	(Learn what processes are running, and relationships)
+pm0 sets up task_desc structures for running tasks.
+	== pm0 is somewhat initialised and can serve task-related requests. ==
+
+pm0 calls mock-up execute() to demonstrate demand paging on the third task's execution.
+
+
+Long Term TODOs:
+-------------------
+- Finish inittask (pager/task manager)
+- Start on fs server (vfs + a filesystem)
+- Finish: fork, execve, mmap, open, close, create, read, write
+
+Current todo:
+==============
+
+- Use shmat/shmget/shmdt to map block device areas to FS0 and start implementing the VFS.
+
+
+
+
+
+

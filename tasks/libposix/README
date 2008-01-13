@@ -1,0 +1,30 @@
+
+libposix
+
+Copyright (C) 2007 Bahadir Balban
+
+Despite the name, this is a library that supports only a tiny portion of posix functions.
+
+Currently supported functions are:
+
+
+Functions to be supported in the near future are:
+
+shmat
+shmget
+shmdt
+mmap
+munmap
+read
+write
+lseek
+open
+close
+creat
+unlink
+fork
+execve
+getpid
+
+New ones will be added as needed.
+
