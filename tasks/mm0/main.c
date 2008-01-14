@@ -87,12 +87,12 @@ void handle_requests(void)
 	}
 	case L4_IPC_TAG_MUNMAP: {
 		/* TODO: Use arg struct instead */
-		sys_munmap(sender, (void *)mr[0], (int)mr[1]);
+//		sys_munmap(sender, (void *)mr[0], (int)mr[1]);
 		break;
 	}
 	case L4_IPC_TAG_MSYNC: {
 		/* TODO: Use arg struct instead */
-		sys_msync(sender, (void *)mr[0], (int)mr[1], (int)mr[2]);
+//		sys_msync(sender, (void *)mr[0], (int)mr[1], (int)mr[2]);
 		break;
 	}
 	default:

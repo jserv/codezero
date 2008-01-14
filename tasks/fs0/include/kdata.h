@@ -12,7 +12,6 @@
 #include INC_GLUE(memory.h)
 #include INC_GLUE(memlayout.h)
 #include INC_ARCH(bootdesc.h)
-#include <vm_area.h>
 
 struct initdata {
 	struct bootdesc *bootdesc;

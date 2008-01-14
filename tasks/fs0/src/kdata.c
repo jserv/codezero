@@ -8,7 +8,7 @@
 #include <kdata.h>
 #include <string.h>
 #include INC_API(kip.h)
-#include <kmalloc/kmalloc.h>
+#include <task.h>
 
 /* Kernel data acquired during initialisation */
 struct initdata initdata;

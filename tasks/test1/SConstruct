@@ -14,7 +14,7 @@ task_name = "test1"
 # The root directory of the repository where this file resides:
 project_root = "../.."
 tools_root = join(project_root, "tools")
-prev_image = join(project_root, "tasks/mm0/mm0.axf")
+prev_image = join(project_root, "tasks/test0/test0.axf")
 libs_path = join(project_root, "libs")
 ld_script = "include/linker.lds"
 physical_base_ld_script = "include/physical_base.lds"

@@ -21,11 +21,6 @@ void wait_pager(l4id_t partner)
 	printf("Pager synced with us.\n");
 }
 
-void fs_request_handler(struct fs_request *fsreq)
-{
-
-}
-
 void handle_fs_requests(void)
 {
 	u32 mr[MR_UNUSED_TOTAL];

@@ -14,8 +14,6 @@ void wait_task(l4id_t partner)
 
 void mount_root(void)
 {
-	l4id_t blkdev_shmid;
-
 	/*
 	 * We know the primary block device from compile-time.
 	 * It is expected to have the root filesystem.
@@ -23,6 +21,5 @@ void mount_root(void)
 	wait_task(BLKDEV_TID);
 
 	/* Set up a shared memory area with the block device */
-	l4_receive_shm(
 }
 

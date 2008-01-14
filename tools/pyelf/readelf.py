@@ -80,8 +80,14 @@ def main():
        if image_name[-4] == ".":
            image_name = image_name[:-4]
        print image_name
-       print "image_start " + hex(paddr_start)[:-1]
-       print "image_end " + hex(paddr_end)[:-1]
+       if hex(paddr_start)[-1] == "L":
+           print "image_start " + hex(paddr_start)[:-1]
+       else:
+       	    print "image_start " + hex(paddr_start)
+       if hex(paddr_end)[-1] == "L":
+            print "image_end " + hex(paddr_end)[:-1]
+       else:
+            print "image_end " + hex(paddr_end)
 
     if options.ffpage:
         paddr_max = 0
@@ -112,8 +118,10 @@ def main():
 	paddr_aligned = paddr_max & ~(p_align.value - 1)
 	if paddr_max & (p_align.value - 1):
 		paddr_aligned += p_align.value
-
-	print "physical_base = " + hex(paddr_aligned)[:-1] + ";"
+	if hex(paddr_aligned)[-1] == "L":
+		print "physical_base = " + hex(paddr_aligned)[:-1] + ";"
+	else:
+		print "physical_base = " + hex(paddr_aligned) + ";"
 
 
 if __name__ == "__main__":

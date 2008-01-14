@@ -1,3 +1,0 @@
-testtask
-image_start 0x220000
-image_end 0x223344

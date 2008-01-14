@@ -10,6 +10,7 @@
 #include <l4/types.h>
 #include <l4/lib/list.h>
 #include <l4lib/arch/syscalls.h>
+#include <l4lib/arch/syslib.h>
 #include "alloc_page.h"
 #include INC_GLUE(memory.h)
 #include INC_SUBARCH(mm.h)

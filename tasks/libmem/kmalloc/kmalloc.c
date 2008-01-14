@@ -12,6 +12,7 @@
 #include INC_GLUE(memlayout.h)
 #include INC_SUBARCH(mm.h)
 #include <l4lib/arch/syscalls.h>
+#include <l4lib/arch/syslib.h>
 #include <l4/lib/list.h>
 #include <kmalloc/kmalloc.h>
 #include <mm/alloc_page.h>
