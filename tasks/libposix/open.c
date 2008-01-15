@@ -20,6 +20,7 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 
 	write_mr(L4SYS_ARG0, (unsigned long)pathname);
 	write_mr(L4SYS_ARG1, flags);
+	write_mr(L4SYS_ARG2, (u32)mode);
 
 	/* Call pager with shmget() request. Check ipc error. */
 	if ((errno = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_OPEN)) < 0) {

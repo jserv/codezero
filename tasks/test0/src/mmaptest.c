@@ -1,7 +1,7 @@
 /*
  * Test mmap/munmap posix calls.
  *
- * Copyright (C) 2007 - 2008 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -58,3 +58,4 @@ int mmaptest(void)
 
 	return 0;
 }
+

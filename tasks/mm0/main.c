@@ -85,6 +85,10 @@ void handle_requests(void)
 		sys_mmap(sender, args->start, args->length, args->prot, args->flags, args->fd, args->offset);
 		break;
 	}
+	case L4_IPC_TAG_BRK: {
+//		sys_brk(sender, (void *)mr[0]);
+//		break;
+	}
 	case L4_IPC_TAG_MUNMAP: {
 		/* TODO: Use arg struct instead */
 //		sys_munmap(sender, (void *)mr[0], (int)mr[1]);

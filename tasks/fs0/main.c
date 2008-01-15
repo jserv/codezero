@@ -7,18 +7,21 @@
 #include <string.h>
 #include <l4lib/arch/message.h>
 #include <l4lib/arch/syscalls.h>
+#include <l4lib/arch/syslib.h>
 #include <l4lib/kip.h>
 #include <l4lib/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <fs.h>
+#include <init.h>
+#include <kdata.h>
+#include <syscalls.h>
+#include <task.h>
 
 /* Synchronise with pager via a `wait' tagged ipc with destination as pager */
 void wait_pager(l4id_t partner)
 {
-	u32 tag = L4_IPC_TAG_WAIT;
-	printf("Going to wait till pager finishes dumping.\n");
-	l4_ipc(partner, l4_nilthread, tag);
-	printf("Pager synced with us.\n");
+	l4_send(partner, L4_IPC_TAG_WAIT);
+	printf("%s: Pager synced with us.\n", __TASKNAME__);
 }
 
 void handle_fs_requests(void)
@@ -68,6 +71,8 @@ void handle_fs_requests(void)
 
 void main(void)
 {
+	initialise();
+
 	wait_pager(PAGER_TID);
 
 	while (1) {

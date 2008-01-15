@@ -38,5 +38,6 @@
 #define L4_IPC_TAG_WRITE		14
 #define L4_IPC_TAG_LSEEK		15
 #define L4_IPC_TAG_CLOSE		16
+#define L4_IPC_TAG_BRK			17
 
 #endif /* __IPCDEFS_H__ */

@@ -28,7 +28,7 @@ void main(void)
 	wait_pager(0);
 
 	/* Check mmap/munmap */
-	// mmaptest();
+	mmaptest();
 
 	/* Check shmget/shmat/shmdt */
 	shmtest();

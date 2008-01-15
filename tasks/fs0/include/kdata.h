@@ -15,7 +15,6 @@
 
 struct initdata {
 	struct bootdesc *bootdesc;
-	struct block_device *bdev;
 };
 
 extern struct initdata initdata;

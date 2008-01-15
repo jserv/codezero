@@ -18,13 +18,6 @@ static struct vm_file shm_swap_file;
 static struct id_pool *swap_file_offset_pool;
 */
 
-/* mmap system call implementation */
-int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
-	     int flags, int fd, off_t offset)
-{
-	return 0;
-}
-
 /* TODO: This is to be implemented when fs0 is ready. */
 int do_msync(void *addr, unsigned long size, unsigned int flags, struct tcb *task)
 {
@@ -486,4 +479,19 @@ int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 	}
 	return 0;
 }
+
+/* mmap system call implementation */
+int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
+	     int flags, int fd, off_t offset)
+{
+	return 0;
+}
+
+/* Sets the end of data segment for sender */
+int sys_brk(l4id_t sender, void *ds_end)
+{
+	// do_brk(find_task(sender), ds_end);
+	return 0;
+}
+
 

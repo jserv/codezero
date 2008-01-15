@@ -22,7 +22,7 @@ struct file_ops {
 	file_op_t write;
 	file_op_t close;
 	file_op_t mmap;
-	file_op_t seek;
+	file_op_t lseek;
 	file_op_t flush;
 	file_op_t fsync;
 };
@@ -52,11 +52,14 @@ struct filesystem;
 struct superblock;
 struct vnode;
 
+#define	VFS_DENTRY_NAME_MAX		512
 struct dentry {
 	int refcnt;
-	char name[512];
+	char name[VFS_DENTRY_NAME_MAX];
 	struct dentry *parent;		/* Parent dentry */
-	struct list_head siblings;	/* List of dentries with same parent */
+	struct list_head child;		/* List of dentries with same parent */
+	struct list_head children;	/* List of children dentries */
+	struct list_head dref_list;	/* For vnode's dirent reference list */
 	struct vnode *vnode;		/* The vnode associated with dirent */
 	struct dentry_ops ops;
 };
@@ -70,6 +73,7 @@ struct file {
 struct vnode {
 	unsigned long id;		/* Filesystem-wide unique vnode id */
 	int refcnt;			/* Reference counter */
+	int hardlinks;			/* Number of hard links */
 	struct vnode_ops ops;		/* Operations on this vnode */
 	struct list_head dirents;	/* Dirents that refer to this vnode */
 	struct list_head state_list;	/* List for vnode's dirty/clean state */
