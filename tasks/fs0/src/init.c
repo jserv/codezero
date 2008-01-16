@@ -43,7 +43,7 @@ void init_root(struct vnode *root_vn, struct dentry *root_d)
 	root_vn->refcnt = 0;
 	INIT_LIST_HEAD(&root_vn->dirents);
 	INIT_LIST_HEAD(&root_vn->state_list);
-	list_add(&root_d->dref_list, &root_vn->dirents);
+	list_add(&root_d->vnlist, &root_vn->dirents);
 	root_vn->size = 0;
 
 	/* Initialise global struct rootdir ptr */

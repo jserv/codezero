@@ -48,7 +48,7 @@ struct superblock_ops {
 
 struct dentry;
 struct file;
-struct filesystem;
+struct file_system_type;
 struct superblock;
 struct vnode;
 
@@ -80,13 +80,16 @@ struct vnode {
 	unsigned long size;		/* Total size of vnode in bytes */
 };
 
-struct filesystem {
-	unsigned long magic;
+struct file_system_type {
 	char name[256];
+	unsigned long magic;
+	unsigned int flags;
+	struct superblock *(*get_sb)(void);
+	struct list_head sb_list;
 };
 
 struct superblock {
-	struct filesystem fs;
+	struct file_system_type fs;
 	struct superblock_ops ops;
 	struct dentry *root_dirent;
 };
