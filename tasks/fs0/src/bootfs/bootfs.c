@@ -1,24 +1,90 @@
 /*
- * An imaginary filesystem for reading the in-memory
- * server tasks loaded out of the initial elf executable.
+ * A pseudo-filesystem for reading the in-memory
+ * server tasks loaded from the initial elf executable.
  *
  * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <fs.h>
 #include <l4/lib/list.h>
+#include <malloc.h>
+
+struct dentry *bootfs_dentry_lookup(struct dentry *d, char *dname)
+{
+	struct dentry *this;
+
+	list_for_each_entry(this, child, &d->children) {
+		if (this->compare(this, dname))
+			return this;
+	}
+	return 0;
+}
+
+struct dentry *path_lookup(struct superblock *sb, char *pathstr)
+{
+	char *dname;
+	char *splitpath;
+	struct dentry *this, *next;
+
+	/* First dentry is root */
+	this = sb->root;
+
+	/* Get next path component from path string */
+	dname = path_next_dentry_name(pathstr);
+
+	if (!this->compare(dname))
+		return;
+
+	while(!(dname = path_next_dentry_name(pathstr))) {
+		if ((d = this->lookup(this, dname)))
+			return 0;
+	}
+}
 
 /*
- * These are preallocated structures for forging a filesystem tree
- * from the elf loaded server segments available from kdata info.
+ * This creates a pseudo-filesystem tree from the loaded
+ * server elf images whose information is available from
+ * initdata.
  */
-#define BOOTFS_IMG_MAX					10
-struct vnode bootfs_vnode[BOOTFS_IMG_MAX];
-struct dentry bootfs_dentry[BOOTFS_IMG_MAX];
-struct file bootfs_file[BOOTFS_IMG_MAX];
+void bootfs_populate(struct initdata *initdata, struct superblock *sb)
+{
+	struct bootdesc *bd = initdata->bootdesc;
+	struct svc_image *img;
+	struct dentry *d;
+	struct vnode *v;
+	struct file *f;
 
-/* These are for the root */
-struct dentry bootfs_root;
-struct vnode bootfs_rootvn;
+	for (int i = 0; i < bd->total_images; i++) {
+		img = &bd->images[i];
+
+		d = malloc(sizeof(struct dentry));
+		v = malloc(sizeof(struct vnode));
+		f = malloc(sizeof(struct file));
+
+		/* Initialise dentry for image */
+		d->refcnt = 0;
+		d->vnode = v;
+		d->parent = sb->root;
+		strncpy(d->name, img->name, VFS_DENTRY_NAME_MAX);
+		INIT_LIST_HEAD(&d->child);
+		INIT_LIST_HEAD(&d->children);
+		list_add(&d->child, &sb->root->children);
+
+		/* Initialise vnode for image */
+		v->refcnt = 0;
+		v->id = img->phys_start;
+		v->size = img->phys_end - img->phys_start;
+		INIT_LIST_HEAD(&v->dirents);
+		list_add(&d->v_ref, &v->dirents);
+
+		/* Initialise file struct for image */
+		f->refcnt = 0;
+		f->dentry = d;
+
+		img_d++;
+		img_vn++;
+		img_f++;
+	}
+}
 
 void bootfs_init_root(struct dentry *r)
 {
@@ -43,8 +109,8 @@ void bootfs_init_root(struct dentry *r)
 
 struct superblock *bootfs_init_sb(struct superblock *sb)
 {
-	sb->root = &bootfs_root;
-	sb->root->vnode = &bootfs_rootvn;
+	sb->root = malloc(sizeof(struct dentry));
+	sb->root->vnode = malloc(sizeof(struct vnode));
 
 	bootfs_init_root(&sb->root);
 
@@ -75,8 +141,7 @@ struct file_system_type bootfs_type = {
 
 void init_bootfs()
 {
-	struct superblock *sb;
+	bootfs_init_sb(&bootfs_sb);
 
-	sb = bootfs_type.get_sb();
+	bootfs_populate(&bootfs_sb);
 }
-

@@ -59,7 +59,7 @@ struct dentry {
 	struct dentry *parent;		/* Parent dentry */
 	struct list_head child;		/* List of dentries with same parent */
 	struct list_head children;	/* List of children dentries */
-	struct list_head dref_list;	/* For vnode's dirent reference list */
+	struct list_head vref;		/* For vnode's dirent reference list */
 	struct vnode *vnode;		/* The vnode associated with dirent */
 	struct dentry_ops ops;
 };
