@@ -8,23 +8,26 @@
 #define __SFS_LAYOUT_H__
 
 #include <l4lib/types.h>
+#include <l4/macros.h>
+#include <l4/config.h>
+#include INC_GLUE(memory.h)
 
 /*
  *
  * Filesystem layout:
  *
  * |---------------|
- * |    Unit 0     |
+ * |    Group 0    |
  * |---------------|
- * |    Unit 1     |
+ * |    Group 1    |
  * |---------------|
  * |      ...      |
  * |---------------|
- * |    Unit n     |
+ * |    Group n    |
  * |---------------|
  *
  *
- * Unit layout:
+ * Group layout:
  *
  * |---------------|
  * |  Superblock   |
@@ -42,24 +45,23 @@
  *
  */
 
-#define SZ_8MB			(0x100000 * 8)
-#define SZ_4KB			0x1000
-#define SZ_4KB_BITS		12
+#define BLOCK_SIZE		PAGE_SIZE
+#define BLOCK_BITS		PAGE_BITS
+#define GROUP_SIZE		SZ_8MB
+#define INODE_TABLE_SIZE	((GROUP_SIZE / BLOCK_SIZE) / 2)
+#define INODE_BITMAP_SIZE	(INODE_TABLE_SIZE >> 5)
 
-#define UNIT_SIZE		(SZ_8MB)
-#define INODE_TABLE_SIZE	((UNIT_SIZE >> SZ_4KB_BITS) >> 1)
-#define INODE_BITMAP_SZIDX	(INODE_TABLE_SIZE >> 5)
 
 struct sfs_superblock {
 	u32 magic;		/* Filesystem magic number */
 	u32 fssize;		/* Total size of filesystem */
 	u32 szidx;		/* Bitmap index size */
-	u32 unitmap[]		/* Bitmap of all fs units */
+	u32 groupmap[];		/* Bitmap of all fs groups */
 };
 
 struct sfs_inode_table {
 	u32 szidx;
-	u32 inodemap[INODE_BITMAP_SZIDX];
+	u32 inodemap[INODE_BITMAP_SIZE];
 	struct sfs_inode inode[INODE_TABLE_SIZE];
 };
 
@@ -70,7 +72,7 @@ struct sfs_inode_table {
  * 2) Keep file/directory metadata.
  * 3) Provide access means to file blocks/directory contents.
  */
-
+#define INODE_DIRECT_BLOCKS	5
 struct sfs_inode_blocks {
 	u32  szidx;		/* Direct array index size */
 	unsigned long indirect;
@@ -96,6 +98,5 @@ struct sfs_dentry {
 	u32 nlength;	/* Name length */
 	u8  name[];	/* Name string */
 } __attribute__ ((__packed__));
-
 
 #endif /* __SFS_LAYOUT_H__ */

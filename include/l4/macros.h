@@ -52,6 +52,7 @@
 #define SZ_16K			0x4000
 #define SZ_64K			0x10000
 #define SZ_1MB			0x100000
+#define SZ_8MB			(8*SZ_1MB)
 #define SZ_16MB			(16*SZ_1MB)
 #define SZ_1K_BITS		10
 #define SZ_4K_BITS		12

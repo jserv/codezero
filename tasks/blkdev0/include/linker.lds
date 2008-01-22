@@ -33,9 +33,13 @@ SECTIONS
 	.data : AT (ADDR(.data) - offset)
 	{
 		. = ALIGN(4K);
-		_start_ramdisk = .;
-		*(.data.fs)
-		_end_ramdisk = .;
+		_start_ramdisk0 = .;
+		*(.data.romfs)
+		_end_ramdisk0 = .;
+		. = ALIGN(4K);
+		_start_ramdisk1 = .;
+		*(.data.sfs)
+		_end_ramdisk1 = .;
 		*(.data)
 	}
 	.bss : AT (ADDR(.bss) - offset) { *(.bss) }

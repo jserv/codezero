@@ -17,9 +17,14 @@
 #include INC_GLUE(memory.h)
 
 /* Ramdisk section markers for ramdisk inside this executable image */
-extern char _start_ramdisk[];
-extern char _end_ramdisk[];
-static unsigned long ramdisk_base;
+extern char _start_ramdisk0[];
+extern char _end_ramdisk0[];
+extern char _start_ramdisk1[];
+extern char _end_ramdisk1[];
+
+__attribute__((section(".data.sfs"))) char sfsdisk[SZ_16MB];
+
+static unsigned long ramdisk_base[2];
 
 void ramdisk_open(struct block_device *ramdisk)
 {
@@ -52,14 +57,26 @@ void ramdisk_writepage(unsigned long pfn, void *buf)
 	ramdisk_write(__pfn_to_addr(pfn), PAGE_SIZE, buf);
 }
 
-struct block_device ramdisk = {
-	.name = "ramdisk",
-	.ops = {
-		.open = ramdisk_open,
-		.read = ramdisk_read,
-		.write = ramdisk_write,
-		.read_page = ramdisk_readpage,
-		.write_page = ramdisk_writepage,
+struct block_device ramdisk[2] = {
+	[0] = {
+		.name = "ramdisk0",
+		.ops = {
+			.open = ramdisk_open,
+			.read = ramdisk_read,
+			.write = ramdisk_write,
+			.read_page = ramdisk_readpage,
+			.write_page = ramdisk_writepage,
+		},
 	},
+	[1] = {
+		.name = "ramdisk1",
+		.ops = {
+			.open = ramdisk_open,
+			.read = ramdisk_read,
+			.write = ramdisk_write,
+			.read_page = ramdisk_readpage,
+			.write_page = ramdisk_writepage,
+		},
+	}
 };
 
