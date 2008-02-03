@@ -252,7 +252,7 @@ void switch_to_user(struct ktcb *task)
 
 void init_inittask(char *name, struct task_ids *ids)
 {
-	struct svc_image *taskimg;
+	struct svc_image *taskimg = 0;
 	struct ktcb *task;
 	int task_pages;
 
@@ -273,10 +273,12 @@ void init_inittask(char *name, struct task_ids *ids)
 	 */
 	for (int i = 0; i < bootdesc->total_images; i++) {
 		if (!strcmp(name, bootdesc->images[i].name)) {
-			BUG_ON(!(taskimg = &bootdesc->images[i]));
+			taskimg = &bootdesc->images[i];
 			break;
 		}
 	}
+	BUG_ON(!taskimg);
+
 	printk("\nInitialising %s.\n", name);
 	if (taskimg->phys_start & PAGE_MASK)
 		printk("Warning, image start address not page aligned.\n");

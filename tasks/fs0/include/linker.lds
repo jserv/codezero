@@ -30,13 +30,13 @@ SECTIONS
 	/* rodata is needed else your strings will link at physical! */
 	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
-	.data : AT (ADDR(.data) - offset) 
+	.data : AT (ADDR(.data) - offset)
 	{
 		. = ALIGN(4K);
-		_start_ramdisk = .;
-		*(.data.diskspace)
-		_end_ramdisk = .;
-		*(.data)	
+		_start_bdev = .;
+		*(.data.memfs)
+		_end_bdev = .;
+		*(.data)
 	}
 	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
 	_end = .;

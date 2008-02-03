@@ -42,7 +42,7 @@ typedef struct _malloc		/* Turbo C	DJGPP */
 static char *g_heap_bot, *g_kbrk, *g_heap_top;
 /*****************************************************************************
 *****************************************************************************/
-static void dump_heap(void)
+void dump_heap(void)
 {
 	unsigned blks_used = 0, blks_free = 0;
 	size_t bytes_used = 0, bytes_free = 0;
@@ -204,6 +204,15 @@ create a new, free block */
 	}
 	return (char *)n + sizeof(malloc_t);
 }
+
+static inline void *kzalloc(size_t size)
+{
+	void *buf = kmalloc(size);
+
+	memset(buf, 0, size);
+	return buf;
+}
+
 /*****************************************************************************
 *****************************************************************************/
 void kfree(void *blk)

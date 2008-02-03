@@ -11,6 +11,7 @@
 #include INC_GLUE(memory.h)
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <l4lib/ipcdefs.h>
 #include <lib/vaddr.h>
 #include <task.h>
 #include <kdata.h>
@@ -145,5 +146,33 @@ void init_pm(struct initdata *initdata)
 {
 	create_init_tcbs(initdata);
 	start_init_tasks(initdata);
+}
+
+void send_task_data(l4id_t requester)
+{
+	struct tcb *t;
+	int li, err;
+
+	if (requester != VFS_TID) {
+		printf("Task data is not requested by FS0, ignoring.\n");
+		return;
+	}
+
+	/* First word is total number of tcbs */
+	write_mr(L4SYS_ARG0, tcb_head.total);
+
+	/* Write each tcb's tid */
+	li = 0;
+	list_for_each_entry(t, &tcb_head.list, list) {
+		BUG_ON(li >= MR_USABLE_TOTAL);
+		write_mr(L4SYS_ARG1 + li, t->tid);
+		li++;
+	}
+
+	/* Reply */
+	if ((err = l4_ipc_return(0)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		BUG();
+	}
 }
 

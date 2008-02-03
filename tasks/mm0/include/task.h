@@ -64,6 +64,8 @@ void init_pm(struct initdata *initdata);
 int start_init_tasks(struct initdata *initdata);
 void dump_tasks(void);
 
+void send_task_data(l4id_t requester);
+
 /* Used by servers that have a reference to tcbs (e.g. a pager) */
 #define current		((struct ktcb *)__L4_ARM_Utcb()->usr_handle)
 

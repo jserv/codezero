@@ -4,10 +4,11 @@
  * Copyright (C) 2007, 2008 Bahadir Balban
  */
 
-#ifndef __SFS_LAYOUT_H__
-#define __SFS_LAYOUT_H__
+#ifndef __C0FS_LAYOUT_H__
+#define __C0FS_LAYOUT_H__
 
 #include <l4lib/types.h>
+#include <l4/lib/list.h>
 #include <l4/macros.h>
 #include <l4/config.h>
 #include INC_GLUE(memory.h)
@@ -54,13 +55,20 @@
 
 struct sfs_superblock {
 	u32 magic;		/* Filesystem magic number */
-	u32 fssize;		/* Total size of filesystem */
-	u32 szidx;		/* Bitmap index size */
+	u64 fssize;		/* Total size of filesystem */
+	u32 total;		/* To */
 	u32 groupmap[];		/* Bitmap of all fs groups */
 };
 
+struct sfs_group_table {
+	u32 total;
+	u32 free;
+	u32 groupmap[];
+};
+
 struct sfs_inode_table {
-	u32 szidx;
+	u32 total;
+	u32 free;
 	u32 inodemap[INODE_BITMAP_SIZE];
 	struct sfs_inode inode[INODE_TABLE_SIZE];
 };
@@ -74,7 +82,7 @@ struct sfs_inode_table {
  */
 #define INODE_DIRECT_BLOCKS	5
 struct sfs_inode_blocks {
-	u32  szidx;		/* Direct array index size */
+	int  szidx;		/* Direct array index size */
 	unsigned long indirect;
 	unsigned long indirect2;
 	unsigned long indirect3;
@@ -86,10 +94,10 @@ struct sfs_inode {
 	u32 inum;	/* Inode number */
 	u32 mode;	/* File permissions */
 	u32 owner;	/* File owner */
-	u32 atime;	/* Last access time */
-	u32 mtime;	/* Last content modification */
-	u32 ctime;	/* Last inode modification */
-	u32 size;	/* Size of contents */
+	u64 atime;	/* Last access time */
+	u64 mtime;	/* Last content modification */
+	u64 ctime;	/* Last inode modification */
+	u64 size;	/* Size of contents */
 	struct sfs_inode_blocks blocks;
 } __attribute__ ((__packed__));
 
@@ -99,4 +107,7 @@ struct sfs_dentry {
 	u8  name[];	/* Name string */
 } __attribute__ ((__packed__));
 
-#endif /* __SFS_LAYOUT_H__ */
+
+void sfs_register_type(struct list_head *);
+
+#endif /* __C0FS_LAYOUT_H__ */

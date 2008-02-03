@@ -12,7 +12,7 @@ tasks that implement memory management, a virtual filesystem layer, and these
 servers currently support a small but essential subset of the POSIX API.
 
 Codezero project is an effort to implement a modern, open source operating
-system based on the latest technology in microkernel design. It targets
+system based on the latest technology in microkernel and OS design. It targets
 realtime, high-end embedded systems and has an emphasis on the ARM architecture.
 
 It is quite common to see open source projects developed in a closed-doors
@@ -23,13 +23,32 @@ the Linux Kernel.
 
 Why the name Codezero?
 
-The project focuses on simplicity, elegance, cleanliness, which are assets
-usually hard to achieve in software engineering. The philosophy is to implement
-a structurally complete system with most modern and complex operating system
-features while retaining simplicity in the implementation as much as possible.
-Avoidance of code bloat is a short way to put it. This objective also fits well
-with embedded platforms, which usually have rigorous memory and performance
-requirements.
+The project focuses on simplicity, elegance, cleanliness, which are important
+assets in software engineering. The philosophy is to implement a structurally
+complete system with most modern OS features while retaining simplicity in the
+implementation as much as possible. This objective also fits well with embedded
+platforms, which usually have rigorous memory and performance requirements. Also
+the project is written from scratch, so the name emphasises that.
+
+
+Design & Features:
+
+Codezero microkernel: Based on L4 microkernel principles, there are only a few
+system calls and the microkernel provides purely mechanism; threads and address
+spaces, and the methods of inter-process communication between them. Anything
+beyond these are policy and they are implemented in the userspace. Due to this
+rigorously simple design the microkernel can be used to design completely
+different operating systems. In terms of other features, the microkernel is
+preemptive, and smp-ready. Currently only synchronous communication is
+implemented, but this will change in the near future.
+
+MM0: Implements memory management. It contains memory and page allocators. It
+implements demand paging by managing page faults, physical pages and their
+file/task associations.
+
+FS0: Implements a simple, modern virtual filesystem layer. Since it abstracts
+the low-level filesystem details, it is a relatively easy job to port a new
+filesystem to be used under FS0.
 
 
 License:
@@ -51,28 +70,32 @@ Why yet another Posix (micro) kernel?
 There are many open source Posix operating systems with advanced features such
 as *BSD and Linux. However these were originally not designed for embedded
 systems. Unix itself and all the tools built upon weren't meant for using on
-small devices. Besides, these operating systems naturally contain a lot of
-historical code. Linux is well established, and targets a broad range of
-platforms and uses, but consequently embedded platforms don't always get enough
-emphasis. Also such well established, mature systems tend to oppose major design
-overhauls, which limits innovation to a certain extent. In addition, their code
-base is so big, that it gets more and more difficult to understand how the
-system works. Usually %95 of the code is irrelevant to the problem, in case of
-embedded systems. Codezero is written from scratch to solely target embedded
-systems and as such the source code is %100 relevant. It is small and free from
-legacy code. Finally monolithic kernels may have issues with dependability due
-to much of the code sharing the same address space. Being a microkernel design,
-Codezero aims to defeat this problem and increase dependability.
+small devices. Accordingly, these operating systems contain a lot of historical
+code. Linux is well established, and targets a broad range of platforms and
+uses, but consequently embedded platforms don't always get enough emphasis. Also
+such well established, mature systems tend to oppose major design overhauls,
+which limits innovation to a certain extent. In addition, their code base is so
+big, that it gets more and more difficult to understand how the system works.
+Usually much of the code is irrelevant to the problem, in case of embedded
+systems. Codezero is written from scratch to solely target embedded systems and
+as such the source code is %100 relevant. It is small and free from legacy code.
+Finally monolithic kernels may have issues with dependability due to much of the
+code sharing the same address space. Being a microkernel design, Codezero aims
+to defeat this problem and increase dependability.
 
 Other than these modern kernels, there is systems software targeting embedded
 devices. Most of them are proprietary, with their own users. Some of the open
 source ones are structurally too simplistic, and lack modern features such as
-paging. There are certainly existing well-designed embedded operating systems,
-but Codezero provides an alternative that will follow the open source
-development principles more closely. Finally, there are new ideas in OS
-literature that would improve Unix but aren't implemented either because they
-have no existing users or may break compatibility somewhat. (E.g. some are
-presented in Plan 9, or ReiserFS 4). As well as practising realistic development
-methodologies, Codezero project aims to keep up with the latest OS literature
-and provide the opportunity to incorporate the latest ideas in OS technology.
+paging. There are existing well-designed embedded OS'es, but Codezero provides
+an alternative that will follow the open source development principles more
+closely. This will prove useful because many embedded systems still use older
+development methods and the right open source methodology would prove favorable
+in the fast-paced nature of development (Linux has already proven that).
+
+Finally, there are new ideas in OS literature that would improve Unix but aren't
+implemented either because they have no existing users or may break compatibility
+somewhat (e.g. some are presented in Plan 9). As well as practising realistic
+development methodologies, Codezero project aims to keep up with the latest OS
+literature and provide the opportunity to incorporate the latest ideas in OS
+technology.
 

@@ -1,6 +1,6 @@
 cd build
 #arm-none-eabi-insight &
-qemu-system-arm -M versatilepb -kernel final.axf -nographic -s &
+qemu-system-arm -S -kernel final.axf -nographic -s -M versatilepb &
 sleep 0.5
 arm-none-eabi-insight ; pkill qemu-system-arm
 #arm-none-eabi-gdb ; pkill qemu-system-arm

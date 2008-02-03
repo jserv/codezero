@@ -88,6 +88,10 @@
 #define printk			printf
 #endif
 
+/* Functions who may either return a pointer or an error code can use these: */
+#define PTR_ERR(x)		((void *)(x))
+#define IS_ERR(x)		(((int)(x)) < 0)
+
 /* TEST: Is this type of printk well tested? */
 #define BUG()			{do {								\
 					printk("BUG in file: %s function: %s line: %d\n",	\

@@ -91,14 +91,14 @@ static inline void l4_set_retval(int retval)
 
 /* Clients:
  * Learn result of request.
- */ 
+ */
 static inline int l4_get_retval(void)
 {
 	return read_mr(MR_RETURN);
 }
 
 /* Servers:
- * Return the ipc result back to requesting task. 
+ * Return the ipc result back to requesting task.
  */
 static inline int l4_ipc_return(int retval)
 {
@@ -174,6 +174,5 @@ static inline int l4_reclaim_pages(l4id_t tid)
 	}
 	return 0;
 }
-
 
 #endif /* __L4LIB_SYSLIB_H__ */

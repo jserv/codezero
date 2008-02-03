@@ -6,5 +6,6 @@
 
 void init_blkdev(void)
 {
-	ramdisk.ops.open(&ramdisk);
+	ramdisk[0].ops.init(&ramdisk[0]);
+	ramdisk[1].ops.init(&ramdisk[1]);
 }

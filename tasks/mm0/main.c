@@ -63,6 +63,10 @@ void handle_requests(void)
 		page_fault_handler(sender, (fault_kdata_t *)&mr[0]);
 		break;
 
+	case L4_IPC_TAG_TASKDATA:
+		send_task_data(sender);
+		break;
+
 	case L4_IPC_TAG_SHMGET: {
 		struct sys_shmget_args *args = (struct sys_shmget_args *)&mr[0];
 		sys_shmget(args->key, args->size, args->shmflg);

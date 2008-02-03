@@ -22,6 +22,7 @@
 #define MR_UNUSED_START	2	/* The first mr that's not used by syslib.h */
 #define MR_TOTAL	6
 #define MR_UNUSED_TOTAL		(MR_TOTAL - MR_UNUSED_START)
+#define MR_USABLE_TOTAL		MR_UNUSED_TOTAL
 
  /* Compact utcb for now! :-) */
 struct utcb {

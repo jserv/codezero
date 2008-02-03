@@ -14,7 +14,7 @@ task_name = "fs0"
 # The root directory of the repository where this file resides:
 project_root = "../.."
 tools_root = join(project_root, "tools")
-prev_image = join(project_root, "tasks/blkdev0/blkdev0.axf")
+prev_image = join(project_root, "tasks/mm0/mm0.axf")
 libs_path = join(project_root, "libs")
 ld_script = "include/linker.lds"
 physical_base_ld_script = "include/physical_base.lds"
@@ -25,6 +25,10 @@ libc_libpath = join(libs_path, "c/build/%s" % libc_variant)
 libc_incpath = join(libc_libpath, "include")
 libc_crt0 = join(libs_path, "c/build/crt/sys-userspace/arch-arm/crt0.o")
 libc_name = "c-%s" % libc_variant
+
+#libmem paths:
+libmem_path = "../libmem"
+libmem_incpath = "../libmem"
 
 # libl4 paths:
 libl4_path = "../libl4"
@@ -47,16 +51,16 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-		  LINKFLAGS = ['-nostdlib', '-T' + ld_script, "-L" + libc_libpath, "-L" + libl4_path],
+		  LINKFLAGS = ['-nostdlib', '-T' + ld_script, "-L" + libc_libpath, "-L" + libl4_path,\
+			       "-L" + libmem_path],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.axf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
-		  LIBS = [libc_name, 'gcc', libc_name, \
-		  'libl4'],				# libgcc.a - This is required for division routines.
+		  LIBS = [libc_name, 'gcc', 'libmc', 'libl4', 'gcc', libc_name],
 		  CPPFLAGS = "-D__USERSPACE__",
-		  CPPPATH = ['#include', libl4_incpath1, kernel_incpath, libc_incpath])
+		  CPPPATH = ['#include', libl4_incpath1, kernel_incpath, libc_incpath, libmem_incpath])
 
-src = [glob("src/*.c"), glob("*.c"), glob("src/arch/arm/*.c")]
+src = [glob("src/*.c"), glob("*.c"), glob("src/arch/arm/*.c"), glob("src/memfs/*.c"), glob("src/lib/*.c")]
 objs = env.Object(src)
 physical_base = env.Command(physical_base_ld_script, prev_image, get_physical_base)
 crt0_copied = env.Command("crt0.o", libc_crt0, copy_crt0)

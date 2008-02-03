@@ -14,12 +14,12 @@ tools_root = "../../tools"
 
 kernel = join(project_root, "build/start.axf")
 mm0 = join(project_root, "tasks/mm0/mm0.axf")
-# fs0 = join(project_root, "tasks/fs0/fs0.axf")
+fs0 = join(project_root, "tasks/fs0/fs0.axf")
 test0 = join(project_root, "tasks/test0/test0.axf")
-test1 = join(project_root, "tasks/test1/test1.axf")
+#test1 = join(project_root, "tasks/test1/test1.axf")
 #blkdev0 = join(project_root, "tasks/fsbin/blkdev0.axf")
 
-images = [kernel, mm0, test0, test1]
+images = [kernel, mm0, fs0, test0]
 autogen_templ = "bootdesc.c.append"
 
 def get_image_name_start_end(image, target):

@@ -1,25 +1,41 @@
 /*
  * VFS definitions.
  *
- * Copyright (C) 2007 Bahadir Balban.
+ * Copyright (C) 2007, 2008 Bahadir Balban.
  */
 #ifndef __FS_H__
 #define __FS_H__
-#include <l4/lib/list.h>
 
-typedef void (*dentry_op_t)(void);
-typedef void (*superblock_op_t)(void);
+#include <l4/lib/list.h>
+#include <l4/macros.h>
+#include <l4lib/types.h>
+#include <stat.h>
+
+
 typedef void (*vnode_op_t)(void);
 typedef void (*file_op_t)(void);
 
+struct dentry;
+struct file;
+struct file_system_type;
+struct superblock;
+struct vnode;
+
 struct dentry_ops {
-	dentry_op_t compare;
+	int (*compare)(struct dentry *d, char *n);
 };
 
+/* Operations that work on file content */
 struct file_ops {
+
+	/* Read a vnode's contents by page range */
+	int (*read)(struct vnode *v, unsigned long pfn,
+		    unsigned long npages, void *buf);
+
+	/* Write a vnode's contents by page range */
+	int (*write)(struct vnode *v, unsigned long pfn,
+		    unsigned long npages, void *buf);
 	file_op_t open;
-	file_op_t read;
-	file_op_t write;
 	file_op_t close;
 	file_op_t mmap;
 	file_op_t lseek;
@@ -27,9 +43,11 @@ struct file_ops {
 	file_op_t fsync;
 };
 
+/* Operations that work on vnode fields and associations between vnodes */
 struct vnode_ops {
 	vnode_op_t create;
-	vnode_op_t lookup;
+	struct vnode *(*lookup)(struct vnode *root, char *path);
+	void * (*readdir)(struct vnode *v, void *dirbuf);
 	vnode_op_t link;
 	vnode_op_t unlink;
 	vnode_op_t mkdir;
@@ -40,22 +58,28 @@ struct vnode_ops {
 };
 
 struct superblock_ops {
-	superblock_op_t read_sb;
-	superblock_op_t write_sb;
-	superblock_op_t read_vnode;
-	superblock_op_t write_vnode;
+	int (*write_sb)(struct superblock *sb);
+
+	/*
+	 * Given a vnum, reads the disk-inode and copies its data
+	 * into the vnode's generic fields
+	 */
+	int (*read_vnode)(struct superblock *sb, struct vnode *v);
+
+	/* Writes vnode's generic fields into the disk-inode structure */
+	int (*write_vnode)(struct superblock *sb, struct vnode *v);
+
+	/* Allocates a disk-inode along with a vnode, and associates the two */
+	struct vnode *(*alloc_vnode)(struct superblock *sb);
+
+	/* Frees the vnode and the corresponding on-disk inode */
+	int (*free_vnode)(struct superblock *sb, struct vnode *v);
 };
 
-struct dentry;
-struct file;
-struct file_system_type;
-struct superblock;
-struct vnode;
-
-#define	VFS_DENTRY_NAME_MAX		512
+#define	VFS_DNAME_MAX			256
 struct dentry {
 	int refcnt;
-	char name[VFS_DENTRY_NAME_MAX];
+	char name[VFS_DNAME_MAX];
 	struct dentry *parent;		/* Parent dentry */
 	struct list_head child;		/* List of dentries with same parent */
 	struct list_head children;	/* List of children dentries */
@@ -64,35 +88,54 @@ struct dentry {
 	struct dentry_ops ops;
 };
 
-struct file {
-	int refcnt;
-	struct dentry *dentry;
-	struct file_ops ops;
-};
-
 struct vnode {
-	unsigned long id;		/* Filesystem-wide unique vnode id */
+	unsigned long vnum;		/* Filesystem-wide unique vnode id */
 	int refcnt;			/* Reference counter */
 	int hardlinks;			/* Number of hard links */
+	struct superblock *sb;		/* Reference to superblock */
 	struct vnode_ops ops;		/* Operations on this vnode */
-	struct list_head dirents;	/* Dirents that refer to this vnode */
+	struct file_ops fops;		/* File-related operations on this vnode */
+	struct list_head dentries;	/* Dirents that refer to this vnode */
 	struct list_head state_list;	/* List for vnode's dirty/clean state */
-	unsigned long size;		/* Total size of vnode in bytes */
+	u32 type;			/* Vnode type, dev? socket? dir? ... */
+	u32 mode;			/* Permissions */
+	u32 owner;			/* Owner */
+	u64 atime;			/* Last access time */
+	u64 mtime;			/* Last content modification */
+	u64 ctime;			/* Last vnode modification */
+	u64 size;			/* Size of contents */
+	void *inode;			/* Ptr to fs-specific inode */
 };
 
-struct file_system_type {
-	char name[256];
-	unsigned long magic;
-	unsigned int flags;
-	struct superblock *(*get_sb)(void);
-	struct list_head sb_list;
+/* FS0 vfs specific macros */
+#define vfs_isdir(v)	S_ISDIR((v)->type)
+
+struct fstype_ops {
+	struct superblock *(*get_superblock)(void *buf);
 };
+
+#define VFS_FSNAME_MAX			256
+struct file_system_type {
+	char name[VFS_FSNAME_MAX];
+	unsigned long magic;
+	struct fstype_ops ops;
+	struct list_head list;	/* Member of list of all fs types */
+	struct list_head sblist; /* List of superblocks with this type */
+};
+struct superblock *get_superblock(void *buf);
 
 struct superblock {
-	struct file_system_type fs;
-	struct superblock_ops ops;
-	struct dentry *root_dirent;
+	u64 fssize;
+	unsigned int blocksize;
+	struct list_head list;
+	struct file_system_type *fs;
+	struct superblock_ops *ops;
+	struct vnode *root;
+	void *fs_super;
 };
 
+void vfs_mount_fs(struct superblock *sb);
+
+extern struct dentry_ops generic_dentry_operations;
 
 #endif /* __FS_H__ */

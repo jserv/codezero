@@ -4,7 +4,9 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <lib/idpool.h>
-#include <kmalloc/kmalloc.h>
+// #include <kmalloc/kmalloc.h> --> This requires page allocation to grow/shrink.
+#include <lib/malloc.h> // --> This is a local library that statically allocates its heap.
+#include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <stdio.h>
 

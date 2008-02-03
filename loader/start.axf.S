@@ -12,5 +12,5 @@
 .align 4
 .global bkpt_phys_to_virt;
 .type	bkpt_phys_to_virt, function;
-.equ	bkpt_phys_to_virt, 0x107118
+.equ	bkpt_phys_to_virt, 0x106f88
 
