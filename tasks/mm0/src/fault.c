@@ -317,6 +317,7 @@ int do_anon_page(struct fault_data *fault)
 
 		/* Add the page to it's owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
+		BUG();
 		list_add(&page->list, &page->owner->page_cache_list);
 
 		/* The offset of this page in its owner file */
