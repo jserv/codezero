@@ -38,86 +38,9 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 	return 0;
 }
 
-/*
- * Means this sender cannot contact this receiver with this type of tag.
- * IOW not accepting a particular type of message from a sender.
- */
-struct ipc_block_data {
-	l4id_t blocked_sender;
-	u32 blocked_tag;
-	struct list_head list;
-};
-
-/*
- * These flags are used on ipc_control call in order to block and unblock a thread
- * from doing ipc with another thread.
- */
-enum ipc_control_flag {
-	IPC_CONTROL_BLOCK = 0,
-	IPC_CONTROL_UNBLOCK
-};
-
-/*
- * This checks if any of the parties are not allowed to talk to each other.
- */
-int ipc_blocked(struct ktcb *receiver, struct ktcb *sender)
-{
-	u32 ipc_tag = *((u32 *)KTCB_REF_MR0(sender));
-	struct ipc_block_data *bdata;
-
-	spin_lock(&receiver->ipc_block_lock);
-	list_for_each_entry(bdata, &receiver->ipc_block_list, list)
-		if (bdata->blocked_sender == sender->tid &&
-		    ipc_tag == bdata->blocked_tag) {
-			spin_unlock(&receiver->ipc_block_lock);
-			return 1;
-		}
-	spin_unlock(&receiver->ipc_block_lock);
-	return 0;
-}
-
-/*
- * Adds and removes task/ipc_tag pairs to/from a task's receive block list.
- * The pairs on this list are prevented to have ipc rendezvous with the task.
- */
 int sys_ipc_control(struct syscall_args *regs)
 {
-	enum ipc_control_flag flag = (enum ipc_control_flag)regs->r0;
-	struct ipc_block_data *bdata;
-	struct ktcb *blocked_sender;
-	l4id_t blocked_tid = (l4id_t)regs->r1;
-	u32 blocked_tag = (u32)regs->r2;
-	int unblocked = 0;
-
-	switch (flag) {
-	case IPC_CONTROL_BLOCK:
-		bdata =	kmalloc(sizeof(struct ipc_block_data));
-		bdata->blocked_sender = blocked_tid;
-		bdata->blocked_tag = blocked_tag;
-		INIT_LIST_HEAD(&bdata->list);
-	       	BUG_ON(!(blocked_sender = find_task(blocked_tid)));
-		BUG_ON(ipc_blocked(current, blocked_sender));
-		spin_lock(&current->ipc_block_lock);
-		list_add(&bdata->list, &current->ipc_block_list);
-		spin_unlock(&current->ipc_block_lock);
-		break;
-	case IPC_CONTROL_UNBLOCK:
-		spin_lock(&current->ipc_block_lock);
-		list_for_each_entry(bdata, &current->ipc_block_list, list)
-			if (bdata->blocked_sender == blocked_tid &&
-			    bdata->blocked_tag == blocked_tag) {
-				unblocked = 1;
-				list_del(&bdata->list);
-				kfree(bdata);
-				break;
-			}
-		spin_unlock(&current->ipc_block_lock);
-		BUG_ON(!unblocked);
-		break;
-	default:
-		printk("%s: Unsupported request.\n", __FUNCTION__);
-	}
-	return 0;
+	return -ENOSYS;
 }
 
 int ipc_send(l4id_t recv_tid)
@@ -129,8 +52,8 @@ int ipc_send(l4id_t recv_tid)
 	spin_lock(&wqhs->slock);
 	spin_lock(&wqhr->slock);
 
-	/* Is my receiver waiting and accepting ipc from me? */
-	if (wqhr->sleepers > 0 && !ipc_blocked(receiver, current)) {
+	/* Is my receiver waiting? */
+	if (wqhr->sleepers > 0) {
 		struct waitqueue *wq, *n;
 		struct ktcb *sleeper;
 
@@ -185,14 +108,9 @@ int ipc_recv(l4id_t senderid)
 
 		list_for_each_entry_safe(wq, n, &wqhs->task_list, task_list) {
 			sleeper = wq->task;
-			/* Found a sender, is it unblocked for rendezvous? */
+			/* Found a sender */
 			if ((sleeper->tid == current->senderid) ||
-			    ((current->senderid == L4_ANYTHREAD) &&
-			     !ipc_blocked(current, sleeper))) {
-				/* Check for bug */
-				BUG_ON(sleeper->tid == current->senderid &&
-				       ipc_blocked(current, sleeper));
-
+			    (current->senderid == L4_ANYTHREAD)) {
 				list_del_init(&wq->task_list);
 				spin_unlock(&wqhr->slock);
 				spin_unlock(&wqhs->slock);

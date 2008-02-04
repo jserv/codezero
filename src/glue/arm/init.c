@@ -318,10 +318,6 @@ void init_inittask(char *name, struct task_ids *ids)
 	waitqueue_head_init(&task->wqh_send);
 	waitqueue_head_init(&task->wqh_recv);
 
-	/* Tasks' rendezvous blocked list */
-	spin_lock_init(&task->ipc_block_lock);
-	INIT_LIST_HEAD(&task->ipc_block_list);
-
 	/* Global hashlist that keeps all existing tasks */
 	add_task_global(task);
 

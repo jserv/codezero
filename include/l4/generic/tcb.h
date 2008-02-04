@@ -92,10 +92,6 @@ struct ktcb {
 	struct waitqueue_head wqh_recv;
 	struct waitqueue_head wqh_send;
 
-	/* Fields for checking parties blocked from doing ipc */
-	struct spinlock ipc_block_lock;
-	struct list_head ipc_block_list;
-
 	l4id_t senderid;	/* Sender checks this for ipc */
 };
 
