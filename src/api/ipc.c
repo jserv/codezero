@@ -154,28 +154,31 @@ int ipc_sendwait(l4id_t to)
 }
 
 /*
- * We currently only support send-receiving from the same task. The receive
- * stage is initiated with the special L4_IPC_TAG_IPCRETURN. This tag is used by
- * client tasks for receiving returned ipc results back. This is by far the most
- * common ipc pattern between client tasks and servers since every such ipc
- * request expects a result.
+ * Both sends and receives mregs in the same call. This is mainly by user
+ * tasks for client server communication with system servers.
+ *
+ * Timeline of client/server communication using ipc_sendrecv():
+ *
+ * (1) User task (client) calls ipc_sendrecv();
+ * (2) System task (server) calls ipc_recv() with from == ANYTHREAD.
+ * (3) Rendezvous occurs. Both tasks exchange mrs and leave rendezvous.
+ * (4,5) User task, immediately calls ipc_recv(), expecting a reply from server.
+ * (4,5) System task handles the request in userspace.
+ * (6) System task calls ipc_send() sending the return result.
+ * (7) Rendezvous occurs. Both tasks exchange mrs and leave rendezvous.
  */
 int ipc_sendrecv(l4id_t to, l4id_t from)
 {
 	int ret = 0;
 
 	if (to == from) {
-
-		/* IPC send request stage */
+		/* Send ipc request */
 		ipc_send(to);
 
 		/*
-		 * IPC result return stage.
-		 *
-		 * If the receiving task is scheduled here, (likely to be a
-		 * server which shouldn't block too long) it would only block
-		 * for a fixed amount of time between these send and receive
-		 * calls.
+		 * Get reply.
+		 * A client would block its server only very briefly
+		 * between these calls.
 		 */
 		ipc_recv(from);
 	} else {

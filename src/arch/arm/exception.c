@@ -59,7 +59,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 				 offsetof(syscall_args_t, r3));
 
 	/* Send ipc to the task's pager */
-	ipc_sendwait(current->pagerid);
+	ipc_sendrecv(current->pagerid, current->pagerid);
 
 	/*
 	 * Pager is now notified and handling the fault. We now sleep on

@@ -368,10 +368,11 @@ int do_anon_page(struct fault_data *fault)
  *  - page needs write access:
  *     action: read the page in, give write access.
  */
-void do_page_fault(struct fault_data *fault)
+int do_page_fault(struct fault_data *fault)
 {
 	unsigned int vma_flags = (fault->vma) ? fault->vma->flags : VM_NONE;
 	unsigned int reason = fault->reason;
+	int err;
 
 	/* vma flags show no access */
 	if (vma_flags & VM_NONE) {
@@ -394,9 +395,15 @@ void do_page_fault(struct fault_data *fault)
 
 	/* Handle legitimate read faults on the vma */
 	if (vma_flags & VMA_ANON)
-		do_anon_page(fault);
+		err = do_anon_page(fault);
 	else
-		do_file_page(fault);
+		err = do_file_page(fault);
+
+	/* Return the ipc and by doing so restart the faulty thread */
+	printf("Finished handling fault. Restarting thread by returning.\n");
+
+	l4_ipc_return(err);
+	return 0;
 }
 
 void vm_file_pager_read_page(struct fault_data *fault, void *dest_page)
