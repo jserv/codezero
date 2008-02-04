@@ -4,6 +4,7 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <stdio.h>
+#include <string.h>
 #include <kdata.h>
 #include <memory.h>
 #include <mm/alloc_page.h>
@@ -52,27 +53,28 @@ void init_mm(struct initdata *initdata)
 /* Create temporary run-time files in memory to test with mmap */
 void init_boot_files(struct initdata *initdata)
 {
-	struct bootdesc *bd = initdata->bootdesc;
-	int total_files = bd->total_images;
-	struct vm_file *memfile;
+	struct vm_file *f;
 	struct svc_image *img;
+	struct bootdesc *bd = initdata->bootdesc;
 
-	memfile = kzalloc(sizeof(struct vm_file) * total_files);
-	initdata->memfile = memfile;
-	BUG();
-	for (int i = BOOTDESC_IMAGE_START; i < total_files; i++) {
+	INIT_LIST_HEAD(&initdata->boot_file_list);
+	for (int i = BOOTDESC_IMAGE_START; i < bd->total_images; i++) {
 		img = &bd->images[i];
+		if (!(!strcmp(img->name, "fs0") || !strcmp(img->name, "test0")))
+			continue; /* Img is not what we want */
+
+		f = kzalloc(sizeof(*f));
+		INIT_LIST_HEAD(&f->list);
+		INIT_LIST_HEAD(&f->page_cache_list);
+		list_add(&f->list, &initdata->boot_file_list);
+
 		/*
-		 * I have left the i_addr as physical on purpose. The inode is
-		 * not a readily usable memory address, its simply a unique key
-		 * that represents that file. Here, we use the physical address
-		 * of the memory file as that key. The pager must take action in
-		 * order to make use of it.
+		 * For boot files, we use the physical address of the memory
+		 * file as its inode.
 		 */
-		memfile[i].inode.i_addr = img->phys_start;
-		memfile[i].length = img->phys_end - img->phys_start;
-		memfile[i].pager = &default_file_pager;
-		INIT_LIST_HEAD(&memfile[i].page_cache_list);
+		f->inode.i_addr = img->phys_start;
+		f->length = img->phys_end - img->phys_start;
+		f->pager = &default_file_pager;
 	}
 }
 

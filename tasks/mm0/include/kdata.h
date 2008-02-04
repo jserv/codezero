@@ -20,7 +20,7 @@
 
 struct initdata {
 	struct bootdesc *bootdesc;
-	struct vm_file *memfile;
+	struct list_head boot_file_list;
 	struct page_bitmap page_map;
 };
 

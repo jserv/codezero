@@ -7,7 +7,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-	. = 0x8000;
+	. = 0x2000000;
 	.text : { *(.text) }
 	.rodata : { *(.rodata) }
 	.rodata1 : { *(.rodata1) }
@@ -16,6 +16,9 @@ SECTIONS
 		_start_kernel = .;
 		*(.kernel)
 		_end_kernel = .;
+		_start_bootdesc = .;
+		*(.bootdesc)
+		_end_bootdesc = .;
 		_start_mm0 = .;
 		*(.mm0)
 		_end_mm0 = .;
@@ -25,9 +28,6 @@ SECTIONS
 		_start_test0 = .;
 		*(.test0)
 		_end_test0 = .;
-		_start_bootdesc = .;
-		*(.bootdesc)
-		_end_bootdesc = .;
 		*(.data)
 	}
 	.got : { *(.got) *(.got.plt) }

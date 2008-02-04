@@ -37,7 +37,7 @@ Codezero microkernel: Based on L4 microkernel principles, there are only a few
 system calls and the microkernel provides purely mechanism; threads and address
 spaces, and the methods of inter-process communication between them. Anything
 beyond these are policy and they are implemented in the userspace. Due to this
-rigorously simple design the microkernel can be used to design completely
+rigorously simple design the same microkernel can be used to design completely
 different operating systems. In terms of other features, the microkernel is
 preemptive, and smp-ready. Currently only synchronous communication is
 implemented, but this will change in the near future.

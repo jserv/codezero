@@ -5,7 +5,7 @@ from string import atoi
 from os import popen2
 from os.path import join
 
-symbols = ['bkpt_phys_to_virt']
+symbols = ['break_virtual']
 builddir = "build"
 loaderdir = "loader"
 image = "start.axf"

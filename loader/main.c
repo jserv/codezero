@@ -106,7 +106,6 @@ extern char _start_test0[];
 extern char _end_test0[];
 extern char _start_bootdesc[];
 extern char _end_bootdesc[];
-
 /* This is a kernel symbol exported to loader's linker script from kernel build */
 extern char bkpt_phys_to_virt[];
 
@@ -127,16 +126,21 @@ main(void)
 	arch_init();
 
 	printf("elf-loader:\tStarted\n");
+
 	printf("Loading the kernel...\n");
 	load_image(&kernel_entry, _start_kernel, _end_kernel);
-	printf("Loading the inittask\n");
-	load_image(&mm0_entry, _start_mm0, _end_mm0);
-	printf("Loading the roottask\n");
-	load_image(&fs0_entry, _start_fs0, _end_fs0);
-	printf("Loading the testtask\n");
-	load_image(&test0_entry, _start_test0, _end_test0);
+
 	printf("Loading the bootdesc\n");
 	load_image(&bootdesc_entry, _start_bootdesc, _end_bootdesc);
+
+	printf("Loading mm0\n");
+	load_image(&mm0_entry, _start_mm0, _end_mm0);
+
+	printf("Loading fs0\n");
+	load_image(&fs0_entry, _start_fs0, _end_fs0);
+
+	printf("Loading test0\n");
+	load_image(&test0_entry, _start_test0, _end_test0);
 
 	printf("elf-loader:\tkernel entry point is %p\n", kernel_entry);
 	arch_start_kernel(kernel_entry);

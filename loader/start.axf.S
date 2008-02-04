@@ -10,7 +10,7 @@
 
 .section .text
 .align 4
-.global bkpt_phys_to_virt;
-.type	bkpt_phys_to_virt, function;
-.equ	bkpt_phys_to_virt, 0x106f88
+.global break_virtual;
+.type	break_virtual, function;
+.equ	break_virtual, 0x106f9c
 

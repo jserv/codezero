@@ -83,7 +83,7 @@ struct inode {
 struct vm_file {
 	struct inode inode;
 	unsigned long length;
-
+	struct list_head list; /* List of all vm files in memory */
 	/* This is the cache of physical pages that this file has in memory. */
 	struct list_head page_cache_list;
 	struct vm_pager *pager;

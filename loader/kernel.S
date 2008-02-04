@@ -5,21 +5,21 @@
 .section .kernel
 
 .incbin "start.axf"
-.align 4
-.section .mm0
 
-.incbin "mm0.axf"
 .align 4
 .section .bootdesc
-
 .incbin "bootdesc.axf"
 
-.section .fs0
-
-.incbin "fs0.axf"
 .align 4
+.section .mm0
+.incbin "mm0.axf"
 
+.align 4
+.section .fs0
+.incbin "fs0.axf"
+
+.align 4
 .section .test0
-
 .incbin "test0.axf"
+
 .align 4

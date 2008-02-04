@@ -2,7 +2,7 @@ target remote localhost:1234
 load final.axf
 stepi
 sym final.axf
-break bkpt_phys_to_virt
+break break_virtual
 continue
 stepi
 sym start.axf

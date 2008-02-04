@@ -52,38 +52,34 @@ void dump_tasks(void)
 #endif
 
 
-void create_init_tcbs(struct initdata *initdata)
+struct tcb *create_init_tcb(struct tcb_head *tcbs)
 {
-	struct bootdesc *bd = initdata->bootdesc;
-	INIT_LIST_HEAD(&tcb_head.list);
-	tcb_head.total++;
+	struct tcb *task = kzalloc(sizeof(struct tcb));
 
-	for (int i = BOOTDESC_IMAGE_START; i < bd->total_images; i++) {
-		struct tcb *task = kzalloc(sizeof(struct tcb));
+	/* Ids will be acquired from the kernel */
+	task->tid = TASK_ID_INVALID;
+	task->spid = TASK_ID_INVALID;
+	task->swap_file = kzalloc(sizeof(struct vm_file));
+	task->swap_file->pager = &swap_pager;
+	vaddr_pool_init(task->swap_file_offset_pool, 0,
+		       	__pfn(TASK_SWAPFILE_MAXSIZE));
+	INIT_LIST_HEAD(&task->swap_file->page_cache_list);
+	INIT_LIST_HEAD(&task->list);
+	INIT_LIST_HEAD(&task->vm_area_list);
+	list_add_tail(&task->list, &tcbs->list);
+	tcbs->total++;
 
-		/* Ids will be acquired from the kernel */
-		task->tid = TASK_ID_INVALID;
-		task->spid = TASK_ID_INVALID;
-		task->swap_file = kzalloc(sizeof(struct vm_file));
-		task->swap_file->pager = &swap_pager;
-		vaddr_pool_init(task->swap_file_offset_pool, 0,
-			       	__pfn(TASK_SWAPFILE_MAXSIZE));
-		INIT_LIST_HEAD(&task->swap_file->page_cache_list);
-		INIT_LIST_HEAD(&task->list);
-		INIT_LIST_HEAD(&task->vm_area_list);
-		list_add_tail(&task->list, &tcb_head.list);
-
-	}
+	return task;
 }
 
-int start_init_tasks(struct initdata *initdata)
+int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 {
-	struct tcb *task;
+	struct vm_file *file;
 	int err;
-	int i = BOOTDESC_IMAGE_START;
 
-	list_for_each_entry(task, &tcb_head.list, list) {
-		struct vm_file *file = &initdata->memfile[i++];
+	INIT_LIST_HEAD(&tcb_head.list);
+	list_for_each_entry(file, &initdata->boot_file_list, list) {
+		struct tcb *task = create_init_tcb(tcbs);
 		unsigned int sp = align(USER_AREA_END - 1, 8);
 		unsigned int pc = USER_AREA_START;
 		struct task_ids ids = { .tid = task->tid, .spid = task->spid };
@@ -132,7 +128,7 @@ int start_init_tasks(struct initdata *initdata)
 
 		/* Start the thread */
 		if ((err = l4_thread_control(THREAD_RUN, &ids) < 0)) {
-			printf("l4_thread_control failed with %d\n");
+			printf("l4_thread_control failed with %d\n", err);
 			goto error;
 		}
 	}
@@ -144,10 +140,14 @@ error:
 
 void init_pm(struct initdata *initdata)
 {
-	create_init_tcbs(initdata);
-	start_init_tasks(initdata);
+	start_boot_tasks(initdata, &tcb_head);
 }
 
+/*
+ * During its initialisation FS0 wants to learn how many boot tasks
+ * are running, and their tids, which includes itself. This function
+ * provides that information.
+ */
 void send_task_data(l4id_t requester)
 {
 	struct tcb *t;

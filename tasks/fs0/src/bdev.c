@@ -6,7 +6,7 @@
 extern char _start_bdev[];
 extern char _end_bdev[];
 
-__attribute__((section(".data.memfs"))) char blockdevice[SZ_16MB];
+__attribute__((section(".data.memfs"))) char blockdevice[SZ_1MB*2];
 
 void *vfs_rootdev_open(void)
 {

@@ -133,8 +133,8 @@ void start_vm()
 		"add	r0, pc, %0	\n"
 		/* Special symbol that is extracted and included in the loader.
 		 * Debuggers can break on it to load the virtual symbol table */
-		".global bkpt_phys_to_virt;\n"
-		"bkpt_phys_to_virt:\n"
+		".global break_virtual;\n"
+		"break_virtual:\n"
 		"mov	pc, r0		\n" /* (r0 has next instruction) */
 		:
 		: "r" (KERNEL_OFFSET)

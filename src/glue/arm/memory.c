@@ -39,8 +39,8 @@ unsigned int space_flags_to_ptflags(unsigned int flags)
 	BUG(); return 0;
 }
 
-#define NUM_PMD_TABLES				6
-#define NUM_PGD_TABLES				8
+#define NUM_PMD_TABLES				7
+//#define NUM_PGD_TABLES				8
 
 /* Initial first level page table to provide startup mappings */
 SECTION(".kspace.pgd") pgd_table_t kspace;
