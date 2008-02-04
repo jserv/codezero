@@ -1,0 +1,13 @@
+cd build
+#arm-none-eabi-insight &
+/opt/bin/qemu-system-arm -s -kernel final.axf -nographic -m 128 -M versatilepb &
+arm-none-eabi-insight ; pkill qemu-system-arm
+#arm-none-eabi-gdb ; pkill qemu-system-arm
+cd ..
+
+
+# TODO:
+# insight works ok if gdbinit script is run from the insight
+# command window. Then one needs to break at bkpt_phys_to_virt and do:
+# sym start.axf
+# Then continue execution to see all symbols. This must be done automatic.

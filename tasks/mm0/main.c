@@ -47,7 +47,7 @@ void handle_requests(void)
 
 	/* Read mrs not used by syslib */
 	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
-		mr[i] = read_mr(i);
+		mr[i] = read_mr(MR_UNUSED_START + i);
 
 	switch(tag) {
 	case L4_IPC_TAG_WAIT:

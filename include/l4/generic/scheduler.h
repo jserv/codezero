@@ -11,8 +11,8 @@
 #include INC_GLUE(memory.h)
 
 /* Ticks per second, try ticks = 1000 + timeslice = 1 for regressed preemption test. */
-#define HZ					100
-#define	TASK_TIMESLICE_DEFAULT			20
+#define HZ					10
+#define	TASK_TIMESLICE_DEFAULT			100
 /* #define	TASK_TIMESLICE_DEFAULT			(HZ/100)*/
 
 static inline struct ktcb *current_task(void)
