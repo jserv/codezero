@@ -18,6 +18,8 @@
 #define MAP_SVC_DEFAULT_FLAGS	MAP_SVC_RW_FLAGS
 #define MAP_IO_DEFAULT_FLAGS	MAP_SVC_IO_FLAGS
 
+#if defined (__KERNEL__)
 int check_access(unsigned long vaddr, unsigned long size, unsigned int flags);
+#endif
 
 #endif /* __SPACE_H__ */

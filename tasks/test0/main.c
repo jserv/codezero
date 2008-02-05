@@ -9,28 +9,31 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/kip.h>
 #include <l4lib/utcb.h>
-#include <l4/api/ipc.h>
+#include <l4lib/ipcdefs.h>
 #include <tests.h>
 
 #define __TASKNAME__			"test0"
 
 void wait_pager(l4id_t partner)
 {
-	u32 tag = L4_IPC_TAG_WAIT;
 	printf("%s: Syncing with pager.\n", __TASKNAME__);
-	l4_send(partner, tag);
+	l4_send(partner, L4_IPC_TAG_WAIT);
 	printf("Pager synced with us.\n");
 }
 
 void main(void)
 {
+	printf("\n%s: Started.\n", __TASKNAME__);
 	/* Sync with pager */
-	wait_pager(0);
+	while (1)
+		wait_pager(0);
 
+#if 0
 	/* Check mmap/munmap */
 	mmaptest();
 
 	/* Check shmget/shmat/shmdt */
 	shmtest();
+#endif
 }
 

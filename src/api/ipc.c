@@ -139,20 +139,6 @@ int ipc_recv(l4id_t senderid)
 	return 0;
 }
 
-/* FIXME: REMOVE: remove this completely and replace by ipc_sendrecv() */
-int ipc_sendwait(l4id_t to)
-{
-	unsigned int *mregs = KTCB_REF_MR0(current);
-
-	/* Send actual message */
-	ipc_send(to);
-
-	/* Send wait message */
-	mregs[L4_IPC_TAG_MR_OFFSET] = L4_IPC_TAG_WAIT;
-	ipc_send(to);
-	return 0;
-}
-
 /*
  * Both sends and receives mregs in the same call. This is mainly by user
  * tasks for client server communication with system servers.

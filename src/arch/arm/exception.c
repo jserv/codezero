@@ -22,7 +22,7 @@
  * for all ipc parties.
  */
 #define	MR_TAG		0
-#define MR_SENDERID	1
+#define MR_SENDER	1
 #define MR_UNUSED_START	2
 
 /* Send data fault ipc to the faulty task's pager */
@@ -30,7 +30,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 {
 	/* mr[0] has the fault tag. The rest is the fault structure */
 	u32 mr[MR_TOTAL] = { [MR_TAG] = L4_IPC_TAG_PFAULT,
-			     [MR_SENDERID] = current->tid };
+			     [MR_SENDER] = current->tid };
 	fault_kdata_t *fault = (fault_kdata_t *)&mr[MR_UNUSED_START];
 
 	/* Fill in fault information to pass over during ipc */

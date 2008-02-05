@@ -18,7 +18,7 @@
 /*** IPC Tags used between server tasks ***/
 
 /* For ping ponging */
-#define L4_IPC_TAG_PINGPONG		3
+#define L4_IPC_TAG_WAIT			3
 
 /* To negotiate a shared memory mapping */
 #define L4_IPC_TAG_SHM			4
