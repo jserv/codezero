@@ -18,4 +18,6 @@
 #define MAP_SVC_DEFAULT_FLAGS	MAP_SVC_RW_FLAGS
 #define MAP_IO_DEFAULT_FLAGS	MAP_SVC_IO_FLAGS
 
+int check_access(unsigned long vaddr, unsigned long size, unsigned int flags);
+
 #endif /* __SPACE_H__ */

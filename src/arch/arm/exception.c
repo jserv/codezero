@@ -1,7 +1,7 @@
 /*
- * Debug print support for unexpected exceptions
+ * Memory exception handling in process context.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
@@ -62,9 +62,17 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	ipc_sendrecv(current->pagerid, current->pagerid);
 
 	/*
-	 * Pager is now notified and handling the fault. We now sleep on
-	 * another queue.
+	 * FIXME: CHECK TASK KILL REPLY !!!
+	 * Here, pager has handled the request and sent us back a message.
+	 * It is natural that a pager might want to kill the task due to
+	 * illegal access. Here we ought to check this and kill it rather
+	 * than return back to it.
 	 */
+}
+
+int pager_pagein_request(unsigned long addr, unsigned long size, unsigned int flags)
+{
+	return 0;
 }
 
 int check_aborts(u32 faulted_pc, u32 fsr, u32 far)

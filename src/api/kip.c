@@ -1,12 +1,12 @@
 /*
  * Kernel Interface Page and sys_kdata_read()
  *
- * Copyright (C) 2007 Bahadir Balban
- *
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
-
 #include <l4/generic/tcb.h>
 #include <l4/generic/physmem.h>
+#include <l4/generic/space.h>
+#include <l4/api/errno.h>
 #include INC_API(kip.h)
 #include INC_API(syscall.h)
 #include INC_GLUE(memlayout.h)
@@ -19,30 +19,25 @@ UNIT("kip") struct kip kip;
 int __sys_kread(int rd, void *dest)
 {
 	int err = 0;
+	unsigned long vaddr = (unsigned long)dest;
 
 	switch(rd) {
 	case KDATA_PAGE_MAP:
-		/*
-		 * FIXME:FIXME: Check if address is mapped here first!!!
-		 * Also check if process has enough buffer for physmem to fit!!!
-		 */
 		printk("Handling KDATA_PAGE_MAP request.\n");
+		if (check_access(vaddr, sizeof(page_map), MAP_USR_RW_FLAGS) < 0)
+			return -EINVAL;
 		memcpy(dest, &page_map, sizeof(page_map));
 		break;
 	case KDATA_BOOTDESC:
 		printk("Handling KDATA_BOOTDESC request.\n");
-		/*
-		 * FIXME:FIXME: Check if address is mapped here first!!!
-		 * Also check if process has enough buffer for physmem to fit!!!
-		 */
+		if (check_access(vaddr, bootdesc->desc_size, MAP_USR_RW_FLAGS) < 0)
+			return -EINVAL;
 		memcpy(dest, bootdesc, bootdesc->desc_size);
 		break;
 	case KDATA_BOOTDESC_SIZE:
 		printk("Handling KDATA_BOOTDESC_SIZE request.\n");
-		/*
-		 * FIXME:FIXME: Check if address is mapped here first!!!
-		 * Also check if process has enough buffer for physmem to fit!!!
-		 */
+		if (check_access(vaddr, sizeof(unsigned int), MAP_USR_RW_FLAGS) < 0)
+			return -EINVAL;
 		*(unsigned int *)dest = bootdesc->desc_size;
 		break;
 
@@ -69,10 +64,8 @@ int sys_kread(struct syscall_args *a)
 	int rd = (int)arg[0];	/* Request descriptor */
 
 	/* Error checking */
-	if ((rd < 0) || (addr <= 0)) {
-		printk("%s: Invalid arguments.\n", __FUNCTION__);
-		return -1;
-	}
+	if (rd < 0)
+		return -EINVAL;
 	return __sys_kread(rd, addr);
 }
 

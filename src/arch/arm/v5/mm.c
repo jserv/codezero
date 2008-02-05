@@ -191,54 +191,6 @@ void attach_pmd(pgd_table_t *pgd, pmd_table_t *pmd, unsigned int vaddr)
 	pgd->entry[pgd_i] |= PGD_TYPE_COARSE;
 }
 
-/*
- * Maps @paddr to @vaddr, covering @size bytes also allocates new pmd if
- * necessary. This flavor explicitly supplies the pgd to modify. This is useful
- * when modifying userspace of processes that are not currently running. (Only
- * makes sense for userspace mappings since kernel mappings are common.)
- */
-void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
-		     unsigned int size, unsigned int flags,
-		     pgd_table_t *pgd)
-{
-	pmd_table_t *pmd;
-	unsigned int numpages = (size >> PAGE_BITS);
-
-	if (size < PAGE_SIZE) {
-		printascii("Error: Mapping size must be in bytes not pages.\n");
-		while(1);
-	}
-	if (size & PAGE_MASK)
-		numpages++;
-
-	/* Convert generic map flags to pagetable-specific */
-	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
-
-	/* Map all consecutive pages that cover given size */
-	for (int i = 0; i < numpages; i++) {
-		/* Check if another mapping already has a pmd attached. */
-		pmd = pmd_exists(pgd, vaddr);
-		if (!pmd) {
-			/*
-			 * If this is the first vaddr in
-			 * this pmd, allocate new pmd
-			 */
-			pmd = alloc_pmd();
-
-			/* Attach pmd to its entry in pgd */
-			attach_pmd(pgd, pmd, vaddr);
-		}
-
-		/* Attach paddr to this pmd */
-		__add_mapping(page_align(paddr),
-			      page_align(vaddr), flags, pmd);
-
-		/* Go to the next page to be mapped */
-		paddr += PAGE_SIZE;
-		vaddr += PAGE_SIZE;
-	}
-}
-
 #if 0
 /* Maps @paddr to @vaddr, covering @size bytes,
  * also allocates new pmd if necessary. */
@@ -326,10 +278,91 @@ void add_mapping(unsigned int paddr, unsigned int vaddr,
 }
 #endif
 
+/*
+ * Maps @paddr to @vaddr, covering @size bytes also allocates new pmd if
+ * necessary. This flavor explicitly supplies the pgd to modify. This is useful
+ * when modifying userspace of processes that are not currently running. (Only
+ * makes sense for userspace mappings since kernel mappings are common.)
+ */
+void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
+		     unsigned int size, unsigned int flags,
+		     pgd_table_t *pgd)
+{
+	pmd_table_t *pmd;
+	unsigned int numpages = (size >> PAGE_BITS);
+
+	if (size < PAGE_SIZE) {
+		printascii("Error: Mapping size must be in bytes not pages.\n");
+		while(1);
+	}
+	if (size & PAGE_MASK)
+		numpages++;
+
+	/* Convert generic map flags to pagetable-specific */
+	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
+
+	/* Map all consecutive pages that cover given size */
+	for (int i = 0; i < numpages; i++) {
+		/* Check if another mapping already has a pmd attached. */
+		pmd = pmd_exists(pgd, vaddr);
+		if (!pmd) {
+			/*
+			 * If this is the first vaddr in
+			 * this pmd, allocate new pmd
+			 */
+			pmd = alloc_pmd();
+
+			/* Attach pmd to its entry in pgd */
+			attach_pmd(pgd, pmd, vaddr);
+		}
+
+		/* Attach paddr to this pmd */
+		__add_mapping(page_align(paddr),
+			      page_align(vaddr), flags, pmd);
+
+		/* Go to the next page to be mapped */
+		paddr += PAGE_SIZE;
+		vaddr += PAGE_SIZE;
+	}
+}
+
 void add_mapping(unsigned int paddr, unsigned int vaddr,
 		 unsigned int size, unsigned int flags)
 {
 	add_mapping_pgd(paddr, vaddr, size, flags, current->pgd);
+}
+
+/*
+ * Checks if a virtual address range has same or more permissive
+ * flags than the given ones, returns 0 if not, and 1 if OK.
+ */
+int check_mapping_pgd(unsigned long vaddr, unsigned long size,
+		      unsigned int flags, pgd_table_t *pgd)
+{
+	unsigned int npages = __pfn(align_up(size, PAGE_SIZE));
+	pte_t pte;
+
+	/* Convert generic map flags to pagetable-specific */
+	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
+	
+	for (int i = 0; i < npages; i++) {
+		pte = virt_to_pte(vaddr + i * PAGE_SIZE);
+
+		/* Check if pte perms are equal or gt given flags */
+		if ((pte & PTE_PROT_MASK) >= (flags & PTE_PROT_MASK))
+			continue;
+		else
+			return 0;
+	}
+
+	return 1;
+}
+
+
+int check_mapping(unsigned long vaddr, unsigned long size,
+		  unsigned int flags)
+{
+	return check_mapping_pgd(vaddr, size, flags, current->pgd);
 }
 
 /* FIXME: Empty PMDs should be returned here !!! */

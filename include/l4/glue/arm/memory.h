@@ -116,6 +116,12 @@ void remove_mapping(unsigned long vaddr);
 void remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd);
 void prealloc_phys_pagedesc(void);
 
+int check_mapping_pgd(unsigned long vaddr, unsigned long size,
+		      unsigned int flags, pgd_table_t *pgd);
+
+int check_mapping(unsigned long vaddr, unsigned long size,
+		  unsigned int flags);
+
 void copy_pgd_kern_all(pgd_table_t *);
 pte_t virt_to_pte(unsigned long virtual);
 pte_t virt_to_pte_from_pgd(unsigned long virtual, pgd_table_t *pgd);

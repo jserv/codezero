@@ -85,4 +85,7 @@ static inline int in_user()
 	return !in_kernel();
 }
 
+int pager_pagein_request(unsigned long vaddr, unsigned long size,
+			 unsigned int flags);
+
 #endif
