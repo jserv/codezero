@@ -7,8 +7,10 @@
 #include INC_GLUE(memlayout.h)
 #include INC_ARCH(exception.h)
 #include <l4/generic/space.h>
+#include <l4/generic/tcb.h>
 #include <l4/api/space.h>
 #include <l4/api/errno.h>
+#include <l4/api/kip.h>
 
 /*
  * Checks whether the given user address is a valid userspace address.
@@ -23,10 +25,14 @@ int check_access(unsigned long vaddr, unsigned long size, unsigned int flags)
 	/* Do not allow ridiculously big sizes */
 	if (size >= USER_AREA_SIZE)
 		return -EINVAL;
-
 	/* Check if in user range, but this is more up to the pager to decide */
-	if (!(vaddr >= USER_AREA_START && vaddr < USER_AREA_END))
-		return -EINVAL;
+	if (current->tid == PAGER_TID) {
+		if (!(vaddr >= INITTASK_AREA_START && vaddr < INITTASK_AREA_END))
+			return -EINVAL;
+	} else {
+		if (!(vaddr >= USER_AREA_START && vaddr < USER_AREA_END))
+			return -EINVAL;
+	}
 
 	/* If not mapped, ask pager whether this is possible */
 	if (!check_mapping(vaddr, size, flags))
