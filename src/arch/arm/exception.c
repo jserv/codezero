@@ -72,6 +72,17 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 
 int pager_pagein_request(unsigned long addr, unsigned long size, unsigned int flags)
 {
+	u32 abort;
+	unsigned long npages = __pfn(align_up(size, PAGE_SIZE));
+
+	set_abort_type(abort, ARM_DABT);
+
+	printk("%s: Kernel initiating paging-in requests\n", __FUNCTION__);
+
+	/* For every page to be used by the kernel send a page-in request */
+	for (int i = 0; i < npages; i++)
+		fault_ipc_to_pager(0, abort, addr + (i * PAGE_SIZE));
+
 	return 0;
 }
 
