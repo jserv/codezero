@@ -33,7 +33,7 @@ void init_mm(struct initdata *initdata)
 	printf("%s: Initialised page allocator.\n", __TASKNAME__);
 
 	/* Initialise the zero page */
-	init_zero_page();
+	init_devzero();
 	printf("%s: Initialised zero page.\n", __TASKNAME__);
 
 	init_utcb();

@@ -22,7 +22,8 @@ void init_mm_descriptors(struct page_bitmap *page_map,
 			 struct bootdesc *bootdesc, struct membank *membank);
 void init_physmem(struct initdata *initdata, struct membank *membank);
 
-void init_zero_page(void);
+void init_devzero(void);
+struct vm_file *get_devzero(void);
 void *get_zero_page(void);
 void put_zero_page(void);
 

@@ -71,6 +71,7 @@ void handle_fs_requests(void)
 
 void main(void)
 {
+	//	printf("\n%s: Started.\n", __FUNCTION__);
 	initialise();
 
 	wait_pager(PAGER_TID);

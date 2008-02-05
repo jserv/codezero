@@ -15,6 +15,7 @@
 
 static void *zpage_p;
 static struct page *zpage;
+static struct vm_file devzero;
 
 void init_zero_page(void)
 {
@@ -33,6 +34,21 @@ void init_zero_page(void)
 
 	/* Update page struct. All other fields are zero */
 	zpage->count++;
+}
+
+void init_devzero(void)
+{
+	init_zero_page();
+
+	INIT_LIST_HEAD(&devzero.list);
+	INIT_LIST_HEAD(&devzero.page_cache_list);
+	devzero.length = (unsigned int)-1;
+	devzero.inode.i_addr = -1;
+}
+
+struct vm_file *get_devzero(void)
+{
+	return &devzero;
 }
 
 void *get_zero_page(void)

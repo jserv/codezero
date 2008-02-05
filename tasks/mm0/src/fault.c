@@ -317,7 +317,6 @@ int do_anon_page(struct fault_data *fault)
 
 		/* Add the page to it's owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
-		BUG();
 		list_add(&page->list, &page->owner->page_cache_list);
 
 		/* The offset of this page in its owner file */
@@ -400,8 +399,6 @@ int do_page_fault(struct fault_data *fault)
 		err = do_file_page(fault);
 
 	/* Return the ipc and by doing so restart the faulty thread */
-	printf("Finished handling fault. Restarting thread by returning.\n");
-
 	l4_ipc_return(err);
 	return 0;
 }

@@ -9,9 +9,8 @@
 #include <posix/sys/types.h>
 #include <task.h>
 #include <mmap.h>
+#include <memory.h>
 #include <l4lib/arch/syscalls.h>
-
-static struct vm_file devzero;
 
 /* Swap related bookkeeping.
 static struct vm_file shm_swap_file;
@@ -253,7 +252,6 @@ int vma_swapfile_realloc(struct vm_area *vma, unsigned long pfn_start,
 }
 
 
-
 /* This shrinks the vma from *one* end only, either start or end */
 int vma_shrink(struct vm_area *vma, struct tcb *task, unsigned long pfn_start,
 	       unsigned long pfn_end)
@@ -441,7 +439,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 
 	if (!mapfile) {
 	       if (flags & VMA_ANON) {
-			mapfile = &devzero;
+			mapfile = get_devzero();
 			f_offset = 0;
 	       } else
 			BUG();
