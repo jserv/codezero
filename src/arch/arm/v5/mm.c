@@ -173,12 +173,7 @@ pte_t virt_to_pte_from_pgd(unsigned long virtual, pgd_table_t *pgd)
 /* Convert a virtual address to a pte if it exists in the page tables. */
 pte_t virt_to_pte(unsigned long virtual)
 {
-	pmd_table_t *pmd = pmd_exists(current->pgd, virtual);
-
-	if (pmd)
-		return (pte_t)pmd->entry[PMD_INDEX(virtual)];
-	else
-		return (pte_t)0;
+	return virt_to_pte_from_pgd(virtual, current->pgd);
 }
 
 void attach_pmd(pgd_table_t *pgd, pmd_table_t *pmd, unsigned int vaddr)
@@ -190,93 +185,6 @@ void attach_pmd(pgd_table_t *pgd, pmd_table_t *pmd, unsigned int vaddr)
 	pgd->entry[pgd_i] = (pgd_t)pmd_phys;
 	pgd->entry[pgd_i] |= PGD_TYPE_COARSE;
 }
-
-#if 0
-/* Maps @paddr to @vaddr, covering @size bytes,
- * also allocates new pmd if necessary. */
-void add_boot_mapping(unsigned int paddr, unsigned int vaddr,
-		 unsigned int size, unsigned int flags)
-{
-	pmd_table_t *pmd;
-	unsigned int numpages = (size >> PAGE_BITS);
-
-	if (size < PAGE_SIZE) {
-		printascii("Error: Mapping size must be in bytes not pages.\n");
-		while(1);
-	}
-	if (size & PAGE_MASK)
-		numpages++;
-
-	/* Convert generic map flags to pagetable-specific */
-	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
-
-	/* Map all consecutive pages that cover given size */
-	for (int i = 0; i < numpages; i++) {
-		/* Check if another vaddr in same pmd already
-		 * has a pmd attached. */
-		pmd = pmd_exists(current->pgd, vaddr);
-		if (!pmd) {
-			/* If this is the first vaddr in
-			 * this pmd, allocate new pmd */
-			pmd = alloc_boot_pmd();
-
-			/* Attach pmd to its entry in pgd */
-			attach_pmd(current->pgd, pmd, vaddr);
-		}
-
-		/* Attach paddr to this pmd */
-		__add_mapping(page_align(paddr),
-			      page_align(vaddr), flags, pmd);
-
-		/* Go to the next page to be mapped */
-		paddr += PAGE_SIZE;
-		vaddr += PAGE_SIZE;
-	}
-}
-#endif
-#if 0
-/* Maps @paddr to @vaddr, covering @size bytes,
- * also allocates new pmd if necessary. */
-void add_mapping(unsigned int paddr, unsigned int vaddr,
-		 unsigned int size, unsigned int flags)
-{
-	pmd_table_t *pmd;
-	unsigned int numpages = (size >> PAGE_BITS);
-
-	if (size < PAGE_SIZE) {
-		printascii("Error: Mapping size must be in bytes not pages.\n");
-		while(1);
-	}
-	if (size & PAGE_MASK)
-		numpages++;
-
-	/* Convert generic map flags to pagetable-specific */
-	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
-
-	/* Map all consecutive pages that cover given size */
-	for (int i = 0; i < numpages; i++) {
-		/* Check if another vaddr in same pmd already
-		 * has a pmd attached. */
-		pmd = pmd_exists(current->pgd, vaddr);
-		if (!pmd) {
-			/* If this is the first vaddr in
-			 * this pmd, allocate new pmd */
-			pmd = alloc_pmd();
-
-			/* Attach pmd to its entry in pgd */
-			attach_pmd(current->pgd, pmd, vaddr);
-		}
-
-		/* Attach paddr to this pmd */
-		__add_mapping(page_align(paddr),
-			      page_align(vaddr), flags, pmd);
-
-		/* Go to the next page to be mapped */
-		paddr += PAGE_SIZE;
-		vaddr += PAGE_SIZE;
-	}
-}
-#endif
 
 /*
  * Maps @paddr to @vaddr, covering @size bytes also allocates new pmd if
