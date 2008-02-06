@@ -105,7 +105,11 @@ void handle_requests(void)
 	}
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "
-		       "received. Ignoring.\n", __TASKNAME__, tag);
+		       "received from (%d). Full mr reading: "
+		       "%u, %u, %u, %u, %u, %u. Ignoring.\n",
+		       __TASKNAME__, tag, sender, read_mr(0),
+		       read_mr(1), read_mr(2), read_mr(3), read_mr(4),
+		       read_mr(5));
 	}
 }
 

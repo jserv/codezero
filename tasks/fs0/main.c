@@ -71,7 +71,7 @@ void handle_fs_requests(void)
 
 void main(void)
 {
-	printf("\n\n%s: Started.\n", __TASKNAME__);
+	printf("\n\n%s: Started with tid: %d\n", __TASKNAME__, self_tid());
 
 	initialise();
 

@@ -196,6 +196,20 @@ static inline int __sys_ipc(l4id_t to, l4id_t from, unsigned int ipc_type)
 	return ret;
 }
 
+void printk_sysregs(struct syscall_args *regs)
+{
+	printk("System call registers for tid: %d\n", current->tid);
+	printk("R0: %x\n", regs->r0);
+	printk("R1: %x\n", regs->r1);
+	printk("R2: %x\n", regs->r2);
+	printk("R3: %x\n", regs->r3);
+	printk("R4: %x\n", regs->r4);
+	printk("R5: %x\n", regs->r5);
+	printk("R6: %x\n", regs->r6);
+	printk("R7: %x\n", regs->r7);
+	printk("R8: %x\n", regs->r8);
+}
+
 /*
  * sys_ipc has multiple functions. In a nutshell:
  * - Copies message registers from one thread to another.

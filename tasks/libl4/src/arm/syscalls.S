@@ -43,12 +43,12 @@ END_PROC(l4_kread)
 
 /*
  * Inter-process communication. Loads message registers as arguments before the call,
- * and stores them as results after the call. @r0 = to, @r1 = from, @r2 = tag.
+ * and stores them as results after the call. @r0 = to, @r1 = from.
  */
 BEGIN_PROC(l4_ipc)
 	stmfd	sp!, {r4-r8,lr}		@ Save context.
 	utcb_address r12		@ Get utcb address.
-	ldmib	r12!, {r3-r8}		@ Load 5 Message registers from utcb. MR1-MR5
+	ldmia	r12!, {r3-r8}		@ Load 6 Message registers from utcb. MR1-MR5
 	ldr	r12, =__l4_ipc
 	mov	lr, pc
 	ldr	pc, [r12]
