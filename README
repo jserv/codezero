@@ -90,7 +90,7 @@ paging. There are existing well-designed embedded OS'es, but Codezero provides
 an alternative that will follow the open source development principles more
 closely. This will prove useful because many embedded systems still use older
 development methods and the right open source methodology would prove favorable
-in the fast-paced nature of development (Linux has already proven that).
+in the fast-paced nature of development.
 
 Finally, there are new ideas in OS literature that would improve Unix but aren't
 implemented either because they have no existing users or may break compatibility
