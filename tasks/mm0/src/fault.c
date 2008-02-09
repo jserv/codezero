@@ -118,8 +118,8 @@ int do_file_page(struct fault_data *fault)
 		BUG_ON(!list_empty(&page->list));
 		list_add(&page->list, &page->owner->page_cache_list);
 		spin_unlock(&page->lock);
-		printf("%s: Mapped new page @ 0x%x to task: %d\n", __TASKNAME__,
-		       fault->address, fault->task->tid);
+		//printf("%s: Mapped new page @ 0x%x to task: %d\n", __TASKNAME__,
+		//       fault->address, fault->task->tid);
 	/* Upgrade RO page to non-cow write */
 	} else if ((reason & VM_WRITE) && (pte_flags & VM_READ)
 		   && !(vma_flags & VMA_COW)) {

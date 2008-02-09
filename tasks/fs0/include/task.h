@@ -6,8 +6,9 @@
 
 #include <lib/idpool.h>
 #include <l4/lib/list.h>
+#include <l4/api/kip.h>
 
-#define __TASKNAME__			"FS0"
+#define __TASKNAME__			__VFSNAME__
 
 #define TASK_OFILES_MAX			32
 
@@ -20,6 +21,6 @@ struct tcb {
 };
 
 struct tcb *find_task(int tid);
-void init_task_data(void);
+int init_task_data(void);
 
 #endif /* __FS0_TASK_H__ */

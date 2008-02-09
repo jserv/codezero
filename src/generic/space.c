@@ -25,6 +25,7 @@ int check_access(unsigned long vaddr, unsigned long size, unsigned int flags)
 	/* Do not allow ridiculously big sizes */
 	if (size >= USER_AREA_SIZE)
 		return -EINVAL;
+
 	/* Check if in user range, but this is more up to the pager to decide */
 	if (current->tid == PAGER_TID) {
 		if (!(vaddr >= INITTASK_AREA_START && vaddr < INITTASK_AREA_END))

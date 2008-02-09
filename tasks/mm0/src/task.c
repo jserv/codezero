@@ -207,13 +207,13 @@ void send_task_data(l4id_t requester)
 	}
 
 	/* First word is total number of tcbs */
-	write_mr(L4SYS_ARG0, tcb_head.total);
+	write_mr(tcb_head.total, L4SYS_ARG0);
 
 	/* Write each tcb's tid */
 	li = 0;
 	list_for_each_entry(t, &tcb_head.list, list) {
 		BUG_ON(li >= MR_USABLE_TOTAL);
-		write_mr(L4SYS_ARG1 + li, t->tid);
+		write_mr(t->tid, L4SYS_ARG1 + li);
 		li++;
 	}
 

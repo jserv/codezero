@@ -56,10 +56,13 @@ int receive_pager_taskdata(l4id_t *tdata)
 		       __FUNCTION__);
 		BUG();
 	}
+	// printf("%s: %d Total tasks.\n", __FUNCTION__, tdata[0]);
 
 	/* Now read task ids. */
-	for (int i = 0; i < (int)tdata[0]; i++)
+	for (int i = 0; i < (int)tdata[0]; i++) {
 		tdata[1 + i] = (l4id_t)read_mr(L4SYS_ARG1 + i);
+		// printf("%s: Task id: %d\n", __FUNCTION__, tdata[1 + i]);
+	}
 
 	return 0;
 }
@@ -92,7 +95,7 @@ int init_task_structs(l4id_t *tdata)
 	return 0;
 }
 
-void init_task_data(void)
+int init_task_data(void)
 {
 	l4id_t tdata[MR_UNUSED_TOTAL];
 
@@ -102,6 +105,8 @@ void init_task_data(void)
 	BUG_ON(receive_pager_taskdata(tdata) < 0);
 
 	/* Initialise local task structs using this info */
-	init_task_structs(tdata);
+	BUG_ON(init_task_structs(tdata) < 0);
+
+	return 0;
 }
 

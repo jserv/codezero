@@ -34,7 +34,7 @@ void init_mm(struct initdata *initdata)
 
 	/* Initialise the zero page */
 	init_devzero();
-	printf("%s: Initialised zero page.\n", __TASKNAME__);
+	printf("%s: Initialised devzero.\n", __TASKNAME__);
 
 	init_utcb();
 	printf("%s: Initialised own utcb.\n", __TASKNAME__);

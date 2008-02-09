@@ -8,11 +8,11 @@
 #include <l4lib/ipcdefs.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
-#include <vfs.h>
 #include <lib/malloc.h>
 #include <string.h>
 #include <stdio.h>
 #include <task.h>
+#include <vfs.h>
 
 /*
  * This notifies mm0 that this is the fd that refers to this vnode number
@@ -26,9 +26,9 @@ int send_pager_opendata(l4id_t sender, int fd, unsigned long vnum)
 {
 	int err;
 
-	write_mr(L4SYS_ARG0, sender);
-	write_mr(L4SYS_ARG1, fd);
-	write_mr(L4SYS_ARG2, vnum);
+	write_mr(sender, L4SYS_ARG0);
+	write_mr(fd, L4SYS_ARG1);
+	write_mr(vnum, L4SYS_ARG2);
 
 	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_OPENDATA)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);

@@ -46,8 +46,15 @@ int sys_ipc_control(struct syscall_args *regs)
 int ipc_send(l4id_t recv_tid)
 {
 	struct ktcb *receiver = find_task(recv_tid);
-	struct waitqueue_head *wqhs = &receiver->wqh_send;
-	struct waitqueue_head *wqhr = &receiver->wqh_recv;
+	struct waitqueue_head *wqhs, *wqhr;
+
+	if (!receiver) {
+		printk("%s: tid: %d, no such task.\n", __FUNCTION__,
+		       recv_tid);
+		return -EINVAL;
+	}
+	wqhs = &receiver->wqh_send;
+	wqhr = &receiver->wqh_recv;
 
 	spin_lock(&wqhs->slock);
 	spin_lock(&wqhr->slock);
