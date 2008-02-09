@@ -10,7 +10,7 @@ static inline unsigned int read_mr(int offset)
 	return __L4_ARM_Utcb()->mr[offset];
 }
 
-static inline void write_mr(unsigned int val, unsigned int offset)
+static inline void write_mr(unsigned int offset, unsigned int val)
 {
 	__L4_ARM_Utcb()->mr[offset] = val;
 }

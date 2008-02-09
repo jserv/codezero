@@ -39,7 +39,7 @@ static inline l4id_t l4_get_sender(void)
 
 static inline void l4_set_sender(l4id_t id)
 {
-	write_mr((unsigned int)id, MR_SENDER);
+	write_mr(MR_SENDER, (unsigned int)id);
 }
 
 static inline unsigned int l4_get_tag(void)
@@ -49,7 +49,7 @@ static inline unsigned int l4_get_tag(void)
 
 static inline void l4_set_tag(unsigned int tag)
 {
-	write_mr(tag, MR_TAG);
+	write_mr(MR_TAG, tag);
 }
 
 static inline l4id_t self_tid(void)
