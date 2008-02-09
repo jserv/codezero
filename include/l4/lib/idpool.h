@@ -2,8 +2,10 @@
 #define __IDPOOL_H__
 
 #include <l4/lib/bit.h>
+#include <l4/lib/spinlock.h>
 
 struct id_pool {
+	struct spinlock lock;
 	int nwords;
 	u32 bitmap[];
 };
