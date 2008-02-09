@@ -50,3 +50,15 @@ int check_and_clear_bit(u32 *word, int bit)
 	}
 }
 
+int check_and_set_bit(u32 *word, int bit)
+{
+	/* Check that bit was clear */
+	if (!(word[BITWISE_GETWORD(bit)] & BITWISE_GETBIT(bit))) {
+		word[BITWISE_GETWORD(bit)] |= BITWISE_GETBIT(bit);
+		return 0;
+	} else {
+		//printf("Trying to set already set bit\n");
+		return -1;
+	}
+}
+

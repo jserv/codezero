@@ -33,8 +33,8 @@ the project is written from scratch, so the name emphasises that.
 
 Design & Features:
 
-Codezero microkernel: Based on L4 microkernel principles, there are only a few
-system calls and the microkernel provides purely mechanism; threads and address
+Based on L4 microkernel principles, there are only a few system calls in
+Codezero. These system calls provide purely mechanism; threads and address
 spaces, and the methods of inter-process communication between them. Anything
 beyond these are policy and they are implemented in the userspace. Due to this
 rigorously simple design the same microkernel can be used to design completely
@@ -42,13 +42,13 @@ different operating systems. In terms of other features, the microkernel is
 preemptive, and smp-ready. Currently only synchronous communication is
 implemented, but this will change in the near future.
 
-MM0: Implements memory management. It contains memory and page allocators. It
-implements demand paging by managing page faults, physical pages and their
-file/task associations.
+MM0 is the systm task that implements memory management. It contains memory and
+page allocators. It implements demand paging by managing page faults, physical
+pages and their file/task associations.
 
-FS0: Implements a simple, modern virtual filesystem layer. Since it abstracts
-the low-level filesystem details, it is a relatively easy job to port a new
-filesystem to be used under FS0.
+FS0 is the system task implements a simple, modern virtual filesystem layer.
+Since it abstracts the low-level filesystem details, it is a relatively easy job
+to port a new filesystem to be used under FS0.
 
 
 License:
@@ -65,9 +65,9 @@ party source code is open source in the OSI definition. Please check these
 directories for their respective licenses.
 
 
-Why yet another Posix (micro) kernel?
+Why yet another POSIX microkernel?
 
-There are many open source Posix operating systems with advanced features such
+There are many open source POSIX operating systems with advanced features such
 as *BSD and Linux. However these were originally not designed for embedded
 systems. Unix itself and all the tools built upon weren't meant for using on
 small devices. Accordingly, these operating systems contain a lot of historical

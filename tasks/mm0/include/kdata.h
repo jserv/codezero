@@ -16,8 +16,6 @@
 #include INC_ARCH(bootdesc.h)
 #include <vm_area.h>
 
-#define BOOTDESC_IMAGE_START		1
-
 struct initdata {
 	struct bootdesc *bootdesc;
 	struct list_head boot_file_list;

@@ -71,6 +71,7 @@ static inline struct superblock *vfs_alloc_superblock(void)
 {
 	struct superblock *sb = kmalloc(sizeof(struct superblock));
 	INIT_LIST_HEAD(&sb->list);
+
 	return sb;
 }
 

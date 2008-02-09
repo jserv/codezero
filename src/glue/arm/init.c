@@ -250,7 +250,7 @@ void switch_to_user(struct ktcb *task)
 	jump(task);
 }
 
-void init_inittask(char *name, struct task_ids *ids)
+void init_pager(char *name, struct task_ids *ids)
 {
 	struct svc_image *taskimg = 0;
 	struct ktcb *task;
@@ -262,7 +262,7 @@ void init_inittask(char *name, struct task_ids *ids)
 	 * This also solves the problem of freeing the bootstack and making use
 	 * of the initial kspace pgd.
 	 */
-	if (!strcmp(name, "mm0"))
+	if (!strcmp(name, __PAGERNAME__))
 		task = current;	/* mm0 is the mockup current during init */
 	else
 		task = (struct ktcb *)zalloc_page();
@@ -341,7 +341,7 @@ void init_tasks()
 	 * This must come last so that other tasks can copy its pgd before it
 	 * modifies it for its own specifics.
 	 */
-	init_inittask("mm0", &ids);
+	init_pager(__PAGERNAME__, &ids);
 }
 
 void start_kernel(void)

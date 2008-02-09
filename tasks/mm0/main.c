@@ -34,7 +34,7 @@ void handle_requests(void)
 	u32 tag;
 	int err;
 
-	printf("%s: Initiating ipc.\n", __TASKNAME__);
+	// printf("%s: Initiating ipc.\n", __TASKNAME__);
 	if ((err = l4_receive(L4_ANYTHREAD)) < 0) {
 		printf("%s: %s: IPC Error: %d. Quitting...\n", __TASKNAME__,
 		       __FUNCTION__, err);
@@ -55,7 +55,7 @@ void handle_requests(void)
 		 * A thread that wants to sync with us would have
 		 * started here.
 		 */
-		printf("%s: Synced with waiting thread.\n", __TASKNAME__);
+		// printf("%s: Synced with waiting thread.\n", __TASKNAME__);
 		break;
 
 	case L4_IPC_TAG_PFAULT:

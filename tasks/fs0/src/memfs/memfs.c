@@ -6,6 +6,8 @@
 #include <init.h>
 #include <fs.h>
 #include <vfs.h>
+#include <task.h>
+#include <stdio.h>
 #include <memfs/memfs.h>
 #include <memfs/vnode.h>
 #include <lib/idpool.h>
@@ -138,11 +140,16 @@ struct superblock *memfs_get_superblock(void *block)
 	struct memfs_superblock *sb = block;
 	struct superblock *vfs_sb;
 
+	printf("%s: %s: Reading superblock.\n", __TASKNAME__, __FUNCTION__);
 	/* We don't do sanity checks here, just confirm id. */
-	if (!strcmp(sb->name, "memfs"))
+	if (strcmp(sb->name, "memfs")) {
+		printf("%s: Name does not match: %s\n", __FUNCTION__, sb->name);
 		return 0;
-	if (sb->magic != MEMFS_MAGIC)
+	}
+	if (sb->magic != MEMFS_MAGIC) {
+		printf("%s: Magic number not match: %s\n", __FUNCTION__, sb->magic);
 		return 0;
+	}
 
 	/* Allocate a vfs superblock. */
 	vfs_sb = vfs_alloc_superblock();
@@ -154,6 +161,10 @@ struct superblock *memfs_get_superblock(void *block)
 /* Registers sfs as an available filesystem type */
 void memfs_register_fstype(struct list_head *fslist)
 {
+	/* Initialise superblock list for this fstype */
+	INIT_LIST_HEAD(&memfs_fstype.sblist);
+
+	/* Add this fstype to list of available fstypes. */
 	list_add(&memfs_fstype.list, fslist);
 }
 

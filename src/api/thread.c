@@ -83,11 +83,29 @@ int thread_create(struct task_ids *ids)
 	copy_pgd_kern_all(new->pgd);
 
 	/* Get new space id */
-	ids->spid = id_new(space_id_pool);
+	if (ids->spid == TASK_ID_INVALID) {
+		ids->spid = id_new(space_id_pool);
+		printk("Got new space id: %d\n", ids->spid);
+	} else {
+		printk("Try new space id: %d\n", ids->spid);
+		if ((ids->spid = id_get(space_id_pool, ids->spid)) < 0)
+			ids->spid = id_new(space_id_pool);
+		else
+			printk("Success.\n");
+	}
 
 spc_found:
 	/* Get a new thread id */
-	ids->tid = id_new(thread_id_pool);
+	if (ids->tid == TASK_ID_INVALID) {
+		ids->tid = id_new(thread_id_pool);
+		printk("Got new thread id: %d\n", ids->tid);
+	} else {
+		printk("Try new thread id: %d\n", ids->tid);
+		if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
+			ids->tid = id_new(thread_id_pool);
+		else
+			printk("Success.\n");
+	}
 
 	/* Set all ids */
 	set_task_ids(new, ids);

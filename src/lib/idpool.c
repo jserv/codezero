@@ -33,3 +33,14 @@ int id_del(struct id_pool *pool, int id)
 	return ret;
 }
 
+/* Return a specific id, if available */
+int id_get(struct id_pool *pool, int id)
+{
+	int ret = check_and_set_bit(pool->bitmap, id);
+
+	if (ret < 0)
+		return ret;
+	else
+		return id;
+}
+

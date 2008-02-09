@@ -4,6 +4,7 @@
 unsigned int __clz(unsigned int bitvector);
 int find_and_set_first_free_bit(u32 *word, unsigned int lastbit);
 int check_and_clear_bit(u32 *word, int bit);
+int check_and_set_bit(u32 *word, int bit);
 
 
 /* Set */
