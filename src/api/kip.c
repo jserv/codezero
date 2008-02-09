@@ -13,7 +13,7 @@
 #include INC_ARCH(bootdesc.h)
 
 /* FIXME: Change the unit name */
-UNIT("kip") struct kip kip;
+__attribute__ ((section(".data.kip"))) struct kip kip;
 
 /* Error-checked kernel data request call */
 int __sys_kread(int rd, void *dest)

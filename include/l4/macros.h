@@ -17,19 +17,6 @@
 
 /* use this to place code/data in a certain section */
 #define SECTION(x) __attribute__((section(x)))
-#define UNIT(x) __attribute__((section(".data." x)))
-
-/*
- * use WEAK to specifiy a weak function which can be replaced
- * by a architecture specific optimization
- * example: void WEAK bla()
- */
-#define WEAK __attribute__(( weak ))
-
-/*
- * Marks a function as noreturn.
- */
-#define NORETURN __attribute__(( noreturn ))
 
 /* Functions for critical path optimizations */
 #if (__GNUC__ >= 3)
@@ -110,5 +97,4 @@
 					printk(msg);	\
 					BUG();			\
 				} while(0)
-#endif /* !__MACROS_H__ */
-
+#endif /* __MACROS_H__ */
