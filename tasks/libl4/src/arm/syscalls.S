@@ -4,7 +4,7 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <l4lib/arch/asm.h>
-#include <l4lib/arch/vregs.h>
+#include <l4lib/arch/utcb.h>
 #include <l4/generic/space.h>
 
 	.macro	utcb_address	rx

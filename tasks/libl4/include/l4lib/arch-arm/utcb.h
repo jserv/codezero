@@ -1,30 +1,21 @@
 #ifndef __ARM_UTCB_H__
 #define __ARM_UTCB_H__
 
-#include <l4lib/types.h>
-#include <l4lib/arch/vregs.h>
+#define USER_UTCB_REF           0xFF000FF0
+#define L4_KIP_ADDRESS		0xFF000000
+#define UTCB_KIP_OFFSET		0xFF0
 
-/* FIXME: LICENSE/LICENCE */
+#ifndef __ASSEMBLY__
+#include <l4lib/types.h>
+#include <l4/macros.h>
+#include INC_GLUE(message.h)
 
 /*
  * NOTE: In syslib.h the first few mrs are used by data frequently
- * needed for all ipcs. Those mrs are defined here.
+ * needed for all ipcs. Those mrs are defined the kernel message.h
  */
 
-/* MRs always used on receive by syslib */
-#define MR_RETURN		0	/* Contains the posix return value. */
-
-/* MRs always used on send by syslib */
-#define MR_TAG		0	/* Defines the message purpose */
-#define MR_SENDER	1	/* For anythread receivers to discover sender */
-
-/* These define the mr start - end range that aren't used by syslib */
-#define MR_UNUSED_START	2	/* The first mr that's not used by syslib.h */
-#define MR_TOTAL	6
-#define MR_UNUSED_TOTAL		(MR_TOTAL - MR_UNUSED_START)
-#define MR_USABLE_TOTAL		MR_UNUSED_TOTAL
-
- /* Compact utcb for now! :-) */
+/* Compact utcb for now! :-) */
 struct utcb {
 	u32 mr[MR_TOTAL];
 	u32 tid;		/* Thread id */
@@ -36,9 +27,22 @@ struct utcb {
 	unsigned long usr_handle;
 };
 
+/* FIXME: LICENSE/LICENCE */
 static inline struct utcb *__L4_ARM_Utcb()
 {
 	return (struct utcb *)(*(struct utcb **)USER_UTCB_REF);
 }
+
+/* Functions to read/write utcb registers */
+static inline unsigned int read_mr(int offset)
+{
+	return __L4_ARM_Utcb()->mr[offset];
+}
+
+static inline void write_mr(unsigned int offset, unsigned int val)
+{
+	__L4_ARM_Utcb()->mr[offset] = val;
+}
+#endif /* !__ASSEMBLY__ */
 
 #endif /* __ARM_UTCB_H__ */

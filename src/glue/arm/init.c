@@ -20,7 +20,7 @@
 #include INC_SUBARCH(mmu_ops.h)
 #include INC_GLUE(memlayout.h)
 #include INC_GLUE(memory.h)
-#include INC_GLUE(utcb.h)
+#include INC_GLUE(message.h)
 #include INC_GLUE(syscall.h)
 #include INC_PLAT(platform.h)
 #include INC_PLAT(printascii.h)

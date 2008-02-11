@@ -5,7 +5,7 @@
  */
 #include <stdio.h>
 #include <init.h>
-#include <l4lib/arch/message.h>
+#include <l4lib/arch/utcb.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/kip.h>

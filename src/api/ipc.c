@@ -12,7 +12,7 @@
 #include <l4/lib/bit.h>
 #include <l4/generic/kmalloc.h>
 #include INC_API(syscall.h)
-#include INC_GLUE(utcb.h)
+#include INC_GLUE(message.h)
 
 enum IPC_TYPE {
 	IPC_INVALID = 0,

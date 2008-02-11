@@ -13,8 +13,9 @@ kernel_headers = join(project_root, "include")
 config_h = join(project_root, "include/l4/config.h")
 
 env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
-		  CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding'],
+		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding'],
 		  LINKFLAGS = ['-nostdlib'],
+		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = 'gcc')
 

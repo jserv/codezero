@@ -13,7 +13,7 @@
 #include INC_ARCH(exception.h)
 #include INC_GLUE(memlayout.h)
 #include INC_GLUE(memory.h)
-#include INC_GLUE(utcb.h)
+#include INC_GLUE(message.h)
 #include INC_SUBARCH(mm.h)
 
 /* Send data fault ipc to the faulty task's pager */

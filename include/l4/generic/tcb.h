@@ -12,7 +12,7 @@
 #include <l4/generic/pgalloc.h>
 #include INC_GLUE(memory.h)
 #include INC_GLUE(syscall.h)
-#include INC_GLUE(utcb.h)
+#include INC_GLUE(message.h)
 #include INC_SUBARCH(mm.h)
 
 enum task_state {

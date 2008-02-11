@@ -7,8 +7,7 @@
 #define __ARM_SYSCALLS_H__
 
 #include <l4lib/arch/types.h>
-#include <l4lib/arch/vregs.h>
-#include <l4lib/arch/message.h>
+#include <l4lib/arch/utcb.h>
 #include <l4/generic/space.h>
 #include <l4/api/space.h>
 #include <l4/api/kip.h>
