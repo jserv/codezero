@@ -146,7 +146,7 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		}
 
 		/* mmap each task's utcb as single page anonymous memory. */
-		if ((err = do_mmap(0, 0, task, (unsigned long)__L4_ARM_Utcb(),
+		if ((err = do_mmap(0, 0, task, (unsigned long)l4_get_utcb(),
 				   VM_READ | VM_WRITE | VMA_ANON, 1) < 0)) {
 			printf("do_mmap: Mapping utcb failed with %d.\n", err);
 			goto error;

@@ -27,21 +27,20 @@ struct utcb {
 	unsigned long usr_handle;
 };
 
-/* FIXME: LICENSE/LICENCE */
-static inline struct utcb *__L4_ARM_Utcb()
+static inline struct utcb *l4_get_utcb()
 {
-	return (struct utcb *)(*(struct utcb **)USER_UTCB_REF);
+	return *(struct utcb **)USER_UTCB_REF;
 }
 
 /* Functions to read/write utcb registers */
 static inline unsigned int read_mr(int offset)
 {
-	return __L4_ARM_Utcb()->mr[offset];
+	return l4_get_utcb()->mr[offset];
 }
 
 static inline void write_mr(unsigned int offset, unsigned int val)
 {
-	__L4_ARM_Utcb()->mr[offset] = val;
+	l4_get_utcb()->mr[offset] = val;
 }
 #endif /* !__ASSEMBLY__ */
 

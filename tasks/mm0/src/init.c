@@ -19,7 +19,7 @@ void init_utcb(void)
 	void *utcb_page = alloc_page(1); /* Allocate a utcb page */
 
 	l4_getid(&ids);
-	l4_map(utcb_page, __L4_ARM_Utcb(), 1, MAP_USR_RW_FLAGS, ids.tid);
+	l4_map(utcb_page, l4_get_utcb(), 1, MAP_USR_RW_FLAGS, ids.tid);
 }
 
 void init_mm(struct initdata *initdata)
