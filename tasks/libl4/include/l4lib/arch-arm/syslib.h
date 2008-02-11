@@ -37,11 +37,6 @@ static inline l4id_t l4_get_sender(void)
 	return (l4id_t)read_mr(MR_SENDER);
 }
 
-static inline void l4_set_sender(l4id_t id)
-{
-	write_mr(MR_SENDER, (unsigned int)id);
-}
-
 static inline unsigned int l4_get_tag(void)
 {
 	return read_mr(MR_TAG);
@@ -63,7 +58,6 @@ static inline l4id_t self_tid(void)
 static inline int l4_send(l4id_t to, unsigned int tag)
 {
 	l4_set_tag(tag);
-	l4_set_sender(self_tid());
 
 	return l4_ipc(to, L4_NILTHREAD);
 }
@@ -72,7 +66,7 @@ static inline int l4_sendrecv(l4id_t to, l4id_t from, unsigned int tag)
 {
 	BUG_ON(to == L4_NILTHREAD || from == L4_NILTHREAD);
 	l4_set_tag(tag);
-	l4_set_sender(self_tid());
+
 	return l4_ipc(to, from);
 }
 

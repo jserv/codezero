@@ -12,6 +12,7 @@
 #include <l4/lib/bit.h>
 #include <l4/generic/kmalloc.h>
 #include INC_API(syscall.h)
+#include INC_GLUE(utcb.h)
 
 enum IPC_TYPE {
 	IPC_INVALID = 0,
@@ -22,8 +23,12 @@ enum IPC_TYPE {
 
 /*
  * Copies message registers from one ktcb stack to another. During the return
- * from system call, the registers are popped from the stack. On fast ipc path
- * they shouldn't even be pushed to the stack to avoid extra copying.
+ * from system call, the registers are popped from the stack. In the future
+ * this should be optimised so that they shouldn't even be pushed to the stack
+ *
+ * This also copies the sender into MR0 in case the receiver receives from
+ * L4_ANYTHREAD. This is done for security since the receiver cannot trust
+ * the sender info provided by the sender task.
  */
 int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 {
@@ -34,6 +39,10 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 	 * Make sure MR_TOTAL matches the number of registers saved on stack.
 	 */
 	memcpy(mr0_dst, mr0_src, MR_TOTAL * sizeof(unsigned int));
+
+	/* Save the sender id in case of ANYTHREAD receiver */
+	if (to->senderid == L4_ANYTHREAD)
+		mr0_dst[MR_SENDER] = from->tid;
 
 	return 0;
 }
@@ -241,6 +250,8 @@ int sys_ipc(struct syscall_args *regs)
 		ret = -EINVAL;
 		goto error;
 	}
+
+	/* Cannot send to self, or receive from self */
 	if (from == current->tid || to == current->tid) {
 		ret = -EINVAL;
 		goto error;

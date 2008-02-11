@@ -16,15 +16,6 @@
 #include INC_GLUE(utcb.h)
 #include INC_SUBARCH(mm.h)
 
-/*
- * NOTE: These are defined in libl4 headers for userspace. Syslib uses
- * these as conventional mr offsets to store ipc-related data commonly needed
- * for all ipc parties.
- */
-#define	MR_TAG		0
-#define MR_SENDER	1
-#define MR_UNUSED_START	2
-
 /* Send data fault ipc to the faulty task's pager */
 void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 {

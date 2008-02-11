@@ -8,6 +8,10 @@
 
 #define MR_TOTAL		6
 
+#define	MR_TAG		0
+#define MR_SENDER	1
+#define MR_UNUSED_START	2
+
 /* Compact utcb for now! 8-) */
 struct utcb {
 	u32 mr[MR_TOTAL];
