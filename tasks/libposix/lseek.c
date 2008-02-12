@@ -20,15 +20,14 @@ static inline off_t l4_lseek(int fildes, off_t offset, int whence)
 	write_mr(L4SYS_ARG2, whence);
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((errno = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_LSEEK)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, errno);
-		return -1;
+	if ((offres = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_LSEEK)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, offres);
+		return offres;
 	}
 	/* Check if syscall itself was successful */
 	if ((offres = l4_get_retval()) < 0) {
 		printf("%s: OPEN Error: %d.\n", __FUNCTION__, (int)offres);
-		errno = (int)offres;
-		return -1;
+		return offres;
 
 	}
 	return offres;
@@ -36,6 +35,15 @@ static inline off_t l4_lseek(int fildes, off_t offset, int whence)
 
 off_t lseek(int fildes, off_t offset, int whence)
 {
-	return l4_lseek(fildes, offset, whence);
+	int ret = l4_lseek(fildes, offset, whence);
+
+	/* If error, return positive error code */
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+	/* else return value */
+	return ret;
+
 }
 

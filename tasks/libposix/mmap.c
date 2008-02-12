@@ -12,6 +12,11 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 
+/* FIXME: Implement the same separation that is in read.c write.c etc. such that
+ * l4_syscall returns negative value and then the actual posix glue sets the errno
+ * rather than the l4_syscall sets it itself
+ */
+
 struct mmap_descriptor {
 	void *start;
 	size_t length;

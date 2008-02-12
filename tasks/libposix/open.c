@@ -23,22 +23,21 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 	write_mr(L4SYS_ARG2, (u32)mode);
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((errno = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_OPEN)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, errno);
-		return -1;
+	if ((fd = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_OPEN)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
+		return fd;
 	}
 	/* Check if syscall itself was successful */
 	if ((fd = l4_get_retval()) < 0) {
 		printf("%s: OPEN Error: %d.\n", __FUNCTION__, fd);
-		errno = fd;
-		return -1;
-
+		return fd;
 	}
 	return fd;
 }
 
 int open(const char *pathname, int oflag, ...)
 {
+	int ret;
 	mode_t mode = 0;
 
 	if (oflag & O_CREAT) {
@@ -47,6 +46,15 @@ int open(const char *pathname, int oflag, ...)
 		mode = va_arg(arg, mode_t);
 		va_end(arg);
 	}
-	return l4_open(pathname, oflag, mode);
+	ret = l4_open(pathname, oflag, mode);
+
+	/* If error, return positive error code */
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+	/* else return value */
+	return ret;
+
 }
 
