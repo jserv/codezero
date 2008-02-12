@@ -39,6 +39,7 @@
 #define L4_IPC_TAG_LSEEK		15
 #define L4_IPC_TAG_CLOSE		16
 #define L4_IPC_TAG_BRK			17
+#define L4_IPC_TAG_READDIR		18
 
 /* Tags for ipc between fs0 and mm0 */
 #define L4_IPC_TAG_OPENDATA		25
