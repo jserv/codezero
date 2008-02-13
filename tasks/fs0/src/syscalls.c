@@ -83,6 +83,31 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	return 0;
 }
 
+/*
+ * FIXME: Read count is not considered yet. Take that into account.
+ * FIXME: Do we pass this buf back to mm0. Do we get it from mm0???
+ * Fix generic_vnode_lookup as well.
+ */
+int sys_readdir(l4id_t sender, int fd, void *buf, int count)
+{
+	struct vnode *v;
+
+	/* Get the task */
+	BUG_ON(!(t = find_task(sender)));
+
+	/* Convert fd to vnode. */
+	BUG_ON(!(v = t->fd[fd]));
+
+	/* Ensure vnode is a directory */
+	if (!vfs_isdir(v))
+		return -ENOTDIR;
+
+	/* Simply read its contents */
+	v->ops.readdir(v, buf, count);
+`
+	return 0;
+}
+
 int sys_write(l4id_t sender, int fd, const void *buf, int count)
 {
 	return 0;

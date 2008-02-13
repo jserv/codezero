@@ -203,9 +203,13 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 
 
 /*
+ * Given a non-zero dirbuf, uses it, otherwise it allocates one on its own.
+ *
  * Allocates and populates all dentries and their corresponding vnodes that are
  * the direct children of vnode v. This means that by each call to readdir, the vfs
  * layer increases its cache of filesystem tree by one level beneath that directory.
+ *
+ * TODO: Returns the list of posix-compliant dirent records in the buffer.
  */
 void *memfs_vnode_readdir(struct vnode *v, void *dirbuf)
 {
