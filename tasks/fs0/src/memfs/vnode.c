@@ -201,10 +201,7 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 	return 0;
 }
 
-
 /*
- * Given a non-zero dirbuf, uses it, otherwise it allocates one on its own.
- *
  * Allocates and populates all dentries and their corresponding vnodes that are
  * the direct children of vnode v. This means that by each call to readdir, the vfs
  * layer increases its cache of filesystem tree by one level beneath that directory.
@@ -223,18 +220,20 @@ int memfs_vnode_readdir(struct vnode *v)
 	if (!vfs_isdir(v))
 		return -ENOTDIR;
 
-	/* Allocate dirbuf if one is not provided by the upper layer */
-	if (!v->dirbuf->buffer) {
-		/* This is as big as a page */
-		v->dirbuf->buffer = vfs_alloc_dirbuf();
-		memfsd = dirbuf = v->dirbuf->buffer;
+	/* If a buffer is there, it means the directory is already read */
+	if (v->dirbuf->buffer)
+		return 0;
 
-		/*
-		 * Fail if vnode size is bigger than a page. Since this allocation
-		 * method is to be replaced, we can live with this limitation for now.
-		 */
-		BUG_ON(v->size > PAGE_SIZE);
-	}
+	/* This is as big as a page */
+	v->dirbuf->buffer = vfs_alloc_dirbuf();
+	v->dirbuf->npages = 1;
+	memfsd = dirbuf = v->dirbuf->buffer;
+
+	/*
+	 * Fail if vnode size is bigger than a page. Since this allocation
+	 * method is to be replaced, we can live with this limitation for now.
+	 */
+	BUG_ON(v->size > PAGE_SIZE);
 
 	/* Read memfsd contents into the buffer */
 	if ((err = v->fops.read(v, 0, 1, dirbuf)))
@@ -271,6 +270,7 @@ int memfs_vnode_readdir(struct vnode *v)
 		list_add(&newd->cache_list, &dentry_cache);
 		list_add(&newv->cache_list, &vnode_cache);
 	}
+
 	return 0;
 }
 
