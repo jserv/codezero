@@ -12,29 +12,45 @@ struct list_head dentry_cache;
 /*
  * Vnodes in the vnode cache have 2 keys. One is their dentry names, the other
  * is their vnum. This one checks the vnode cache by the given vnum first.
- * If nothing is found, it reads the vnode from disk into cache.
+ * If nothing is found, it reads the vnode from disk into cache. This is called
+ * by system calls since tasks keep an fd-to-vnum table.
  */
 struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 {
 	struct vnode *v;
+	int err;
 
 	/* Check the vnode cache by vnum */
 	list_for_each_entry(v, vnode_cache, cache_list)
 		if (v->vnum == vnum)
 			return v;
 
-	/* Otherwise ask the filesystem:
-	 * TODO:
-	 * vfs_alloc_vnode() -> This should also add the empty vnode to vnode cache.
-	 * read_vnode() -> read it from filesystem.
-	 * return what's read.
+	/*
+	 * In the future it will be possible that a vnum known by the fd table
+	 * is not in the cache, because the cache will be able to grow and shrink.
+	 * But currently it just grows, so its a bug that a known vnum is not in
+	 * the cache.
 	 */
+	BUG();
+
+	/* Check the actual filesystem for the vnode */
+	v = vfs_alloc_vnode();
+	v->vnum = vnum;
+	if ((err = v->read_vnode(sb, v)) < 0) {
+		vfs_free_vnode(v);
+		return err;
+	}
+
+	/* Add the vnode back to vnode cache */
+	list_add(&v->cache_list, &vnode_cache);
+
+	return v;
 }
 
 /*
- * Vnodes in the vnode cache have 2 keys. One is their dentry name, the
- * other is their vnum. This one checks the vnode cache by the path first.
- * If nothing is found, it reads the vnode from disk into the cache.
+ * Vnodes in the vnode cache have 2 keys. One is the set of dentry names they
+ * have, the other is their vnum. This one checks the vnode cache by the path
+ * first. If nothing is found, it reads the vnode from disk into the cache.
  */
 struct vnode *vfs_lookup_bypath(struct superblock *sb, char *path)
 {

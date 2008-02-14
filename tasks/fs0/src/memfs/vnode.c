@@ -106,6 +106,7 @@ int memfs_destroy_inode(struct memfs_superblock *sb, struct memfs_inode *i)
 	return 0;
 }
 
+/* Allocates both an inode and a vnode and associates the two together */
 struct vnode *memfs_alloc_vnode(struct superblock *sb)
 {
 	struct memfs_inode *i;
@@ -131,6 +132,7 @@ struct vnode *memfs_alloc_vnode(struct superblock *sb)
 	return v;
 }
 
+/* Frees the inode and the corresponding vnode */
 int memfs_free_vnode(struct superblock *sb, struct vnode *v)
 {
 	struct memfs_inode *i = v->inode;
@@ -182,6 +184,7 @@ int memfs_read_vnode(struct superblock *sb, struct vnode *v)
 	return 0;
 }
 
+/* Writes a valid vnode's fields back to its fs-specific inode */
 int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 {
 	struct memfs_inode *i = v->inode;

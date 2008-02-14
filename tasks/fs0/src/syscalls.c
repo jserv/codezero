@@ -93,7 +93,6 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	unsigned long vnum;
 	struct vnode *v;
 	struct tcb *t;
-	struct dirbuf *db;
 	unsigned long nbytes;
 	int err;
 

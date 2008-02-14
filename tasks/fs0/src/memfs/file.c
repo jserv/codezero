@@ -45,6 +45,12 @@ int memfs_write_block(struct vnode *v, int blknum, void *buf)
 
 /*
  * Handles both read and writes since most details are common.
+ *
+ * TODO: Think about whether to use inode or the vnode's fields (e.g. size)
+ * and when updated, which one is to be updated first. Normally if you use and
+ * update inode, then you sync vnode via read_vnode. but this is not really meant for
+ * this use, its meant for retrieving an unknown inode under the vnode with valid vnum.
+ * here we already have the inode.
  */
 int memfs_file_read_write(struct vnode *v, unsigned long pfn,
 			  unsigned long npages, void *buf, int wr)
@@ -86,29 +92,29 @@ int memfs_file_read_write(struct vnode *v, unsigned long pfn,
 			       &i->block[x], blocksize);
 	} else { /* Write-specific operations */
 		/* Is the write beyond current file size? */
-		if (i->size < ((pfn + npages) * (blocksize))) {
-			unsigned long diff = pfn + npages - __pfn(i->size);
+		if (v->size < ((pfn + npages) * (blocksize))) {
+			unsigned long diff = pfn + npages - __pfn(v->size);
 			unsigned long holes;
 
 			/*
 			 * If write is not consecutively after the currently
 			 * last file block, the gap must be filled in by holes.
 			 */
-			if (pfn > __pfn(i->size))
-				holes = pfn - __pfn(i->size);
+			if (pfn > __pfn(v->size))
+				holes = pfn - __pfn(v->size);
 
 			/* Allocate new blocks */
 			for (int x = 0; x < diff; x++)
-				if (!(i->block[__pfn(i->size) + x] = memfs_alloc_block(memfs_sb)))
+				if (!(i->block[__pfn(v->size) + x] = memfs_alloc_block(memfs_sb)))
 					return -ENOSPC;
 
 			/* Zero out the holes. FIXME: How do we zero out non-page-aligned bytes?` */
 			for (int x = 0; x < holes; x++)
-				memset(i->block[__pfn(i->size) + x], 0, blocksize);
+				memset(i->block[__pfn(v->size) + x], 0, blocksize);
 
-			/* Update size and the vnode. FIXME: How do we handle non page-aligned size */
-			i->size = (pfn + npages) * blocksize;
-			v->sb->ops->read_vnode(v->sb, v);
+			/* Update size and the inode. FIXME: How do we handle non page-aligned size */
+			v->size = (pfn + npages) * blocksize;
+			v->sb->ops->write_vnode(v->sb, v);
 		}
 
 		/* Copy the data from page buffer into inode blocks */
