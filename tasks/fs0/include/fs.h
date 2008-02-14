@@ -47,7 +47,7 @@ struct file_ops {
 struct vnode_ops {
 	vnode_op_t create;
 	struct vnode *(*lookup)(struct vnode *root, char *path);
-	void * (*readdir)(struct vnode *v, void *dirbuf);
+	void *(*readdir)(struct vnode *v, void *dirbuf);
 	vnode_op_t link;
 	vnode_op_t unlink;
 	vnode_op_t mkdir;
@@ -97,6 +97,7 @@ struct vnode {
 	struct file_ops fops;		/* File-related operations on this vnode */
 	struct list_head dentries;	/* Dirents that refer to this vnode */
 	struct list_head state_list;	/* List for vnode's dirty/clean state */
+	struct list_head cache_list;	/* For adding the vnode to vnode cache */
 	u32 type;			/* Vnode type, dev? socket? dir? ... */
 	u32 mode;			/* Permissions */
 	u32 owner;			/* Owner */

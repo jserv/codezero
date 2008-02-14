@@ -91,6 +91,7 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 {
 	struct vnode *v;
+	struct tcb *t;
 
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
@@ -104,7 +105,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 
 	/* Simply read its contents */
 	v->ops.readdir(v, buf, count);
-`
+
 	return 0;
 }
 

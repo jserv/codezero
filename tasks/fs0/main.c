@@ -16,6 +16,19 @@
 #include <syscalls.h>
 #include <task.h>
 
+/*
+ * TODO:
+ * - Have a dentry cache searchable by name
+ * - Have a vnode cache searchable by vnum (and name?)
+ * - fs-specific readdir would read contents by page range, and add vnodes/dentries
+ *   to their caches, while populating the directory vnode being read.
+ * - Have 2 vfs_lookup() flavors, one that searches a path, one that searches a vnum.
+ * - dirbuf is either allocated by low-level readdir, or else by a higher level, i.e.
+ *   either high-level vfs code, or the mm0 page cache.
+ * - readdir provides a posix-compliant dirent structure list in dirbuf.
+ * - memfs dentries should be identical to posix struct dirents.
+ */
+
 /* Synchronise with pager via a `wait' tagged ipc with destination as pager */
 void wait_pager(l4id_t partner)
 {

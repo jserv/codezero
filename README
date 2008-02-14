@@ -46,7 +46,7 @@ MM0 is the systm task that implements memory management. It contains memory and
 page allocators. It implements demand paging by managing page faults, physical
 pages and their file/task associations.
 
-FS0 is the system task implements a simple, modern virtual filesystem layer.
+FS0 is the system task that implements a simple, modern virtual filesystem layer.
 Since it abstracts the low-level filesystem details, it is a relatively easy job
 to port a new filesystem to be used under FS0.
 

@@ -6,6 +6,17 @@
 #include <l4/lib/list.h>
 #include <memfs/memfs.h>
 
+/* Buffer to keep directory content. This is the only vnode content
+ * that fs0 maintains. All other file data is in mm0 page cache.
+ */
+struct dirbuf {
+	struct list_head list;
+	unsigned long bufsize;
+	u8 *buffer;
+};
+extern struct list_head vnode_cache;
+extern struct list_head dentry_cache;
+
 /*
  * FIXME:
  * These ought to be strings and split/comparison functions should
@@ -58,12 +69,16 @@ static inline struct vnode *vfs_alloc_vnode(void)
 
 	INIT_LIST_HEAD(&v->dentries);
 	INIT_LIST_HEAD(&v->state_list);
+	INIT_LIST_HEAD(&v->cache_list);
+	list_add(&v->cache_list, &vnode_cache);
 
 	return v;
 }
 
 static inline void vfs_free_vnode(struct vnode *v)
 {
+	BUG(); /* Are the dentries freed ??? */
+	list_del(&v->cache_list);
 	kfree(v);
 }
 
@@ -84,6 +99,7 @@ extern struct vfs_mountpoint vfs_root;
 
 int vfs_mount_root(struct superblock *sb);
 struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path);
-struct vnode *vfs_lookup(struct superblock *sb, char *path);
+struct vnode *vfs_lookup_bypath(struct superblock *sb, char *path);
+struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum);
 
 #endif /* __VFS_H__ */
