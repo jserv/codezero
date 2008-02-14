@@ -29,6 +29,10 @@
  * - memfs dentries should be identical to posix struct dirents.
  */
 
+/* TODO:
+ * Assign memfs dentry fields same as in posix
+ */
+
 /* Synchronise with pager via a `wait' tagged ipc with destination as pager */
 void wait_pager(l4id_t partner)
 {
