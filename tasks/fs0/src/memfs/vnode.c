@@ -229,7 +229,6 @@ int memfs_vnode_readdir(struct vnode *v)
 	/* This is as big as a page */
 	v->dirbuf.buffer = vfs_alloc_dirpage();
 	v->dirbuf.npages = 1;
-	memfsd = (struct memfs_dentry *) v->dirbuf.buffer;
 
 	/*
 	 * Fail if vnode size is bigger than a page. Since this allocation
@@ -240,6 +239,8 @@ int memfs_vnode_readdir(struct vnode *v)
 	/* Read memfsd contents into the buffer */
 	if ((err = v->fops.read(v, 0, 1, v->dirbuf.buffer)))
 		return err;
+
+	memfsd = (struct memfs_dentry *)v->dirbuf.buffer;
 
 	/* Read fs-specific directory entry into vnode and dentry caches. */
 	for (int i = 0; i < (v->size / sizeof(struct memfs_dentry)); i++) {

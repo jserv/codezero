@@ -76,7 +76,7 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path)
 				/* Are there any more path components? */
 				if (path) {
 					/* Read directory contents */
-					if ((err = (int)d->vnode->ops.readdir(d->vnode)))
+					if ((err = d->vnode->ops.readdir(d->vnode)) < 0)
 						return PTR_ERR(err);
 
 					/* Search all children one level below. */
