@@ -96,8 +96,8 @@ struct vnode {
 	struct vnode_ops ops;		/* Operations on this vnode */
 	struct file_ops fops;		/* File-related operations on this vnode */
 	struct list_head dentries;	/* Dirents that refer to this vnode */
-	struct list_head state_list;	/* List for vnode's dirty/clean state */
 	struct list_head cache_list;	/* For adding the vnode to vnode cache */
+	struct dirbuf dirbuf;		/* Only directory buffers are kept */
 	u32 type;			/* Vnode type, dev? socket? dir? ... */
 	u32 mode;			/* Permissions */
 	u32 owner;			/* Owner */

@@ -90,21 +90,39 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
  */
 int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 {
+	unsigned long vnum;
 	struct vnode *v;
 	struct tcb *t;
+	struct dirbuf *db;
+	unsigned long nbytes;
+	int err;
 
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
 
-	/* Convert fd to vnode. */
-	BUG_ON(!(v = t->fd[fd]));
+	/* Convert fd to vnum. */
+	BUG_ON(!(vnum = t->fd[fd]));
+
+	/* Lookup vnode */
+	if (!(v = vfs_lookup_byvnum(vnum)))
+		return -EINVAL; /* No such vnode */
 
 	/* Ensure vnode is a directory */
 	if (!vfs_isdir(v))
 		return -ENOTDIR;
 
-	/* Simply read its contents */
-	v->ops.readdir(v, buf, count);
+	/* Read the whole content from fs, if haven't done so yet */
+	if ((err = v->ops.readdir(v)) < 0)
+		return err;
+
+	/* Bytes to read, minimum of vnode size and count requested */
+	nbytes = (v->size <= count) ? v->size : count;
+
+	/* Do we have those bytes at hand? */
+	if (v->dirbuf->buffer && (v->dirbuf->npages * PAGE_SIZE) >= nbytes) {
+		memcpy(buf, v->dirbuf->buffer, nbytes); /* Finish the job */
+		return nbytes;
+	}
 
 	return 0;
 }

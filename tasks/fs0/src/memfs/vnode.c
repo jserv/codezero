@@ -211,21 +211,23 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
  *
  * TODO: Returns the list of posix-compliant dirent records in the buffer.
  */
-void *memfs_vnode_readdir(struct vnode *v, void *dirbuf)
+int memfs_vnode_readdir(struct vnode *v)
 {
 	int err;
-	struct memfs_dentry *memfsd = dirbuf;
-	struct dentry *parent = list_entry(v->dentries.next, struct dentry,
-					   vref);
+	u8 *dirbuf;
+	struct memfs_dentry *memfsd;
+	struct dentry *parent = list_entry(v->dentries.next,
+					   struct dentry, vref);
 
 	/* Check directory type */
 	if (!vfs_isdir(v))
-		return PTR_ERR(-ENOTDIR);
+		return -ENOTDIR;
 
 	/* Allocate dirbuf if one is not provided by the upper layer */
-	if (!dirbuf) {
+	if (!v->dirbuf->buffer) {
 		/* This is as big as a page */
-		memfsd = dirbuf = vfs_alloc_dirpage();
+		v->dirbuf->buffer = vfs_alloc_dirbuf();
+		memfsd = dirbuf = v->dirbuf->buffer;
 
 		/*
 		 * Fail if vnode size is bigger than a page. Since this allocation
@@ -234,18 +236,18 @@ void *memfs_vnode_readdir(struct vnode *v, void *dirbuf)
 		BUG_ON(v->size > PAGE_SIZE);
 	}
 
-	/* Read contents into the buffer */
+	/* Read memfsd contents into the buffer */
 	if ((err = v->fops.read(v, 0, 1, dirbuf)))
-		return PTR_ERR(err);
+		return err;
 
-	/* For each fs-specific directory entry */
+	/* Read fs-specific directory entry into vnode and dentry caches. */
 	for (int i = 0; i < (v->size / sizeof(struct memfs_dentry)); i++) {
 		struct dentry *newd;
 		struct vnode *newv;
 
 		/* Allocate a vfs dentry */
 		if (!(newd = vfs_alloc_dentry()))
-			return PTR_ERR(-ENOMEM);
+			return -ENOMEM;
 
 		/* Initialise it */
 		newd->ops = generic_dentry_operations;
@@ -264,8 +266,12 @@ void *memfs_vnode_readdir(struct vnode *v, void *dirbuf)
 
 		/* Copy fields into generic dentry */
 		memcpy(newd->name, memfsd[i].name, MEMFS_DNAME_MAX);
+
+		/* Add both vnode and dentry to their caches */
+		list_add(&newd->cache_list, &dentry_cache);
+		list_add(&newv->cache_list, &vnode_cache);
 	}
-	return dirbuf;
+	return 0;
 }
 
 struct vnode_ops memfs_vnode_operations = {

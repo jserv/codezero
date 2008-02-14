@@ -10,10 +10,11 @@
  * that fs0 maintains. All other file data is in mm0 page cache.
  */
 struct dirbuf {
-	struct list_head list;
-	unsigned long bufsize;
-	u8 *buffer;
+	unsigned long npages;
+	int dirty;
+	u8 *buf;
 };
+
 extern struct list_head vnode_cache;
 extern struct list_head dentry_cache;
 
@@ -54,6 +55,7 @@ static inline struct dentry *vfs_alloc_dentry(void)
 	INIT_LIST_HEAD(&d->child);
 	INIT_LIST_HEAD(&d->children);
 	INIT_LIST_HEAD(&d->vref);
+	INIT_LIST_HEAD(&d->cache_list);
 
 	return d;
 }
@@ -68,9 +70,7 @@ static inline struct vnode *vfs_alloc_vnode(void)
 	struct vnode *v = kzalloc(sizeof(struct vnode));
 
 	INIT_LIST_HEAD(&v->dentries);
-	INIT_LIST_HEAD(&v->state_list);
 	INIT_LIST_HEAD(&v->cache_list);
-	list_add(&v->cache_list, &vnode_cache);
 
 	return v;
 }
