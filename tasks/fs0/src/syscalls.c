@@ -50,7 +50,7 @@ int do_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	memcpy(pathcopy, pathname, strlen(pathname));
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup(vfs_root.pivot->sb, pathcopy)))
+	if (IS_ERR(v = vfs_lookup_bypath(vfs_root.pivot->sb, pathcopy)))
 		return (int)v;
 
 	/* Get the task */
@@ -103,7 +103,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	BUG_ON(!(vnum = t->fd[fd]));
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vnum)))
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
 		return -EINVAL; /* No such vnode */
 
 	/* Ensure vnode is a directory */
@@ -118,8 +118,8 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	nbytes = (v->size <= count) ? v->size : count;
 
 	/* Do we have those bytes at hand? */
-	if (v->dirbuf->buffer && (v->dirbuf->npages * PAGE_SIZE) >= nbytes) {
-		memcpy(buf, v->dirbuf->buffer, nbytes); /* Finish the job */
+	if (v->dirbuf.buffer && (v->dirbuf.npages * PAGE_SIZE) >= nbytes) {
+		memcpy(buf, v->dirbuf.buffer, nbytes); /* Finish the job */
 		return nbytes;
 	}
 

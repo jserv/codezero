@@ -84,8 +84,19 @@ struct dentry {
 	struct list_head child;		/* List of dentries with same parent */
 	struct list_head children;	/* List of children dentries */
 	struct list_head vref;		/* For vnode's dirent reference list */
+	struct list_head cache_list;	/* Dentry cache reference */
 	struct vnode *vnode;		/* The vnode associated with dirent */
 	struct dentry_ops ops;
+};
+
+/*
+ * Buffer to keep directory content. This is the only vnode content
+ * that fs0 maintains. All other file data is in mm0 page cache.
+ */
+struct dirbuf {
+	unsigned long npages;
+	int dirty;
+	u8 *buffer;
 };
 
 struct vnode {

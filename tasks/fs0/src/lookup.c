@@ -74,15 +74,16 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path)
 			/* Is this a directory? */
 			if (vfs_isdir(thisnode)) {
 				/* Are there any more path components? */
-				if (path)
+				if (path) {
 					/* Read directory contents */
 					if ((err = (int)d->vnode->ops.readdir(d->vnode)))
-						return err;
+						return PTR_ERR(err);
+
 					/* Search all children one level below. */
 					if ((found = lookup_dentry_children(d, path)))
 					 	/* Either found, or non-zero error */
 						return found;
-				else
+				} else
 					return thisnode;
 			} else { /* Its a file */
 				if (path) /* There's still path, but not directory */

@@ -10,6 +10,16 @@ struct list_head vnode_cache;
 struct list_head dentry_cache;
 
 /*
+ * /
+ * /boot
+ * /boot/images/mm0.axf
+ * /boot/images/fs0.axf
+ * /boot/images/test0.axf
+ * /file.txt
+ */
+struct vfs_mountpoint vfs_root;
+
+/*
  * Vnodes in the vnode cache have 2 keys. One is their dentry names, the other
  * is their vnum. This one checks the vnode cache by the given vnum first.
  * If nothing is found, it reads the vnode from disk into cache. This is called
@@ -21,7 +31,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 	int err;
 
 	/* Check the vnode cache by vnum */
-	list_for_each_entry(v, vnode_cache, cache_list)
+	list_for_each_entry(v, &vnode_cache, cache_list)
 		if (v->vnum == vnum)
 			return v;
 
@@ -36,9 +46,11 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 	/* Check the actual filesystem for the vnode */
 	v = vfs_alloc_vnode();
 	v->vnum = vnum;
-	if ((err = v->read_vnode(sb, v)) < 0) {
+
+	/* Note this only checks given superblock */
+	if ((err = sb->ops->read_vnode(sb, v)) < 0) {
 		vfs_free_vnode(v);
-		return err;
+		return PTR_ERR(err);
 	}
 
 	/* Add the vnode back to vnode cache */
@@ -67,16 +79,6 @@ struct vnode *vfs_lookup_bypath(struct superblock *sb, char *path)
 	/* It's not in the cache, look it up from filesystem. */
 	return sb->root->ops.lookup(sb->root, path);
 }
-
-/*
- * /
- * /boot
- * /boot/images/mm0.axf
- * /boot/images/fs0.axf
- * /boot/images/test0.axf
- * /file.txt
- */
-struct vfs_mountpoint vfs_root;
 
 int vfs_mount_root(struct superblock *sb)
 {

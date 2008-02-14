@@ -5,15 +5,8 @@
 #include <lib/malloc.h>
 #include <l4/lib/list.h>
 #include <memfs/memfs.h>
-
-/* Buffer to keep directory content. This is the only vnode content
- * that fs0 maintains. All other file data is in mm0 page cache.
- */
-struct dirbuf {
-	unsigned long npages;
-	int dirty;
-	u8 *buf;
-};
+#include <l4/macros.h>
+#include <stdio.h>
 
 extern struct list_head vnode_cache;
 extern struct list_head dentry_cache;

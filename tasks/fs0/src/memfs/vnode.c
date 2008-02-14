@@ -214,7 +214,6 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 int memfs_vnode_readdir(struct vnode *v)
 {
 	int err;
-	u8 *dirbuf;
 	struct memfs_dentry *memfsd;
 	struct dentry *parent = list_entry(v->dentries.next,
 					   struct dentry, vref);
@@ -224,13 +223,13 @@ int memfs_vnode_readdir(struct vnode *v)
 		return -ENOTDIR;
 
 	/* If a buffer is there, it means the directory is already read */
-	if (v->dirbuf->buffer)
+	if (v->dirbuf.buffer)
 		return 0;
 
 	/* This is as big as a page */
-	v->dirbuf->buffer = vfs_alloc_dirbuf();
-	v->dirbuf->npages = 1;
-	memfsd = dirbuf = v->dirbuf->buffer;
+	v->dirbuf.buffer = vfs_alloc_dirpage();
+	v->dirbuf.npages = 1;
+	memfsd = (struct memfs_dentry *) v->dirbuf.buffer;
 
 	/*
 	 * Fail if vnode size is bigger than a page. Since this allocation
@@ -239,7 +238,7 @@ int memfs_vnode_readdir(struct vnode *v)
 	BUG_ON(v->size > PAGE_SIZE);
 
 	/* Read memfsd contents into the buffer */
-	if ((err = v->fops.read(v, 0, 1, dirbuf)))
+	if ((err = v->fops.read(v, 0, 1, v->dirbuf.buffer)))
 		return err;
 
 	/* Read fs-specific directory entry into vnode and dentry caches. */
