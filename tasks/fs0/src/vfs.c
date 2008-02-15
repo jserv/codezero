@@ -30,7 +30,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 	struct vnode *v;
 	int err;
 
-	/* Check the vnode cache by vnum */
+	/* Check the vnode flat list by vnum */
 	list_for_each_entry(v, &vnode_cache, cache_list)
 		if (v->vnum == vnum)
 			return v;
@@ -53,7 +53,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 		return PTR_ERR(err);
 	}
 
-	/* Add the vnode back to vnode cache */
+	/* Add the vnode back to vnode flat list */
 	list_add(&v->cache_list, &vnode_cache);
 
 	return v;
@@ -70,14 +70,10 @@ struct vnode *vfs_lookup_bypath(struct superblock *sb, char *path)
 	if (!strcmp(path, "/"))
 		return sb->root;
 
-	/* TODO: Check the vnode cache by path component
-	 *
-	 * This should split the path into components and compare
-	 * each of them with each vnode's dentry list.
+	/*
+	 * This does vfs cache + fs lookup.
 	 */
-
-	/* It's not in the cache, look it up from filesystem. */
-	return sb->root->ops.lookup(sb->root, path);
+	return generic_vnode_lookup(sb->root, path);
 }
 
 int vfs_mount_root(struct superblock *sb)

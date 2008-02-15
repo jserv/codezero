@@ -57,7 +57,7 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir, char *path)
 			return v;
 
 	/* Out of all children dentries, neither was a match, so we return 0 */
-	return 0;
+	return PTR_ERR(-ENOENT);
 }
 
 /* Lookup, recursive, assuming single-mountpoint */
@@ -68,7 +68,7 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path)
 	struct vnode *found;
 	int err;
 
-	/* Does this path component match with any of parent vnode's names? */
+	/* Does this path component match with any of this vnode's dentries? */
 	list_for_each_entry(d, &thisnode->dentries, vref) {
 		if (d->ops.compare(d, component)) {
 			/* Is this a directory? */

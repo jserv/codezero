@@ -78,15 +78,28 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	return do_open(sender, pathname, flags, mode);
 }
 
+int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
+{
+	return 0;
+}
+
 int sys_read(l4id_t sender, int fd, void *buf, int count)
 {
 	return 0;
 }
 
+int sys_write(l4id_t sender, int fd, const void *buf, int count)
+{
+	return 0;
+}
+
+int sys_lseek(l4id_t sender, int fd, int offset, int whence)
+{
+	return 0;
+}
+
 /*
- * FIXME: Read count is not considered yet. Take that into account.
- * FIXME: Do we pass this buf back to mm0. Do we get it from mm0???
- * Fix generic_vnode_lookup as well.
+ * Reads @count bytes of posix struct dirents into @buf
  */
 int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 {
@@ -119,20 +132,10 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 
 	/* Do we have those bytes at hand? */
 	if (v->dirbuf.buffer && (v->dirbuf.npages * PAGE_SIZE) >= nbytes) {
-		memcpy(buf, v->dirbuf.buffer, nbytes); /* Finish the job */
+		memcpy(buf, v->dirbuf.buffer, nbytes);
 		return nbytes;
 	}
 
-	return 0;
-}
-
-int sys_write(l4id_t sender, int fd, const void *buf, int count)
-{
-	return 0;
-}
-
-int sys_lseek(l4id_t sender, int fd, int offset, int whence)
-{
 	return 0;
 }
 

@@ -27,6 +27,12 @@
  *   either high-level vfs code, or the mm0 page cache.
  * - readdir provides a posix-compliant dirent structure list in dirbuf.
  * - memfs dentries should be identical to posix struct dirents.
+ *
+ *   ALL DONE!!! But untested.
+ *
+ * - Add mkdir
+ * - Add create
+ * - Add read/write -> This will need page cache and mm0 involvement.
  */
 
 /* TODO:
