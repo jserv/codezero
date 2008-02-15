@@ -204,6 +204,77 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 	return 0;
 }
 
+int memfs_vnode_mkdir(struct vnode *v, char *dirname)
+{
+	struct dentry *d, *parent = list_entry(v->dentries.next,
+					       struct dentry, vref);
+	struct memfs_dentry *memfsd;
+	struct dentry *newd;
+	struct vnode *newv;
+	int err;
+
+	/*
+	 * Precautions to prove that parent is the *only* dentry,
+	 * since directories can't have multiple dentries associated
+	 * with them.
+	 */
+	BUG_ON(list_empty(&v->dentries));
+	BUG_ON(parent->vref.next != &v->dentries);
+	BUG_ON(!vfs_isdir(v));
+
+	/* Populate the children */
+	if ((err = v->ops.readdir(v)) < 0)
+		return err;
+
+	/* Check there's no existing child with same name */
+	list_for_each_entry(d, &parent->children, child) {
+		/* Does the name exist as a child? */
+		if(d->ops.compare(d, dirname))
+			return -EEXIST;
+	}
+
+	/* Allocate a new vnode for the new directory */
+	if (IS_ERR(newv = v->sb->ops->alloc_vnode(v->sb)))
+		return (int)newv;
+
+	/* Initialise the vnode */
+	vfs_set_type(newv, S_IFDIR);
+
+	/* Get the next directory entry available on the parent vnode */
+	if (v->dirbuf.npages * PAGE_SIZE <= v->size)
+		return -ENOSPC;
+	memfsd = (struct memfs_dentry *)&v->dirbuf.buffer[v->size];
+	memfsd->offset = v->size;
+	memfsd->rlength = sizeof(*memfsd);
+	memfsd->inum = ((struct memfs_inode *)newv->inode)->inum;
+	strncpy((char *)memfsd->name, dirname, MEMFS_DNAME_MAX);
+	memfsd->name[MEMFS_DNAME_MAX - 1] = '\0';
+
+	/* Update parent vnode */
+	v->size += sizeof(*memfsd);
+
+	/* Allocate a new vfs dentry */
+	if (!(newd = vfs_alloc_dentry()))
+		return -ENOMEM;
+
+	/* Initialise it */
+	newd->ops = generic_dentry_operations;
+	newd->parent = parent;
+	newd->vnode = newv;
+
+	/* Associate dentry with its vnode */
+	list_add(&newd->vref, &newd->vnode->dentries);
+
+	/* Associate dentry with its parent */
+	list_add(&newd->child, &parent->children);
+
+	/* Add both vnode and dentry to their flat caches */
+	list_add(&newd->cache_list, &dentry_cache);
+	list_add(&newv->cache_list, &vnode_cache);
+
+	return 0;
+}
+
 /*
  * Reads the vnode directory contents into vnode's buffer in a posix-compliant
  * struct dirent format.
@@ -220,9 +291,13 @@ int memfs_vnode_readdir(struct vnode *v)
 	struct dentry *parent = list_entry(v->dentries.next,
 					   struct dentry, vref);
 
-	/* Check directory type */
-	if (!vfs_isdir(v))
-		return -ENOTDIR;
+	/*
+	 * Precautions to prove that parent is the *only* dentry,
+	 * since directories can't have multiple dentries associated
+	 * with them.
+	 */
+	BUG_ON(parent->vref.next != &v->dentries);
+	BUG_ON(!vfs_isdir(v));
 
 	/* If a buffer is there, it means the directory is already read */
 	if (v->dirbuf.buffer)
@@ -279,8 +354,10 @@ int memfs_vnode_readdir(struct vnode *v)
 	return 0;
 }
 
+
 struct vnode_ops memfs_vnode_operations = {
 	.readdir = memfs_vnode_readdir,
+	.mkdir = memfs_vnode_mkdir,
 };
 
 struct superblock_ops memfs_superblock_operations = {

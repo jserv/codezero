@@ -8,6 +8,7 @@
 #include <l4lib/ipcdefs.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <lib/pathstr.h>
 #include <lib/malloc.h>
 #include <string.h>
 #include <stdio.h>
@@ -38,19 +39,22 @@ int send_pager_opendata(l4id_t sender, int fd, unsigned long vnum)
 	return 0;
 }
 
-int do_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
+/* FIXME:
+ * - Is it already open?
+ * - Allocate a copy of path string since lookup destroys it
+ * - Check flags and mode.
+ */
+int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {
 	struct vnode *v;
 	struct tcb *t;
 	int fd;
+	char *copypath = kmalloc(strlen(pathname) + 1);
 
-	/* FIXME: Use strnlen */
-	char *pathcopy = kmalloc(strlen(pathname));
-	/* FIXME: Use strncpy */
-	memcpy(pathcopy, pathname, strlen(pathname));
+	strcpy(copypath, pathname);
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(vfs_root.pivot->sb, pathcopy)))
+	if (IS_ERR(v = vfs_lookup_bypath(vfs_root.pivot->sb, copypath)))
 		return (int)v;
 
 	/* Get the task */
@@ -68,18 +72,32 @@ int do_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	return 0;
 }
 
-/* FIXME:
- * - Is it already open?
- * - Allocate a copy of path string since lookup destroys it
- * - Check flags and mode.
- */
-int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
-{
-	return do_open(sender, pathname, flags, mode);
-}
-
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
+	char *parentpath, *pathbuf = kmalloc(strlen(pathname) + 1);
+	struct vnode *vparent;
+	char *newdir_name;
+	int err;
+
+	strcpy(pathbuf, pathname);
+	parentpath = pathbuf;
+
+	/* The last component is to be created */
+	newdir_name = splitpath_end(&parentpath, '/');
+
+	/* Check that the parentdir exists. */
+	if (IS_ERR(vparent = vfs_lookup_bypath(vfs_root.pivot->sb, parentpath)))
+		return (int)vparent;
+
+	/* The parent vnode must be a directory. */
+	if (!vfs_isdir(vparent))
+		return -ENOENT;
+
+	/* Create new directory under the parent */
+	if ((err = vparent->ops.mkdir(vparent, newdir_name)) < 0)
+		return err;
+	kfree(pathbuf);
+
 	return 0;
 }
 

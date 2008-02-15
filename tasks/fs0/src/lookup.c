@@ -7,39 +7,7 @@
 #include <vfs.h>
 #include <stat.h>
 #include <l4/api/errno.h>
-
-/*
- * Splits the string str according to the given seperator, returns the
- * first component, and modifies the str so that it points at the next
- * available component (or a leading separator which can be filtered
- * out on a subsequent call to this function).
- */
-char *splitpath(char **str, char sep)
-{
-	char *cursor = *str;
-	char *end;
-
-	/* Move forward until no seperator */
-	while (*cursor == sep) {
-		*cursor = '\0';
-		cursor++;	/* Move to first char of component */
-	}
-
-	end = cursor;
-	while (*end != sep && *end != '\0')
-		end++;		/* Move until end of component */
-
-	if (*end == sep) {	/* if ended with separator */
-		*end = '\0';	/* finish component by null */
-		if (*(end + 1) != '\0')	/* if more components after, */
-			*str = end + 1;	/* assign beginning to str */
-		else
-			*str = end; /* else str is also depleted, give null */
-	} else /* if end was null, that means the end for str, too. */
-		*str = end;
-
-	return cursor;
-}
+#include <lib/pathstr.h>
 
 /*
  * Given a dentry that has been populated by readdir with children dentries

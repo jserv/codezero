@@ -50,7 +50,7 @@ struct vnode_ops {
 	int (*readdir)(struct vnode *v);
 	vnode_op_t link;
 	vnode_op_t unlink;
-	vnode_op_t mkdir;
+	int (*mkdir)(struct vnode *parent, char *name);
 	vnode_op_t rmdir;
 	vnode_op_t rename;
 	vnode_op_t getattr;
@@ -109,8 +109,7 @@ struct vnode {
 	struct list_head dentries;	/* Dirents that refer to this vnode */
 	struct list_head cache_list;	/* For adding the vnode to vnode cache */
 	struct dirbuf dirbuf;		/* Only directory buffers are kept */
-	u32 type;			/* Vnode type, dev? socket? dir? ... */
-	u32 mode;			/* Permissions */
+	u32 mode;			/* Permissions and vnode type */
 	u32 owner;			/* Owner */
 	u64 atime;			/* Last access time */
 	u64 mtime;			/* Last content modification */
@@ -120,7 +119,12 @@ struct vnode {
 };
 
 /* FS0 vfs specific macros */
-#define vfs_isdir(v)	S_ISDIR((v)->type)
+
+/* Check if directory */
+#define vfs_isdir(v)		S_ISDIR((v)->mode)
+
+/* Set vnode type */
+#define vfs_set_type(v, type)	{v->mode &= ~S_IFMT; v->mode |= S_IFMT & type; }
 
 struct fstype_ops {
 	struct superblock *(*get_superblock)(void *buf);
