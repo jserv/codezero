@@ -334,14 +334,25 @@ int memfs_vnode_readdir(struct vnode *v)
 		list_add(&newd->child, &parent->children);
 
 		/*
-		 * Read the vnode for dentry by its vnode number.
+		 * Lookup the vnode for dentry by its vnode number. We call
+		 * vnode_lookup_byvnum instead of directly reading it because
+		 * this dentry might just be a link to a vnode that's already
+		 * in the vnode cache. If it's not there, the lookup function
+		 * allocates and reads it for us as well.
 		 */
-		newv = newd->vnode = vfs_alloc_vnode();
-		newv->vnum = memfsd[i].inum;
-		BUG_ON(newv->sb->ops->read_vnode(newv->sb, newv) < 0);
+		newv = newd->vnode = vfs_lookup_byvnum(v->sb, memfsd[i].inum);
+		if (!newv) {
+			printf("Filesystem seems to be broken. Directory has"
+			       "inode number: %d, but no such inode found.\n",
+				memfsd[i].inum);
+			BUG();
+		}
 
 		/* Assing this dentry as a name of its vnode */
 		list_add(&newd->vref, &newd->vnode->dentries);
+
+		/* Increase link count */
+		newv->links++;
 
 		/* Copy fields into generic dentry */
 		memcpy(newd->name, memfsd[i].name, MEMFS_DNAME_MAX);

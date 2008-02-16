@@ -35,14 +35,6 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 		if (v->vnum == vnum)
 			return v;
 
-	/*
-	 * In the future it will be possible that a vnum known by the fd table
-	 * is not in the cache, because the cache will be able to grow and shrink.
-	 * But currently it just grows, so its a bug that a known vnum is not in
-	 * the cache.
-	 */
-	BUG();
-
 	/* Check the actual filesystem for the vnode */
 	v = vfs_alloc_vnode();
 	v->vnum = vnum;

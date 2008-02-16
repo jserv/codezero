@@ -69,6 +69,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Tell mm0 about opened vnode information */
 	BUG_ON(send_pager_opendata(sender, fd, v->vnum) < 0);
 
+	kfree(copypath);
 	return 0;
 }
 
@@ -97,7 +98,6 @@ int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 	if ((err = vparent->ops.mkdir(vparent, newdir_name)) < 0)
 		return err;
 	kfree(pathbuf);
-
 	return 0;
 }
 

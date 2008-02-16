@@ -102,7 +102,7 @@ struct dirbuf {
 struct vnode {
 	unsigned long vnum;		/* Filesystem-wide unique vnode id */
 	int refcnt;			/* Reference counter */
-	int hardlinks;			/* Number of hard links */
+	int links;			/* Number of hard links */
 	struct superblock *sb;		/* Reference to superblock */
 	struct vnode_ops ops;		/* Operations on this vnode */
 	struct file_ops fops;		/* File-related operations on this vnode */
