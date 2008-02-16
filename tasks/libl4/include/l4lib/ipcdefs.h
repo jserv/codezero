@@ -42,7 +42,7 @@
 #define L4_IPC_TAG_READDIR		18
 
 /* Tags for ipc between fs0 and mm0 */
-#define L4_IPC_TAG_OPENDATA		25
+#define L4_IPC_TAG_PAGER_SYSOPEN	25
 #define L4_IPC_TAG_TASKDATA		26
 
 #endif /* __IPCDEFS_H__ */

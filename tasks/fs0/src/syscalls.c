@@ -13,7 +13,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <task.h>
+#include <stat.h>
 #include <vfs.h>
+#include <alloca.h>
 
 /*
  * This notifies mm0 that this is the fd that refers to this vnode number
@@ -23,7 +25,7 @@
  * for handling syscalls that access file content (i.e. read/write) since
  * it maintains the page cache.
  */
-int send_pager_opendata(l4id_t sender, int fd, unsigned long vnum)
+int send_pager_sys_open(l4id_t sender, int fd, unsigned long vnum)
 {
 	int err;
 
@@ -31,10 +33,39 @@ int send_pager_opendata(l4id_t sender, int fd, unsigned long vnum)
 	write_mr(L4SYS_ARG1, fd);
 	write_mr(L4SYS_ARG2, vnum);
 
-	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_OPENDATA)) < 0) {
+	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_PAGER_SYSOPEN)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
+
+	return 0;
+}
+
+/* Creates a node under a directory, e.g. a file, directory. */
+int vfs_create(const char *pathname, unsigned int mode)
+{
+	char *pathbuf = alloca(strlen(pathname) + 1);
+	char *parentpath = pathbuf;
+	struct vnode *vparent;
+	char *nodename;
+	int err;
+
+	strcpy(pathbuf, pathname);
+
+	/* The last component is to be created */
+	nodename = splitpath_end(&parentpath, '/');
+
+	/* Check that the parent directory exists. */
+	if (IS_ERR(vparent = vfs_lookup_bypath(vfs_root.pivot->sb, parentpath)))
+		return (int)vparent;
+
+	/* The parent vnode must be a directory. */
+	if (!vfs_isdir(vparent))
+		return -ENOENT;
+
+	/* Create new directory under the parent */
+	if ((err = vparent->ops.mknod(vparent, nodename, mode)) < 0)
+		return err;
 
 	return 0;
 }
@@ -46,17 +77,23 @@ int send_pager_opendata(l4id_t sender, int fd, unsigned long vnum)
  */
 int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {
+	char *pathbuf = alloca(strlen(pathname) + 1);
 	struct vnode *v;
 	struct tcb *t;
 	int fd;
-	char *copypath = kmalloc(strlen(pathname) + 1);
+	int err;
 
-	strcpy(copypath, pathname);
+	strcpy(pathbuf, pathname);
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(vfs_root.pivot->sb, copypath)))
-		return (int)v;
-
+	if (IS_ERR(v = vfs_lookup_bypath(vfs_root.pivot->sb, pathbuf))) {
+		if (!flags & O_CREAT) {
+			return (int)v;
+		} else {
+			if ((err = vfs_create(pathname, mode)) < 0)
+				return err;
+		}
+	}
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
 
@@ -66,39 +103,15 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Assign the new fd with the vnode's number */
 	t->fd[fd] = v->vnum;
 
-	/* Tell mm0 about opened vnode information */
-	BUG_ON(send_pager_opendata(sender, fd, v->vnum) < 0);
+	/* Tell the pager about opened vnode information */
+	BUG_ON(send_pager_sys_open(sender, fd, v->vnum) < 0);
 
-	kfree(copypath);
 	return 0;
 }
 
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
-	char *parentpath, *pathbuf = kmalloc(strlen(pathname) + 1);
-	struct vnode *vparent;
-	char *newdir_name;
-	int err;
-
-	strcpy(pathbuf, pathname);
-	parentpath = pathbuf;
-
-	/* The last component is to be created */
-	newdir_name = splitpath_end(&parentpath, '/');
-
-	/* Check that the parentdir exists. */
-	if (IS_ERR(vparent = vfs_lookup_bypath(vfs_root.pivot->sb, parentpath)))
-		return (int)vparent;
-
-	/* The parent vnode must be a directory. */
-	if (!vfs_isdir(vparent))
-		return -ENOENT;
-
-	/* Create new directory under the parent */
-	if ((err = vparent->ops.mkdir(vparent, newdir_name)) < 0)
-		return err;
-	kfree(pathbuf);
-	return 0;
+	return vfs_create(pathname, mode);
 }
 
 int sys_read(l4id_t sender, int fd, void *buf, int count)

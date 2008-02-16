@@ -51,6 +51,7 @@ struct vnode_ops {
 	vnode_op_t link;
 	vnode_op_t unlink;
 	int (*mkdir)(struct vnode *parent, char *name);
+	int (*mknod)(struct vnode *parent, char *name, unsigned int mode);
 	vnode_op_t rmdir;
 	vnode_op_t rename;
 	vnode_op_t getattr;
