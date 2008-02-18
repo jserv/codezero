@@ -16,12 +16,24 @@
 #include <string.h>
 #include <memory.h>
 #include <shm.h>
+#include <file.h>
 
-/* FIXME: TODO:
+/* FIXME: FIXME: FIXME: FIXME: FIXME: FIXME: FIXME: FIXME: TODO:
  * For every page that is allocated, (read-only file pages) and anon pages
  * etc. Page cache for that page's file must be visited first, before
  * allocation.
  */
+
+unsigned long fault_to_file_offset(struct fault_data *fault)
+{
+	/* Fault's offset in its vma */
+	unsigned long vma_off_pfn = __pfn(fault->address) - fault->vma->pfn_start;
+
+	/* Fault's offset in the file */
+	unsigned long f_off_pfn = fault->vma->f_offset + vma_off_pfn;
+
+	return f_off_pfn;
+}
 
 /*
  * For copy-on-write vmas, grows an existing shadow vma, or creates a new one
@@ -87,6 +99,7 @@ int do_file_page(struct fault_data *fault)
 		void *paddr = alloc_page(1);
 		void *vaddr = phys_to_virt(paddr);
 		struct page *page = phys_to_page(paddr);
+		unsigned long f_offset = fault_to_file_offset(fault);
 
 		/* Map new page at a self virtual address temporarily */
 		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
@@ -95,7 +108,8 @@ int do_file_page(struct fault_data *fault)
 		 * Read the page. (Simply read into the faulty area that's
 		 * now mapped using a newly allocated page.)
 		 */
-		fault->vma->owner->pager->ops.read_page(fault, vaddr);
+		fault->vma->owner->pager->ops.read_page(fault->vma->owner,
+							f_offset, vaddr);
 
 		/* Remove temporary mapping */
 		l4_unmap(vaddr, 1, self_tid());
@@ -191,6 +205,7 @@ int do_file_page(struct fault_data *fault)
 		void *paddr = alloc_page(1);
 		void *vaddr = phys_to_virt(paddr);
 		struct page *page = phys_to_page(paddr);
+		unsigned long f_offset = fault_to_file_offset(fault);
 
 		/* Map it to self */
 		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
@@ -206,7 +221,8 @@ int do_file_page(struct fault_data *fault)
 		 * Read the page. (Simply read into the faulty area that's
 		 * now mapped using a newly allocated page.)
 		 */
-		fault->vma->owner->pager->ops.read_page(fault, vaddr);
+		fault->vma->owner->pager->ops.read_page(fault->vma->owner,
+							f_offset, vaddr);
 
 		/* Unmap from self */
 		l4_unmap(vaddr, 1, self_tid());
@@ -403,17 +419,43 @@ int do_page_fault(struct fault_data *fault)
 	return 0;
 }
 
-void vm_file_pager_read_page(struct fault_data *fault, void *dest_page)
+int file_pager_read_page(struct vm_file *f, unsigned long f_offset, void *dest_page)
 {
-	/* Fault's offset in its vma */
-	unsigned long vma_off_pfn = __pfn(fault->address) - fault->vma->pfn_start;
+	int err;
 
-	/* Fault's offset in the file */
-	unsigned long f_off_pfn = fault->vma->f_offset + vma_off_pfn;
+	/* Map the page to vfs task (shared mapping) */
+	l4_map(virt_to_phys(dest_page), dest_page, 1, MAP_USR_RW_FLAGS, VFS_TID);
 
+	/* vfs reads into the page. */
+	err = vfs_read(f->vnum, f_offset, 1, dest_page);
+
+	/* Unmap it from vfs */
+	l4_unmap(dest_page, 1, VFS_TID);
+
+	return err;
+}
+
+int file_pager_write_page(struct vm_file *f, unsigned long f_offset, void *src_page)
+{
+	int err;
+
+	/* Map the page to vfs task (shared mapping) */
+	l4_map(virt_to_phys(src_page), src_page, 1, MAP_USR_RW_FLAGS, VFS_TID);
+
+	/* write the page via vfs. */
+	err = vfs_write(f->vnum, f_offset, 1, src_page);
+
+	/* Unmap it from vfs */
+	l4_unmap(src_page, 1, VFS_TID);
+
+	return err;
+}
+
+int boot_pager_read_page(struct vm_file *f, unsigned long f_off_pfn,
+			 void *dest_page)
+{
 	/* The address of page in the file */
-	void *file_page = (void *)(fault->vma->owner->inode.i_addr +
-				   __pfn_to_addr(f_off_pfn));
+	void *file_page = (void *)(f->vnum + __pfn_to_addr(f_off_pfn));
 
 	/*
 	 * Map the memfile's page into virtual memory.
@@ -425,36 +467,33 @@ void vm_file_pager_read_page(struct fault_data *fault, void *dest_page)
 
 	/* Copy it into destination page */
 	memcpy(dest_page, file_page, PAGE_SIZE);
+
+	return 0;
 }
 
-void vm_file_pager_write_page(struct fault_data *f, void *p)
-{
-
-}
-
-void vm_swapper_read_page(struct fault_data *fault, void *p)
-{
-
-}
-
-void vm_swapper_write_page(struct fault_data *f, void *p) { }
+/* Pager for boot files read from sys_kdata() */
+struct vm_pager boot_file_pager = {
+	.ops = {
+		.read_page = boot_pager_read_page,
+		.write_page= 0,
+	},
+};
 
 /* Pager for file pages */
 struct vm_pager default_file_pager = {
 	.ops = {
-		.read_page = vm_file_pager_read_page,
-		.write_page= vm_file_pager_write_page,
+		.read_page = file_pager_read_page,
+		.write_page= 0,
 	},
 };
 
 /* Swap pager for anonymous and private pages */
 struct vm_pager swap_pager = {
 	.ops = {
-		.read_page = vm_swapper_read_page,
-		.write_page= vm_swapper_write_page,
+		.read_page = 0,
+		.write_page= 0,
 	},
 };
-
 
 void page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 {

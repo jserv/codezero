@@ -25,13 +25,14 @@
  * for handling syscalls that access file content (i.e. read/write) since
  * it maintains the page cache.
  */
-int send_pager_sys_open(l4id_t sender, int fd, unsigned long vnum)
+int send_pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
 {
 	int err;
 
 	write_mr(L4SYS_ARG0, sender);
 	write_mr(L4SYS_ARG1, fd);
 	write_mr(L4SYS_ARG2, vnum);
+	write_mr(L4SYS_ARG3, size);
 
 	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_PAGER_SYSOPEN)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
@@ -104,7 +105,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	t->fd[fd] = v->vnum;
 
 	/* Tell the pager about opened vnode information */
-	BUG_ON(send_pager_sys_open(sender, fd, v->vnum) < 0);
+	BUG_ON(send_pager_sys_open(sender, fd, v->vnum, v->size) < 0);
 
 	return 0;
 }

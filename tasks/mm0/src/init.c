@@ -12,6 +12,8 @@
 #include <l4lib/arch/syscalls.h>
 #include <task.h>
 #include <shm.h>
+#include <file.h>
+#include <init.h>
 
 void init_utcb(void)
 {
@@ -45,6 +47,8 @@ void init_mm(struct initdata *initdata)
 
 	shm_init();
 	printf("%s: Initialised shm structures.\n", __TASKNAME__);
+
+	vmfile_init();
 
 	/* Give the kernel some memory to use for its allocators */
 	l4_kmem_grant(__pfn(alloc_page(__pfn(SZ_1MB))), __pfn(SZ_1MB));

@@ -61,3 +61,18 @@ int id_del(struct id_pool *pool, int id)
 	return ret;
 }
 
+/* Return a specific id, if available */
+int id_get(struct id_pool *pool, int id)
+{
+	int ret;
+
+	spin_lock(&pool->lock);
+	ret = check_and_set_bit(pool->bitmap, id);
+	spin_unlock(&pool->lock);
+
+	if (ret < 0)
+		return ret;
+	else
+		return id;
+}
+

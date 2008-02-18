@@ -43,7 +43,7 @@ void init_devzero(void)
 	INIT_LIST_HEAD(&devzero.list);
 	INIT_LIST_HEAD(&devzero.page_cache_list);
 	devzero.length = (unsigned int)-1;
-	devzero.inode.i_addr = -1;
+	devzero.vnum = -1;
 }
 
 struct vm_file *get_devzero(void)

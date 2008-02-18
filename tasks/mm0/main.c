@@ -18,6 +18,7 @@
 #include <task.h>
 #include <vm_area.h>
 #include <syscalls.h>
+#include <file.h>
 
 /* FIXME:LOCKING:FIXME:LOCKING:FIXME:LOCKING
  * NOTE: For multithreadded MM0, not suprisingly, we need locking on
@@ -81,6 +82,20 @@ void handle_requests(void)
 
 	case L4_IPC_TAG_SHMDT:
 		sys_shmdt(sender, (void *)mr[0]);
+		break;
+
+	case L4_IPC_TAG_PAGER_SYSOPEN:
+		/* vfs opens a file and tells us about it here. */
+		vfs_receive_sys_open(sender, (l4id_t)mr[0], (int)mr[1],
+				     (unsigned long)mr[2], (unsigned long)mr[3]);
+		break;
+
+	case L4_IPC_TAG_READ:
+		sys_read(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+		break;
+
+	case L4_IPC_TAG_WRITE:
+		sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 
 	case L4_IPC_TAG_MMAP: {

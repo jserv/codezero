@@ -20,7 +20,7 @@
 #include <string.h>
 #include <vm_area.h>
 #include <memory.h>
-
+#include <file.h>
 
 struct tcb_head {
 	struct list_head list;
@@ -73,18 +73,6 @@ struct tcb *create_init_tcb(struct tcb_head *tcbs)
 	return task;
 }
 
-/* Create temporary run-time files in memory to test with mmap */
-struct vm_file *create_init_vmfile(struct list_head *vmfile_head)
-{
-	struct vm_file *file = kzalloc(sizeof(*file));
-
-	INIT_LIST_HEAD(&file->list);
-	INIT_LIST_HEAD(&file->page_cache_list);
-	list_add(&file->list, vmfile_head);
-
-	return file;
-}
-
 int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 {
 	int err;
@@ -119,16 +107,17 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		pc = USER_AREA_START;
 
 		/* Create vm file and tcb */
-		file = create_init_vmfile(&initdata->boot_file_list);
+		file = vmfile_alloc_init();
 		task = create_init_tcb(tcbs);
 
 		/*
 		 * For boot files, we use the physical address of the memory
 		 * file as its mock-up inode.
 		 */
-		file->inode.i_addr = img->phys_start;
+		file->vnum = img->phys_start;
 		file->length = img->phys_end - img->phys_start;
-		file->pager = &default_file_pager;
+		file->pager = &boot_file_pager;
+		list_add(&file->list, &initdata->boot_file_list);
 
 		/* mmap each task's physical image to task's address space. */
 		if ((err = do_mmap(file, 0, task, USER_AREA_START,

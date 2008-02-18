@@ -59,8 +59,8 @@ struct fault_data {
 };
 
 struct vm_pager_ops {
-	void (*read_page)(struct fault_data *f, void *);
-	void (*write_page)(struct fault_data *f, void *);
+	int (*read_page)(struct vm_file *f, unsigned long f_offset, void *pagebuf);
+	int (*write_page)(struct vm_file *f, unsigned long f_offset, void *pagebuf);
 };
 
 /* Describes the pager task that handles a vm_area. */
@@ -69,25 +69,20 @@ struct vm_pager {
 };
 
 /*
- * TODO: Since there's no vfs yet, an inode's i_addr field is the
- * virtual memory address of a file which uniquely identifies that file.
- */
-struct inode {
-	unsigned long i_addr;	/* The unique, global resource id. */
-};
-
-/*
  * Describes the in-memory representation of a file. This could
  * point at a file or another resource, e.g. a device area or swapper space.
  */
 struct vm_file {
-	struct inode inode;
+	int refcnt;
+	unsigned long vnum;	/* Vnode number */
 	unsigned long length;
 	struct list_head list; /* List of all vm files in memory */
+
 	/* This is the cache of physical pages that this file has in memory. */
 	struct list_head page_cache_list;
 	struct vm_pager *pager;
 };
+
 
 /*
  * Describes a virtually contiguous chunk of memory region in a task. It covers
@@ -119,6 +114,7 @@ static inline struct vm_area *find_vma(unsigned long addr,
 
 /* Pagers */
 extern struct vm_pager default_file_pager;
+extern struct vm_pager boot_file_pager;
 extern struct vm_pager swap_pager;
 
 

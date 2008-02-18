@@ -13,12 +13,20 @@
 #include <l4lib/types.h>
 #include <l4lib/utcb.h>
 
-#define __TASKNAME__		"mm0"
+#define __TASKNAME__		__PAGERNAME__
+
+#define TASK_OFILES_MAX			32
 
 /* Allow per-task anonymous memory to grow as much as 1 MB for now. */
 #define TASK_SWAPFILE_MAXSIZE				SZ_1MB
 
 struct vm_file;
+
+struct file_descriptor {
+	unsigned long vnum;
+	unsigned long cursor;
+	struct vm_file *vmfile;
+};
 
 /* Stores all task information that can be kept in userspace. */
 struct tcb {
@@ -52,6 +60,9 @@ struct tcb {
 
 	/* Per-task swap file for now */
 	struct vm_file *swap_file;
+
+	/* File descriptors for this task */
+	struct file_descriptor fd[TASK_OFILES_MAX];
 
 	/* Pool to generate swap file offsets for fileless anonymous regions */
 	struct id_pool *swap_file_offset_pool;
