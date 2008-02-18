@@ -28,6 +28,7 @@
 #define L4SYS_ARG0	(MR_UNUSED_START)
 #define	L4SYS_ARG1	(MR_UNUSED_START + 1)
 #define L4SYS_ARG2	(MR_UNUSED_START + 2)
+#define L4SYS_ARG3	(MR_UNUSED_START + 3)
 
 /*
  * Servers get sender.
