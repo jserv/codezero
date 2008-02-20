@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  *
  * This file contains ipc definitions that are needed for server tasks
  * to communicate with each other. For example common shared memory ids
@@ -40,9 +40,14 @@
 #define L4_IPC_TAG_CLOSE		16
 #define L4_IPC_TAG_BRK			17
 #define L4_IPC_TAG_READDIR		18
+#define L4_IPC_TAG_MKDIR		19
+#define L4_IPC_TAG_MMAP2		20
+#define L4_IPC_TAG_CHDIR		21
 
 /* Tags for ipc between fs0 and mm0 */
-#define L4_IPC_TAG_PAGER_SYSOPEN	25
-#define L4_IPC_TAG_TASKDATA		26
+#define L4_IPC_TAG_TASKDATA		25
+#define L4_IPC_TAG_PAGER_OPEN		26	/* vfs sends the pager open file data. */
+#define L4_IPC_TAG_PAGER_READ		27	/* Pager reads file contents from vfs */
+#define L4_IPC_TAG_PAGER_WRITE		28	/* Pager writes file contents to vfs */
 
 #endif /* __IPCDEFS_H__ */

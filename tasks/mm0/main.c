@@ -65,6 +65,7 @@ void handle_requests(void)
 		break;
 
 	case L4_IPC_TAG_TASKDATA:
+		/* Send runnable task information to fs0 */
 		send_task_data(sender);
 		break;
 
@@ -84,7 +85,7 @@ void handle_requests(void)
 		sys_shmdt(sender, (void *)mr[0]);
 		break;
 
-	case L4_IPC_TAG_PAGER_SYSOPEN:
+	case L4_IPC_TAG_PAGER_OPEN:
 		/* vfs opens a file and tells us about it here. */
 		vfs_receive_sys_open(sender, (l4id_t)mr[0], (int)mr[1],
 				     (unsigned long)mr[2], (unsigned long)mr[3]);
@@ -98,19 +99,24 @@ void handle_requests(void)
 		sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 
+	case L4_IPC_TAG_MMAP2: {
+		struct sys_mmap_args *args = (struct sys_mmap_args *)mr[0];
+		sys_mmap(sender, args->start, args->length, args->prot,
+			 args->flags, args->fd, args->offset);
+	}
 	case L4_IPC_TAG_MMAP: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)&mr[0];
-		BUG();	/* FIXME: There are 8 arguments to ipc whereas there are 7 mrs available. Fix this by increasing MRs to 8 ??? */
-		sys_mmap(sender, args->start, args->length, args->prot, args->flags, args->fd, args->offset);
+		sys_mmap(sender, args->start, args->length, args->prot,
+			 args->flags, args->fd, __pfn(args->offset));
 		break;
 	}
 	case L4_IPC_TAG_BRK: {
 //		sys_brk(sender, (void *)mr[0]);
 //		break;
 	}
+
 	case L4_IPC_TAG_MUNMAP: {
-		/* TODO: Use arg struct instead */
-//		sys_munmap(sender, (void *)mr[0], (int)mr[1]);
+		sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);
 		break;
 	}
 	case L4_IPC_TAG_MSYNC: {

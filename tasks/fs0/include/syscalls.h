@@ -6,9 +6,16 @@
 #ifndef __FS0_SYSCALLS_H__
 #define __FS0_SYSCALLS_H__
 
+/* Posix calls */
 int sys_open(l4id_t sender, char *pathname, int flags, u32 mode);
-int sys_read(l4id_t sender, int fd, void *buf, int cnt);
-int sys_write(l4id_t sender, int fd, void *buf, int cnt);
-int sys_lseek(l4id_t sender, int fd, unsigned long offset, int whence);
+int sys_readdir(l4id_t sender, int fd, void *buf, int count);
+int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode);
+int sys_chdir(l4id_t sender, const char *pathname);
 
+/* Calls from pager that completes a posix call */
+int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
+		   unsigned long npages, void *pagebuf);
+
+int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
+		   unsigned long npages, void *pagebuf);
 #endif /* __FS0_SYSCALLS_H__ */

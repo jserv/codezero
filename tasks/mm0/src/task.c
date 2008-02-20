@@ -173,6 +173,7 @@ error:
 	BUG();
 }
 
+
 void init_pm(struct initdata *initdata)
 {
 	start_boot_tasks(initdata, &tcb_head);

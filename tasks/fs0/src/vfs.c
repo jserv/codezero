@@ -5,6 +5,7 @@
  */
 #include <fs.h>
 #include <vfs.h>
+#include <task.h>
 
 struct list_head vnode_cache;
 struct list_head dentry_cache;
@@ -56,22 +57,25 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
  * have, the other is their vnum. This one checks the vnode cache by the path
  * first. If nothing is found, it reads the vnode from disk into the cache.
  */
-struct vnode *vfs_lookup_bypath(struct superblock *sb, char *path)
+struct vnode *vfs_lookup_bypath(struct tcb *task, char *path)
 {
-	/* If it's just / we already got it. */
+	/* If it's the root or current dir, we already got it. */
 	if (!strcmp(path, "/"))
-		return sb->root;
+		return task->rootdir;
+	if (!strcmp(path, "."))
+		return task->curdir;
 
 	/*
 	 * This does vfs cache + fs lookup.
 	 */
-	return generic_vnode_lookup(sb->root, path);
+	return generic_vnode_lookup(task->rootdir, path);
 }
 
 int vfs_mount_root(struct superblock *sb)
 {
-	/* Lookup the root vnode of this superblock */
-	vfs_root.pivot = vfs_lookup_bypath(sb, "/");
+	/* Lookup the root vnode of this superblock.
+	 * The root superblock has vnode number 0. */
+	vfs_root.pivot = vfs_lookup_byvnum(sb, 0);
 	vfs_root.sb = sb;
 
 	return 0;

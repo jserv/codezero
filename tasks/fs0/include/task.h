@@ -18,6 +18,8 @@ struct tcb {
 	struct list_head list;
 	int fd[TASK_OFILES_MAX];
 	struct id_pool *fdpool;
+	struct vnode *curdir;
+	struct vnode *rootdir;
 };
 
 struct tcb *find_task(int tid);

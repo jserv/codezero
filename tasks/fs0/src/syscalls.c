@@ -25,7 +25,7 @@
  * for handling syscalls that access file content (i.e. read/write) since
  * it maintains the page cache.
  */
-int send_pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
+int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
 {
 	int err;
 
@@ -34,7 +34,7 @@ int send_pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long
 	write_mr(L4SYS_ARG2, vnum);
 	write_mr(L4SYS_ARG3, size);
 
-	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_PAGER_SYSOPEN)) < 0) {
+	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_PAGER_OPEN)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -43,7 +43,7 @@ int send_pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long
 }
 
 /* Creates a node under a directory, e.g. a file, directory. */
-int vfs_create(const char *pathname, unsigned int mode)
+int vfs_create(struct tcb *task, const char *pathname, unsigned int mode)
 {
 	char *pathbuf = alloca(strlen(pathname) + 1);
 	char *parentpath = pathbuf;
@@ -57,7 +57,7 @@ int vfs_create(const char *pathname, unsigned int mode)
 	nodename = splitpath_end(&parentpath, '/');
 
 	/* Check that the parent directory exists. */
-	if (IS_ERR(vparent = vfs_lookup_bypath(vfs_root.pivot->sb, parentpath)))
+	if (IS_ERR(vparent = vfs_lookup_bypath(task, parentpath)))
 		return (int)vparent;
 
 	/* The parent vnode must be a directory. */
@@ -80,58 +80,127 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {
 	char *pathbuf = alloca(strlen(pathname) + 1);
 	struct vnode *v;
-	struct tcb *t;
+	struct tcb *task;
 	int fd;
 	int err;
 
 	strcpy(pathbuf, pathname);
 
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(vfs_root.pivot->sb, pathbuf))) {
+	if (IS_ERR(v = vfs_lookup_bypath(task, pathbuf))) {
 		if (!flags & O_CREAT) {
 			return (int)v;
 		} else {
-			if ((err = vfs_create(pathname, mode)) < 0)
+			if ((err = vfs_create(task, pathname, mode)) < 0)
 				return err;
 		}
 	}
-	/* Get the task */
-	BUG_ON(!(t = find_task(sender)));
 
 	/* Get a new fd */
-	BUG_ON(!(fd = id_new(t->fdpool)));
+	BUG_ON(!(fd = id_new(task->fdpool)));
 
 	/* Assign the new fd with the vnode's number */
-	t->fd[fd] = v->vnum;
+	task->fd[fd] = v->vnum;
 
 	/* Tell the pager about opened vnode information */
-	BUG_ON(send_pager_sys_open(sender, fd, v->vnum, v->size) < 0);
+	BUG_ON(pager_sys_open(sender, fd, v->vnum, v->size) < 0);
 
 	return 0;
 }
 
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
-	return vfs_create(pathname, mode);
+	struct tcb *task;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	return vfs_create(task, pathname, mode);
 }
 
-int sys_read(l4id_t sender, int fd, void *buf, int count)
+int sys_chdir(l4id_t sender, const char *pathname)
 {
-	return 0;
-}
+	char *pathbuf = alloca(strlen(pathname) + 1);
+	struct vnode *v;
+	struct tcb *task;
 
-int sys_write(l4id_t sender, int fd, const void *buf, int count)
-{
-	return 0;
-}
+	strcpy(pathbuf, pathname);
 
-int sys_lseek(l4id_t sender, int fd, int offset, int whence)
-{
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Get the vnode */
+	if (IS_ERR(v = vfs_lookup_bypath(task, pathbuf)))
+		return (int)v;
+
+	/* Ensure it's a directory */
+	if (!vfs_isdir(v))
+		return -ENOTDIR;
+
+	/* Assign the current directory pointer */
+	task->curdir = v;
+
 	return 0;
 }
 
 /*
- * Reads @count bytes of posix struct dirents into @buf
+ * Note this can be solely called by the pager and is not the posix read call.
+ * That call is in the pager. This merely supplies the pages the pager needs
+ * if they're not in the page cache.
+ */
+int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
+		   unsigned long npages, void *pagebuf)
+{
+	struct vnode *v;
+	int err;
+
+	if (sender != PAGER_TID)
+		return -EINVAL;
+
+	/* Lookup vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL; /* No such vnode */
+
+	/* Ensure vnode is not a directory */
+	if (vfs_isdir(v))
+		return -EISDIR;
+
+	if ((err = v->fops.read(v, f_offset, npages, pagebuf)) < 0)
+		return err;
+
+	return 0;
+}
+
+int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
+		   unsigned long npages, void *pagebuf)
+{
+	struct vnode *v;
+	int err;
+
+	if (sender != PAGER_TID)
+		return -EINVAL;
+
+	/* Lookup vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL; /* No such vnode */
+
+	/* Ensure vnode is not a directory */
+	if (vfs_isdir(v))
+		return -EISDIR;
+
+	if ((err = v->fops.write(v, f_offset, npages, pagebuf)) < 0)
+		return err;
+
+	return 0;
+}
+
+/*
+ * Reads @count bytes of posix struct dirents into @buf. This implements
+ * the raw dirent read syscall upon which readdir() etc. posix calls
+ * can be built in userspace.
  */
 int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 {

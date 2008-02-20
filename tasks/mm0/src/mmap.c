@@ -194,7 +194,6 @@ struct vm_area *vma_split(struct vm_area *vma, struct tcb *task,
 	if (!(new = vma_new(0, 0, 0, 0, 0)))
 		return 0;
 
-
 	/*
 	 * Some sanity checks to show that splitter range does end up
 	 * producing two smaller vmas.
@@ -367,6 +366,15 @@ pgtable_unmap:
 	return 0;
 }
 
+int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
+{
+	struct tcb *task;
+
+	BUG_ON(!(task = find_task(sender)));
+
+	return do_munmap(vaddr, size, task);
+}
+
 static struct vm_area *
 is_vma_mergeable(unsigned long pfn_start, unsigned long pfn_end,
 		 unsigned int flags, struct vm_area *vma)
@@ -480,15 +488,35 @@ int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 
 /* mmap system call implementation */
 int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
-	     int flags, int fd, off_t offset)
+	     int flags, int fd, unsigned long pfn)
 {
+	unsigned long npages = __pfn(page_align_up(length));
+	struct tcb * task;
+	int err;
+
+	BUG_ON(!(task = find_task(sender)));
+
+	if (fd < 0 || fd > TASK_OFILES_MAX)
+		return -EINVAL;
+
+	if ((unsigned long)start < USER_AREA_START || (unsigned long)start >= USER_AREA_END)
+		return -EINVAL;
+
+	/* TODO:
+	 * Check that @start does not already have a mapping.
+	 * Check that pfn + npages range is within the file range.
+	 * Check that posix flags passed match those defined in vm_area.h
+	 */
+	if ((err =  do_mmap(task->fd[fd].vmfile, __pfn_to_addr(pfn), task,
+			    (unsigned long)start, flags, npages)) < 0)
+		return err;
+
 	return 0;
 }
 
 /* Sets the end of data segment for sender */
 int sys_brk(l4id_t sender, void *ds_end)
 {
-	// do_brk(find_task(sender), ds_end);
 	return 0;
 }
 

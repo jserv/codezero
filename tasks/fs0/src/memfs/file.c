@@ -16,7 +16,7 @@
 
 #if 0
 
-/* 
+/*
  * FIXME: read_write() could be more layered using these functions.
  */
 void *memfs_read_block(struct vnode *v, int blknum)

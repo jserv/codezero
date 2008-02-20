@@ -86,7 +86,7 @@ struct dentry {
 	struct list_head children;	/* List of children dentries */
 	struct list_head vref;		/* For vnode's dirent reference list */
 	struct list_head cache_list;	/* Dentry cache reference */
-	struct vnode *vnode;		/* The vnode associated with dirent */
+	struct vnode *vnode;		/* The vnode associated with dentry */
 	struct dentry_ops ops;
 };
 

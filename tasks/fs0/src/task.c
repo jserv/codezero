@@ -11,6 +11,8 @@
 #include <l4lib/ipcdefs.h>
 #include <lib/malloc.h>
 #include <task.h>
+#include <vfs.h>
+
 
 struct tcb_head {
 	struct list_head list;
@@ -88,10 +90,12 @@ int init_task_structs(l4id_t *tdata)
 	struct tcb *t;
 	int total = tdata[0];
 
-	for (int i = 0; i < total; i++)
+	for (int i = 0; i < total; i++) {
 		if (IS_ERR(t = create_tcb(tdata[1 + i])))
 			return (int)t;
-
+		t->rootdir = vfs_root.pivot;
+		t->curdir = vfs_root.pivot;
+	}
 	return 0;
 }
 

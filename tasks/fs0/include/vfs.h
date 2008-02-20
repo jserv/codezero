@@ -7,6 +7,7 @@
 #include <memfs/memfs.h>
 #include <l4/macros.h>
 #include <stdio.h>
+#include <task.h>
 
 extern struct list_head vnode_cache;
 extern struct list_head dentry_cache;
@@ -92,7 +93,7 @@ extern struct vfs_mountpoint vfs_root;
 
 int vfs_mount_root(struct superblock *sb);
 struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path);
-struct vnode *vfs_lookup_bypath(struct superblock *sb, char *path);
+struct vnode *vfs_lookup_bypath(struct tcb *task, char *path);
 struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum);
 
 #endif /* __VFS_H__ */

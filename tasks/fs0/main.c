@@ -33,10 +33,8 @@
  * - Add mkdir
  * - Add create
  * - Add read/write -> This will need page cache and mm0 involvement.
- */
-
-/* TODO:
- * Assign memfs dentry fields same as in posix
+ *
+ *   Done those, too. but untested.
  */
 
 /* Synchronise with pager via a `wait' tagged ipc with destination as pager */
@@ -74,16 +72,24 @@ void handle_fs_requests(void)
 		printf("%s: Synced with waiting thread.\n", __TASKNAME__);
 		break;
 	case L4_IPC_TAG_OPEN:
-		sys_open(sender, (void *)mr[0], (int)mr[1], (u32)mr[2]);
+		sys_open(sender, (void *)mr[0], (int)mr[1], (unsigned int)mr[2]);
 		break;
-	case L4_IPC_TAG_READ:
-		sys_read(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+	case L4_IPC_TAG_MKDIR:
+		sys_mkdir(sender, (const char *)mr[0], (unsigned int)mr[1]);
 		break;
-	case L4_IPC_TAG_WRITE:
-		sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+	case L4_IPC_TAG_CHDIR:
+		sys_chdir(sender, (const char *)mr[0]);
 		break;
-	case L4_IPC_TAG_LSEEK:
-		sys_lseek(sender, (int)mr[0], (int)mr[1], (int)mr[2]);
+	case L4_IPC_TAG_READDIR:
+		sys_readdir(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+		break;
+	case L4_IPC_TAG_PAGER_READ:
+		pager_sys_read(sender, (unsigned long)mr[0], (unsigned long)mr[1],
+			       (unsigned long)mr[2], (void *)mr[3]);
+		break;
+	case L4_IPC_TAG_PAGER_WRITE:
+		pager_sys_write(sender, (unsigned long)mr[0], (unsigned long)mr[1],
+			        (unsigned long)mr[2], (void *)mr[3]);
 		break;
 	default:
 		printf("%s: Unrecognised ipc tag (%d)"
