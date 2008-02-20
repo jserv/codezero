@@ -145,8 +145,8 @@ struct page *find_page(struct vm_file *f, unsigned long pfn)
 }
 
 /*
- * This reads-in a range of pages from a file just like a page fault,
- * but its not in the page fault path.
+ * This reads-in a range of pages from a file and populates the page cache
+ * just like a page fault, but its not in the page fault path.
  */
 int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 		    unsigned long pfn_end)
@@ -192,8 +192,8 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 {
 	unsigned long foff_pfn_start, foff_pfn_end;
 	struct vm_file *vmfile;
-	struct tcb *t;
 	unsigned long cursor;
+	struct tcb *t;
 	int err;
 
 	BUG_ON(!(t = find_task(sender)));
@@ -215,9 +215,8 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	 * FIXME: If vmfiles are mapped contiguously on mm0, then these reads
 	 * can be implemented as a straightforward copy as below.
 	 *
-	 * The problem is that in-memrory file pages are usually non-contiguous.
+	 * The problem is that in-memory file pages are usually non-contiguous.
 	 * memcpy(buf, (void *)(vmfile->base + cursor), count);
-	 *
 	 */
 
 	return 0;
@@ -225,6 +224,26 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
+	unsigned long foff_pfn_start, foff_pfn_end;
+	struct vm_file *vmfile;
+	unsigned long cursor;
+	struct tcb *t;
+	int err;
+
+	BUG_ON(!(t = find_task(sender)));
+
+	/* TODO: Check user buffer and count validity */
+	if (fd < 0 || fd > TASK_OFILES_MAX)
+		return -EINVAL;
+
+	vmfile = t->fd[fd].vmfile;
+	cursor = t->fd[fd].cursor;
+
+	foff_pfn_start = __pfn(cursor);
+	foff_pfn_end = __pfn(page_align_up(cursor + count));
+
+	if ((err =  write_file_pages(vmfile, foff_pfn_start, foff_pfn_end) < 0))
+		return err;
 
 	return 0;
 }

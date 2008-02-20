@@ -254,6 +254,10 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	strncpy((char *)memfsd->name, dirname, MEMFS_DNAME_MAX);
 	memfsd->name[MEMFS_DNAME_MAX - 1] = '\0';
 
+	BUG(); /* FIXME: Fix this issue. */
+	/* Write the updated directory buffer back to disk */
+	v->fops.write(v, 0, 1, v->dirbuf.buffer);
+
 	/* Update parent vnode */
 	v->size += sizeof(*memfsd);
 

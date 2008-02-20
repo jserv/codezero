@@ -111,6 +111,19 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	return 0;
 }
 
+int sys_close(l4id_t sender, int fd)
+{
+	struct vnode *v;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Lookup vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL; /* No such vnode */
+
+}
+
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
 	struct tcb *task;
