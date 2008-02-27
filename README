@@ -59,14 +59,14 @@ For example the virtual and physical memory resources can be partitioned by
 Codezero among pagers, and a third-party pager can override Codezero's MM0
 pager on the same run-time, and implement an independent paging behaviour
 for its own memory partition. This feature provides the option of having an
-adjustable mixture of generalisation and specialisation at the same run-time, by
-using a combination of Codezero's abstract posix-like page/file management
-services and an application-specific pager that depends on its own paging
-abilities. For example a critical task could both use posix-like files
-benefiting from the abstraction and simplification that it brings, but at the
-same time rely on its own page-fault handling for its critical data so that even
-though it handles its memory in a specialised way, it does not depend on another
-pager's grace for correct, stable operation.
+adjustable mixture of generalisation and specialisation of system services at
+the same run-time, by using a combination of Codezero's abstract posix-like
+page/file management services and an application-specific pager that depends on
+its own paging abilities. For example a critical task could both use posix-like
+files benefiting from the abstraction and simplification that it brings, but at
+the same time rely on its own page-fault handling for its critical data so that
+even though it handles its memory in a specialised way, it does not depend on
+another pager's grace for correct, stable operation.
 
 
 License:
