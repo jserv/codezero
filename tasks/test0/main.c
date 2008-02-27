@@ -26,9 +26,12 @@ void main(void)
 {
 	printf("\n%s: Started with tid %d.\n", __TASKNAME__, self_tid());
 	/* Sync with pager */
+	wait_pager(0);
+
+	dirtest();
+
 	while (1)
 		wait_pager(0);
-
 #if 0
 	/* Check mmap/munmap */
 	mmaptest();

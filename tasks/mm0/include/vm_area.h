@@ -112,6 +112,9 @@ static inline struct vm_area *find_vma(unsigned long addr,
 	return 0;
 }
 
+/* Adds a page to its vmfile's page cache in order of offset. */
+int insert_page_olist(struct page *this, struct vm_file *f);
+
 /* Pagers */
 extern struct vm_pager default_file_pager;
 extern struct vm_pager boot_file_pager;

@@ -38,17 +38,35 @@ Codezero. These system calls provide purely mechanism; threads and address
 spaces, and the methods of inter-process communication between them. Anything
 beyond these are policy and they are implemented in the userspace. Due to this
 rigorously simple design the same microkernel can be used to design completely
-different operating systems. In terms of other features, the microkernel is
-preemptive, and smp-ready. Currently only synchronous communication is
-implemented, but this will change in the near future.
+different operating systems.
 
-MM0 is the systm task that implements memory management. It contains memory and
+In terms of other features, the microkernel is preemptive, and smp-ready.
+Currently only synchronous communication is implemented, but this will change in
+the near future.
+
+MM0 is the system task that implements memory management. It contains memory and
 page allocators. It implements demand paging by managing page faults, physical
-pages and their file/task associations.
+pages and their file/task associations. It provides the default paging mechanism
+on Codezero.
 
 FS0 is the system task that implements a simple, modern virtual filesystem layer.
-Since it abstracts the low-level filesystem details, it is a relatively easy job
-to port a new filesystem to be used under FS0.
+It is designed to serve file requests from MM0. Since it abstracts the low-level
+filesystem details, it is a relatively easy job to port a new filesystem to be
+used under FS0.
+
+MM0 and FS0 both reside in the userspace, and they are not mandatory services.
+For example the virtual and physical memory resources can be partitioned by
+Codezero among pagers, and a third-party pager can override Codezero's MM0
+pager on the same run-time, and implement an independent paging behaviour
+for its own memory partition. This feature provides the option of having an
+adjustable mixture of generalisation and specialisation at the same run-time, by
+using a combination of Codezero's abstract posix-like page/file management
+services and an application-specific pager that depends on its own paging
+abilities. For example a critical task could both use posix-like files
+benefiting from the abstraction and simplification that it brings, but at the
+same time rely on its own page-fault handling for its critical data so that even
+though it handles its memory in a specialised way, it does not depend on another
+pager's grace for correct, stable operation.
 
 
 License:
@@ -75,8 +93,8 @@ code. Linux is well established, and targets a broad range of platforms and
 uses, but consequently embedded platforms don't always get enough emphasis. Also
 such well established, mature systems tend to oppose major design overhauls,
 which limits innovation to a certain extent. In addition, their code base is so
-big, that it gets more and more difficult to understand how the system works.
-Usually much of the code is irrelevant to the problem, in case of embedded
+big, that it gets more and more difficult to understand how their internals
+work. Usually much of the code is irrelevant to the problem, in case of embedded
 systems. Codezero is written from scratch to solely target embedded systems and
 as such the source code is %100 relevant. It is small and free from legacy code.
 Finally monolithic kernels may have issues with dependability due to much of the
@@ -98,4 +116,8 @@ somewhat (e.g. some are presented in Plan 9). As well as practising realistic
 development methodologies, Codezero project aims to keep up with the latest OS
 literature and provide the opportunity to incorporate the latest ideas in OS
 technology.
+
+
+
+
 

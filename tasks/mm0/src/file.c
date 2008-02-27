@@ -132,16 +132,53 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	return 0;
 }
 
-/* TODO: Implement this */
 struct page *find_page(struct vm_file *f, unsigned long pfn)
 {
 	struct page *p;
 
-	list_for_each_entry(p, &f->page_cache_list, list) {
+	list_for_each_entry(p, &f->page_cache_list, list)
 		if (p->f_offset == pfn)
 			return p;
-	}
+
 	return 0;
+}
+
+/*
+ * Inserts the page to vmfile's list in order of page frame offset.
+ * We use an ordered list instead of a radix or btree for now.
+ */
+int insert_page_olist(struct page *this, struct vm_file *f)
+{
+	struct page *before, *after;
+
+	/* Add if list is empty */
+	if (list_empty(&f->page_cache_list)) {
+		list_add_tail(&this->list, &f->page_cache_list);
+		return 0;
+	}
+	/* Else find the right interval */
+	list_for_each_entry(before, &f->page_cache_list, list) {
+		after = list_entry(before->list.next, struct page, list);
+
+		/* If there's only one in list */
+		if (before->list.next == &f->page_cache_list) {
+			/* Add to end if greater */
+			if (this->f_offset > before->f_offset)
+				list_add_tail(&this->list, &before->list);
+			/* Add to beginning if smaller */
+			else if (this->f_offset < before->f_offset)
+				list_add(&this->list, &before->list);
+			return 0;
+		}
+
+		/* If this page is in-between two other, insert it there */
+		if (before->f_offset < this->f_offset &&
+		    after->f_offset > this->f_offset) {
+			list_add_tail(&this->list, &before->list);
+			return 0;
+		}
+	}
+	BUG();
 }
 
 /*
@@ -180,7 +217,7 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 
 			/* Add the page to owner's list of in-memory pages */
 			BUG_ON(!list_empty(&page->list));
-			list_add(&page->list, &vmfile->page_cache_list);
+			insert_page_olist(page, vmfile);
 			spin_unlock(&page->lock);
 		}
 	}
@@ -188,11 +225,49 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
+/* Reads a page range from an ordered list of pages into buffer */
+int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
+		     unsigned long pfn_end, unsigned long offset,
+		     int count)
+{
+	struct page *head, *next;
+	int copysize, left;
+
+	list_for_each_entry(head, &vmfile->page_cache_list, list)
+		if (head->f_offset == pfn_start)
+			goto copy;
+	BUG();
+
+copy:
+	left = count;
+
+	/* Copy the first page */
+	copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
+	memcpy(buf, (void *)phys_to_virt((void *)page_to_phys(head)) + offset,
+	       copysize);
+	left -= copysize;
+
+	/* Copy the rest. Urgh, lots of arithmetic here. */
+	list_for_each_entry(next, &head->list, list) {
+		if (left == 0 || next->f_offset == pfn_end)
+			break;
+		copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
+		memcpy(buf + count - left,
+		       (void *)phys_to_virt((void *)page_to_phys(next)),
+		       copysize);
+		left -= copysize;
+	}
+	BUG_ON(left != 0);
+
+	return 0;
+}
+
+
 int sys_read(l4id_t sender, int fd, void *buf, int count)
 {
 	unsigned long foff_pfn_start, foff_pfn_end;
+	unsigned long cursor, first_pgoff;
 	struct vm_file *vmfile;
-	unsigned long cursor;
 	struct tcb *t;
 	int err;
 
@@ -208,43 +283,26 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	foff_pfn_start = __pfn(cursor);
 	foff_pfn_end = __pfn(page_align_up(cursor + count));
 
+	/* Read the page range into the cache from file */
 	if ((err =  read_file_pages(vmfile, foff_pfn_start, foff_pfn_end) < 0))
 		return err;
 
-	/*
-	 * FIXME: If vmfiles are mapped contiguously on mm0, then these reads
-	 * can be implemented as a straightforward copy as below.
-	 *
-	 * The problem is that in-memory file pages are usually non-contiguous.
-	 * memcpy(buf, (void *)(vmfile->base + cursor), count);
-	 */
+	/* The offset of cursor on first page */
+	first_pgoff = PAGE_MASK & cursor;
+
+	/* Read it into the user buffer from the cache */
+	if ((err = read_cache_pages(vmfile, buf, foff_pfn_start, foff_pfn_end,
+				    first_pgoff, count)) < 0)
+		return err;
+
+	/* Update cursor on success */
+	t->fd[fd].cursor += count;
 
 	return 0;
 }
 
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
-	unsigned long foff_pfn_start, foff_pfn_end;
-	struct vm_file *vmfile;
-	unsigned long cursor;
-	struct tcb *t;
-	int err;
-
-	BUG_ON(!(t = find_task(sender)));
-
-	/* TODO: Check user buffer and count validity */
-	if (fd < 0 || fd > TASK_OFILES_MAX)
-		return -EINVAL;
-
-	vmfile = t->fd[fd].vmfile;
-	cursor = t->fd[fd].cursor;
-
-	foff_pfn_start = __pfn(cursor);
-	foff_pfn_end = __pfn(page_align_up(cursor + count));
-
-	if ((err =  write_file_pages(vmfile, foff_pfn_start, foff_pfn_end) < 0))
-		return err;
-
 	return 0;
 }
 

@@ -66,14 +66,11 @@ int memfs_format_filesystem(void *buffer)
 	INIT_LIST_HEAD(&sb->inode_cache_list);
 	memfs_init_caches(sb);
 
-	/*
-	 * TODO: Make sure root vnode has a vnode number of 0 !!!.
-	 * This is used in early root lookup.
-	 */
-	BUG();
-
 	/* We allocate and fix a root inode so the sb is ready for mount */
 	sb->root = memfs_create_inode(sb);
+
+	/* Some early-init code relies on root having inode number 0 */
+	BUG_ON(sb->root->inum != 0);
 
 	return 0;
 }

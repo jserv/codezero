@@ -127,9 +127,9 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 			goto error;
 		}
 
-		/* mmap each task's stack as single page anonymous memory. */
-		if ((err = do_mmap(0, 0, task, USER_AREA_END - PAGE_SIZE,
-				   VM_READ | VM_WRITE | VMA_ANON, 1) < 0)) {
+		/* mmap each task's stack as 4-page anonymous memory. */
+		if ((err = do_mmap(0, 0, task, USER_AREA_END - PAGE_SIZE * 4,
+				   VM_READ | VM_WRITE | VMA_ANON, 4) < 0)) {
 			printf("do_mmap: Mapping stack failed with %d.\n", err);
 			goto error;
 		}

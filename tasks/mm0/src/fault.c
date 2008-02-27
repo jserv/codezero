@@ -130,7 +130,7 @@ int do_file_page(struct fault_data *fault)
 
 		/* Add the page to it's owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
-		list_add(&page->list, &page->owner->page_cache_list);
+		insert_page_olist(page, page->owner);
 		spin_unlock(&page->lock);
 		//printf("%s: Mapped new page @ 0x%x to task: %d\n", __TASKNAME__,
 		//       fault->address, fault->task->tid);
@@ -184,7 +184,7 @@ int do_file_page(struct fault_data *fault)
 
 		/* Add the page to it's owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
-		list_add(&page->list, &page->owner->page_cache_list);
+		insert_page_olist(page, page->owner);
 		spin_unlock(&page->lock);
 
 		/*
@@ -244,7 +244,7 @@ int do_file_page(struct fault_data *fault)
 
 		/* Add the page to it's owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
-		list_add(&page->list, &page->owner->page_cache_list);
+		insert_page_olist(page, page->owner);
 		spin_unlock(&page->lock);
 	} else
 		BUG();
@@ -333,7 +333,7 @@ int do_anon_page(struct fault_data *fault)
 
 		/* Add the page to it's owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
-		list_add(&page->list, &page->owner->page_cache_list);
+		insert_page_olist(page, page->owner);
 
 		/* The offset of this page in its owner file */
 		page->f_offset = __pfn(fault->address)
@@ -391,15 +391,15 @@ int do_page_fault(struct fault_data *fault)
 
 	/* vma flags show no access */
 	if (vma_flags & VM_NONE) {
-		printf("Illegal access, tid: %d, address: %x\n",
-		       fault->task->tid, fault->address);
+		printf("Illegal access, tid: %d, address: 0x%x, PC @ 0x%x,\n",
+		       fault->task->tid, fault->address, fault->kdata->faulty_pc);
 		BUG();
 	}
 
 	/* The access reason is not included in the vma's listed flags */
 	if (!(reason & vma_flags)) {
-		printf("Illegal access, tid: %d, address: %x\n",
-		       fault->task->tid, fault->address);
+		printf("Illegal access, tid: %d, address: 0x%x, PC @ 0x%x\n",
+		       fault->task->tid, fault->address, fault->kdata->faulty_pc);
 		BUG();
 	}
 

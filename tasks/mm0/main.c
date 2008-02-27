@@ -20,13 +20,6 @@
 #include <syscalls.h>
 #include <file.h>
 
-/* FIXME:LOCKING:FIXME:LOCKING:FIXME:LOCKING
- * NOTE: For multithreadded MM0, not suprisingly, we need locking on
- * vmas, vm_files, and all global variables. Also at times, the per-task
- * lists of items (e.g. vmas) must be entirely locked. Pages already have
- * locking.
- */
-
 void handle_requests(void)
 {
 	/* Generic ipc data */
