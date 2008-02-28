@@ -72,7 +72,7 @@ struct tcb *create_init_tcb(struct tcb_head *tcbs)
 	tcbs->total++;
 
 	/* Allocate a utcb virtual address */
-	task->utcb_addr = (unsigned long)utcb_vaddr_new();
+	task->utcb_address = (unsigned long)utcb_vaddr_new();
 
 	return task;
 }
@@ -158,8 +158,8 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 
 		/* mmap each task's utcb as single page anonymous memory. */
 		printf("%s: Mapping utcb for new task at: 0x%x\n", __TASKNAME__,
-		       task->utcb_addr);
-		if ((err = do_mmap(0, 0, task, task->utcb_addr,
+		       task->utcb_address);
+		if ((err = do_mmap(0, 0, task, task->utcb_address,
 				   VM_READ | VM_WRITE | VMA_ANON, 1) < 0)) {
 			printf("do_mmap: Mapping utcb failed with %d.\n", err);
 			goto error;

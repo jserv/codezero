@@ -258,6 +258,20 @@ int is_env_arg_page(struct fault_data *fault)
 	return fault->address >= page_align(fault->task->stack_end);
 }
 
+int fill_env_arg_info(struct fault_data *fault, void *vaddr)
+{
+	/* Get the env start offset in the page */
+	unsigned long env_offset = fault->task->env_start & PAGE_MASK;
+
+	/* Write the environment information */
+	*(unsigned long *)(vaddr + env_offset) = fault->task->utcb_address;
+	printf("%s: Written env value 0x%x, to task address 0x%x\n",
+	       __TASKNAME__, fault->task->utcb_address,
+	       page_align(fault->address) + env_offset);
+
+	return 0;
+}
+
 /*
  * Handles any page allocation or file ownership change for anonymous pages.
  * For read accesses initialises a wired-in zero page and for write accesses
@@ -319,8 +333,9 @@ int do_anon_page(struct fault_data *fault)
 		/* Clear the page */
 		memset((void *)vaddr, 0, PAGE_SIZE);
 
+		/* If its the env/arg page on stack, fill that information */
 		if (is_env_arg_page(fault))
-			/* TODO: Fill in environment information here. */
+			fill_env_arg_info(fault, vaddr);
 
 		/* Remove temporary mapping */
 		l4_unmap((void *)vaddr, 1, self_tid());

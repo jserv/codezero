@@ -60,7 +60,7 @@ struct tcb {
 	unsigned long args_end;
 
 	/* UTCB address */
-	unsigned long utcb_addr;
+	unsigned long utcb_address;
 
 	/* Virtual memory areas */
 	struct list_head vm_area_list;
