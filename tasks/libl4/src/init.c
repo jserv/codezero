@@ -20,6 +20,9 @@ __l4_kmem_reclaim_t __l4_kmem_reclaim = 0;
 
 struct kip *kip;
 
+/* UTCB address of this task. */
+struct utcb *utcb;
+
 void __l4_init(void)
 {
     kip = l4_kernel_interface(0, 0, 0);

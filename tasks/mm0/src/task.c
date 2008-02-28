@@ -21,6 +21,7 @@
 #include <vm_area.h>
 #include <memory.h>
 #include <file.h>
+#include <utcb.h>
 
 struct tcb_head {
 	struct list_head list;
@@ -70,6 +71,9 @@ struct tcb *create_init_tcb(struct tcb_head *tcbs)
 	list_add_tail(&task->list, &tcbs->list);
 	tcbs->total++;
 
+	/* Allocate a utcb virtual address */
+	task->utcb_addr = (unsigned long)utcb_vaddr_new();
+
 	return task;
 }
 
@@ -102,10 +106,6 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 			ids.spid = -1;
 		}
 
-		/* Set up task's registers */
-		sp = align(USER_AREA_END - 1, 8);
-		pc = USER_AREA_START;
-
 		/* Create vm file and tcb */
 		file = vmfile_alloc_init();
 		task = create_init_tcb(tcbs);
@@ -119,6 +119,28 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		file->pager = &boot_file_pager;
 		list_add(&file->list, &initdata->boot_file_list);
 
+		/*
+		 * Setup task's regions so that they are taken into account
+		 * during page faults.
+		 */
+		task->stack_start = USER_AREA_END - PAGE_SIZE * 4;
+
+		/* Next address after 8 spaces, and 8-byte alignment */
+		task->stack_end = align(USER_AREA_END - 8, 8) + sizeof(int);
+
+		/* No argument space, but 8 bytes for utcb address environment */
+		task->env_start = task->stack_end;
+		task->env_end = USER_AREA_END;
+		task->args_start = task->env_start;
+		task->args_end = task->env_start;
+
+		/* Only text start is valid */
+		task->text_start = USER_AREA_START;
+
+		/* Set up task's registers */
+		sp = align(task->stack_end - 1, sizeof(int));
+		pc = task->text_start;
+
 		/* mmap each task's physical image to task's address space. */
 		if ((err = do_mmap(file, 0, task, USER_AREA_START,
 				   VM_READ | VM_WRITE | VM_EXEC,
@@ -128,14 +150,16 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		}
 
 		/* mmap each task's stack as 4-page anonymous memory. */
-		if ((err = do_mmap(0, 0, task, USER_AREA_END - PAGE_SIZE * 4,
+		if ((err = do_mmap(0, 0, task, task->stack_start,
 				   VM_READ | VM_WRITE | VMA_ANON, 4) < 0)) {
 			printf("do_mmap: Mapping stack failed with %d.\n", err);
 			goto error;
 		}
 
 		/* mmap each task's utcb as single page anonymous memory. */
-		if ((err = do_mmap(0, 0, task, (unsigned long)l4_get_utcb(),
+		printf("%s: Mapping utcb for new task at: 0x%x\n", __TASKNAME__,
+		       task->utcb_addr);
+		if ((err = do_mmap(0, 0, task, task->utcb_addr,
 				   VM_READ | VM_WRITE | VMA_ANON, 1) < 0)) {
 			printf("do_mmap: Mapping utcb failed with %d.\n", err);
 			goto error;

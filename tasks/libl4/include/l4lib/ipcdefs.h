@@ -14,7 +14,6 @@
 /* SHMID used betweeen FS0 and BLKDEV0 servers */
 #define FS_BLKDEV_SHMID			0
 
-
 /*** IPC Tags used between server tasks ***/
 
 /* For ping ponging */

@@ -26,7 +26,7 @@ extern __l4_thread_switch_t __l4_thread_switch;
 unsigned int l4_thread_switch (u32 dest);
 
 typedef int (*__l4_getid_t)(struct task_ids *ids);
-extern __l4_getid_t __l4_getpid;
+extern __l4_getid_t __l4_getid;
 int l4_getid(struct task_ids *ids);
 
 typedef int (*__l4_ipc_t)(l4id_t to, l4id_t from);

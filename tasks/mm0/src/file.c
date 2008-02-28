@@ -198,7 +198,12 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 			void *vaddr = phys_to_virt(paddr);
 			page = phys_to_page(paddr);
 
-			/* Map new page at a self virtual address temporarily */
+			/*
+			 * Map new page at a self virtual address.
+			 * NOTE: this is not unmapped here but in
+			 * read_cache_pages where mm0's work with the
+			 * page is done.
+			 */
 			l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
 
 			/* Read-in the page using the file's pager */
@@ -208,11 +213,6 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 			page->count++;
 			page->owner = vmfile;
 			page->f_offset = f_offset;
-
-			/* TODO:
-			 * Page is not mapped into any address space except mm0.
-			 * Shall we add mm0 vaddr here ???
-			 */
 			page->virtual = 0;
 
 			/* Add the page to owner's list of in-memory pages */
@@ -232,6 +232,7 @@ int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
 {
 	struct page *head, *next;
 	int copysize, left;
+	void *page_virtual;
 
 	list_for_each_entry(head, &vmfile->page_cache_list, list)
 		if (head->f_offset == pfn_start)
@@ -241,20 +242,27 @@ int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
 copy:
 	left = count;
 
-	/* Copy the first page */
+	/*
+	 * This function assumes the pages are already in-memory and
+	 * they are mapped into the current address space.
+	 */
+	page_virtual = phys_to_virt((void *)page_to_phys(head));
+
+	/* Copy the first page and unmap it from current task. */
 	copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
-	memcpy(buf, (void *)phys_to_virt((void *)page_to_phys(head)) + offset,
+	memcpy(buf, page_virtual + offset,
 	       copysize);
 	left -= copysize;
+	l4_unmap(page_virtual, 1, self_tid());
 
-	/* Copy the rest. Urgh, lots of arithmetic here. */
+	/* Copy the rest and unmap. */
 	list_for_each_entry(next, &head->list, list) {
 		if (left == 0 || next->f_offset == pfn_end)
 			break;
 		copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
-		memcpy(buf + count - left,
-		       (void *)phys_to_virt((void *)page_to_phys(next)),
-		       copysize);
+		page_virtual = phys_to_virt((void *)page_to_phys(next));
+		memcpy(buf + count - left, page_virtual, copysize);
+		l4_unmap(page_virtual, 1, self_tid());
 		left -= copysize;
 	}
 	BUG_ON(left != 0);

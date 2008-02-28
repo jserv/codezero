@@ -54,6 +54,13 @@ struct tcb {
 	unsigned long stack_end;   /* Exclusive of last currently mapped page */
 	unsigned long heap_start;
 	unsigned long heap_end;    /* Exclusive of last currently mapped page */
+	unsigned long env_start;
+	unsigned long env_end;
+	unsigned long args_start;
+	unsigned long args_end;
+
+	/* UTCB address */
+	unsigned long utcb_addr;
 
 	/* Virtual memory areas */
 	struct list_head vm_area_list;

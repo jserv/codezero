@@ -252,6 +252,12 @@ int do_file_page(struct fault_data *fault)
 	return 0;
 }
 
+/* Check if faulty page has environment and argument information */
+int is_env_arg_page(struct fault_data *fault)
+{
+	return fault->address >= page_align(fault->task->stack_end);
+}
+
 /*
  * Handles any page allocation or file ownership change for anonymous pages.
  * For read accesses initialises a wired-in zero page and for write accesses
@@ -281,24 +287,21 @@ int do_anon_page(struct fault_data *fault)
 		return 0;
 	}
 
-	/* For non-existant pages just map the zero page. */
-	if (fault->reason & VM_READ) {
+	/* For non-existant pages just map the zero page, unless it is the
+	 * beginning of stack which requires environment and argument data. */
+	if (fault->reason & VM_READ && is_env_arg_page(fault)) {
 		/*
 		 * Zero page is a special wired-in page that is mapped
 		 * many times in many tasks. Just update its count field.
 		 */
 		paddr = get_zero_page();
 
-#if defined(SHM_DISJOINT_VADDR_POOL)
 		l4_map(paddr, (void *)page_align(fault->address), 1,
 		       MAP_USR_RO_FLAGS, fault->task->tid);
-#else
-#error ARM v5 Cache aliasing possibility. Map this uncached on VMA_SHARED
-#endif
 	}
 
 	/* Write faults require a real zero initialised page */
-	if (fault->reason & VM_WRITE) {
+	if (fault->reason & VM_WRITE || is_env_arg_page(fault)) {
 		paddr = alloc_page(1);
 		vaddr = phys_to_virt(paddr);
 		page = phys_to_page(paddr);
@@ -316,16 +319,15 @@ int do_anon_page(struct fault_data *fault)
 		/* Clear the page */
 		memset((void *)vaddr, 0, PAGE_SIZE);
 
+		if (is_env_arg_page(fault))
+			/* TODO: Fill in environment information here. */
+
 		/* Remove temporary mapping */
 		l4_unmap((void *)vaddr, 1, self_tid());
 
-#if defined(SHM_DISJOINT_VADDR_POOL)
 		/* Map the page to task */
 		l4_map(paddr, (void *)page_align(fault->address), 1,
 		       MAP_USR_RW_FLAGS, fault->task->tid);
-#else
-#error ARM v5 Cache aliasing possibility. Map this uncached on VMA_SHARED.
-#endif
 
 		spin_lock(&page->lock);
 		/* vma's swap file owns this page */

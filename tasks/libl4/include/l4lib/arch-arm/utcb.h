@@ -21,15 +21,17 @@ struct utcb {
 	u32 tid;		/* Thread id */
 
 	/*
-	 * This field is used by servers as the ptr to current tcb,
-	 * i.e. the task that this server is serving to.
+	 * For passing ipc data larger than mrs,
+	 * that is, if the callee is allowed to map it
 	 */
-	unsigned long usr_handle;
+	char userbuf[];
 };
+extern struct utcb *utcb;
 
 static inline struct utcb *l4_get_utcb()
 {
-	return *(struct utcb **)USER_UTCB_REF;
+	return utcb;
+	// (struct utcb **)USER_UTCB_REF;
 }
 
 /* Functions to read/write utcb registers */

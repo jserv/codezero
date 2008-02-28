@@ -10,18 +10,23 @@
 #include <mm/alloc_page.h>
 #include <kmalloc/kmalloc.h>
 #include <l4lib/arch/syscalls.h>
+#include <l4lib/arch/syslib.h>
 #include <task.h>
 #include <shm.h>
 #include <file.h>
 #include <init.h>
+#include <utcb.h>
 
+/* Initialise the utcb virtual address pool and its own utcb */
 void init_utcb(void)
 {
-	struct task_ids ids;
-	void *utcb_page = alloc_page(1); /* Allocate a utcb page */
+	void *utcb_virt, *utcb_page;
 
-	l4_getid(&ids);
-	l4_map(utcb_page, l4_get_utcb(), 1, MAP_USR_RW_FLAGS, ids.tid);
+	/* Allocate and map one for self */
+	utcb_virt = utcb_vaddr_new();
+	printf("%s: Mapping 0x%x as utcb to self.\n", __TASKNAME__, utcb_virt);
+	utcb_page = alloc_page(1);
+	l4_map(utcb_page, utcb_virt, 1, MAP_USR_RW_FLAGS, self_tid());
 }
 
 void init_mm(struct initdata *initdata)

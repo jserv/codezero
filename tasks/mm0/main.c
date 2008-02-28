@@ -14,11 +14,11 @@
 #include <l4/api/thread.h>
 #include <l4/api/space.h>
 #include <l4/api/ipc.h>
-#include <shm.h>
-#include <task.h>
 #include <vm_area.h>
 #include <syscalls.h>
 #include <file.h>
+#include <shm.h>
+#include <task.h>
 
 void handle_requests(void)
 {
