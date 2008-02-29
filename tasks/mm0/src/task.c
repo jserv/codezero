@@ -13,7 +13,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
-#include <lib/vaddr.h>
+#include <lib/addr.h>
 #include <task.h>
 #include <kdata.h>
 #include <kmalloc/kmalloc.h>
@@ -22,6 +22,7 @@
 #include <memory.h>
 #include <file.h>
 #include <utcb.h>
+#include <env.h>
 
 struct tcb_head {
 	struct list_head list;
@@ -63,8 +64,8 @@ struct tcb *create_init_tcb(struct tcb_head *tcbs)
 	task->spid = TASK_ID_INVALID;
 	task->swap_file = kzalloc(sizeof(struct vm_file));
 	task->swap_file->pager = &swap_pager;
-	vaddr_pool_init(task->swap_file_offset_pool, 0,
-		       	__pfn(TASK_SWAPFILE_MAXSIZE));
+	address_pool_init(&task->swap_file_offset_pool, 0,
+			  __pfn(TASK_SWAPFILE_MAXSIZE));
 	INIT_LIST_HEAD(&task->swap_file->page_cache_list);
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->vm_area_list);
@@ -119,26 +120,37 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		file->pager = &boot_file_pager;
 		list_add(&file->list, &initdata->boot_file_list);
 
-		/*
-		 * Setup task's regions so that they are taken into account
-		 * during page faults.
-		 */
-		task->stack_start = USER_AREA_END - PAGE_SIZE * 4;
-
-		/* Next address after 8 spaces, and 8-byte alignment */
-		task->stack_end = align(USER_AREA_END - 8, 8) + sizeof(int);
-
-		/* No argument space, but 8 bytes for utcb address environment */
-		task->env_start = task->stack_end;
+		/* Prepare environment boundaries. Posix minimum is 4Kb */
 		task->env_end = USER_AREA_END;
+		task->env_start = task->env_end - PAGE_SIZE;
 		task->args_start = task->env_start;
 		task->args_end = task->env_start;
+
+		/*
+		 * Prepare the task environment file and data.
+		 * Currently it only has the utcb address. The env pager
+		 * when faulted, simply copies the task env data to the
+		 * allocated page.
+		 */
+		if (task_prepare_env_file(task) < 0) {
+			printf("Could not create environment file.\n");
+			goto error;
+		}
+		task->env_data = &task->utcb_address;
+		task->env_size = sizeof(task->utcb_address);
+
+		/*
+		 * Task stack starts right after the environment,
+		 * and is of 4 page size.
+		 */
+		task->stack_end = task->env_start;
+		task->stack_start = task->stack_end - PAGE_SIZE * 4;
 
 		/* Only text start is valid */
 		task->text_start = USER_AREA_START;
 
 		/* Set up task's registers */
-		sp = align(task->stack_end - 1, sizeof(int));
+		sp = align(task->stack_end - 1, 8);
 		pc = task->text_start;
 
 		/* mmap each task's physical image to task's address space. */
@@ -149,9 +161,19 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 			goto error;
 		}
 
+		/* mmap each task's environment from its env file. */
+		if ((err = do_mmap(task->env_file, 0, task, task->env_start,
+				   VM_READ | VM_WRITE,
+				   __pfn(task->env_end - task->env_start)) < 0)) {
+			printf("do_mmap: Mapping environment failed with %d.\n",
+			       err);
+			goto error;
+		}
+
 		/* mmap each task's stack as 4-page anonymous memory. */
 		if ((err = do_mmap(0, 0, task, task->stack_start,
-				   VM_READ | VM_WRITE | VMA_ANON, 4) < 0)) {
+				   VM_READ | VM_WRITE | VMA_ANON,
+				   __pfn(task->stack_end - task->stack_start)) < 0)) {
 			printf("do_mmap: Mapping stack failed with %d.\n", err);
 			goto error;
 		}

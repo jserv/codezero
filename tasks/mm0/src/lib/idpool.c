@@ -7,12 +7,15 @@
 #include <kmalloc/kmalloc.h>
 #include INC_GLUE(memory.h)
 #include <stdio.h>
+#include <l4/api/errno.h>
 
 struct id_pool *id_pool_new_init(int totalbits)
 {
 	int nwords = BITWISE_GETWORD(totalbits);
 	struct id_pool *new = kzalloc((nwords * SZ_WORD)
 				      + sizeof(struct id_pool));
+	if (!new)
+		return PTR_ERR(-ENOMEM);
 	new->nwords = nwords;
 	return new;
 }

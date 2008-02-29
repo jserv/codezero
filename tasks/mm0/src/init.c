@@ -11,22 +11,31 @@
 #include <kmalloc/kmalloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <l4lib/utcb.h>
 #include <task.h>
 #include <shm.h>
 #include <file.h>
 #include <init.h>
 #include <utcb.h>
 
-/* Initialise the utcb virtual address pool and its own utcb */
+/*
+ * Initialise the utcb virtual address pool and its own utcb.
+ * NOTE: This allocates memory so kmalloc must be initialised first.
+ */
 void init_utcb(void)
 {
 	void *utcb_virt, *utcb_page;
 
 	/* Allocate and map one for self */
+	if (utcb_pool_init() < 0)
+		printf("UTCB initialisation failed.\n");
 	utcb_virt = utcb_vaddr_new();
 	printf("%s: Mapping 0x%x as utcb to self.\n", __TASKNAME__, utcb_virt);
 	utcb_page = alloc_page(1);
 	l4_map(utcb_page, utcb_virt, 1, MAP_USR_RW_FLAGS, self_tid());
+
+	/* Also initialise the utcb reference that is used in l4lib. */
+	utcb = utcb_virt;
 }
 
 void init_mm(struct initdata *initdata)
@@ -43,15 +52,15 @@ void init_mm(struct initdata *initdata)
 	init_devzero();
 	printf("%s: Initialised devzero.\n", __TASKNAME__);
 
-	init_utcb();
-	printf("%s: Initialised own utcb.\n", __TASKNAME__);
-
 	/* Initialise the pager's memory allocator */
 	kmalloc_init();
 	printf("%s: Initialised kmalloc.\n", __TASKNAME__);
 
 	shm_init();
 	printf("%s: Initialised shm structures.\n", __TASKNAME__);
+
+	init_utcb();
+	printf("%s: Initialised own utcb.\n", __TASKNAME__);
 
 	vmfile_init();
 

@@ -12,7 +12,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <lib/idpool.h>
-#include <lib/vaddr.h>
+#include <lib/addr.h>
 #include <lib/spinlock.h>
 #include <l4/api/errno.h>
 #include <l4/lib/list.h>
@@ -33,7 +33,7 @@ static struct list_head shm_desc_list;
 static struct id_pool *shm_ids;
 
 /* Globally disjoint shm virtual address pool */
-static struct id_pool *shm_vaddr_pool;
+static struct address_pool shm_vaddr_pool;
 
 void shm_init()
 {
@@ -43,7 +43,7 @@ void shm_init()
 	shm_ids = id_pool_new_init(SHM_AREA_MAX);
 
 	/* Initialise the global shm virtual address pool */
-	vaddr_pool_init(shm_vaddr_pool, SHM_AREA_START, SHM_AREA_END);
+	address_pool_init(&shm_vaddr_pool, SHM_AREA_START, SHM_AREA_END);
 }
 
 /*
@@ -74,7 +74,7 @@ static int do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
 	if (shm->shm_addr)
 		shm_addr = shm->shm_addr;
 	else
-		shm_addr = vaddr_new(shm_vaddr_pool, __pfn(shm->size));
+		shm_addr = address_new(&shm_vaddr_pool, __pfn(shm->size));
 
 	BUG_ON(!is_page_aligned(shm_addr));
 

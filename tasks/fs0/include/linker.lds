@@ -14,7 +14,7 @@
  */
 /* USER_AREA_START, see memlayout.h */
 virtual_base = 0x10000000;
-__stack = 0x20000000;
+__stack = (0x20000000 - 0x1000 - 8); /* First page before env/args page */
 INCLUDE "include/physical_base.lds"
 
 /* physical_base = 0x228000; */

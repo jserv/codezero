@@ -108,8 +108,10 @@ int do_file_page(struct fault_data *fault)
 		 * Read the page. (Simply read into the faulty area that's
 		 * now mapped using a newly allocated page.)
 		 */
-		fault->vma->owner->pager->ops.read_page(fault->vma->owner,
-							f_offset, vaddr);
+		if (fault->vma->owner->pager->ops.read_page(fault->vma->owner,
+							    f_offset,
+							    vaddr) < 0)
+			BUG();
 
 		/* Remove temporary mapping */
 		l4_unmap(vaddr, 1, self_tid());
@@ -221,8 +223,10 @@ int do_file_page(struct fault_data *fault)
 		 * Read the page. (Simply read into the faulty area that's
 		 * now mapped using a newly allocated page.)
 		 */
-		fault->vma->owner->pager->ops.read_page(fault->vma->owner,
-							f_offset, vaddr);
+		if (fault->vma->owner->pager->ops.read_page(fault->vma->owner,
+							    f_offset,
+							    vaddr) < 0)
+			BUG();
 
 		/* Unmap from self */
 		l4_unmap(vaddr, 1, self_tid());
@@ -248,26 +252,6 @@ int do_file_page(struct fault_data *fault)
 		spin_unlock(&page->lock);
 	} else
 		BUG();
-
-	return 0;
-}
-
-/* Check if faulty page has environment and argument information */
-int is_env_arg_page(struct fault_data *fault)
-{
-	return fault->address >= page_align(fault->task->stack_end);
-}
-
-int fill_env_arg_info(struct fault_data *fault, void *vaddr)
-{
-	/* Get the env start offset in the page */
-	unsigned long env_offset = fault->task->env_start & PAGE_MASK;
-
-	/* Write the environment information */
-	*(unsigned long *)(vaddr + env_offset) = fault->task->utcb_address;
-	printf("%s: Written env value 0x%x, to task address 0x%x\n",
-	       __TASKNAME__, fault->task->utcb_address,
-	       page_align(fault->address) + env_offset);
 
 	return 0;
 }
@@ -303,7 +287,7 @@ int do_anon_page(struct fault_data *fault)
 
 	/* For non-existant pages just map the zero page, unless it is the
 	 * beginning of stack which requires environment and argument data. */
-	if (fault->reason & VM_READ && is_env_arg_page(fault)) {
+	if (fault->reason & VM_READ) {
 		/*
 		 * Zero page is a special wired-in page that is mapped
 		 * many times in many tasks. Just update its count field.
@@ -315,7 +299,7 @@ int do_anon_page(struct fault_data *fault)
 	}
 
 	/* Write faults require a real zero initialised page */
-	if (fault->reason & VM_WRITE || is_env_arg_page(fault)) {
+	if (fault->reason & VM_WRITE) {
 		paddr = alloc_page(1);
 		vaddr = phys_to_virt(paddr);
 		page = phys_to_page(paddr);
@@ -332,10 +316,6 @@ int do_anon_page(struct fault_data *fault)
 
 		/* Clear the page */
 		memset((void *)vaddr, 0, PAGE_SIZE);
-
-		/* If its the env/arg page on stack, fill that information */
-		if (is_env_arg_page(fault))
-			fill_env_arg_info(fault, vaddr);
 
 		/* Remove temporary mapping */
 		l4_unmap((void *)vaddr, 1, self_tid());

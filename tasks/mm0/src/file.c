@@ -340,5 +340,3 @@ int sys_lseek(l4id_t sender, int fd, off_t offset, int whence)
 	return 0;
 }
 
-
-

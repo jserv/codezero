@@ -12,6 +12,7 @@
 #include <l4/lib/list.h>
 #include <l4lib/types.h>
 #include <l4lib/utcb.h>
+#include <lib/addr.h>
 
 #define __TASKNAME__		__PAGERNAME__
 
@@ -43,7 +44,7 @@ struct tcb {
 	/* Related task ids */
 	unsigned int pagerid;	/* Task's pager */
 
-	/* Program segment marks */
+	/* Program segment marks, ends exclusive as usual */
 	unsigned long text_start;
 	unsigned long text_end;
 	unsigned long data_start;
@@ -51,9 +52,9 @@ struct tcb {
 	unsigned long bss_start;
 	unsigned long bss_end;
 	unsigned long stack_start;
-	unsigned long stack_end;   /* Exclusive of last currently mapped page */
+	unsigned long stack_end;
 	unsigned long heap_start;
-	unsigned long heap_end;    /* Exclusive of last currently mapped page */
+	unsigned long heap_end;
 	unsigned long env_start;
 	unsigned long env_end;
 	unsigned long args_start;
@@ -62,17 +63,24 @@ struct tcb {
 	/* UTCB address */
 	unsigned long utcb_address;
 
+	/* Temporary storage for environment data */
+	void *env_data;
+	unsigned long env_size;
+
+	/* Per-task environment file */
+	struct vm_file *env_file;
+
 	/* Virtual memory areas */
 	struct list_head vm_area_list;
-
-	/* Per-task swap file for now */
-	struct vm_file *swap_file;
 
 	/* File descriptors for this task */
 	struct file_descriptor fd[TASK_OFILES_MAX];
 
+	/* Per-task swap file for now */
+	struct vm_file *swap_file;
+
 	/* Pool to generate swap file offsets for fileless anonymous regions */
-	struct id_pool *swap_file_offset_pool;
+	struct address_pool swap_file_offset_pool;
 };
 
 struct tcb *find_task(int tid);

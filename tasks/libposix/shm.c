@@ -11,9 +11,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
-
-#define PTR_ERR(x)		((void *)(x))
-#define IS_ERR(x)		(((int)(x)) < 0)
+#include <l4/macros.h>
 
 int l4_shmget(l4id_t key, int size, int shmflg)
 {

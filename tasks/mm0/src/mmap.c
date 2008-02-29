@@ -361,6 +361,8 @@ pgtable_unmap:
 	 * - If refcount is zero (they could be shared!), either add pages to some page
 	 *   cache, or simpler the better, free the actual pages back to the page allocator.
 	 * - l4_unmap() the corresponding virtual region from the page tables.
+	 *
+	 *   -- These are all done --
 	 */
 #endif
 	return 0;
