@@ -107,14 +107,24 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 			ids.spid = -1;
 		}
 
-		/* Create vm file and tcb */
-		file = vmfile_alloc_init();
+		printf("Creating new thread.\n");
+		/* Create the thread structures and address space */
+		if ((err = l4_thread_control(THREAD_CREATE, &ids)) < 0) {
+			printf("l4_thread_control failed with %d.\n", err);
+			goto error;
+		}
+
+		/* Create a task and use returned space and thread ids. */
+		printf("New task with id: %d, space id: %d\n", ids.tid, ids.spid);
 		task = create_init_tcb(tcbs);
+		task->tid = ids.tid;
+		task->spid = ids.spid;
 
 		/*
 		 * For boot files, we use the physical address of the memory
 		 * file as its mock-up inode.
 		 */
+		file = vmfile_alloc_init();
 		file->vnum = img->phys_start;
 		file->length = img->phys_end - img->phys_start;
 		file->pager = &boot_file_pager;
@@ -132,12 +142,10 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		 * when faulted, simply copies the task env data to the
 		 * allocated page.
 		 */
-		if (task_prepare_env_file(task) < 0) {
+		if (task_prepare_environment(task) < 0) {
 			printf("Could not create environment file.\n");
 			goto error;
 		}
-		task->env_data = &task->utcb_address;
-		task->env_size = sizeof(task->utcb_address);
 
 		/*
 		 * Task stack starts right after the environment,
@@ -186,18 +194,6 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 			printf("do_mmap: Mapping utcb failed with %d.\n", err);
 			goto error;
 		}
-
-		printf("Creating new thread.\n");
-		/* Create the thread structures and address space */
-		if ((err = l4_thread_control(THREAD_CREATE, &ids)) < 0) {
-			printf("l4_thread_control failed with %d.\n", err);
-			goto error;
-		}
-
-		/* Use returned space and thread ids. */
-		printf("New task with id: %d, space id: %d\n", ids.tid, ids.spid);
-		task->tid = ids.tid;
-		task->spid = ids.spid;
 
 		/* Set up the task's thread details, (pc, sp, pager etc.) */
 		if ((err = l4_exchange_registers(pc, sp, self_tid(), task->tid) < 0)) {

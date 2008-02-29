@@ -47,10 +47,10 @@ void __l4_init(void)
 
 	/* Initialise utcb only if we're not the pager */
 	if (self_tid() != PAGER_TID) {
-		utcb = *(struct utcb **)(USER_AREA_END - 8);
+		/* FIXME: C library should give the environ pointer for this */
+		utcb = *(struct utcb **)(USER_AREA_END - PAGE_SIZE);
 		printf("UTCB Read from userspace as: 0x%x\n",
 		(unsigned long)utcb);
 	}
-
 }
 

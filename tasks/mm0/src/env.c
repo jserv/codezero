@@ -13,34 +13,47 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
+#include <l4lib/types.h>
 #include <l4/lib/list.h>
-#include <vm_area.h>
-#include <kmalloc/kmalloc.h>
-#include <task.h>
 #include <l4/api/kip.h>
 #include <l4/api/errno.h>
+#include <kmalloc/kmalloc.h>
+#include <vm_area.h>
 #include <string.h>
 #include <file.h>
+#include <task.h>
+
+struct envdata {
+	struct list_head list;
+	void *env_data;
+	int env_size;
+	int id;
+};
+LIST_HEAD(env_list);
 
 /* Copies environment data into provided page. */
 int task_env_pager_read_page(struct vm_file *f, unsigned long f_off_pfn,
 			     void *dest_page)
 {
-	struct tcb *t = find_task(f->vnum);
+	struct envdata *env;
 
-	if (!t) {
-		printf("%s: No such task tid: %d, to copy environment for.\n",
-		       __TASKNAME__,  f->vnum);
-		return -EINVAL;
-	}
+	list_for_each_entry(env, &env_list, list)
+		if (env->id == f->vnum)
+			goto copyenv;
 
+	printf("%s: No such env id: %d, to copy environment for.\n",
+	       __TASKNAME__,  f->vnum);
+	return -EINVAL;
+
+copyenv:
 	if (f_off_pfn != 0) {
 		printf("%s: Environments currently have a single page.\n");
 		return -EINVAL;
 	}
 
 	memset(dest_page, 0, PAGE_SIZE);
-	memcpy(dest_page, t->env_data, t->env_size);
+	BUG_ON(env->env_size > PAGE_SIZE);
+	memcpy(dest_page, env->env_data, env->env_size);
 
 	return 0;
 }
@@ -53,13 +66,14 @@ struct vm_pager task_env_pager = {
 	},
 };
 
-
 /*
  * For a task that is about to execute, this dynamically
- * generates its environment file.
+ * generates its environment file, and environment data.
  */
-int task_prepare_env_file(struct tcb *t)
+int task_prepare_environment(struct tcb *t)
 {
+	struct envdata *env;
+
 	/* Allocate a new vmfile for this task's environment */
 	if (IS_ERR(t->env_file = vmfile_alloc_init()))
 		return (int)t->env_file;
@@ -74,6 +88,14 @@ int task_prepare_env_file(struct tcb *t)
 	t->env_file->length = PAGE_SIZE;
 	t->env_file->pager = &task_env_pager;
 	list_add(&t->env_file->list, &vm_file_list);
+
+	/* Allocate, initialise and add per-task env data */
+	BUG_ON(!(env = kzalloc(sizeof(struct envdata))));
+	INIT_LIST_HEAD(&env->list);
+	env->env_data = &t->utcb_address;
+	env->env_size = sizeof(t->utcb_address);
+	env->id = t->tid;
+	list_add(&env->list, &env_list);
 
 	return 0;
 }

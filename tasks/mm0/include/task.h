@@ -63,10 +63,6 @@ struct tcb {
 	/* UTCB address */
 	unsigned long utcb_address;
 
-	/* Temporary storage for environment data */
-	void *env_data;
-	unsigned long env_size;
-
 	/* Per-task environment file */
 	struct vm_file *env_file;
 

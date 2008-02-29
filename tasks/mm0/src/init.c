@@ -34,7 +34,7 @@ void init_utcb(void)
 	utcb_page = alloc_page(1);
 	l4_map(utcb_page, utcb_virt, 1, MAP_USR_RW_FLAGS, self_tid());
 
-	/* Also initialise the utcb reference that is used in l4lib. */
+	/* Also initialise the utcb reference that is inside l4lib. */
 	utcb = utcb_virt;
 }
 

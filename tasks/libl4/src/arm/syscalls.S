@@ -8,8 +8,7 @@
 #include <l4/generic/space.h>
 
 	.macro	utcb_address	rx
-		mov	\rx, #L4_KIP_ADDRESS
-		add	\rx, \rx, #UTCB_KIP_OFFSET
+		ldr	\rx, =utcb
 		ldr	\rx, [\rx]
 	.endm
 

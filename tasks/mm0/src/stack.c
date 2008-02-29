@@ -1,4 +1,9 @@
-
+/*
+ * TODO: This is to be used when moving mm0's temporary
+ * stack to a proper place. It's unused for now.
+ *
+ * Copyright (C) 2007, 2008 Bahadir Balban
+ */
 #include <l4/config.h>
 #include <l4/macros.h>
 #include <l4/types.h>
