@@ -9,9 +9,11 @@
 #include <l4/lib/list.h>
 #include <l4/api/thread.h>
 #include <l4/api/kip.h>
+#include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <l4lib/arch/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <lib/addr.h>
 #include <task.h>
@@ -222,14 +224,71 @@ void init_pm(struct initdata *initdata)
 }
 
 /*
+ * Makes the virtual to page translation for a given user task.
+ */
+struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
+{
+	unsigned long vaddr_vma_offset;
+	unsigned long vaddr_file_offset;
+	struct vm_area *vma;
+	struct vm_file *vmfile;
+	struct page *page;
+
+	/* First find the vma that maps that virtual address */
+	if (!(vma = find_vma(virtual, &t->vm_area_list))) {
+		printf("%s: No VMA found for 0x%x on task: %d\n",
+		       __FUNCTION__, virtual, t->tid);
+		return PTR_ERR(-EINVAL);
+	}
+
+	/* Find the pfn offset of virtual address in this vma */
+	BUG_ON(__pfn(virtual) < vma->pfn_start ||
+	       __pfn(virtual) > vma->pfn_end);
+	vaddr_vma_offset = __pfn(virtual) - vma->pfn_start;
+
+	/* Find the file offset of virtual address in this file */
+	vmfile = vma->owner;
+	vaddr_file_offset = vma->f_offset + vaddr_vma_offset;
+
+	/*
+	 * Find the page with the same file offset with that of the
+	 * virtual address, that is, if the page is resident in memory.
+	 */
+	list_for_each_entry(page, &vmfile->page_cache_list, list)
+		if (vaddr_file_offset == page->f_offset) {
+			printf("%s: %s: Found page @ 0x%x, f_offset: 0x%x, with vma @ 0x%x, vmfile @ 0x%x\n", __TASKNAME__,
+			       __FUNCTION__, (unsigned long)page, page->f_offset, vma, vma->owner);
+			return page;
+		}
+
+	/*
+	 * The page is not found, meaning that it is not mapped in
+	 * yet, e.g. via a page fault.
+	 */
+	return 0;
+}
+
+struct task_data {
+	unsigned long tid;
+	unsigned long utcb_address;
+};
+
+struct task_data_head {
+	unsigned long total;
+	struct task_data tdata[];
+};
+
+/*
  * During its initialisation FS0 wants to learn how many boot tasks
  * are running, and their tids, which includes itself. This function
  * provides that information.
  */
 void send_task_data(l4id_t requester)
 {
-	struct tcb *t;
 	int li, err;
+	struct tcb *t, *vfs;
+	struct utcb *vfs_utcb;
+	struct task_data_head *tdata_head;
 
 	if (requester != VFS_TID) {
 		printf("%s: Task data requested by %d, which is not "
@@ -238,14 +297,26 @@ void send_task_data(l4id_t requester)
 		return;
 	}
 
-	/* First word is total number of tcbs */
-	write_mr(L4SYS_ARG0, tcb_head.total);
+	BUG_ON(!(vfs = find_task(requester)));
 
-	/* Write each tcb's tid */
+	/* Map in vfs's utcb. FIXME: Whatif it is already mapped? */
+	l4_map((void *)page_to_phys(task_virt_to_page(vfs, vfs->utcb_address)),
+	       (void *)vfs->utcb_address, 1, MAP_USR_RW_FLAGS, self_tid());
+
+	/* Get a handle on vfs utcb */
+	vfs_utcb = (struct utcb *)vfs->utcb_address;
+
+	/* Write all requested task information to utcb's user buffer area */
+	tdata_head = (struct task_data_head *)vfs_utcb->buf;
+
+	/* First word is total number of tcbs */
+	tdata_head->total = tcb_head.total;
+
+	/* Write per-task data for all tasks */
 	li = 0;
 	list_for_each_entry(t, &tcb_head.list, list) {
-		BUG_ON(li >= MR_USABLE_TOTAL);
-		write_mr(L4SYS_ARG1 + li, t->tid);
+		tdata_head->tdata[li].tid = t->tid;
+		tdata_head->tdata[li].utcb_address = t->utcb_address;
 		li++;
 	}
 

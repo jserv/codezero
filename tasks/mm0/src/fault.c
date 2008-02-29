@@ -324,6 +324,17 @@ int do_anon_page(struct fault_data *fault)
 		l4_map(paddr, (void *)page_align(fault->address), 1,
 		       MAP_USR_RW_FLAGS, fault->task->tid);
 
+		/*** DEBUG CODE FOR FS0 UTCB ***/
+		if(page_align(fault->address) == 0xf8001000) {
+			printf("For FS0 utcb @ 0xf8001000, mapping page @ 0x%x, foffset: 0x%x, owned by vma @ 0x%x, vmfile @ 0x%x\n",
+				(unsigned long)page, page->f_offset, fault->vma, fault->vma->owner);
+		}
+		if(page_align(fault->address) == 0xf8002000) {
+			printf("For FS0 utcb @ 0xf8002000, mapping page @ 0x%x, foffset: 0x%x, owned by vma @ 0x%x, vmfile @ 0x%x\n",
+				(unsigned long)page, page->f_offset, fault->vma, fault->vma->owner);
+		}
+		/*** DEBUG CODE FOR FS0 UTCB ***/
+
 		spin_lock(&page->lock);
 		/* vma's swap file owns this page */
 		page->owner = fault->vma->owner;

@@ -35,7 +35,7 @@ struct tcb *find_task(int tid)
  * registers are sufficient. First argument tells how many there are, the rest
  * tells the tids.
  */
-int receive_pager_taskdata(l4id_t *tdata)
+int receive_pager_taskdata_orig(l4id_t *tdata)
 {
 	int err;
 
@@ -69,15 +69,51 @@ int receive_pager_taskdata(l4id_t *tdata)
 	return 0;
 }
 
+struct task_data {
+	unsigned long tid;
+	unsigned long utcb_address;
+};
+
+struct task_data_head {
+	unsigned long total;
+	struct task_data tdata[];
+};
+
+/* Read task information into the utcb buffer, since it wont fit into mrs. */
+struct task_data_head *receive_pager_taskdata(void)
+{
+	int err;
+
+	/* Ask pager to write the data at this address */
+	write_mr(L4SYS_ARG0, (unsigned long)utcb->buf);
+
+	/* Make the actual ipc call */
+	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID,
+			       L4_IPC_TAG_TASKDATA)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return PTR_ERR(err);
+	}
+
+	/* Check if call itself was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Error: %d.\n", __FUNCTION__, err);
+		return PTR_ERR(err);
+	}
+
+	printf("%s: %d Total tasks.\n", __FUNCTION__,
+	       ((struct task_data_head *)utcb->buf)->total);
+
+	return (struct task_data_head *)utcb->buf;
+}
+
 /* Allocate a task struct and initialise it */
-struct tcb *create_tcb(l4id_t tid)
+struct tcb *create_tcb(void)
 {
 	struct tcb *t;
 
 	if (!(t = kmalloc(sizeof(*t))))
 		return PTR_ERR(-ENOMEM);
 
-	t->tid = tid;
 	INIT_LIST_HEAD(&t->list);
 	list_add_tail(&t->list, &tcb_head.list);
 	tcb_head.total++;
@@ -85,31 +121,37 @@ struct tcb *create_tcb(l4id_t tid)
 	return t;
 }
 
-int init_task_structs(l4id_t *tdata)
+int init_task_structs(struct task_data_head *tdata_head)
 {
 	struct tcb *t;
-	int total = tdata[0];
 
-	for (int i = 0; i < total; i++) {
-		if (IS_ERR(t = create_tcb(tdata[1 + i])))
+	for (int i = 0; i < tdata_head->total; i++) {
+		if (IS_ERR(t = create_tcb()))
 			return (int)t;
+
+		/* Initialise fields sent by pager */
+		t->tid = tdata_head->tdata[i].tid;
+		t->utcb_address = tdata_head->tdata[i].utcb_address;
+
+		/* Initialise vfs specific fields. */
 		t->rootdir = vfs_root.pivot;
 		t->curdir = vfs_root.pivot;
 	}
+
 	return 0;
 }
 
 int init_task_data(void)
 {
-	l4id_t tdata[MR_UNUSED_TOTAL];
+	struct task_data_head *tdata_head;
 
 	INIT_LIST_HEAD(&tcb_head.list);
 
 	/* Read how many tasks and tids of each */
-	BUG_ON(receive_pager_taskdata(tdata) < 0);
+	BUG_ON((tdata_head = receive_pager_taskdata()) < 0);
 
 	/* Initialise local task structs using this info */
-	BUG_ON(init_task_structs(tdata) < 0);
+	BUG_ON(init_task_structs(tdata_head) < 0);
 
 	return 0;
 }

@@ -252,7 +252,7 @@ int check_mapping_pgd(unsigned long vaddr, unsigned long size,
 
 	/* Convert generic map flags to pagetable-specific */
 	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
-	
+
 	for (int i = 0; i < npages; i++) {
 		pte = virt_to_pte(vaddr + i * PAGE_SIZE);
 

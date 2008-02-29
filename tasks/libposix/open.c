@@ -14,11 +14,23 @@
 #include <l4lib/ipcdefs.h>
 #include <fcntl.h>
 
+/*
+ * Arguments that are too large to fit in message registers are
+ * copied onto another area that is still on the utcb, and the servers
+ * map-in the task utcb and read those arguments from there.
+ */
+void *copy_to_utcb(void *arg, int size)
+{
+	BUG_ON(size > PAGE_SIZE);
+	memcpy(utcb->buf, arg, size);
+}
+
 static inline int l4_open(const char *pathname, int flags, mode_t mode)
 {
 	int fd;
 
-	write_mr(L4SYS_ARG0, (unsigned long)pathname);
+	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
+	copy_to_utcb(pathname, strlen(pathname));
 	write_mr(L4SYS_ARG1, flags);
 	write_mr(L4SYS_ARG2, (u32)mode);
 

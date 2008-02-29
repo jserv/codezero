@@ -61,6 +61,12 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	 */
 }
 
+/*
+ * When a task calls the kernel and the supplied user buffer is not mapped, the kernel
+ * generates a page fault to the task's pager so that the pager can make the decision
+ * on mapping the buffer. Remember that if a task maps its own user buffer to itself
+ * this way, the kernel can access it, since it shares that task's page table.
+ */
 int pager_pagein_request(unsigned long addr, unsigned long size, unsigned int flags)
 {
 	u32 abort;

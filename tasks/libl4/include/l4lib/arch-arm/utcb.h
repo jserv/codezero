@@ -24,7 +24,7 @@ struct utcb {
 	 * For passing ipc data larger than mrs,
 	 * that is, if the callee is allowed to map it
 	 */
-	char userbuf[];
+	char buf[];
 };
 extern struct utcb *utcb;
 

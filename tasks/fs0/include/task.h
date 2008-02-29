@@ -15,6 +15,7 @@
 /* Thread control block, fs0 portion */
 struct tcb {
 	l4id_t tid;
+	unsigned long utcb_address;
 	struct list_head list;
 	int fd[TASK_OFILES_MAX];
 	struct id_pool *fdpool;

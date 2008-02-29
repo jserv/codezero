@@ -168,6 +168,8 @@ int insert_page_olist(struct page *this, struct vm_file *f)
 			/* Add to beginning if smaller */
 			else if (this->f_offset < before->f_offset)
 				list_add(&this->list, &before->list);
+			else
+				BUG();
 			return 0;
 		}
 
@@ -177,6 +179,8 @@ int insert_page_olist(struct page *this, struct vm_file *f)
 			list_add_tail(&this->list, &before->list);
 			return 0;
 		}
+		BUG_ON(this->f_offset == before->f_offset);
+		BUG_ON(this->f_offset == after->f_offset);
 	}
 	BUG();
 }
