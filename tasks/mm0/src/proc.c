@@ -22,6 +22,7 @@
 #include <string.h>
 #include <file.h>
 #include <task.h>
+#include <proc.h>
 
 struct envdata {
 	struct list_head list;

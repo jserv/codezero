@@ -24,7 +24,7 @@
 #include <memory.h>
 #include <file.h>
 #include <utcb.h>
-#include <env.h>
+#include <proc.h>
 
 struct tcb_head {
 	struct list_head list;
