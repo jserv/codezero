@@ -62,8 +62,6 @@ void init_mm(struct initdata *initdata)
 	init_utcb();
 	printf("%s: Initialised own utcb.\n", __TASKNAME__);
 
-	vmfile_init();
-
 	/* Give the kernel some memory to use for its allocators */
 	l4_kmem_grant(__pfn(alloc_page(__pfn(SZ_1MB))), __pfn(SZ_1MB));
 }

@@ -42,6 +42,7 @@
 #define L4_IPC_TAG_MKDIR		19
 #define L4_IPC_TAG_MMAP2		20
 #define L4_IPC_TAG_CHDIR		21
+#define L4_IPC_TAG_FORK			22
 
 /* Tags for ipc between fs0 and mm0 */
 #define L4_IPC_TAG_TASKDATA		25

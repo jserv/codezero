@@ -13,6 +13,8 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <fcntl.h>
+#include <l4/macros.h>
+#include INC_GLUE(memory.h)
 
 /*
  * Arguments that are too large to fit in message registers are
@@ -30,7 +32,7 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 	int fd;
 
 	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
-	copy_to_utcb(pathname, strlen(pathname));
+	copy_to_utcb((void *)pathname, strlen(pathname));
 	write_mr(L4SYS_ARG1, flags);
 	write_mr(L4SYS_ARG2, (u32)mode);
 

@@ -403,6 +403,58 @@ Current todo:
 
 
 
+todo:
+
+- Generate 4 vmfiles:
+- env, stack, data, bss.
+
+- Fill in env as a private file.
+  As faults occur on env, simply map file to process.
+
+- Create an empty data, bss and stack file.
+  As faults occur on real data, copy on write onto proc->data file, by creating shadows.
+  As faults occur on devzero, copy on write onto proc->stack file, by creating shadows.
+  As faults occur on bss, copy on write onto proc->bss file, by creating shadows.
+
+  FORK:
+  If a fork occurs, copy all vmas into new task.
+  Find all RW and VM_PRIVATE regions. All RW shadows are eligible.
+  Create a fork file for each RW/VM_PRIVATE region. E.g.
+  task->fork->data
+  task->fork->stack
+  task->fork->bss
+
+  All RW/PRIVATE shadows become RO, with task->fork owners, rather than their original
+  owners e.g. proc->data, proc->stack etc. All pages under shadow are moved onto those files.
+
+  Increase file refcount for forker tasks.
+  As faults occur on fork->stack/bss/data, copy on write onto proc->stack/bss/data, by making
+  shadows RW again and copying those faulted pages from fork files onto the proc->x files.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

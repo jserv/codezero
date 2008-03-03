@@ -1,7 +1,7 @@
 /*
  * Thread control block.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #ifndef __TASK_H__
 #define __TASK_H__
@@ -17,9 +17,6 @@
 #define __TASKNAME__		__PAGERNAME__
 
 #define TASK_OFILES_MAX			32
-
-/* Allow per-task anonymous memory to grow as much as 1 MB for now. */
-#define TASK_SWAPFILE_MAXSIZE				SZ_1MB
 
 struct vm_file;
 
@@ -78,12 +75,6 @@ struct tcb {
 
 	/* File descriptors for this task */
 	struct file_descriptor fd[TASK_OFILES_MAX];
-
-	/* Per-task swap file for now */
-	struct vm_file *swap_file;
-
-	/* Pool to generate swap file offsets for fileless anonymous regions */
-	struct address_pool swap_file_offset_pool;
 };
 
 struct tcb *find_task(int tid);
@@ -94,8 +85,5 @@ int start_init_tasks(struct initdata *initdata);
 void dump_tasks(void);
 
 void send_task_data(l4id_t requester);
-
-/* Used by servers that have a reference to tcbs (e.g. a pager) */
-#define current		((struct ktcb *)__L4_ARM_Utcb()->usr_handle)
 
 #endif /* __TASK_H__ */

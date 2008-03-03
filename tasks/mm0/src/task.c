@@ -64,11 +64,6 @@ struct tcb *create_init_tcb(struct tcb_head *tcbs)
 	/* Ids will be acquired from the kernel */
 	task->tid = TASK_ID_INVALID;
 	task->spid = TASK_ID_INVALID;
-	task->swap_file = kzalloc(sizeof(struct vm_file));
-	task->swap_file->pager = &swap_pager;
-	address_pool_init(&task->swap_file_offset_pool, 0,
-			  __pfn(TASK_SWAPFILE_MAXSIZE));
-	INIT_LIST_HEAD(&task->swap_file->page_cache_list);
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->vm_area_list);
 	list_add_tail(&task->list, &tcbs->list);
@@ -144,7 +139,7 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		 * when faulted, simply copies the task env data to the
 		 * allocated page.
 		 */
-		if (task_prepare_environment(task) < 0) {
+		if (task_prepare_proc_files(task) < 0) {
 			printf("Could not create environment file.\n");
 			goto error;
 		}
@@ -156,8 +151,11 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 		task->stack_end = task->env_start;
 		task->stack_start = task->stack_end - PAGE_SIZE * 4;
 
-		/* Only text start is valid */
-		task->text_start = USER_AREA_START;
+		/* Currently RO text and RW data are one region */
+		task->data_start = USER_AREA_START;
+		task->data_end = USER_AREA_START + file->length;
+		task->text_start = task->data_start;
+		task->text_end = task->data_end;
 
 		/* Set up task's registers */
 		sp = align(task->stack_end - 1, 8);
@@ -165,15 +163,15 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 
 		/* mmap each task's physical image to task's address space. */
 		if ((err = do_mmap(file, 0, task, USER_AREA_START,
-				   VM_READ | VM_WRITE | VM_EXEC,
+				   VM_READ | VM_WRITE,
 				   __pfn(page_align_up(file->length)))) < 0) {
 			printf("do_mmap: failed with %d.\n", err);
 			goto error;
 		}
 
 		/* mmap each task's environment from its env file. */
-		if ((err = do_mmap(task->env_file, 0, task, task->env_start,
-				   VM_READ | VM_WRITE,
+		if ((err = do_mmap(task->proc_files->env_file, 0, task,
+				   task->env_start, VM_READ | VM_WRITE,
 				   __pfn(task->env_end - task->env_start)) < 0)) {
 			printf("do_mmap: Mapping environment failed with %d.\n",
 			       err);

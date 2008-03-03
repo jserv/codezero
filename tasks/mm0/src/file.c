@@ -14,27 +14,6 @@
 #include <posix/sys/types.h>
 #include <string.h>
 
-/* Global list of in-memory vm files. */
-struct list_head vm_file_list;
-
-/* Allocate and initialise a vmfile, and return it */
-struct vm_file *vmfile_alloc_init(void)
-{
-	struct vm_file *file;
-
-	if (!(file = kzalloc(sizeof(*file))))
-		return PTR_ERR(-ENOMEM);
-
-	INIT_LIST_HEAD(&file->list);
-	INIT_LIST_HEAD(&file->page_cache_list);
-
-	return file;
-}
-
-void vmfile_init(void)
-{
-	INIT_LIST_HEAD(&vm_file_list);
-}
 
 int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 	     void *pagebuf)
