@@ -41,36 +41,20 @@ struct tcb *find_task(int tid)
 	return 0;
 }
 
-#if 0
-void dump_tasks(void)
+struct tcb *tcb_alloc_init(void)
 {
-	struct tcb *t;
+	struct tcb *task;
 
-	list_for_each_entry(t, &tcb_head.list, list) {
-		printf("Task %s: id/spid: %d/%d\n", &t->name[0], t->tid, t->spid);
-		printf("Task vm areas:\n");
-		dump_vm_areas(t);
-		printf("Task swapfile:\n");
-		dump_task_swapfile(t);
-	}
-}
-#endif
-
-
-struct tcb *create_init_tcb(struct tcb_head *tcbs)
-{
-	struct tcb *task = kzalloc(sizeof(struct tcb));
+	if (!(task = kzalloc(sizeof(struct tcb))))
+		return PTR_ERR(-ENOMEM);
 
 	/* Ids will be acquired from the kernel */
 	task->tid = TASK_ID_INVALID;
 	task->spid = TASK_ID_INVALID;
+
+	/* Initialise its lists */
 	INIT_LIST_HEAD(&task->list);
 	INIT_LIST_HEAD(&task->vm_area_list);
-	list_add_tail(&task->list, &tcbs->list);
-	tcbs->total++;
-
-	/* Allocate a utcb virtual address */
-	task->utcb_address = (unsigned long)utcb_vaddr_new();
 
 	return task;
 }
@@ -78,15 +62,15 @@ struct tcb *create_init_tcb(struct tcb_head *tcbs)
 int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 {
 	int err;
-	struct vm_file *file;
 	struct svc_image *img;
 	unsigned int sp, pc;
 	struct tcb *task;
 	struct task_ids ids;
-	struct bootdesc *bd = initdata->bootdesc;
+	struct bootdesc *bd;
+	struct vm_object *vm_obj;
 
+	bd = initdata->bootdesc;
 	INIT_LIST_HEAD(&tcb_head.list);
-	INIT_LIST_HEAD(&initdata->boot_file_list);
 
 	for (int i = 0; i < bd->total_images; i++) {
 		img = &bd->images[i];
@@ -113,16 +97,17 @@ int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
 
 		/* Create a task and use returned space and thread ids. */
 		printf("New task with id: %d, space id: %d\n", ids.tid, ids.spid);
-		task = create_init_tcb(tcbs);
+		task = tcb_alloc_init(tcbs);
 		task->tid = ids.tid;
 		task->spid = ids.spid;
 
-		/*
-		 * For boot files, we use the physical address of the memory
-		 * file as its mock-up inode.
-		 */
-		file = vmfile_alloc_init();
-		file->vnum = img->phys_start;
+		/* Allocate a utcb virtual address */
+		task->utcb_address = (unsigned long)utcb_vaddr_new();
+
+		/* Allocate the first vm_object we want to map */
+		vm_obj = vm_obj_alloc_init();
+		vm_obj->priv.img = img;
+
 		file->length = img->phys_end - img->phys_start;
 		file->pager = &boot_file_pager;
 		list_add(&file->list, &initdata->boot_file_list);

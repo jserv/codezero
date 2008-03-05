@@ -9,8 +9,11 @@
 #include <kmalloc/kmalloc.h>
 
 
-/* Global list of in-memory vm files. */
+/* Global list of in-memory vm objects. */
 LIST_HEAD(vm_object_list);
+
+/* Global list of in-memory vm files */
+LIST_HEAD(vm_file_list);
 
 /* Allocate and initialise a vmfile, and return it */
 struct vm_object *vm_object_alloc_init(void)

@@ -15,74 +15,98 @@
 #include <task.h>
 #include <proc.h>
 
-static void *zpage_p;
+static void *zpage_phys;
 static struct page *zpage;
+static struct vm_file *devzero;
 
-static struct vm_object devzero;
-
+/* TODO: Associate devzero with zero page */
 void init_zero_page(void)
 {
-	void *zpage_v;
-	zpage_p = alloc_page(1);
-	zpage = phys_to_page(zpage_p);
+	void *zpage_virt;
+	zpage_phys = alloc_page(1);
+	zpage = phys_to_page(zpage_phys);
 
 	/* Map it to self */
-	zpage_v = l4_map_helper(zpage_p, 1);
+	zpage_virt = l4_map_helper(zpage_phys, 1);
 
 	/* Zero it */
-	memset(zpage_v, 0, PAGE_SIZE);
+	memset(zpage_virt, 0, PAGE_SIZE);
 
 	/* Unmap it */
-	l4_unmap_helper(zpage_v, 1);
+	l4_unmap_helper(zpage_virt, 1);
 
 	/* Update page struct. All other fields are zero */
+	spin_lock(&page->lock);
 	zpage->count++;
+	spin_unlock(&page->lock);
+
 }
 
 #define VM_OBJ_MASK		0xFFFF
 #define VM_OBJ_DEVZERO		(1 << 0)	/* Devzero special file */
 #define VM_OBJ_FILE		(1 << 1)	/* Regular VFS file */
 #define VM_OBJ_SHADOW		(1 << 2)	/* Shadow of another object */
+#define VM_OBJ_COW		(1 << 3)	/* Copy-on-write semantics */
+
+struct vm_object *get_devzero(void)
+{
+	return &devzero;
+}
+
+struct page *get_zero_page(void)
+{
+
+	/* Update zero page struct. */
+	spin_lock(&page->lock);
+	zpage->count++;
+	spin_unlock(&page->lock);
+
+	return zpage;
+}
+
+void put_zero_page(void)
+{
+	spin_lock(&page->lock);
+	zpage->count--;
+	spin_unlock(&page->lock);
+
+	BUG_ON(zpage->count < 0);
+}
+
+#define vm_object_to_file(obj)	\
+	(struct vm_file *)container_of(obj, struct vm_file, vm_obj)
 
 /* Returns the page with given offset in this vm_object */
-struct page *devzero_pager_page_in(struct vm_object *vm_obj, unsigned long f_offset)
+struct page *devzero_pager_page_in(struct vm_object *vm_obj,
+				   unsigned long page_offset)
 {
+	struct vm_file *devzero = container_of(vm_obj, struct vm_file, vm_obj);
+	struct page *zpage = devzero->priv_data;
+
+	/* Update zero page struct. */
+	spin_lock(&page->lock);
+	zpage->count++;
+	spin_unlock(&page->lock);
+
 	return zpage;
 }
 
 struct vm_pager devzero_pager {
-	page_in = devzero_pager_page_int,
+	.page_in = devzero_pager_page_in,
 };
 
 void init_devzero(void)
 {
 	init_zero_page();
 
-	INIT_LIST_HEAD(&devzero.page_cache);
 	INIT_LIST_HEAD(&devzero.list);
 	INIT_LIST_HEAD(&devzero.shadows);
+	INIT_LIST_HEAD(&devzero.page_cache);
 
 	/* Devzero has infinitely many pages ;-) */
 	devzero.npages = -1;
-	devzero.type = VM_OBJ_FILE;
+	devzero.type = VM_OBJ_DEVZERO;
 	devzero.pager = &devzero_pager;
-}
-
-struct vm_file *get_devzero(void)
-{
-	return &devzero;
-}
-
-void *get_zero_page(void)
-{
-	zpage->count++;
-	return zpage_p;
-}
-
-void put_zero_page(void)
-{
-	zpage->count--;
-	BUG_ON(zpage->count < 0);
 }
 
 /* Allocates and fills in the env page. This is like a pre-faulted file. */
@@ -123,22 +147,17 @@ int task_populate_env(struct task *task)
 	return 0;
 }
 
-
-#define TASK_DATA_VNUM	1
-#define TASK_STACK_VNUM	2
-#define TASK_ENV_VNUM	3
-
 /*
  * For a task that is about to execute, this dynamically
  * generates its environment file, and environment data.
  */
 int task_setup_vm_objects(struct tcb *t)
 {
-	struct proc_files *pf = &t->proc_files;
+	struct proc_vm_objects *po = &t->proc_vm_objects;
 
-	if (IS_ERR(pf->stack_file = vmfile_alloc_init()))
+	if (IS_ERR(pf->stack = vmfile_alloc_init()))
 		return (int)t->stack_file;
-	if (IS_ERR(pf->env_file = vmfile_alloc_init()))
+	if (IS_ERR(pf->env = vmfile_alloc_init()))
 		return (int)t->env_file;
 	if (IS_ERR(pf->env_file = vmfile_alloc_init()))
 		return (int)t->data_file;

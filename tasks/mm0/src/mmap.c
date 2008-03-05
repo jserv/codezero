@@ -12,10 +12,6 @@
 #include <memory.h>
 #include <l4lib/arch/syscalls.h>
 
-/* Swap related bookkeeping.
-static struct vm_file shm_swap_file;
-static struct id_pool *swap_file_offset_pool;
-*/
 
 /* TODO: This is to be implemented when fs0 is ready. */
 int do_msync(void *addr, unsigned long size, unsigned int flags, struct tcb *task)
@@ -237,20 +233,6 @@ struct vm_area *vma_split(struct vm_area *vma, struct tcb *task,
 	return new;
 }
 
-/*
- * For written anonymous regions swapfile segments are allocated dynamically.
- * when vma regions are modified these allocations must be re-adjusted.
- * This call handles this adjustment as well as the vma.
- */
-int vma_swapfile_realloc(struct vm_area *vma, unsigned long pfn_start,
-			 unsigned long pfn_end)
-{
-	/* TODO: Reslot in swapfile */
-	BUG();
-	return 0;
-}
-
-
 /* This shrinks the vma from *one* end only, either start or end */
 int vma_shrink(struct vm_area *vma, struct tcb *task, unsigned long pfn_start,
 	       unsigned long pfn_end)
@@ -407,12 +389,12 @@ is_vma_mergeable(unsigned long pfn_start, unsigned long pfn_end,
  * existing vma and the flags match, it returns the adjacent vma. Otherwise it
  * returns 0.
  */
-int find_unmapped_area(struct vm_area **existing, struct vm_file *file,
-		       unsigned long pfn_start, unsigned long npages,
-		       unsigned int flags, struct list_head *vm_area_head)
+int find_unmapped_area(struct vm_area **existing,  unsigned long pfn_start,
+		       unsigned long npages, unsigned int flags,
+		       struct list_head *vm_area_head)
 {
-	struct vm_area *vma;
 	unsigned long pfn_end = pfn_start + npages;
+	struct vm_area *vma;
 	*existing = 0;
 
 	list_for_each_entry(vma, vm_area_head, list) {
@@ -445,26 +427,33 @@ int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 	    unsigned long map_address, unsigned int flags, unsigned int pages)
 {
 	struct vm_area *vma;
+	struct vm_object *vmobj;
 	unsigned long pfn_start = __pfn(map_address);
 
 	if (!mapfile) {
 	       if (flags & VMA_ANON) {
-			mapfile = get_devzero();
+			vmobj = get_devzero();
 			f_offset = 0;
 	       } else
 			BUG();
-	} else if (pages > (__pfn(page_align_up(mapfile->length)) - f_offset)) {
-		printf("%s: Trying to map %d pages from page %d, "
-		       "but file length is %d\n", __FUNCTION__, pages,
-		       f_offset, __pfn(page_align_up(mapfile->length)));
-		return -EINVAL;
+	} else {
+		if (pages > (__pfn(page_align_up(mapfile->length))
+			     - f_offset)) {
+			printf("%s: Trying to map %d pages from page %d, "
+			       "but file length is %d\n", __FUNCTION__, pages,
+			       f_offset, __pfn(page_align_up(mapfile->length)));
+			return -EINVAL;
+		}
+		/* Set up a vm object for given file */
+		vmobj = vm_obj_alloc_init();
+		vmobj->priv.file = mapfile;
 	}
 
 	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__, map_address,
 	       map_address + pages * PAGE_SIZE);
 
 	/* See if it overlaps or is mergeable to an existing vma. */
-	if (find_unmapped_area(&vma, mapfile, pfn_start, pages, flags,
+	if (find_unmapped_area(&vma, pfn_start, pages, flags,
 			       &t->vm_area_list) < 0)
 		return -EINVAL;	/* Indicates overlap. */
 

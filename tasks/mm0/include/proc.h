@@ -3,11 +3,11 @@
 
 #include <vm_area.h>
 
-struct proc_files {
-	struct vm_object *stack_file;	/* ZI, RO: devzero, RW: private */
-	struct vm_object *env_file;	/* NON-ZI, RO: private, RW: private */
-	struct vm_object *data_file;	/* NON-ZI, RO: shared,  RW: private */
-	struct vm_object *bss_file;	/* ZI, RO: devzero, RW: private */
+struct proc_vm_objects {
+	struct vm_object *stack;	/* ZI, RO: devzero, RW: private */
+	struct vm_object *env;		/* NON-ZI, RO: private, RW: private */
+	struct vm_object *data;		/* NON-ZI, RO: shared,  RW: private */
+	struct vm_object *bss;		/* ZI, RO: devzero, RW: private */
 };
 
 int task_setup_vm_objects(struct tcb *t);

@@ -1,5 +1,5 @@
 /*
- * Virtual memory area descriptors. No page cache yet.
+ * Virtual memory area descriptors.
  *
  * Copyright (C) 2007 Bahadir Balban
  */
@@ -20,17 +20,17 @@
 #define VM_WRITE			(1 << 2)
 #define VM_EXEC				(1 << 3)
 #define VM_PROT_MASK			(VM_READ | VM_WRITE | VM_EXEC)
-#define VM_SWAPPED			(1 << 4)
 
-/* VMA flags */
+/* Shared copy of a file */
 #define VMA_SHARED			(1 << 3)
-/* VMA that's not file-backed, always ZI */
-#define VMA_ANON			(1 << 4)
-/* Private copy of a file VMA, can be ZI */
-#define VMA_COW				(1 << 5)
-
-/* VMA object type flags */
-#define VMOBJ_SHADOW			(1 << 6)
+/* VMA that's not file-backed, always maps devzero as VMA_COW */
+#define VMA_ANONYMOUS			(1 << 4)
+/* Private copy of a file */
+#define VMA_PRIVATE			(1 << 5)
+/* Copy-on-write semantics */
+#define VMA_COW				(1 << 6)
+/* A vm object that is a shadow of another */
+#define VMOBJ_SHADOW			(1 << 7)
 
 struct page {
 	int count;		/* Refcount */
@@ -69,6 +69,16 @@ struct vm_pager {
 	struct vm_pager_ops ops;	/* The ops the pager does on area */
 };
 
+enum VM_OBJ_TYPE {
+	VM_OBJ_SHADOW = 1,	/* Anonymous pages, swap_pager, no vm_file */
+	VM_OBJ_VNODE,		/* VFS file pages, vnode_pager, has vm_file */
+	VM_OBJ_DEVICE		/* Device pages, device_pager, has vm_file */
+};
+
+/* TODO:
+ * How to distinguish different devices handling page faults ???
+ */
+
 /*
  * Describes the in-memory representation of a resource. This could
  * point at a file or another resource, e.g. a device area, swapper space,
@@ -81,20 +91,19 @@ struct vm_object {
 	int vma_refcnt;		    /* Number of vmas that refer */
 	int shadow_refcnt;	    /* Number of shadows that refer */
 	struct list_head shadows;   /* List of vm objects that shadow this one */
-	struct vm_object *orig_vma; /* Original object that this one shadows */
+	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int type;	    /* Defines the type of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
-	struct list_head page_cache;/* List of in-memory pages */
-	struct vm_pager *pager;		  /* The pager for this object */
-	union private_data {		  /* Private data about the object */
-		struct vm_file *file;	  /* VFS file-specific information */
-	} priv;
+	struct list_head page_cache;	/* List of in-memory pages */
+	struct vm_pager *pager;		/* The pager for this object */
 };
 
-/* In memory representation of a vfs file. */
+/* In memory representation of either a vfs file, a device. */
 struct vm_file {
 	unsigned long vnum;
 	unsigned long length;
+	struct vm_object vm_obj;
+	void *priv_data;	/* Device pagers use to access device info */
 };
 
 /* To create per-vma vm_object lists */
