@@ -135,21 +135,32 @@ int vma_unmap_shadows(struct vm_area *vma, struct tcb *task, unsigned long pfn_s
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			unsigned int flags,  unsigned long f_offset,
-			struct vm_file *owner)
+			struct vm_file *mapfile)
 {
 	struct vm_area *vma;
+	struct vm_obj_link *obj_link;
 
-	/* Initialise new area */
+	/* Allocate new area */
 	if (!(vma = kzalloc(sizeof(struct vm_area))))
 		return 0;
+
+	/* Allocate vm object link */
+	if (!(obj_link = kzalloc(sizeof(struct vm_obj_link)))) {
+		kfree(vma);
+		return 0;
+	}
+
+	INIT_LIST_HEAD(&vma->list);
+	INIT_LIST_HEAD(&vma->vm_obj_list);
 
 	vma->pfn_start = pfn_start;
 	vma->pfn_end = pfn_start + npages;
 	vma->flags = flags;
 	vma->f_offset = f_offset;
-	vma->owner = owner;
-	INIT_LIST_HEAD(&vma->list);
-	INIT_LIST_HEAD(&vma->shadow_list);
+
+	INIT_LIST_HEAD(&obj_link->list);
+	obj_link->obj = &mapfile->vm_obj;
+	list_add(&obj_link->list, &vma->vm_obj_list);
 
 	return vma;
 }
@@ -359,61 +370,54 @@ int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
 	return do_munmap(vaddr, size, task);
 }
 
-static struct vm_area *
-is_vma_mergeable(unsigned long pfn_start, unsigned long pfn_end,
-		 unsigned int flags, struct vm_area *vma)
+int vma_intersect(unsigned long start, unsigned long end,
+		      struct vm_area *vma)
 {
-	/* TODO:
-	 * The swap implementation is too simple for now. The vmas on swap
-	 * are stored non-sequentially, and adjacent vmas don't imply adjacent
-	 * file position on swap. So at the moment merging swappable vmas
-	 * doesn't make sense. But this is going to change in the future.
-	 */
-	if (vma->flags & VMA_COW) {
-		BUG();
-		/* FIXME: XXX: Think about this! */
+	if ((pfn_start <= vma->pfn_start) && (pfn_end > vma->pfn_start)) {
+		printf("%s: VMAs overlap.\n", __FUNCTION__);
+		return 1;
 	}
 
-	/* Check for vma adjacency */
-	if ((vma->pfn_start == pfn_end) && (vma->flags == flags))
-		return vma;
-	if ((vma->pfn_end == pfn_start) && (vma->flags == flags))
-		return vma;
-
+	if ((pfn_end >= vma->pfn_end) && (pfn_start < vma->pfn_end)) {
+		printf("%s: VMAs overlap.\n", __FUNCTION__);
+		return 1;
+	}
 	return 0;
 }
 
 /*
- * Finds an unmapped virtual memory area for the given parameters. If it
- * overlaps with an existing vma, it returns -1, if it is adjacent to an
- * existing vma and the flags match, it returns the adjacent vma. Otherwise it
- * returns 0.
+ * Check if region is unmapped. If not, supply another region,
+ * if VMA_FIXED is supplied return EINVAL.
  */
-int find_unmapped_area(struct vm_area **existing,  unsigned long pfn_start,
-		       unsigned long npages, unsigned int flags,
-		       struct list_head *vm_area_head)
+struct vm_area *
+find_unmapped_area(unsigned long pfn_start, unsigned long npages,
+		   unsigned int flags, struct vm_file *mapfile,
+		   unsigned long file_offset, struct tcb *task)
 {
 	unsigned long pfn_end = pfn_start + npages;
 	struct vm_area *vma;
-	*existing = 0;
 
-	list_for_each_entry(vma, vm_area_head, list) {
-		/* Check overlap */
-		if ((vma->pfn_start <= pfn_start) &&
-		    (pfn_start < vma->pfn_end)) {
-			printf("%s: VMAs overlap.\n", __FUNCTION__);
-			return -1;	/* Overlap */
-		} if ((vma->pfn_start < pfn_end) &&
-		    (pfn_end < vma->pfn_end)) {
-			printf("%s: VMAs overlap.\n", __FUNCTION__);
-			return -1;	/* Overlap */
-		}
-		if (is_vma_mergeable(pfn_start, pfn_end, flags, vma)) {
-			*existing = vma;
-			return 0;
+	/*
+	 * We refuse all mapped areas for now, in the future refuse just
+	 * the process image areas, i.e. the stack, data and text.
+	 */
+	list_for_each_entry(vma, &task->vm_area_head, list) {
+		if (vma_intersect(pfn_start, pfn_end, vma)) {
+			if (flags & VM_FIXED)
+				return 0;
+			else
 		}
 	}
-	return 0;
+
+	/*
+	 * They don't overlap, initialise and return a new
+	 * vma for the given region.
+	 */
+	if (!(vma = vma_new(pfn_start, pfn_end - pfn_start,
+			    flags, file_offset, mapfile)))
+		return -ENOMEM;
+	else
+		return vma;
 }
 
 /*
@@ -423,16 +427,15 @@ int find_unmapped_area(struct vm_area **existing,  unsigned long pfn_start,
  * The actual paging in/out of the file from/into memory pages is handled by
  * the file's pager upon page faults.
  */
-int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
+int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *task,
 	    unsigned long map_address, unsigned int flags, unsigned int pages)
 {
-	struct vm_area *vma;
-	struct vm_object *vmobj;
 	unsigned long pfn_start = __pfn(map_address);
+	struct vm_area *vma;
 
 	if (!mapfile) {
-	       if (flags & VMA_ANON) {
-			vmobj = get_devzero();
+	       if (flags & VMA_ANONYMOUS) {
+			mapfile = get_devzero();
 			f_offset = 0;
 	       } else
 			BUG();
@@ -444,17 +447,17 @@ int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 			       f_offset, __pfn(page_align_up(mapfile->length)));
 			return -EINVAL;
 		}
-		/* Set up a vm object for given file */
-		vmobj = vm_obj_alloc_init();
-		vmobj->priv.file = mapfile;
+	}
+	if (pages == 0) {
+		printf("Trying to map %d pages.\n", pages);
+		return -EINVAL;
 	}
 
 	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__, map_address,
 	       map_address + pages * PAGE_SIZE);
 
-	/* See if it overlaps or is mergeable to an existing vma. */
-	if (find_unmapped_area(&vma, pfn_start, pages, flags,
-			       &t->vm_area_list) < 0)
+	/* See if it overlaps with an existing vma. */
+	if (IS_ERR(vma = find_unmapped_area(pfn_start, pages, flags, task)))
 		return -EINVAL;	/* Indicates overlap. */
 
 	/* Mergeable vma returned? */
@@ -482,12 +485,14 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	     int flags, int fd, unsigned long pfn)
 {
 	unsigned long npages = __pfn(page_align_up(length));
-	struct tcb * task;
+	struct vm_file *file = 0;
+	unsigned int vmflags = 0;
+	struct tcb *task;
 	int err;
 
 	BUG_ON(!(task = find_task(sender)));
 
-	if (fd < 0 || fd > TASK_OFILES_MAX)
+	if ((fd < 0 && !(flags & MAP_ANONYMOUS)) || fd > TASK_FILES_MAX)
 		return -EINVAL;
 
 	if ((unsigned long)start < USER_AREA_START || (unsigned long)start >= USER_AREA_END)
@@ -498,8 +503,31 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	 * Check that pfn + npages range is within the file range.
 	 * Check that posix flags passed match those defined in vm_area.h
 	 */
-	if ((err =  do_mmap(task->fd[fd].vmfile, __pfn_to_addr(pfn), task,
-			    (unsigned long)start, flags, npages)) < 0)
+	if (flags & MAP_ANONYMOUS) {
+		file = 0;
+		vmflags |= VMA_ANONYMOUS;
+	} else {
+		file = task->fd[fd].vmfile;
+	}
+
+	if (flags & MAP_FIXED)
+		vmflags |= VMA_FIXED;
+
+	if (flags & MAP_PRIVATE)
+		/* This means COW, if writeable. */
+		vmflags |= VMA_PRIVATE;
+	else	/* This also means COW, if writeable and anonymous */
+		vmflags |= VMA_SHARED;
+
+	if (prot & PROT_READ)
+		vmflags |= VM_READ;
+	if (prot & PROT_WRITE)
+		vmflags |= VM_WRITE;
+	if (prot & PROT_EXEC)
+		vmflags |= VM_EXEC;
+
+	if ((err =  do_mmap(file, __pfn_to_addr(pfn), task,
+			    (unsigned long)start, vmflags, npages)) < 0)
 		return err;
 
 	return 0;

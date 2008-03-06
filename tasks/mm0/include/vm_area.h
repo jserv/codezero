@@ -22,15 +22,14 @@
 #define VM_PROT_MASK			(VM_READ | VM_WRITE | VM_EXEC)
 
 /* Shared copy of a file */
-#define VMA_SHARED			(1 << 3)
+#define VMA_SHARED			(1 << 4)
 /* VMA that's not file-backed, always maps devzero as VMA_COW */
-#define VMA_ANONYMOUS			(1 << 4)
+#define VMA_ANONYMOUS			(1 << 5)
 /* Private copy of a file */
-#define VMA_PRIVATE			(1 << 5)
+#define VMA_PRIVATE			(1 << 6)
 /* Copy-on-write semantics */
-#define VMA_COW				(1 << 6)
-/* A vm object that is a shadow of another */
-#define VMOBJ_SHADOW			(1 << 7)
+#define VMA_COW				(1 << 7)
+#define VMA_FIXED			(1 << 8)
 
 struct page {
 	int count;		/* Refcount */
@@ -60,8 +59,8 @@ struct fault_data {
 };
 
 struct vm_pager_ops {
-	int (*page_in)(struct vm_object *vm_obj, unsigned long f_offset);
-	int (*page_out)(struct vm_object *vm_obj, unsigned long f_offset);
+	int (*page_in)(struct vm_object *vm_obj, unsigned long pfn_offset);
+	int (*page_out)(struct vm_object *vm_obj, unsigned long pfn_offset);
 };
 
 /* Describes the pager task that handles a vm_area. */
@@ -69,14 +68,27 @@ struct vm_pager {
 	struct vm_pager_ops ops;	/* The ops the pager does on area */
 };
 
+/* Defines the type of file. A device file? Regular file? One used at boot? */
+enum VM_FILE_TYPE {
+	VM_FILE_DEVZERO = 0,
+	VM_FILE_REGULAR,
+	VM_FILE_BOOTFILE,
+};
+
+/* Defines the type of object. A file? Just a standalone object? */
 enum VM_OBJ_TYPE {
-	VM_OBJ_SHADOW = 1,	/* Anonymous pages, swap_pager, no vm_file */
-	VM_OBJ_VNODE,		/* VFS file pages, vnode_pager, has vm_file */
-	VM_OBJ_DEVICE		/* Device pages, device_pager, has vm_file */
+	VM_OBJ_SHADOW = 1,	/* Anonymous pages, swap_pager */
+	VM_OBJ_FILE,		/* VFS file and device pages */
 };
 
 /* TODO:
  * How to distinguish different devices handling page faults ???
+ * A possible answer:
+ *
+ * If they are not mmap'ed, this is handled by the vfs calling that file's
+ * specific operations (e.g. even calling the device process). If they're
+ * mmap'ed, they adhere to a standard mmap_device structure kept in
+ * vm_file->priv_data. This is used by the device pager to map those pages.
  */
 
 /*
@@ -94,23 +106,28 @@ struct vm_object {
 	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int type;	    /* Defines the type of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
-	struct list_head page_cache;	/* List of in-memory pages */
-	struct vm_pager *pager;		/* The pager for this object */
+	struct vm_pager *pager;	    /* The pager for this object */
+	struct list_head page_cache; /* List of in-memory pages */
 };
 
 /* In memory representation of either a vfs file, a device. */
 struct vm_file {
 	unsigned long vnum;
 	unsigned long length;
+	unsigned int type;
+	struct list_head list;
 	struct vm_object vm_obj;
 	void *priv_data;	/* Device pagers use to access device info */
 };
 
 /* To create per-vma vm_object lists */
-struct vma_obj_list {
+struct vma_obj_link {
 	struct list_head list;
 	struct vm_object *obj;
 }
+
+#define vm_object_to_file(obj)	\
+	(struct vm_file *)container_of(obj, struct vm_file, vm_obj)
 
 /*
  * Describes a virtually contiguous chunk of memory region in a task. It covers
@@ -119,9 +136,9 @@ struct vma_obj_list {
  * file or various other resources. This is managed by the region's pager.
  *
  * COW: Upon copy-on-write, each copy-on-write instance creates a shadow of the
- * original vma which supersedes the original vma with its copied modified pages.
- * This creates a stack of shadow vmas, where the top vma's copy of pages
- * supersede the ones lower in the stack.
+ * original vm object which supersedes the original vm object with its copied
+ * modified pages. This creates a stack of shadow vm objects, where the top
+ * object's copy of pages supersede the ones lower in the stack.
  */
 struct vm_area {
 	struct list_head list;		/* Per-task vma list */
@@ -148,10 +165,17 @@ static inline struct vm_area *find_vma(unsigned long addr,
 int insert_page_olist(struct page *this, struct vm_object *vm_obj);
 
 /* Pagers */
-extern struct vm_pager default_file_pager;
-extern struct vm_pager boot_file_pager;
-extern struct vm_pager swap_pager;
+extern struct vm_pager file_pager;
+extern struct vm_pager bootfile_pager;
+extern struct vm_pager devzero_pager;
 
+/* vm object and vm file lists */
+extern struct list_head vm_object_list;
+extern struct list_head vm_file_list;
+
+/* vm file and object initialisation */
+struct vm_file *vm_file_alloc_init(void);
+struct vm_object *vm_object_alloc_init(void);
 
 /* Main page fault entry point */
 void page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);

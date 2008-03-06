@@ -48,13 +48,17 @@ void init_mm(struct initdata *initdata)
 	init_page_allocator(membank[0].free, membank[0].end);
 	printf("%s: Initialised page allocator.\n", __TASKNAME__);
 
+	/* Initialise the pager's memory allocator */
+	kmalloc_init();
+	printf("%s: Initialised kmalloc.\n", __TASKNAME__);
+
 	/* Initialise the zero page */
 	init_devzero();
 	printf("%s: Initialised devzero.\n", __TASKNAME__);
 
-	/* Initialise the pager's memory allocator */
-	kmalloc_init();
-	printf("%s: Initialised kmalloc.\n", __TASKNAME__);
+	/* Initialise in-memory boot files */
+	init_boot_files();
+	printf("%s: Initialised in-memory boot files.\n", __TASKNAME__);
 
 	shm_init();
 	printf("%s: Initialised shm structures.\n", __TASKNAME__);

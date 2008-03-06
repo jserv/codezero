@@ -19,6 +19,7 @@
 struct initdata {
 	struct bootdesc *bootdesc;
 	struct page_bitmap page_map;
+	struct list_head boot_file_list;
 };
 
 extern struct initdata initdata;
