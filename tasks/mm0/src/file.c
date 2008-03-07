@@ -111,16 +111,6 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	return 0;
 }
 
-struct page *find_page(struct vm_file *f, unsigned long pfn)
-{
-	struct page *p;
-
-	list_for_each_entry(p, &f->page_cache_list, list)
-		if (p->f_offset == pfn)
-			return p;
-
-	return 0;
-}
 
 /*
  * Inserts the page to vmfile's list in order of page frame offset.

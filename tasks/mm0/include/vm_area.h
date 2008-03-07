@@ -31,6 +31,15 @@
 #define VMA_COW				(1 << 7)
 #define VMA_FIXED			(1 << 8)
 
+/*
+ * A suggestion to how a non-page_array (i.e. a device)
+ * page could tell its physical address.
+ */
+struct devpage {
+	struct page page;
+	unsigned long phys;
+};
+
 struct page {
 	int count;		/* Refcount */
 	struct spinlock lock;	/* Page lock. */
@@ -38,7 +47,7 @@ struct page {
 	struct vm_object *owner;/* The vm_object the page belongs to */
 	unsigned long virtual;	/* If refs >1, first mapper's virtual address */
 	unsigned int flags;	/* Flags associated with the page. */
-	unsigned long f_offset; /* The offset page resides in its owner */
+	unsigned long offset;	/* The offset page resides in its owner */
 };
 extern struct page *page_array;
 
@@ -59,8 +68,8 @@ struct fault_data {
 };
 
 struct vm_pager_ops {
-	int (*page_in)(struct vm_object *vm_obj, unsigned long pfn_offset);
-	int (*page_out)(struct vm_object *vm_obj, unsigned long pfn_offset);
+	struct page *(*page_in)(struct vm_object *vm_obj, unsigned long pfn_offset);
+	struct page *(*page_out)(struct vm_object *vm_obj, unsigned long pfn_offset);
 };
 
 /* Describes the pager task that handles a vm_area. */
@@ -120,14 +129,14 @@ struct vm_file {
 	void *priv_data;	/* Device pagers use to access device info */
 };
 
+
 /* To create per-vma vm_object lists */
 struct vma_obj_link {
 	struct list_head list;
 	struct vm_object *obj;
-}
+};
 
-#define vm_object_to_file(obj)	\
-	(struct vm_file *)container_of(obj, struct vm_file, vm_obj)
+#define vm_object_to_file(obj) container_of(obj, struct vm_file, vm_obj)
 
 /*
  * Describes a virtually contiguous chunk of memory region in a task. It covers
@@ -146,7 +155,7 @@ struct vm_area {
 	unsigned long pfn_start;	/* Region start virtual pfn */
 	unsigned long pfn_end;		/* Region end virtual pfn, exclusive */
 	unsigned long flags;		/* Protection flags. */
-	unsigned long f_offset;		/* File offset in pfns */
+	unsigned long file_offset;	/* File offset in pfns */
 };
 
 static inline struct vm_area *find_vma(unsigned long addr,

@@ -30,7 +30,7 @@ unsigned long fault_to_file_offset(struct fault_data *fault)
 	unsigned long vma_off_pfn = __pfn(fault->address) - fault->vma->pfn_start;
 
 	/* Fault's offset in the file */
-	unsigned long f_off_pfn = fault->vma->f_offset + vma_off_pfn;
+	unsigned long f_off_pfn = fault->vma->file_offset + vma_off_pfn;
 
 	return f_off_pfn;
 }
@@ -81,6 +81,211 @@ struct vm_area *copy_on_write_vma(struct fault_data *fault)
 	 */
 	list_add(&shadow->list,	&fault->vma->shadow_list);
 	return shadow;
+}
+
+/*
+ * Given a reference to a vm_object link, obtains the prev vm_object.
+ *
+ * vma->link1->link2->link3
+ *       |      |      |
+ *       V      V      V
+ *       vmo1   vmo2   vmo3|vm_file
+ *
+ * E.g. given a reference to vma, obtains vmo3.
+ */
+struct vm_object *vma_get_prev_object(struct list_head *linked_list)
+{
+	struct vm_object_link *link;
+
+	BUG_ON(list_empty(linked_list));
+
+	link = list_entry(linked_list.prev, struct vm_obj_link, list);
+
+	return link->obj;
+}
+
+/* Obtain the original mmap'ed object */
+struct vm_object *vma_get_original_object(struct vm_area *vma)
+{
+	return vma_get_prev_object(&vma->vm_obj_list);
+}
+
+
+/*
+ * Given a reference to a vm_object link, obtains the next vm_object.
+ *
+ * vma->link1->link2->link3
+ *       |      |      |
+ *       V      V      V
+ *       vmo1   vmo2   vmo3|vm_file
+ *
+ * E.g. given a reference to vma, obtains vmo1.
+ */
+struct vm_object *vma_get_next_object(struct list_head *linked_list)
+{
+	struct vm_object_link *link;
+
+	BUG_ON(list_empty(linked_list));
+
+	link = list_entry(linked_list.next, struct vm_obj_link, list);
+
+	return link->obj;
+}
+
+struct vm_obj_link *vma_create_shadow(void)
+{
+	struct vm_object *vmo;
+	struct vm_obj_link *vmo_link;
+
+	if (!(vmo_link = kzalloc(sizeof(*vmo_link))))
+		return 0;
+
+	if (!(vmo = vm_object_alloc_init())) {
+		kfree(vmo_link);
+		return 0;
+	}
+	INIT_LIST_HEAD(&vmo_link->list);
+	vmo_link->obj = vmo;
+
+	return vmo_link;
+}
+
+struct page *copy_on_write_page_in(struct vm_object *shadow,
+				   struct vm_object *orig,
+				   unsigned long page_offset)
+{
+	struct page *page, *newpage;
+	void *vaddr, *new_vaddr, *new_paddr;
+	int err;
+
+	/* The page is not resident in page cache. */
+	if (!(page = find_page(shadow, page_offset))) {
+		/* Allocate a new page */
+		newpaddr = alloc_page(1);
+		newpage = phys_to_page(paddr);
+
+		/* Get the faulty page from the original vm object. */
+		if (IS_ERR(page = orig->pager.ops->page_in(orig,
+							   file_offset))) {
+			printf("%s: Could not obtain faulty page.\n",
+			       __TASKNAME__);
+			BUG();
+		}
+
+		/* Map the new and orig page to self */
+		new_vaddr = l4_map_helper(paddr, 1);
+		vaddr = l4_map_helper(page_to_phys(page), 1);
+
+		/* Copy the page into new page */
+		memcpy(new_vaddr, vaddr, PAGE_SIZE);
+
+		/* Unmap both pages from current task. */
+		l4_unmap_helper(vaddr, 1);
+		l4_unmap_helper(new_vaddr, 1);
+
+		/* Update vm object details */
+		shadow->npages++;
+
+		/* Update page details */
+		spin_lock(&page->lock);
+		page->count++;
+		page->owner = shadow;
+		page->offset = page_offset;
+		page->virtual = 0;
+
+		/* Add the page to owner's list of in-memory pages */
+		BUG_ON(!list_empty(&page->list));
+		insert_page_olist(page, shadow);
+		spin_unlock(&page->lock);
+	}
+
+	return page;
+}
+
+int copy_on_write(struct fault_data *fault)
+{
+	unsigned int reason = fault->reason;
+	unsigned int vma_flags = fault->vma->flags;
+	unsigned int pte_flags = vm_prot_flags(fault->kdata->pte);
+	unsigned long file_offset = fault_to_file_offset(fault);
+	struct vm_obj_link *vmo_link;
+	struct vm_object *vmo, *shadow;
+	struct page *page, *newpage;
+
+	vmo = vma_get_original_object(vma);
+	BUG_ON(vmo->type != VM_OBJ_FILE);
+
+	/* No shadows on this yet. Create new. */
+	if (list_empty(&vmo->shadows)) {
+		if (!(vmo_link = vma_create_shadow()))
+			return -ENOMEM;
+
+		/* Initialise the shadow */
+		shadow = vmo_link->obj;
+		shadow->vma_refcnt = 1;
+		shadow->orig_obj = vmo;
+		shadow->type = VM_OBJ_SHADOW;
+		shadow->pager = swap_pager;
+
+		/*
+		 * Add the shadow in front of the original:
+		 *
+ 		 * vma->link0->link1
+ 		 *       |      |
+ 		 *       V      V
+ 		 *       shadow original
+		 */
+		list_add(&shadow->list, &vmo->list);
+	}
+
+	/*
+	 * A transitional page-in operation that does the actual
+	 * copy-on-write.
+	 */
+	copy_on_write_page_in(shadow, orig, file_offset);
+
+	/* Map it to faulty task */
+	l4_map(page_to_phys(page), (void *)page_align(fault->address), 1,
+	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
+	       fault->task->tid);
+}
+
+/*
+ * Handles the page fault, all entries here are assumed *legal* faults,
+ * i.e. do_page_fault() should have already checked for illegal accesses.
+ */
+int __do_page_fault(struct fault_data *fault)
+{
+	unsigned int reason = fault->reason;
+	unsigned int vma_flags = fault->vma->flags;
+	unsigned int pte_flags = vm_prot_flags(fault->kdata->pte);
+	struct vm_object *vmo;
+	struct page *page;
+
+	/* Handle read */
+	if ((reason & VM_READ) && (pte_flags & VM_NONE)) {
+		unsigned long file_offset = fault_to_file_offset(fault);
+		vmo = vma_get_next_object(&vma->vm_obj_list);
+
+		/* Get the page from its pager */
+		if (IS_ERR(page = vmo->pager.ops->page_in(vmo, file_offset))) {
+			printf("%s: Could not obtain faulty page.\n",
+			       __TASKNAME__);
+			BUG();
+		}
+		/* Map it to faulty task */
+		l4_map(page_to_phys(page), (void *)page_align(fault->address),1,
+		       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
+		       fault->task->tid);
+	}
+
+	/* Handle write */
+	if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
+		/* Copy-on-write */
+		if (vma_flags & VMA_PRIVATE) {
+			copy_on_write(fault);
+		}
+	}
 }
 
 /*
@@ -416,7 +621,6 @@ int do_page_fault(struct fault_data *fault)
 		BUG();	/* Can't handle this yet. */
 	}
 
-	/* Handle legitimate read faults on the vma */
 	if (vma_flags & VMA_ANON)
 		err = do_anon_page(fault);
 	else
@@ -426,82 +630,6 @@ int do_page_fault(struct fault_data *fault)
 	l4_ipc_return(err);
 	return 0;
 }
-
-int file_pager_read_page(struct vm_file *f, unsigned long f_offset, void *dest_page)
-{
-	int err;
-
-	/* Map the page to vfs task (shared mapping) */
-	l4_map(virt_to_phys(dest_page), dest_page, 1, MAP_USR_RW_FLAGS, VFS_TID);
-
-	/* vfs reads into the page. */
-	err = vfs_read(f->vnum, f_offset, 1, dest_page);
-
-	/* Unmap it from vfs */
-	l4_unmap(dest_page, 1, VFS_TID);
-
-	return err;
-}
-
-int file_pager_write_page(struct vm_file *f, unsigned long f_offset, void *src_page)
-{
-	int err;
-
-	/* Map the page to vfs task (shared mapping) */
-	l4_map(virt_to_phys(src_page), src_page, 1, MAP_USR_RW_FLAGS, VFS_TID);
-
-	/* write the page via vfs. */
-	err = vfs_write(f->vnum, f_offset, 1, src_page);
-
-	/* Unmap it from vfs */
-	l4_unmap(src_page, 1, VFS_TID);
-
-	return err;
-}
-
-int boot_pager_read_page(struct vm_file *f, unsigned long f_off_pfn,
-			 void *dest_page)
-{
-	/* The address of page in the file */
-	void *file_page = (void *)(f->vnum + __pfn_to_addr(f_off_pfn));
-
-	/*
-	 * Map the memfile's page into virtual memory.
-	 *
-	 * FIXME: Need to find a way of properly generating virtual addresses
-	 * rather than one-to-one conversion.
-	 */
-	file_page = l4_map_helper(file_page, 1);
-
-	/* Copy it into destination page */
-	memcpy(dest_page, file_page, PAGE_SIZE);
-
-	return 0;
-}
-
-/* Pager for boot files read from sys_kdata() */
-struct vm_pager boot_file_pager = {
-	.ops = {
-		.read_page = boot_pager_read_page,
-		.write_page= 0,
-	},
-};
-
-/* Pager for file pages */
-struct vm_pager default_file_pager = {
-	.ops = {
-		.read_page = file_pager_read_page,
-		.write_page= 0,
-	},
-};
-
-/* Swap pager for anonymous and private pages */
-struct vm_pager swap_pager = {
-	.ops = {
-		.read_page = 0,
-		.write_page= 0,
-	},
-};
 
 void page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 {

@@ -377,7 +377,6 @@ int vma_intersect(unsigned long pfn_start, unsigned long pfn_end,
 		printf("%s: VMAs overlap.\n", __FUNCTION__);
 		return 1;
 	}
-
 	if ((pfn_end >= vma->pfn_end) && (pfn_start < vma->pfn_end)) {
 		printf("%s: VMAs overlap.\n", __FUNCTION__);
 		return 1;
@@ -405,7 +404,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 	vma = list_entry(&task->vm_area_head.next, struct vm_area, list);
 
 	/* Start searching from task's end of data to start of stack */
-	while (pfn_end < __pfn(task->map_end)) {
+	while (pfn_end <= __pfn(task->map_end)) {
 
 		/* If intersection, skip the vma and fast-forward to next */
 		if (vma_intersection(pfn_start, pfn_end, vma)) {
@@ -485,7 +484,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 			       find_unmapped_area(npages, task)) < 0)
 			return (int)map_address;
 
-		/* Create a new vma for new address */
+		/* Create a new vma for newly allocated address */
 		else if (!(vma_new = vma_new(__pfn(map_address), npages,
 					     flags, file_offset, mapfile)))
 			return -ENOMEM;
@@ -493,8 +492,10 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 		goto out_success;
 	}
 
-	/* FIXME: Currently we don't allow overlapping vmas. To be fixed soon */
-	/* FIXME: Handle intersection, splitting, shrink/grow etc. */
+	/*
+	 * FIXME: Currently we don't allow overlapping vmas. To be fixed soon
+	 * We need to handle intersection, splitting, shrink/grow etc.
+	 */
 	list_for_each_entry(vma_mapped, &task->vm_area_list, list)
 		BUG_ON(vma_intersect(map_pfn, map_pfn + npages, vma_mapped));
 

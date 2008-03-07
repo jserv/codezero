@@ -4,11 +4,11 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <stdio.h>
-#include <l4lib/arch/syscalls.h>
-#include <kdata.h>
 #include <string.h>
+#include <init.h>
 #include INC_API(kip.h)
 #include <kmalloc/kmalloc.h>
+#include <l4lib/arch/syscalls.h>
 
 /* Kernel data acquired during initialisation */
 struct initdata initdata;

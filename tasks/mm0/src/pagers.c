@@ -1,18 +1,90 @@
 /*
  * Copyright (C) 2008 Bahadir Balban
  */
+#include <l4/macros.h>
+#include <l4/lib/list.h>
+#include <l4lib/arch/syscalls.h>
+#include <l4lib/arch/syslib.h>
+#include <mm/alloc_page.h>
 #include <vm_area.h>
+#include <string.h>
+#include <file.h>
+#include <init.h>
+#include INC_ARCH(bootdesc.h)
+
+struct page *find_page(struct vm_object *obj, unsigned long pfn)
+{
+	struct page *p;
+
+	list_for_each_entry(p, &obj->page_cache, list)
+		if (p->offset == pfn)
+			return p;
+
+	return 0;
+}
+
+struct page *copy_on_write_page_in(struct vm_object *vm_obj, unsigned long page_offset)
+{
+	struct vm_object *orig = vma_get_next_object(vm_obj); 
+	struct page *page;
+	void *vaddr, *paddr;
+	int err;
+
+		vm_object_to_file(vm_obj);
+	/* The page is not resident in page cache. */
+	if (!(page = find_page(vm_obj, page_offset))) {
+		/* Allocate a new page */
+		paddr = alloc_page(1);
+		vaddr = phys_to_virt(paddr);
+		page = phys_to_page(paddr);
+
+		/* Map the page to vfs task */
+		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
+
+		/* Syscall to vfs to read into the page. */
+		if ((err = vfs_read(f->vnum, page_offset, 1, vaddr)) < 0)
+			goto out_err;
+
+		/* Unmap it from vfs */
+		l4_unmap(vaddr, 1, VFS_TID);
+
+		/* Update vm object details */
+		vm_obj->npages++;
+
+		/* Update page details */
+		spin_lock(&page->lock);
+		page->count++;
+		page->owner = vm_obj;
+		page->offset = page_offset;
+		page->virtual = 0;
+
+		/* Add the page to owner's list of in-memory pages */
+		BUG_ON(!list_empty(&page->list));
+		insert_page_olist(page, vm_obj);
+		spin_unlock(&page->lock);
+	}
+
+	return page;
+
+out_err:
+	l4_unmap(vaddr, 1, VFS_TID);
+	free_page(paddr);
+	return PTR_ERR(err);
+
+}
 
 struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
 	struct page *page;
+	void *vaddr, *paddr;
+	int err;
 
 	/* The page is not resident in page cache. */
-	if (!(page = find_page(vm_obj, page_offset)))
+	if (!(page = find_page(vm_obj, page_offset))) {
 		/* Allocate a new page */
-		void *paddr = alloc_page(1);
-		void *vaddr = phys_to_virt(paddr);
+		paddr = alloc_page(1);
+		vaddr = phys_to_virt(paddr);
 		page = phys_to_page(paddr);
 
 		/* Map the page to vfs task */
@@ -53,13 +125,15 @@ out_err:
  * This reads-in a range of pages from a file and populates the page cache
  * just like a page fault, but its not in the page fault path.
  */
-int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
+int read_file_pages(struct vm_file *f, unsigned long pfn_start,
 		    unsigned long pfn_end)
 {
-	struct page *page;
+	struct page *p;
 
 	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++)
-		vmfile->vm_obj->pager.ops->page_in(vmfile->vm_obj, f_offset);
+		if (IS_ERR(p = f->vm_obj.pager->ops.page_in(&f->vm_obj,
+							    f_offset)))
+			return (int)p;
 
 	return 0;
 }
@@ -68,15 +142,42 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
  * All non-mmapable char devices are handled by this.
  * VFS calls those devices to read their pages
  */
-struct vm_pager file_pager {
-	.page_in = file_page_in,
+struct vm_pager file_pager = {
+	.ops = {
+		.page_in = file_page_in,
+	},
 };
+
+
+/* A proposal for shadow vma container, could be part of vm_file->priv_data */
+struct vm_swap_node {
+	struct vm_file *swap_file;
+	struct task_ids task_ids;
+	struct address_pool *pool;
+};
+
+/*
+ * This should save swap_node/page information either in the pte or in a global
+ * list of swap descriptors, and then write the page into the possibly one and
+ * only swap file.
+ */
+struct page *swap_page_in(struct vm_object *vm_obj, unsigned long file_offset)
+{
+	BUG();
+}
+
+struct vm_pager swap_pager = {
+	.ops = {
+		.page_in = swap_page_in,
+	},
+};
+
 
 /* Returns the page with given offset in this vm_object */
 struct page *bootfile_page_in(struct vm_object *vm_obj,
 			      unsigned long pfn_offset)
 {
-	struct vm_file *boot_file = vm_obj_to_file(vm_obj);
+	struct vm_file *boot_file = vm_object_to_file(vm_obj);
 	struct svc_image *img = boot_file->priv_data;
 	struct page *page = phys_to_page(img->phys_start +
 					 __pfn_to_addr(pfn_offset));
@@ -88,24 +189,21 @@ struct page *bootfile_page_in(struct vm_object *vm_obj,
 	return page;
 }
 
-struct vm_pager bootfile_pager {
-	.page_in = bootfile_page_in,
+struct vm_pager bootfile_pager = {
+	.ops = {
+		.page_in = bootfile_page_in,
+	},
 };
 
-LIST_HEAD(&boot_file_list);
+LIST_HEAD(boot_file_list);
 
 /* From bare boot images, create mappable device files */
 int init_boot_files(struct initdata *initdata)
 {
-	struct svc_image *img;
-	unsigned int sp, pc;
-	struct tcb *task;
-	struct task_ids ids;
-	struct bootdesc *bd;
+	struct bootdesc *bd = initdata->bootdesc;
 	struct vm_file *boot_file;
-	int err;
+	struct svc_image *img;
 
-	bd = initdata->bootdesc;
 	INIT_LIST_HEAD(&initdata->boot_file_list);
 
 	for (int i = 0; i < bd->total_images; i++) {
@@ -113,11 +211,11 @@ int init_boot_files(struct initdata *initdata)
 		boot_file = vm_file_alloc_init();
 		boot_file->priv_data = img;
 		boot_file->length = img->phys_end - img->phys_start;
-		boot_file->pager = &bootfile_pager;
 		boot_file->type = VM_FILE_BOOTFILE;
 
 		/* Initialise the vm object */
 		boot_file->vm_obj.type = VM_OBJ_FILE;
+		boot_file->vm_obj.pager = &bootfile_pager;
 
 		/* Add the object to global vm_object list */
 		list_add(&boot_file->vm_obj.list, &vm_object_list);
@@ -125,25 +223,31 @@ int init_boot_files(struct initdata *initdata)
 		/* Add the file to initdata's bootfile list */
 		list_add(&boot_file->list, &initdata->boot_file_list);
 	}
+	return 0;
 }
 
 /* Returns the page with given offset in this vm_object */
 struct page *devzero_page_in(struct vm_object *vm_obj,
 			     unsigned long page_offset)
 {
-	struct vm_file *devzero = vm_obj_to_file(vm_obj);
+	struct vm_file *devzero = vm_object_to_file(vm_obj);
 	struct page *zpage = devzero->priv_data;
 
+	BUG_ON(!(devzero->type & VM_FILE_DEVZERO));
+
 	/* Update zero page struct. */
-	spin_lock(&page->lock);
+	spin_lock(&zpage->lock);
+	BUG_ON(zpage->count < 0);
 	zpage->count++;
-	spin_unlock(&page->lock);
+	spin_unlock(&zpage->lock);
 
 	return zpage;
 }
 
-struct vm_pager devzero_pager {
-	.page_in = devzero_page_in,
+struct vm_pager devzero_pager = {
+	.ops = {
+		.page_in = devzero_page_in,
+	},
 };
 
 struct vm_file *get_devzero(void)
@@ -173,7 +277,7 @@ int init_devzero(void)
 	/* Allocate and initialise devzero file */
 	devzero = vmfile_alloc_init();
 	devzero->vm_obj.npages = ~0;
-	devzero->vm_obj.pager = devzero_pager;
+	devzero->vm_obj.pager = &devzero_pager;
 	devzero->vm_obj.type = VM_OBJ_FILE;
 	devzero->type = VM_FILE_DEVZERO;
 	devzero->priv_data = zpage;

@@ -88,7 +88,7 @@ static int do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
 	 * per segment and its the same for all the system tasks.
 	 */
 	if ((err = do_mmap(0, 0, task, (unsigned long)shm_addr,
-			   VM_READ | VM_WRITE | VMA_ANON | VMA_SHARED,
+			   VM_READ | VM_WRITE | VMA_ANONYMOUS | VMA_SHARED,
 			   shm->size)) < 0) {
 		printf("do_mmap: Mapping shm area failed with %d.\n", err);
 		BUG();

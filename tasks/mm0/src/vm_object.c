@@ -30,7 +30,7 @@ struct vm_object *vm_object_alloc_init(void)
 	struct vm_object *obj;
 
 	if (!(obj = kzalloc(sizeof(*obj))))
-		return PTR_ERR(-ENOMEM);
+		return 0;
 
 	return vm_object_init(obj);
 }

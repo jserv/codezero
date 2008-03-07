@@ -1,27 +1,33 @@
 /*
+ * Copyright (C) 2008 Bahadir Balban
+ */
+#include <l4/lib/list.h>
+#include <vm_area.h>
+#include <kmalloc/kmalloc.h>
+
+/*
  * This is yet unused, it is more of an anticipation
  * of how mmaped devices would be mapped with a pager.
  */
-
 struct mmap_device {
 	struct list_head page_list;	/* Dyn-allocated page list */
 	unsigned long pfn_start;	/* Physical pfn start */
 	unsigned long pfn_end;		/* Physical pfn end */
 };
 
-struct page *mmap_device_page_in(struct vm_object *vm_obj,
-				 unsigned long pfn_offset)
+struct page *memdev_page_in(struct vm_object *vm_obj,
+			    unsigned long pfn_offset)
 {
-	struct vm_file *f = vm_obj_to_file(vm_obj);
-	struct mmap_device *mmdev = f->private_data;
+	struct vm_file *f = vm_object_to_file(vm_obj);
+	struct mmap_device *memdev = f->priv_data;
 	struct page *page;
 
 	/* Check if its within device boundary */
-	if (pfn_offset >= mmdev->pfn_end - mmdev->pfn_start)
-		return -1;
+	if (pfn_offset >= memdev->pfn_end - memdev->pfn_start)
+		return PTR_ERR(-1);
 
 	/* Simply return the page if found */
-	list_for_each_entry(page, &mmdev->page_list, list)
+	list_for_each_entry(page, &memdev->page_list, list)
 		if (page->offset == pfn_offset)
 			return page;
 
@@ -31,15 +37,16 @@ struct page *mmap_device_page_in(struct vm_object *vm_obj,
 	spin_lock_init(&page->lock);
 	page->offset = pfn_offset;
 	page->owner = vm_obj;
-	page->flags = DEVICE_PAGE;
-	list_add(&page->list, &mmdev->page_list)
+	list_add(&page->list, &memdev->page_list);
 
 	return page;
 }
 
 /* All mmapable devices are handled by this */
-struct vm_pager mmap_device_pager {
-	.page_in = mmap_device_page_in,
+struct vm_pager memdev_pager = {
+	.ops = {
+		.page_in = memdev_page_in,
+	},
 };
 
 

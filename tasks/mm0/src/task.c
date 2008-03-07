@@ -230,6 +230,10 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	task->text_start = task->data_start;
 	task->text_end = task->data_end;
 
+	/* Task's region available for mmap */
+	task->map_start = task->data_end;
+	task->map_end = task->stack_start;
+
 	/* Set up task's registers */
 	sp = align(task->stack_end - 1, 8);
 	pc = task->text_start;
