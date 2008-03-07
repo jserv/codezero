@@ -226,7 +226,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 
 	/* Currently RO text and RW data are one region */
 	task->data_start = USER_AREA_START;
-	task->data_end = USER_AREA_START + file->length;
+	task->data_end = USER_AREA_START + page_align_up(file->length);
 	task->text_start = task->data_start;
 	task->text_end = task->data_end;
 

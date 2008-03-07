@@ -47,7 +47,7 @@ struct tcb {
 	/* Related task ids */
 	unsigned int pagerid;	/* Task's pager */
 
-	/* Program segment marks, ends exclusive as usual */
+	/* Page aligned program segment marks, ends exclusive as usual */
 	unsigned long text_start;
 	unsigned long text_end;
 	unsigned long data_start;
@@ -62,6 +62,10 @@ struct tcb {
 	unsigned long env_end;
 	unsigned long args_start;
 	unsigned long args_end;
+
+	/* Task's mmappable region */
+	unsigned long map_start;
+	unsigned long map_end;
 
 	/* UTCB address */
 	unsigned long utcb_address;

@@ -370,7 +370,7 @@ int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
 	return do_munmap(vaddr, size, task);
 }
 
-int vma_intersect(unsigned long start, unsigned long end,
+int vma_intersect(unsigned long pfn_start, unsigned long pfn_end,
 		      struct vm_area *vma)
 {
 	if ((pfn_start <= vma->pfn_start) && (pfn_end > vma->pfn_start)) {
@@ -386,38 +386,54 @@ int vma_intersect(unsigned long start, unsigned long end,
 }
 
 /*
- * Check if region is unmapped. If not, supply another region,
- * if VMA_FIXED is supplied return EINVAL.
+ * Search an empty space in the task's mmapable address region.
  */
-struct vm_area *
-find_unmapped_area(unsigned long pfn_start, unsigned long npages,
-		   unsigned int flags, struct vm_file *mapfile,
-		   unsigned long file_offset, struct tcb *task)
+unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 {
+	unsigned long pfn_start = __pfn(task->map_start);
 	unsigned long pfn_end = pfn_start + npages;
 	struct vm_area *vma;
 
-	/*
-	 * We refuse all mapped areas for now, in the future refuse just
-	 * the process image areas, i.e. the stack, data and text.
-	 */
-	list_for_each_entry(vma, &task->vm_area_head, list) {
-		if (vma_intersect(pfn_start, pfn_end, vma)) {
-			if (flags & VM_FIXED)
-				return 0;
-			else
-		}
-	}
+	if (npages > __pfn(task->map_end - task->map_start))
+		return 0;
 
-	/*
-	 * They don't overlap, initialise and return a new
-	 * vma for the given region.
-	 */
-	if (!(vma = vma_new(pfn_start, pfn_end - pfn_start,
-			    flags, file_offset, mapfile)))
-		return -ENOMEM;
-	else
-		return vma;
+	/* If no vmas, first map slot is available. */
+	if (list_empty(&task->vm_area_head))
+		return __pfn(task->map_start);
+
+	/* First vma to check our range against */
+	vma = list_entry(&task->vm_area_head.next, struct vm_area, list);
+
+	/* Start searching from task's end of data to start of stack */
+	while (pfn_end < __pfn(task->map_end)) {
+
+		/* If intersection, skip the vma and fast-forward to next */
+		if (vma_intersection(pfn_start, pfn_end, vma)) {
+
+			/* Update interval to next available space */
+			pfn_start = vma->pfn_end;
+			pfn_end = pfn_start + npages;
+
+			/*
+			 * Decision point, no more vmas left to check.
+			 * Are we out of task map area?
+			 */
+			if (vma->list.next == &task->vm_area_head) {
+				if (pfn_end > __pfn(task->map_end))
+					break; /* Yes, fail */
+				else
+					return pfn_start; /* No, success */
+			}
+
+			/* Otherwise get next vma entry */
+			vma = list_entry(vma->list.next,
+					 struct vm_area, list);
+			continue;
+		}
+		BUG_ON(pfn_start + npages > __pfn(task->map_end));
+		return pfn_start;
+	}
+	return 0;
 }
 
 /*
@@ -427,56 +443,71 @@ find_unmapped_area(unsigned long pfn_start, unsigned long npages,
  * The actual paging in/out of the file from/into memory pages is handled by
  * the file's pager upon page faults.
  */
-int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *task,
-	    unsigned long map_address, unsigned int flags, unsigned int pages)
+int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task,
+	    unsigned long map_address, unsigned int flags, unsigned int npages)
 {
-	unsigned long pfn_start = __pfn(map_address);
-	struct vm_area *vma;
+	unsigned long file_npages = __pfn(page_align_up(mapfile->length));
+	unsigned long map_pfn = __pfn(map_address);
+	struct vm_area *vma_new, *vma_mapped;
 
 	if (!mapfile) {
 	       if (flags & VMA_ANONYMOUS) {
 			mapfile = get_devzero();
-			f_offset = 0;
+			file_offset = 0;
 	       } else
 			BUG();
-	} else {
-		if (pages > (__pfn(page_align_up(mapfile->length))
-			     - f_offset)) {
-			printf("%s: Trying to map %d pages from page %d, "
-			       "but file length is %d\n", __FUNCTION__, pages,
-			       f_offset, __pfn(page_align_up(mapfile->length)));
-			return -EINVAL;
-		}
+	} else if (npages > file_npages - file_offset) {
+		printf("%s: Trying to map %d pages from page %d, "
+		       "but file length is %d\n", __FUNCTION__,
+		       npages, file_offset, file_npages);
+		return -EINVAL;
 	}
+
+	/* Check invalid page size */
 	if (pages == 0) {
 		printf("Trying to map %d pages.\n", pages);
 		return -EINVAL;
 	}
-
-	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__, map_address,
-	       map_address + pages * PAGE_SIZE);
-
-	/* See if it overlaps with an existing vma. */
-	if (IS_ERR(vma = find_unmapped_area(pfn_start, pages, flags, task)))
-		return -EINVAL;	/* Indicates overlap. */
-
-	/* Mergeable vma returned? */
-	if (vma) {
-		if (vma->pfn_end == pfn_start)
-			vma->pfn_end = pfn_start + pages;
-		else {
-			vma->f_offset -= vma->pfn_start - pfn_start;
-
-			/* Check if adjusted yields the original */
-			BUG_ON(vma->f_offset != f_offset);
-			vma->pfn_start = pfn_start;
-		}
-	} else { /* Initialise new area */
-		if (!(vma = vma_new(pfn_start, pages, flags, f_offset,
-				    mapfile)))
-			return -ENOMEM;
-		list_add(&vma->list, &t->vm_area_list);
+	if (pages > __pfn(task->stack_start - task->data_end)) {
+		printf("Trying to map too many pages: %d\n", pages);
+		return -ENOMEM;
 	}
+
+	/* Check invalid map address */
+	if (map_address == 0 || map_address < task->data_end ||
+	    map_address >= task->stack_start) {
+		/* Address invalid or not specified */
+		if (flags & VM_FIXED)
+			return -EINVAL;
+
+		/* Get new map address for region of this size */
+		else if ((int)(map_address =
+			       find_unmapped_area(npages, task)) < 0)
+			return (int)map_address;
+
+		/* Create a new vma for new address */
+		else if (!(vma_new = vma_new(__pfn(map_address), npages,
+					     flags, file_offset, mapfile)))
+			return -ENOMEM;
+		/* Successful? Add it to list and return */
+		goto out_success;
+	}
+
+	/* FIXME: Currently we don't allow overlapping vmas. To be fixed soon */
+	/* FIXME: Handle intersection, splitting, shrink/grow etc. */
+	list_for_each_entry(vma_mapped, &task->vm_area_list, list)
+		BUG_ON(vma_intersect(map_pfn, map_pfn + npages, vma_mapped));
+
+	/* For valid regions that aren't allocated by us, create the vma. */
+	if (!(vma_new = vma_new(__pfn(map_address), npages, flags, file_offset,
+				mapfile)))
+		return -ENOMEM;
+
+out_success:
+	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
+	       map_address, map_address + npages * PAGE_SIZE);
+	list_add(&vma->list, &task->vm_area_list);
+
 	return 0;
 }
 
