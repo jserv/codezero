@@ -36,6 +36,8 @@ unsigned long fault_to_file_offset(struct fault_data *fault)
 }
 
 /*
+ * Old function, likely to be ditched.
+ *
  * For copy-on-write vmas, grows an existing shadow vma, or creates a new one
  * for the copy-on-write'ed page. Then adds this shadow vma to the actual vma's
  * shadow list. Shadow vmas never overlap with each other, and always overlap
@@ -81,6 +83,58 @@ struct vm_area *copy_on_write_vma(struct fault_data *fault)
 	 */
 	list_add(&shadow->list,	&fault->vma->shadow_list);
 	return shadow;
+}
+
+/* likely to be ditched by copy_on_write() */
+struct page *copy_on_write_page_in(struct vm_area *vma,
+				   unsigned long page_offset)
+{
+	struct page *page, *newpage;
+	void *vaddr, *new_vaddr, *new_paddr;
+	int err;
+
+	/* The page is not resident in page cache. */
+	if (!(page = find_page(shadow, page_offset))) {
+		/* Allocate a new page */
+		newpaddr = alloc_page(1);
+		newpage = phys_to_page(paddr);
+
+		/* Get the faulty page from the original vm object. */
+		if (IS_ERR(page = orig->pager.ops->page_in(orig,
+							   file_offset))) {
+			printf("%s: Could not obtain faulty page.\n",
+			       __TASKNAME__);
+			BUG();
+		}
+
+		/* Map the new and orig page to self */
+		new_vaddr = l4_map_helper(paddr, 1);
+		vaddr = l4_map_helper(page_to_phys(page), 1);
+
+		/* Copy the page into new page */
+		memcpy(new_vaddr, vaddr, PAGE_SIZE);
+
+		/* Unmap both pages from current task. */
+		l4_unmap_helper(vaddr, 1);
+		l4_unmap_helper(new_vaddr, 1);
+
+		/* Update vm object details */
+		shadow->npages++;
+
+		/* Update page details */
+		spin_lock(&page->lock);
+		page->count++;
+		page->owner = shadow;
+		page->offset = page_offset;
+		page->virtual = 0;
+
+		/* Add the page to owner's list of in-memory pages */
+		BUG_ON(!list_empty(&page->list));
+		insert_page_olist(page, shadow);
+		spin_unlock(&page->lock);
+	}
+
+	return page;
 }
 
 /*
@@ -150,81 +204,101 @@ struct vm_obj_link *vma_create_shadow(void)
 	return vmo_link;
 }
 
-struct page *copy_on_write_page_in(struct vm_object *shadow,
-				   struct vm_object *orig,
-				   unsigned long page_offset)
+/* Allocates a new page, copies the original onto it and returns. */
+struct page *copy_page(struct page *orig)
 {
-	struct page *page, *newpage;
-	void *vaddr, *new_vaddr, *new_paddr;
-	int err;
+	void *new_vaddr, *vaddr, *paddr;
+	struct page *new;
 
-	/* The page is not resident in page cache. */
-	if (!(page = find_page(shadow, page_offset))) {
-		/* Allocate a new page */
-		newpaddr = alloc_page(1);
-		newpage = phys_to_page(paddr);
+	if (!(paddr = alloc_page(1)))
+		return 0;
 
-		/* Get the faulty page from the original vm object. */
-		if (IS_ERR(page = orig->pager.ops->page_in(orig,
-							   file_offset))) {
-			printf("%s: Could not obtain faulty page.\n",
-			       __TASKNAME__);
-			BUG();
-		}
+	new = phys_to_page(paddr);
 
-		/* Map the new and orig page to self */
-		new_vaddr = l4_map_helper(paddr, 1);
-		vaddr = l4_map_helper(page_to_phys(page), 1);
+	/* Map the new and orig page to self */
+	new_vaddr = l4_map_helper(paddr, 1);
+	vaddr = l4_map_helper(page_to_phys(orig), 1);
 
-		/* Copy the page into new page */
-		memcpy(new_vaddr, vaddr, PAGE_SIZE);
+	/* Copy the page into new page */
+	memcpy(new_vaddr, vaddr, PAGE_SIZE);
 
-		/* Unmap both pages from current task. */
-		l4_unmap_helper(vaddr, 1);
-		l4_unmap_helper(new_vaddr, 1);
+	/* Unmap both pages from current task. */
+	l4_unmap_helper(vaddr, 1);
+	l4_unmap_helper(new_vaddr, 1);
 
-		/* Update vm object details */
-		shadow->npages++;
-
-		/* Update page details */
-		spin_lock(&page->lock);
-		page->count++;
-		page->owner = shadow;
-		page->offset = page_offset;
-		page->virtual = 0;
-
-		/* Add the page to owner's list of in-memory pages */
-		BUG_ON(!list_empty(&page->list));
-		insert_page_olist(page, shadow);
-		spin_unlock(&page->lock);
-	}
-
-	return page;
+	return new;
 }
 
+
+/*
+ * Checks if page cache pages of lesser is a subset of those of copier.
+ * Note this just checks the page cache, so if any objects have pages
+ * swapped to disk, this function does not rule.
+ */
+int vm_object_check_subset(struct vm_object *copier,
+			   struct vm_object *lesser)
+{
+	struct page *pc, *pl;
+
+	/* Copier must have equal or more pages to overlap lesser */
+	if (copier->npages < lesser->npages)
+		return 1;
+
+	/*
+	 * Do a page by page comparison. Every lesser page
+	 * must be in copier for overlap.
+	 */
+	list_for_each_entry(pl, &lesser->page_cache, list) {
+		if (!(pc = find_page(copier, pl->offset)))
+			return 1;
+	}
+
+	/*
+	 * For all pages of lesser vmo, there seems to be a page
+	 * in the copier vmo. So lesser is a subset of copier
+	 */
+	return 0;
+}
+
+/* TODO:
+ * - Why not allocate a swap descriptor in vma_create_shadow() rather than
+ *   a bare vm_object? It will be needed.
+ */
 int copy_on_write(struct fault_data *fault)
 {
+	struct vm_obj_link *vmo_link, *shadow_link, *copier_link;
+	struct vm_object *vmo, *shadow, *copier;
+	struct page *page, *new_page;
 	unsigned int reason = fault->reason;
 	unsigned int vma_flags = fault->vma->flags;
 	unsigned int pte_flags = vm_prot_flags(fault->kdata->pte);
 	unsigned long file_offset = fault_to_file_offset(fault);
-	struct vm_obj_link *vmo_link;
-	struct vm_object *vmo, *shadow;
-	struct page *page, *newpage;
 
-	vmo = vma_get_original_object(vma);
-	BUG_ON(vmo->type != VM_OBJ_FILE);
+	/* Get the first object, either original file or a shadow */
+	if (!(vmo = vma_get_next_object(&vma->vm_obj_list,
+					&vma->vm_obj_list))) {
+		printf("%s:%s: No vm object in vma!\n",
+		       __TASKNAME__, __FUNCTION__);
+		BUG();
+	}
 
-	/* No shadows on this yet. Create new. */
-	if (list_empty(&vmo->shadows)) {
+	/* Is the object read-only? Create a shadow object if so.
+	 *
+	 * NOTE: Whenever the topmost object is read-only, a new shadow
+	 * object must be created. When there are no shadows one is created
+	 * because, its the original vm_object that is not writeable, and
+	 * when there are shadows one is created because a fork had just
+	 * happened, in which case all shadows are rendered read-only.
+	 */
+	if (!(vmo->flags & VM_WRITE)) {
 		if (!(vmo_link = vma_create_shadow()))
 			return -ENOMEM;
 
 		/* Initialise the shadow */
 		shadow = vmo_link->obj;
 		shadow->vma_refcnt = 1;
-		shadow->orig_obj = vmo;
-		shadow->type = VM_OBJ_SHADOW;
+		shadow->orig_obj = first;
+		shadow->type = VM_OBJ_SHADOW | VM_WRITE;
 		shadow->pager = swap_pager;
 
 		/*
@@ -235,20 +309,73 @@ int copy_on_write(struct fault_data *fault)
  		 *       V      V
  		 *       shadow original
 		 */
-		list_add(&shadow->list, &vmo->list);
+		list_add(&vmo_link->list, &vma->vm_obj_list);
+
+		/* Shadow is the copier object */
+		copier = shadow;
+	} else {
+		/* No new shadows, topmost vmo is the copier object */
+		copier = vmo;
+
+		/*
+		 * We start page search on read-only objects. If the first
+		 * one was writable, go to next which must be read-only.
+		 */
+		BUG_ON(!(vmo = vma_get_next_object(vmo, &vma->vm_obj_list)));
+		BUG_ON(vmo->flags & VM_WRITE);
+	}
+
+	/* Traverse the list of read-only vm objects and search for the page */
+	while (!(page = vmo->pager.ops->page_in(vmo, file_offset))) {
+		if (!(vmo = vma_get_next_object(vmo, &vma->vm_obj_list))) {
+			printf("%s:%s: Traversed all shadows and the original "
+			       "file's vm_object, but could not find the "
+			       "faulty page in this vma.\n",__TASKNAME__,
+			       __FUNCTION__);
+			BUG();
+		}
 	}
 
 	/*
-	 * A transitional page-in operation that does the actual
-	 * copy-on-write.
+	 * Copy the page. This traverse and copy is like a page-in operation
+	 * of a pager, except that the page is moving along vm_objects.
 	 */
-	copy_on_write_page_in(shadow, orig, file_offset);
+	new_page = copy_page(page);
+
+	/* Update page details */
+	spin_lock(&new_page->lock);
+	new_page->count = 1;
+	new_page->owner = copier;
+	new_page->offset = page_offset;
+	new_page->virtual = 0;
+
+	/* Add the page to owner's list of in-memory pages */
+	BUG_ON(!list_empty(&new_page->list));
+	insert_page_olist(page, shadow);
+	spin_unlock(&page->lock);
 
 	/* Map it to faulty task */
 	l4_map(page_to_phys(page), (void *)page_align(fault->address), 1,
 	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 	       fault->task->tid);
+
+	/*
+	 * Check possible shadow collapses. Does the copier shadow
+	 * completely shadow the one underlying it?
+	 */
+	if (!(vmo = vma_get_next_object(copier, &vma->vm_obj_list))) {
+		/* Copier must have an object under it */
+		printf("Copier must have had an object under it!\n");
+		BUG();
+	}
+
+	/* Compare whether page caches overlap */
+	if (vm_object_check_subset(copier, vmo)) {
+		/* They do overlap, so drop reference to lesser shadow */
+		vma_drop_link(vmo);
+	}
 }
+
 
 /*
  * Handles the page fault, all entries here are assumed *legal* faults,

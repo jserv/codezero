@@ -80,6 +80,14 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 	void *vaddr, *paddr;
 	int err;
 
+	/* Check first if the file has such a page at all */
+	if (__pfn(page_align_up(f->length) <= page_offset)) {
+		printf("%s: %s: Trying to look up page %d, but file length "
+		       "is %d bytes.\n", __TASKNAME__, __FUNCTION__,
+		       page_offset, f->length);
+		BUG();
+	}
+
 	/* The page is not resident in page cache. */
 	if (!(page = find_page(vm_obj, page_offset))) {
 		/* Allocate a new page */
@@ -163,7 +171,8 @@ struct vm_swap_node {
  */
 struct page *swap_page_in(struct vm_object *vm_obj, unsigned long file_offset)
 {
-	BUG();
+	/* No swapping yet, so the page is either here or not here. */
+	return find_page(vm_obj, page_offset);
 }
 
 struct vm_pager swap_pager = {

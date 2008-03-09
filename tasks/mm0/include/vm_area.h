@@ -113,7 +113,7 @@ struct vm_object {
 	int shadow_refcnt;	    /* Number of shadows that refer */
 	struct list_head shadows;   /* List of vm objects that shadow this one */
 	struct vm_object *orig_obj; /* Original object that this one shadows */
-	unsigned int type;	    /* Defines the type of the object */
+	unsigned int flags;	    /* Defines the type and flags of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
 	struct vm_pager *pager;	    /* The pager for this object */
 	struct list_head page_cache; /* List of in-memory pages */
@@ -128,7 +128,6 @@ struct vm_file {
 	struct vm_object vm_obj;
 	void *priv_data;	/* Device pagers use to access device info */
 };
-
 
 /* To create per-vma vm_object lists */
 struct vma_obj_link {
