@@ -109,9 +109,9 @@ enum VM_OBJ_TYPE {
  */
 struct vm_object {
 	int npages;		    /* Number of pages in memory */
-	int vma_refcnt;		    /* Number of vmas that refer */
-	int shadow_refcnt;	    /* Number of shadows that refer */
-	struct list_head shadows;   /* List of vm objects that shadow this one */
+	int refcnt;		    /* Number of shadows (or vmas) that refer */
+	struct list_head shadowers; /* List of vm objects that shadow this one */
+	struct list_head shref;	    /* Shadow referees use this to track us */
 	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int flags;	    /* Defines the type and flags of the object */
 	struct list_head list;	    /* List of all vm objects in memory */

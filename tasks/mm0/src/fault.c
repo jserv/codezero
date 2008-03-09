@@ -85,106 +85,43 @@ struct vm_area *copy_on_write_vma(struct fault_data *fault)
 	return shadow;
 }
 
-/* likely to be ditched by copy_on_write() */
-struct page *copy_on_write_page_in(struct vm_area *vma,
-				   unsigned long page_offset)
-{
-	struct page *page, *newpage;
-	void *vaddr, *new_vaddr, *new_paddr;
-	int err;
-
-	/* The page is not resident in page cache. */
-	if (!(page = find_page(shadow, page_offset))) {
-		/* Allocate a new page */
-		newpaddr = alloc_page(1);
-		newpage = phys_to_page(paddr);
-
-		/* Get the faulty page from the original vm object. */
-		if (IS_ERR(page = orig->pager.ops->page_in(orig,
-							   file_offset))) {
-			printf("%s: Could not obtain faulty page.\n",
-			       __TASKNAME__);
-			BUG();
-		}
-
-		/* Map the new and orig page to self */
-		new_vaddr = l4_map_helper(paddr, 1);
-		vaddr = l4_map_helper(page_to_phys(page), 1);
-
-		/* Copy the page into new page */
-		memcpy(new_vaddr, vaddr, PAGE_SIZE);
-
-		/* Unmap both pages from current task. */
-		l4_unmap_helper(vaddr, 1);
-		l4_unmap_helper(new_vaddr, 1);
-
-		/* Update vm object details */
-		shadow->npages++;
-
-		/* Update page details */
-		spin_lock(&page->lock);
-		page->count++;
-		page->owner = shadow;
-		page->offset = page_offset;
-		page->virtual = 0;
-
-		/* Add the page to owner's list of in-memory pages */
-		BUG_ON(!list_empty(&page->list));
-		insert_page_olist(page, shadow);
-		spin_unlock(&page->lock);
-	}
-
-	return page;
-}
-
 /*
- * Given a reference to a vm_object link, obtains the prev vm_object.
+ * Given a reference to a vm_object link, returns the next link.
+ * If back to given head, returns 0.
  *
  * vma->link1->link2->link3
  *       |      |      |
  *       V      V      V
  *       vmo1   vmo2   vmo3|vm_file
  *
- * E.g. given a reference to vma, obtains vmo3.
+ * Example:
+ * Given a reference to link = vma, head = vma, returns link1.
+ * Given a reference to link = link3, head = vma, returns 0.
  */
-struct vm_object *vma_get_prev_object(struct list_head *linked_list)
+struct vm_object *vma_next_link(struct list_head *link,
+				struct list_head *head)
 {
-	struct vm_object_link *link;
-
-	BUG_ON(list_empty(linked_list));
-
-	link = list_entry(linked_list.prev, struct vm_obj_link, list);
-
-	return link->obj;
+	BUG_ON(list_empty(link));
+	if (link == head)
+		return 0;
+	else
+		return list_entry(link.next, struct vm_obj_link, list);
 }
 
-/* Obtain the original mmap'ed object */
-struct vm_object *vma_get_original_object(struct vm_area *vma)
+/* Unlinks obj_link from its vma. */
+int vma_drop_link(struct vm_obj_link *shadower,
+		  struct vm_obj_link *obj_link)
 {
-	return vma_get_prev_object(&vma->vm_obj_list);
+	/* Remove object link from vma's list */
+	list_del(&obj_link->list);
+
+	/* Reduce object's ref count */
+	obj_link->obj->refcnt--;
+
+	/* Remove the copier from obj_link's shadower list */
+	list_del(&shadower->shref);
 }
 
-
-/*
- * Given a reference to a vm_object link, obtains the next vm_object.
- *
- * vma->link1->link2->link3
- *       |      |      |
- *       V      V      V
- *       vmo1   vmo2   vmo3|vm_file
- *
- * E.g. given a reference to vma, obtains vmo1.
- */
-struct vm_object *vma_get_next_object(struct list_head *linked_list)
-{
-	struct vm_object_link *link;
-
-	BUG_ON(list_empty(linked_list));
-
-	link = list_entry(linked_list.next, struct vm_obj_link, list);
-
-	return link->obj;
-}
 
 struct vm_obj_link *vma_create_shadow(void)
 {
@@ -229,7 +166,6 @@ struct page *copy_page(struct page *orig)
 	return new;
 }
 
-
 /*
  * Checks if page cache pages of lesser is a subset of those of copier.
  * Note this just checks the page cache, so if any objects have pages
@@ -248,11 +184,9 @@ int vm_object_check_subset(struct vm_object *copier,
 	 * Do a page by page comparison. Every lesser page
 	 * must be in copier for overlap.
 	 */
-	list_for_each_entry(pl, &lesser->page_cache, list) {
+	list_for_each_entry(pl, &lesser->page_cache, list)
 		if (!(pc = find_page(copier, pl->offset)))
 			return 1;
-	}
-
 	/*
 	 * For all pages of lesser vmo, there seems to be a page
 	 * in the copier vmo. So lesser is a subset of copier
@@ -263,6 +197,9 @@ int vm_object_check_subset(struct vm_object *copier,
 /* TODO:
  * - Why not allocate a swap descriptor in vma_create_shadow() rather than
  *   a bare vm_object? It will be needed.
+ *
+ * - Check refcounting of shadows, their references, page refs,
+ *   reduces increases etc.
  */
 int copy_on_write(struct fault_data *fault)
 {
@@ -275,8 +212,7 @@ int copy_on_write(struct fault_data *fault)
 	unsigned long file_offset = fault_to_file_offset(fault);
 
 	/* Get the first object, either original file or a shadow */
-	if (!(vmo = vma_get_next_object(&vma->vm_obj_list,
-					&vma->vm_obj_list))) {
+	if (!(vmo_link = vma_next_link(&vma->vm_obj_list, &vma->vm_obj_list))) {
 		printf("%s:%s: No vm object in vma!\n",
 		       __TASKNAME__, __FUNCTION__);
 		BUG();
@@ -291,13 +227,13 @@ int copy_on_write(struct fault_data *fault)
 	 * happened, in which case all shadows are rendered read-only.
 	 */
 	if (!(vmo->flags & VM_WRITE)) {
-		if (!(vmo_link = vma_create_shadow()))
+		if (!(shadow_link = vma_create_shadow()))
 			return -ENOMEM;
 
 		/* Initialise the shadow */
-		shadow = vmo_link->obj;
+		shadow = shadow_link->obj;
 		shadow->vma_refcnt = 1;
-		shadow->orig_obj = first;
+		shadow->orig_obj = vmo_link->obj;
 		shadow->type = VM_OBJ_SHADOW | VM_WRITE;
 		shadow->pager = swap_pager;
 
@@ -309,25 +245,26 @@ int copy_on_write(struct fault_data *fault)
  		 *       V      V
  		 *       shadow original
 		 */
-		list_add(&vmo_link->list, &vma->vm_obj_list);
+		list_add(&shadow_link->list, &vma->vm_obj_list);
 
 		/* Shadow is the copier object */
-		copier = shadow;
+		copier_link = shadow_link;
 	} else {
 		/* No new shadows, topmost vmo is the copier object */
-		copier = vmo;
+		copier_link = vmo_link;
 
 		/*
 		 * We start page search on read-only objects. If the first
 		 * one was writable, go to next which must be read-only.
 		 */
-		BUG_ON(!(vmo = vma_get_next_object(vmo, &vma->vm_obj_list)));
-		BUG_ON(vmo->flags & VM_WRITE);
+		BUG_ON(!(vmo_link = vma_next_object(vmo_link, &vma->vm_obj_list)));
+		BUG_ON(vmo_link->obj->flags & VM_WRITE);
 	}
 
 	/* Traverse the list of read-only vm objects and search for the page */
-	while (!(page = vmo->pager.ops->page_in(vmo, file_offset))) {
-		if (!(vmo = vma_get_next_object(vmo, &vma->vm_obj_list))) {
+	while (!(page = vmo_link->obj->pager.ops->page_in(vmo_link->obj,
+							  file_offset))) {
+		if (!(vmo_link = vma_next_object(vmo_link, &vma->vm_obj_list))) {
 			printf("%s:%s: Traversed all shadows and the original "
 			       "file's vm_object, but could not find the "
 			       "faulty page in this vma.\n",__TASKNAME__,
@@ -345,13 +282,13 @@ int copy_on_write(struct fault_data *fault)
 	/* Update page details */
 	spin_lock(&new_page->lock);
 	new_page->count = 1;
-	new_page->owner = copier;
+	new_page->owner = copier_link->obj;
 	new_page->offset = page_offset;
 	new_page->virtual = 0;
 
 	/* Add the page to owner's list of in-memory pages */
 	BUG_ON(!list_empty(&new_page->list));
-	insert_page_olist(page, shadow);
+	insert_page_olist(page, shadow_link->obj);
 	spin_unlock(&page->lock);
 
 	/* Map it to faulty task */
@@ -363,16 +300,30 @@ int copy_on_write(struct fault_data *fault)
 	 * Check possible shadow collapses. Does the copier shadow
 	 * completely shadow the one underlying it?
 	 */
-	if (!(vmo = vma_get_next_object(copier, &vma->vm_obj_list))) {
+	if (!(vmo_link = vma_next_object(copier_link, &vma->vm_obj_list))) {
 		/* Copier must have an object under it */
 		printf("Copier must have had an object under it!\n");
 		BUG();
 	}
 
 	/* Compare whether page caches overlap */
-	if (vm_object_check_subset(copier, vmo)) {
+	if (vm_object_check_subset(copier_link->obj, vmo_link->obj)) {
 		/* They do overlap, so drop reference to lesser shadow */
-		vma_drop_link(vmo);
+		vma_drop_link(copier_link, vmo_link);
+
+		/* vm object reference down to one? */
+		if (vmo_link->obj->refcnt == 1) {
+			/* TODO: Fill this in! Merge with the only reference */
+			vm_object_merge(vmo_link);
+
+			/*
+			 * To merge, the object should use the last shadow
+			 * reference left, but this reference must be changed
+			 * to point at the vm_obj_link rather than the object
+			 * itself, because it's not possible to find the link
+			 * from the object, and only the link matters.
+			 */
+		}
 	}
 }
 
