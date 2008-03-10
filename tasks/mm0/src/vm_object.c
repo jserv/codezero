@@ -1,5 +1,5 @@
 /*
- * VM Objects.
+ * vm objects.
  *
  * Copyright (C) 2008 Bahadir Balban
  */
@@ -46,5 +46,32 @@ struct vm_file *vm_file_alloc_init(void)
 	vm_object_init(&f->vm_obj);
 
 	return f;
+}
+
+/* Deletes the object via its base, along with all its pages */
+int vm_object_delete(struct vm_object *vmo)
+{
+	struct vm_file *f;
+
+	/* Release all pages */
+	vmo->pager.ops->release_pages(vmo);
+
+	/* Remove from global list */
+	list_del(&vmo->list);
+
+	/* Check any references */
+	BUG_ON(vmo->refcnt);
+	BUG_ON(!list_empty(&vmo->shadowers));
+	BUG_ON(!list_emtpy(&vmo->page_cache));
+
+	/* Obtain and free via the base object */
+	if (vmo->flags & VM_OBJ_FILE) {
+		f = vm_object_to_file(vmo);
+		kfree(f);
+	} else if (vmo->flags & VM_OBJ_SHADOW)
+		kfree(obj);
+	else BUG();
+
+	return 0;
 }
 

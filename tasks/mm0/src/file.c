@@ -116,26 +116,26 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
  * Inserts the page to vmfile's list in order of page frame offset.
  * We use an ordered list instead of a radix or btree for now.
  */
-int insert_page_olist(struct page *this, struct vm_file *f)
+int insert_page_olist(struct page *this, struct vm_object *vmo)
 {
 	struct page *before, *after;
 
 	/* Add if list is empty */
-	if (list_empty(&f->page_cache_list)) {
-		list_add_tail(&this->list, &f->page_cache_list);
+	if (list_empty(&vmo->page_cache)) {
+		list_add_tail(&this->list, &vmo->page_cache);
 		return 0;
 	}
 	/* Else find the right interval */
-	list_for_each_entry(before, &f->page_cache_list, list) {
+	list_for_each_entry(before, &vmo->page_cache, list) {
 		after = list_entry(before->list.next, struct page, list);
 
 		/* If there's only one in list */
-		if (before->list.next == &f->page_cache_list) {
+		if (before->list.next == &vmo->page_cache) {
 			/* Add to end if greater */
-			if (this->f_offset > before->f_offset)
+			if (this->offset > before->offset)
 				list_add_tail(&this->list, &before->list);
 			/* Add to beginning if smaller */
-			else if (this->f_offset < before->f_offset)
+			else if (this->offset < before->offset)
 				list_add(&this->list, &before->list);
 			else
 				BUG();
@@ -143,13 +143,13 @@ int insert_page_olist(struct page *this, struct vm_file *f)
 		}
 
 		/* If this page is in-between two other, insert it there */
-		if (before->f_offset < this->f_offset &&
-		    after->f_offset > this->f_offset) {
+		if (before->offset < this->offset &&
+		    after->offset > this->offset) {
 			list_add_tail(&this->list, &before->list);
 			return 0;
 		}
-		BUG_ON(this->f_offset == before->f_offset);
-		BUG_ON(this->f_offset == after->f_offset);
+		BUG_ON(this->offset == before->offset);
+		BUG_ON(this->offset == after->offset);
 	}
 	BUG();
 }

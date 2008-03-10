@@ -18,12 +18,6 @@
 #include <shm.h>
 #include <file.h>
 
-/* FIXME: FIXME: FIXME: FIXME: FIXME: FIXME: FIXME: FIXME: TODO:
- * For every page that is allocated, (read-only file pages) and anon pages
- * etc. Page cache for that page's file must be visited first, before
- * allocation.
- */
-
 unsigned long fault_to_file_offset(struct fault_data *fault)
 {
 	/* Fault's offset in its vma */
@@ -122,6 +116,93 @@ int vma_drop_link(struct vm_obj_link *shadower,
 	list_del(&shadower->shref);
 }
 
+/*
+ * Checks if page cache pages of lesser is a subset of those of copier.
+ * Note this just checks the page cache, so if any objects have pages
+ * swapped to disk, this function does not rule.
+ */
+int vm_object_check_subset(struct vm_object *copier,
+			   struct vm_object *lesser)
+{
+	struct page *pc, *pl;
+
+	/* Copier must have equal or more pages to overlap lesser */
+	if (copier->npages < lesser->npages)
+		return 1;
+
+	/*
+	 * Do a page by page comparison. Every lesser page
+	 * must be in copier for overlap.
+	 */
+	list_for_each_entry(pl, &lesser->page_cache, list)
+		if (!(pc = find_page(copier, pl->offset)))
+			return 1;
+	/*
+	 * For all pages of lesser vmo, there seems to be a page
+	 * in the copier vmo. So lesser is a subset of copier
+	 */
+	return 0;
+}
+
+/* Merges link 1 to link 2 */
+int do_vma_merge_link(struct vm_obj_link *link1, struct vm_obj_link *link2)
+{
+	struct vm_object *obj1 = link1->obj;
+	struct vm_object *obj2 = link2->obj;
+	struct page *p1, *p2;
+
+	/*
+	 * Move all non-intersecting pages to link2. Free all
+	 * intersecting pages.
+	 */
+	list_for_each_entry(p1, &obj1->page_cache, list) {
+		/* Page doesn't exist, move it to shadower */
+		if (!(p2 = find_page(obj2, p1->offset))) {
+			list_del(&p1->list);
+			spin_lock(&page->lock);
+			p1->owner = obj2;
+			spin_unlock(&page->lock);
+			insert_page_olist(p1, obj2);
+			obj2->npages++;
+		}
+	}
+	/* Delete the object along with all its pages. */
+	vm_object_delete(obj1);
+}
+
+/*
+ * Merges a vma's shadow object with its shadower. Note this
+ * must be called when merge is decided.
+ */
+int vma_merge_link(struct vm_obj_link *vmo_link)
+{
+	struct vm_obj_link *sh_link;
+
+	/* Check refcount */
+	BUG_ON(vmo_link->obj->refcnt != 1);
+
+	/* Get the last shadower entry */
+	sh_link = list_entry(&vmo_link->obj->shadowers.next,
+			     struct vm_obj_link, shref);
+
+	/* Remove it */
+	list_del(&sh_link->shref);
+
+	/* Check that there really was one shadower left */
+	BUG_ON(!list_empty(&vmo_link->obj->shadowers));
+
+	/* Do the actual merge */
+	do_vma_merge_link(vmo_link, sh_link);
+
+}
+
+			/*
+			 * To merge, the object should use the last shadow
+			 * reference left, but this reference must be changed
+			 * to point at the vm_obj_link rather than the object
+			 * itself, because it's not possible to find the link
+			 * from the object.
+			 */
 
 struct vm_obj_link *vma_create_shadow(void)
 {
@@ -164,34 +245,6 @@ struct page *copy_page(struct page *orig)
 	l4_unmap_helper(new_vaddr, 1);
 
 	return new;
-}
-
-/*
- * Checks if page cache pages of lesser is a subset of those of copier.
- * Note this just checks the page cache, so if any objects have pages
- * swapped to disk, this function does not rule.
- */
-int vm_object_check_subset(struct vm_object *copier,
-			   struct vm_object *lesser)
-{
-	struct page *pc, *pl;
-
-	/* Copier must have equal or more pages to overlap lesser */
-	if (copier->npages < lesser->npages)
-		return 1;
-
-	/*
-	 * Do a page by page comparison. Every lesser page
-	 * must be in copier for overlap.
-	 */
-	list_for_each_entry(pl, &lesser->page_cache, list)
-		if (!(pc = find_page(copier, pl->offset)))
-			return 1;
-	/*
-	 * For all pages of lesser vmo, there seems to be a page
-	 * in the copier vmo. So lesser is a subset of copier
-	 */
-	return 0;
 }
 
 /* TODO:
@@ -313,16 +366,9 @@ int copy_on_write(struct fault_data *fault)
 
 		/* vm object reference down to one? */
 		if (vmo_link->obj->refcnt == 1) {
+			BUG(); /* Check that the mergers are both shadows!!! */
 			/* TODO: Fill this in! Merge with the only reference */
 			vm_object_merge(vmo_link);
-
-			/*
-			 * To merge, the object should use the last shadow
-			 * reference left, but this reference must be changed
-			 * to point at the vm_obj_link rather than the object
-			 * itself, because it's not possible to find the link
-			 * from the object, and only the link matters.
-			 */
 		}
 	}
 }

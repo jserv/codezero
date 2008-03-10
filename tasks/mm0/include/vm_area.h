@@ -111,7 +111,6 @@ struct vm_object {
 	int npages;		    /* Number of pages in memory */
 	int refcnt;		    /* Number of shadows (or vmas) that refer */
 	struct list_head shadowers; /* List of vm objects that shadow this one */
-	struct list_head shref;	    /* Shadow referees use this to track us */
 	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int flags;	    /* Defines the type and flags of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
@@ -132,6 +131,7 @@ struct vm_file {
 /* To create per-vma vm_object lists */
 struct vma_obj_link {
 	struct list_head list;
+	struct list_head shref;	/* Ref to shadowers by original objects */
 	struct vm_object *obj;
 };
 

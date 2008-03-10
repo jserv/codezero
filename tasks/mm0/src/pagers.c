@@ -23,56 +23,6 @@ struct page *find_page(struct vm_object *obj, unsigned long pfn)
 	return 0;
 }
 
-struct page *copy_on_write_page_in(struct vm_object *vm_obj, unsigned long page_offset)
-{
-	struct vm_object *orig = vma_get_next_object(vm_obj); 
-	struct page *page;
-	void *vaddr, *paddr;
-	int err;
-
-		vm_object_to_file(vm_obj);
-	/* The page is not resident in page cache. */
-	if (!(page = find_page(vm_obj, page_offset))) {
-		/* Allocate a new page */
-		paddr = alloc_page(1);
-		vaddr = phys_to_virt(paddr);
-		page = phys_to_page(paddr);
-
-		/* Map the page to vfs task */
-		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
-
-		/* Syscall to vfs to read into the page. */
-		if ((err = vfs_read(f->vnum, page_offset, 1, vaddr)) < 0)
-			goto out_err;
-
-		/* Unmap it from vfs */
-		l4_unmap(vaddr, 1, VFS_TID);
-
-		/* Update vm object details */
-		vm_obj->npages++;
-
-		/* Update page details */
-		spin_lock(&page->lock);
-		page->count++;
-		page->owner = vm_obj;
-		page->offset = page_offset;
-		page->virtual = 0;
-
-		/* Add the page to owner's list of in-memory pages */
-		BUG_ON(!list_empty(&page->list));
-		insert_page_olist(page, vm_obj);
-		spin_unlock(&page->lock);
-	}
-
-	return page;
-
-out_err:
-	l4_unmap(vaddr, 1, VFS_TID);
-	free_page(paddr);
-	return PTR_ERR(err);
-
-}
-
 struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
@@ -181,19 +131,21 @@ struct vm_pager swap_pager = {
 	},
 };
 
-
 /* Returns the page with given offset in this vm_object */
 struct page *bootfile_page_in(struct vm_object *vm_obj,
-			      unsigned long pfn_offset)
+			      unsigned long offset)
 {
 	struct vm_file *boot_file = vm_object_to_file(vm_obj);
 	struct svc_image *img = boot_file->priv_data;
 	struct page *page = phys_to_page(img->phys_start +
-					 __pfn_to_addr(pfn_offset));
+					 __pfn_to_addr(offset));
 
 	spin_lock(&page->lock);
 	page->count++;
 	spin_unlock(&page->lock);
+
+	/* FIXME: Why not add pages to linked list and update npages? */
+	vm_obj->npages++;
 
 	return page;
 }
