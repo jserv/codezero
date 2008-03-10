@@ -74,8 +74,8 @@ License:
 The current 'Toy' release is distributed under GNU General Public License
 Version 3 and this version only. Any next version will be released in the same
 license, but there are intentions to keep the project in a dual-licensed manner.
-In any case, the project source code will always be released as open source with
-copyleft clauses.
+In any case, the project source code will always be released as open source as
+in the OSI definition, and with copyleft clauses.
 
 The third party source code under the directories loader/ tools/ libs/c libs/elf
 have their own copyright and licenses, separate from this project. All third
@@ -104,11 +104,11 @@ to defeat this problem and increase dependability.
 Other than these modern kernels, there is systems software targeting embedded
 devices. Most of them are proprietary, with their own users. Some of the open
 source ones are structurally too simplistic, and lack modern features such as
-paging. There are existing well-designed embedded OS'es, but Codezero provides
-an alternative that will follow the open source development principles more
-closely. This will prove useful because many embedded systems still use older
-development methods and the right open source methodology would prove favorable
-in the fast-paced nature of development.
+paging. There are existing embedded OS'es that are well-designed, but Codezero
+provides alternative that will follow the open source development principles
+more closely. This will prove useful because many embedded systems still use
+older development methods and the right open source methodology would prove
+favorable in the fast-paced nature of development.
 
 Finally, there are new ideas in OS literature that would improve Unix but aren't
 implemented either because they have no existing users or may break compatibility
