@@ -23,6 +23,25 @@ struct page *find_page(struct vm_object *obj, unsigned long pfn)
 	return 0;
 }
 
+int default_release_pages(struct vm_object *vm_obj)
+{
+	struct page *p;
+	struct list_head *n;
+	void *phys;
+
+	list_for_each_entry_safe(p, n, &vm_obj->page_cache, list) {
+		list_del(&p->list);
+		BUG_ON(p->refcnt);
+
+		/* Return page back to allocator */
+		free_page(page_to_phys(p));
+
+		/* Free the page structure */
+		kfree(p);
+	}
+	return 0;
+}
+
 struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
@@ -103,6 +122,7 @@ int read_file_pages(struct vm_file *f, unsigned long pfn_start,
 struct vm_pager file_pager = {
 	.ops = {
 		.page_in = file_page_in,
+		.release_pages = default_release_pages,
 	},
 };
 
@@ -128,6 +148,7 @@ struct page *swap_page_in(struct vm_object *vm_obj, unsigned long file_offset)
 struct vm_pager swap_pager = {
 	.ops = {
 		.page_in = swap_page_in,
+		.release_pages = default_release_pages,
 	},
 };
 

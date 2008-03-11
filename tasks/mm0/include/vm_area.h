@@ -1,7 +1,7 @@
 /*
  * Virtual memory area descriptors.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #ifndef __VM_AREA_H__
 #define __VM_AREA_H__
@@ -41,7 +41,7 @@ struct devpage {
 };
 
 struct page {
-	int count;		/* Refcount */
+	int refcnt;		/* Refcount */
 	struct spinlock lock;	/* Page lock. */
 	struct list_head list;  /* For list of a vm_object's in-memory pages */
 	struct vm_object *owner;/* The vm_object the page belongs to */
@@ -68,8 +68,11 @@ struct fault_data {
 };
 
 struct vm_pager_ops {
-	struct page *(*page_in)(struct vm_object *vm_obj, unsigned long pfn_offset);
-	struct page *(*page_out)(struct vm_object *vm_obj, unsigned long pfn_offset);
+	struct page *(*page_in)(struct vm_object *vm_obj,
+				unsigned long pfn_offset);
+	struct page *(*page_out)(struct vm_object *vm_obj,
+				 unsigned long pfn_offset);
+	int (*release_pages)(struct vm_object *vm_obj);
 };
 
 /* Describes the pager task that handles a vm_area. */
@@ -115,7 +118,8 @@ struct vm_object {
 	unsigned int flags;	    /* Defines the type and flags of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
 	struct vm_pager *pager;	    /* The pager for this object */
-	struct list_head page_cache; /* List of in-memory pages */
+	struct list_head page_cache;/* List of in-memory pages */
+	struct vm_object_ops ops;   /* Operations on the object */
 };
 
 /* In memory representation of either a vfs file, a device. */

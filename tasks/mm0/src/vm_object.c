@@ -25,7 +25,7 @@ struct vm_object *vm_object_init(struct vm_object *obj)
 }
 
 /* Allocate and initialise a vmfile, and return it */
-struct vm_object *vm_object_alloc_init(void)
+struct vm_object *vm_object_create(void)
 {
 	struct vm_object *obj;
 
@@ -35,7 +35,7 @@ struct vm_object *vm_object_alloc_init(void)
 	return vm_object_init(obj);
 }
 
-struct vm_file *vm_file_alloc_init(void)
+struct vm_file *vm_file_create(void)
 {
 	struct vm_file *f;
 
@@ -44,6 +44,7 @@ struct vm_file *vm_file_alloc_init(void)
 
 	INIT_LIST_HEAD(&f->file_list);
 	vm_object_init(&f->vm_obj);
+	f->vm_obj->type = VM_OBJ_FILE;
 
 	return f;
 }

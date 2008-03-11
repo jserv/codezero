@@ -145,7 +145,7 @@ int vm_object_check_subset(struct vm_object *copier,
 }
 
 /* Merges link 1 to link 2 */
-int do_vma_merge_link(struct vm_obj_link *link1, struct vm_obj_link *link2)
+int vma_do_merge_link(struct vm_obj_link *link1, struct vm_obj_link *link2)
 {
 	struct vm_object *obj1 = link1->obj;
 	struct vm_object *obj2 = link2->obj;
@@ -192,17 +192,9 @@ int vma_merge_link(struct vm_obj_link *vmo_link)
 	BUG_ON(!list_empty(&vmo_link->obj->shadowers));
 
 	/* Do the actual merge */
-	do_vma_merge_link(vmo_link, sh_link);
+	vma_do_merge_link(vmo_link, sh_link);
 
 }
-
-			/*
-			 * To merge, the object should use the last shadow
-			 * reference left, but this reference must be changed
-			 * to point at the vm_obj_link rather than the object
-			 * itself, because it's not possible to find the link
-			 * from the object.
-			 */
 
 struct vm_obj_link *vma_create_shadow(void)
 {
@@ -212,11 +204,12 @@ struct vm_obj_link *vma_create_shadow(void)
 	if (!(vmo_link = kzalloc(sizeof(*vmo_link))))
 		return 0;
 
-	if (!(vmo = vm_object_alloc_init())) {
+	if (!(vmo = vm_object_create())) {
 		kfree(vmo_link);
 		return 0;
 	}
 	INIT_LIST_HEAD(&vmo_link->list);
+	vmo->type = VM_OBJ_SHADOW;
 	vmo_link->obj = vmo;
 
 	return vmo_link;
@@ -250,7 +243,7 @@ struct page *copy_page(struct page *orig)
 /* TODO:
  * - Why not allocate a swap descriptor in vma_create_shadow() rather than
  *   a bare vm_object? It will be needed.
- *
+ * - Does vm_write clash with any other object flags???
  * - Check refcounting of shadows, their references, page refs,
  *   reduces increases etc.
  */
@@ -303,21 +296,23 @@ int copy_on_write(struct fault_data *fault)
 		/* Shadow is the copier object */
 		copier_link = shadow_link;
 	} else {
-		/* No new shadows, topmost vmo is the copier object */
+		/* No new shadows, the topmost r/w vmo is the copier object */
 		copier_link = vmo_link;
 
 		/*
 		 * We start page search on read-only objects. If the first
 		 * one was writable, go to next which must be read-only.
 		 */
-		BUG_ON(!(vmo_link = vma_next_object(vmo_link, &vma->vm_obj_list)));
+		BUG_ON(!(vmo_link = vma_next_object(vmo_link,
+						    &vma->vm_obj_list)));
 		BUG_ON(vmo_link->obj->flags & VM_WRITE);
 	}
 
 	/* Traverse the list of read-only vm objects and search for the page */
 	while (!(page = vmo_link->obj->pager.ops->page_in(vmo_link->obj,
 							  file_offset))) {
-		if (!(vmo_link = vma_next_object(vmo_link, &vma->vm_obj_list))) {
+		if (!(vmo_link = vma_next_object(vmo_link,
+						 &vma->vm_obj_list))) {
 			printf("%s:%s: Traversed all shadows and the original "
 			       "file's vm_object, but could not find the "
 			       "faulty page in this vma.\n",__TASKNAME__,
@@ -341,17 +336,18 @@ int copy_on_write(struct fault_data *fault)
 
 	/* Add the page to owner's list of in-memory pages */
 	BUG_ON(!list_empty(&new_page->list));
-	insert_page_olist(page, shadow_link->obj);
+	insert_page_olist(new_page, new_page->owner->obj);
 	spin_unlock(&page->lock);
 
-	/* Map it to faulty task */
-	l4_map(page_to_phys(page), (void *)page_align(fault->address), 1,
+	/* Map the new page to faulty task */
+	l4_map(page_to_phys(new_page), (void *)page_align(fault->address), 1,
 	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 	       fault->task->tid);
 
 	/*
-	 * Check possible shadow collapses. Does the copier shadow
-	 * completely shadow the one underlying it?
+	 * Finished handling the actual fault, now check for possible
+	 * shadow collapses. Does the copier shadow completely shadow
+	 * the one underlying it?
 	 */
 	if (!(vmo_link = vma_next_object(copier_link, &vma->vm_obj_list))) {
 		/* Copier must have an object under it */
@@ -365,12 +361,14 @@ int copy_on_write(struct fault_data *fault)
 		vma_drop_link(copier_link, vmo_link);
 
 		/* vm object reference down to one? */
-		if (vmo_link->obj->refcnt == 1) {
-			BUG(); /* Check that the mergers are both shadows!!! */
-			/* TODO: Fill this in! Merge with the only reference */
-			vm_object_merge(vmo_link);
-		}
+		if (vmo_link->obj->refcnt == 1)
+			/* The object is mergeable? i.e. not a file? */
+			if (vmo_link->type != VM_OBJ_FILE)
+				/* Merge it with its only shadower */
+				vm_object_merge(vmo_link);
 	}
+
+	return 0;
 }
 
 
