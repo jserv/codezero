@@ -403,8 +403,8 @@ int __do_page_fault(struct fault_data *fault)
 		if (vma_flags & VMA_PRIVATE) {
 			copy_on_write(fault);
 		}
-		/* FIXME: Just do fs files for now, anon shm objects later. */
-		if (vma_flags & VMA_SHARED) {
+		/* Regular files */
+		if ((vma_flags & VMA_SHARED) && !(vma_flags & VMA_ANONYMOUS)) {
 			file_offset = fault_to_file_offset(fault);
 			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
 							  &vma->vm_obj_list)));
@@ -423,7 +423,10 @@ int __do_page_fault(struct fault_data *fault)
 			       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 			       fault->task->tid);
 		}
+		/* FIXME: Just do fs files for now, anon shm objects later. */
+		BUG_ON((vma_flags & VMA_SHARED) && (vma_flags & VMA_ANONYMOUS));
 	}
+
 	return 0;
 }
 
