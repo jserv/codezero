@@ -12,14 +12,10 @@
 /* Global list of in-memory vm objects. */
 LIST_HEAD(vm_object_list);
 
-/* Global list of in-memory vm files */
-LIST_HEAD(vm_file_list);
-
 struct vm_object *vm_object_init(struct vm_object *obj)
 {
 	INIT_LIST_HEAD(&obj->list);
 	INIT_LIST_HEAD(&obj->page_cache);
-	INIT_LIST_HEAD(&obj->shadows);
 
 	return obj;
 }
@@ -42,9 +38,9 @@ struct vm_file *vm_file_create(void)
 	if (!(f = kzalloc(sizeof(*f))))
 		return PTR_ERR(-ENOMEM);
 
-	INIT_LIST_HEAD(&f->file_list);
+	INIT_LIST_HEAD(&f->list);
 	vm_object_init(&f->vm_obj);
-	f->vm_obj->type = VM_OBJ_FILE;
+	f->vm_obj.flags = VM_OBJ_FILE;
 
 	return f;
 }
@@ -55,7 +51,7 @@ int vm_object_delete(struct vm_object *vmo)
 	struct vm_file *f;
 
 	/* Release all pages */
-	vmo->pager.ops->release_pages(vmo);
+	vmo->pager->ops.release_pages(vmo);
 
 	/* Remove from global list */
 	list_del(&vmo->list);
@@ -63,14 +59,14 @@ int vm_object_delete(struct vm_object *vmo)
 	/* Check any references */
 	BUG_ON(vmo->refcnt);
 	BUG_ON(!list_empty(&vmo->shadowers));
-	BUG_ON(!list_emtpy(&vmo->page_cache));
+	BUG_ON(!list_empty(&vmo->page_cache));
 
 	/* Obtain and free via the base object */
 	if (vmo->flags & VM_OBJ_FILE) {
 		f = vm_object_to_file(vmo);
 		kfree(f);
 	} else if (vmo->flags & VM_OBJ_SHADOW)
-		kfree(obj);
+		kfree(vmo);
 	else BUG();
 
 	return 0;

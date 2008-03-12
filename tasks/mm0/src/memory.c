@@ -1,9 +1,9 @@
 /*
  * Initialise the memory structures.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
-#include <kdata.h>
+#include <init.h>
 #include <memory.h>
 #include <l4/macros.h>
 #include <l4/config.h>
@@ -78,7 +78,7 @@ void init_physmem(struct initdata *initdata, struct membank *membank)
 
 		/* Set use counts for pages the kernel has already used up */
 		if (!(pmap->map[BITWISE_GETWORD(i)] & BITWISE_GETBIT(i)))
-			membank[0].page_array[i].count = -1;
+			membank[0].page_array[i].refcnt = -1;
 		else	/* Last page used +1 is free */
 			ffree_addr = (i + 1) * PAGE_SIZE;
 	}

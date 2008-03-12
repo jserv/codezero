@@ -28,8 +28,18 @@
 /* Private copy of a file */
 #define VMA_PRIVATE			(1 << 6)
 /* Copy-on-write semantics */
-#define VMA_COW				(1 << 7)
-#define VMA_FIXED			(1 << 8)
+#define VMA_FIXED			(1 << 7)
+
+/* Defines the type of file. A device file? Regular file? One used at boot? */
+enum VM_FILE_TYPE {
+	VM_FILE_DEVZERO = 0,
+	VM_FILE_REGULAR,
+	VM_FILE_BOOTFILE,
+};
+
+/* Defines the type of object. A file? Just a standalone object? */
+#define VM_OBJ_SHADOW		(1 << 8) /* Anonymous pages, swap_pager */
+#define VM_OBJ_FILE		(1 << 9) /* VFS file and device pages */
 
 struct page {
 	int refcnt;		/* Refcount */
@@ -80,18 +90,6 @@ struct vm_pager {
 	struct vm_pager_ops ops;	/* The ops the pager does on area */
 };
 
-/* Defines the type of file. A device file? Regular file? One used at boot? */
-enum VM_FILE_TYPE {
-	VM_FILE_DEVZERO = 0,
-	VM_FILE_REGULAR,
-	VM_FILE_BOOTFILE,
-};
-
-/* Defines the type of object. A file? Just a standalone object? */
-enum VM_OBJ_TYPE {
-	VM_OBJ_SHADOW = 1,	/* Anonymous pages, swap_pager */
-	VM_OBJ_FILE,		/* VFS file and device pages */
-};
 
 /* TODO:
  * How to distinguish different devices handling page faults ???
@@ -184,10 +182,12 @@ extern struct vm_pager bootfile_pager;
 extern struct vm_pager devzero_pager;
 extern struct vm_pager swap_pager;
 
-/* Pager initialisation, Special files */
-
 /* vm object and vm file lists */
 extern struct list_head vm_object_list;
+
+/* vm object link related functions */
+struct vm_obj_link *vma_next_link(struct list_head *link,
+				  struct list_head *head);
 
 /* vm file and object initialisation */
 struct vm_file *vm_file_alloc_init(void);

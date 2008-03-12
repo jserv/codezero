@@ -118,23 +118,6 @@ out_err:
 }
 
 /*
- * This reads-in a range of pages from a file and populates the page cache
- * just like a page fault, but its not in the page fault path.
- */
-int read_file_pages(struct vm_file *f, unsigned long pfn_start,
-		    unsigned long pfn_end)
-{
-	struct page *p;
-
-	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++)
-		if (IS_ERR(p = f->vm_obj.pager->ops.page_in(&f->vm_obj,
-							    f_offset)))
-			return (int)p;
-
-	return 0;
-}
-
-/*
  * All non-mmapable char devices are handled by this.
  * VFS calls those devices to read their pages
  */
@@ -236,7 +219,7 @@ int init_boot_files(struct initdata *initdata)
 
 	for (int i = 0; i < bd->total_images; i++) {
 		img = &bd->images[i];
-		boot_file = vm_file_alloc_init();
+		boot_file = vm_file_create();
 		boot_file->priv_data = img;
 		boot_file->length = img->phys_end - img->phys_start;
 		boot_file->type = VM_FILE_BOOTFILE;
@@ -303,7 +286,7 @@ int init_devzero(void)
 	zpage->refcnt++;
 
 	/* Allocate and initialise devzero file */
-	devzero = vmfile_alloc_init();
+	devzero = vm_file_create();
 	devzero->vm_obj.npages = ~0;
 	devzero->vm_obj.pager = &devzero_pager;
 	devzero->vm_obj.flags = VM_OBJ_FILE;

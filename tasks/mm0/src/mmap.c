@@ -329,6 +329,13 @@ pgtable_unmap:
 #endif
 	return 0;
 }
+#endif
+
+
+int do_munmap(void *vaddr, unsigned long size, struct tcb *task)
+{
+	return 0;
+}
 
 int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
 {
@@ -338,7 +345,6 @@ int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
 
 	return do_munmap(vaddr, size, task);
 }
-#endif
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			unsigned int flags,  unsigned long file_offset,

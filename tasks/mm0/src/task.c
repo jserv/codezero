@@ -365,13 +365,14 @@ void init_pm(struct initdata *initdata)
 
 /*
  * Makes the virtual to page translation for a given user task.
+ * If page is not mapped (either not faulted or swapped), returns 0.
  */
 struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 {
-	unsigned long vaddr_vma_offset;
-	unsigned long vaddr_file_offset;
+	unsigned long vma_offset;
+	unsigned long file_offset;
+	struct vm_obj_link *vmo_link;
 	struct vm_area *vma;
-	struct vm_object *vmo;
 	struct page *page;
 
 	/* First find the vma that maps that virtual address */
@@ -384,33 +385,31 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 	/* Find the pfn offset of virtual address in this vma */
 	BUG_ON(__pfn(virtual) < vma->pfn_start ||
 	       __pfn(virtual) > vma->pfn_end);
-	vaddr_vma_offset = __pfn(virtual) - vma->pfn_start;
+	vma_offset = __pfn(virtual) - vma->pfn_start;
 
 	/* Find the file offset of virtual address in this file */
-	vmo = vma->owner;
-	vaddr_file_offset = vma->f_offset + vaddr_vma_offset;
+	file_offset = vma->file_offset + vma_offset;
 
-	/* TODO:
-	 * Traverse vm objects to find the one with the page.
-	 * Check each object's cache by find page. dont page in.
-	 */
+	/* Get the initial link */
+	BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
+					  &vma->vm_obj_list)));
 
-	/*
-	 * Find the page with the same file offset with that of the
-	 * virtual address, that is, if the page is resident in memory.
-	 */
-	list_for_each_entry(page, &vmfile->page_cache_list, list)
-		if (vaddr_file_offset == page->f_offset) {
-			printf("%s: %s: Found page @ 0x%x, f_offset: 0x%x, with vma @ 0x%x, vmfile @ 0x%x\n", __TASKNAME__,
-			       __FUNCTION__, (unsigned long)page, page->f_offset, vma, vma->owner);
-			return page;
-		}
+	/* Is page there in the cache ??? */
+	while(!(page = find_page(vmo_link->obj, file_offset))) {
+		/* No, check the next link */
+		if (!(vmo_link = vma_next_link(&vma->vm_obj_list,
+					       &vma->vm_obj_list)));
+			/* Exhausted the objects. The page is not there. */
+			return 0;
+	}
 
-	/*
-	 * The page is not found, meaning that it is not mapped in
-	 * yet, e.g. via a page fault.
-	 */
-	return 0;
+	/* Found it */
+	printf("%s: %s: Found page @ 0x%x, file_offset: 0x%x, "
+	       "with vma @ 0x%x, vm object @ 0x%x\n", __TASKNAME__,
+	       __FUNCTION__, (unsigned long)page, page->offset,
+	       vma, vmo_link->obj);
+
+	return page;
 }
 
 struct task_data {

@@ -168,12 +168,12 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 
 	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++) {
 		page = vmfile->vm_obj.pager->ops.page_in(&vmfile->vm_obj,
-						  f_offset);
+							 f_offset);
 		if (IS_ERR(page)) {
 			printf("%s: %s:Could not read page %d "
 			       "from file with vnum: 0x%x\n", __TASKNAME__,
 			       __FUNCTION__, f_offset, vmfile->vnum);
-			break;
+			return (int)page;
 		}
 	}
 
