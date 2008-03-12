@@ -17,7 +17,7 @@
 #include <l4lib/ipcdefs.h>
 #include <lib/addr.h>
 #include <kmalloc/kmalloc.h>
-#include <kdata.h>
+#include <init.h>
 #include <string.h>
 #include <vm_area.h>
 #include <memory.h>
@@ -25,6 +25,9 @@
 #include <utcb.h>
 #include <proc.h>
 #include <task.h>
+
+/* A separate list than the generic file list that keeps just the boot files */
+LIST_HEAD(boot_file_list);
 
 #if 0
 int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
@@ -198,16 +201,20 @@ struct tcb *tcb_alloc_init(void)
  */
 int start_boot_task(struct vm_file *file, struct task_ids *ids)
 {
+	int err;
+	struct tcb *task;
+	unsigned int sp, pc;
+
 	/* Create the thread structures and address space */
 	printf("Creating new thread.\n");
-	if ((err = l4_thread_control(THREAD_CREATE, &ids)) < 0) {
+	if ((err = l4_thread_control(THREAD_CREATE, ids)) < 0) {
 		printf("l4_thread_control failed with %d.\n", err);
 		goto error;
 	}
 
 	/* Create a task and use given space and thread ids. */
 	printf("New task with id: %d, space id: %d\n", ids->tid, ids->spid);
-	task = tcb_alloc_init(tcbs);
+	task = tcb_alloc_init();
 	task->tid = ids->tid;
 	task->spid = ids->spid;
 
@@ -220,11 +227,11 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	task->args_end = task->env_start;
 	task->args_start = task->env_start;
 
-	/* Task stack starts right after the environment. TODO: Fix this. */
+	/* Task stack starts right after the environment. */
 	task->stack_end = task->env_start;
 	task->stack_start = task->stack_end - DEFAULT_STACK_SIZE;
 
-	/* Currently RO text and RW data are one region */
+	/* Currently RO text and RW data are one region. TODO: Fix this */
 	task->data_start = USER_AREA_START;
 	task->data_end = USER_AREA_START + page_align_up(file->length);
 	task->text_start = task->data_start;
@@ -283,15 +290,20 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	}
 
 	/* Add the task to the global task list */
-	list_add(&task->list, tcb_head->list);
-	tcb_head->total++;
+	list_add(&task->list, &tcb_head.list);
+	tcb_head.total++;
 
 	/* Start the thread */
 	printf("Starting task with id %d\n", task->tid);
-	if ((err = l4_thread_control(THREAD_RUN, &ids) < 0)) {
+	if ((err = l4_thread_control(THREAD_RUN, ids) < 0)) {
 		printf("l4_thread_control failed with %d\n", err);
 		goto error;
 	}
+
+	return 0;
+
+error:
+	BUG();
 }
 
 /*
@@ -300,9 +312,8 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
  */
 int start_boot_tasks(struct initdata *initdata)
 {
-	struct vm_file *file;
-	struct list_head *n;
-	struct svg_image *img;
+	struct vm_file *file, *n;
+	struct svc_image *img;
 	struct task_ids ids;
 	int total = 0;
 
@@ -332,7 +343,7 @@ int start_boot_tasks(struct initdata *initdata)
 
 		/* Add the file to global vm lists */
 		list_add(&file->list, &vm_file_list);
-		list_add(&file->vm_obj->list, &vm_object_list);
+		list_add(&file->vm_obj.list, &vm_object_list);
 
 		/* Start the file as a task */
 		start_boot_task(file, &ids);
@@ -349,7 +360,7 @@ int start_boot_tasks(struct initdata *initdata)
 
 void init_pm(struct initdata *initdata)
 {
-	start_boot_tasks(initdata, &tcb_head);
+	start_boot_tasks(initdata);
 }
 
 /*
@@ -360,7 +371,7 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 	unsigned long vaddr_vma_offset;
 	unsigned long vaddr_file_offset;
 	struct vm_area *vma;
-	struct vm_file *vmfile;
+	struct vm_object *vmo;
 	struct page *page;
 
 	/* First find the vma that maps that virtual address */
@@ -376,8 +387,13 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 	vaddr_vma_offset = __pfn(virtual) - vma->pfn_start;
 
 	/* Find the file offset of virtual address in this file */
-	vmfile = vma->owner;
+	vmo = vma->owner;
 	vaddr_file_offset = vma->f_offset + vaddr_vma_offset;
+
+	/* TODO:
+	 * Traverse vm objects to find the one with the page.
+	 * Check each object's cache by find page. dont page in.
+	 */
 
 	/*
 	 * Find the page with the same file offset with that of the

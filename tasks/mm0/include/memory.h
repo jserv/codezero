@@ -7,7 +7,7 @@
 #define __MEMORY_H__
 
 #include <vm_area.h>
-#include <kdata.h>
+#include <init.h>
 
 struct membank {
 	unsigned long start;

@@ -27,5 +27,8 @@ extern struct initdata initdata;
 int request_initdata(struct initdata *i);
 
 void initialise(void);
+int init_devzero(void);
+struct vm_file *get_devzero(void);
+int init_boot_files(struct initdata *initdata);
 
 #endif /* __MM_INIT_H__ */

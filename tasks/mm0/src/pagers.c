@@ -5,6 +5,7 @@
 #include <l4/lib/list.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <kmalloc/kmalloc.h>
 #include <mm/alloc_page.h>
 #include <vm_area.h>
 #include <string.h>
@@ -12,6 +13,18 @@
 #include <init.h>
 #include INC_ARCH(bootdesc.h)
 
+
+struct page *page_init(struct page *page)
+{
+	/* Reset page */
+	memset(page, 0, sizeof(*page));
+	page->refcnt = -1;
+	spin_lock_init(&page->lock);
+	INIT_LIST_HEAD(&page->list);
+
+	return page;
+
+}
 struct page *find_page(struct vm_object *obj, unsigned long pfn)
 {
 	struct page *p;
@@ -23,24 +36,31 @@ struct page *find_page(struct vm_object *obj, unsigned long pfn)
 	return 0;
 }
 
+/*
+ * Deletes all pages in a page cache, assumes pages are from the
+ * page allocator, and page structs are from the page_array, which
+ * is the default situation.
+ */
 int default_release_pages(struct vm_object *vm_obj)
 {
-	struct page *p;
-	struct list_head *n;
-	void *phys;
+	struct page *p, *n;
 
 	list_for_each_entry_safe(p, n, &vm_obj->page_cache, list) {
 		list_del(&p->list);
 		BUG_ON(p->refcnt);
 
 		/* Return page back to allocator */
-		free_page(page_to_phys(p));
+		free_page((void *)page_to_phys(p));
 
 		/* Free the page structure */
 		kfree(p);
+
+		/* Reduce object page count */
+		BUG_ON(--vm_obj->npages < 0);
 	}
 	return 0;
 }
+
 
 struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 {
@@ -78,8 +98,8 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 		vm_obj->npages++;
 
 		/* Update page details */
-		spin_lock(&page->lock);
-		page->count++;
+		page_init(page);
+		page->refcnt++;
 		page->owner = vm_obj;
 		page->offset = page_offset;
 		page->virtual = 0;
@@ -87,7 +107,6 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 		/* Add the page to owner's list of in-memory pages */
 		BUG_ON(!list_empty(&page->list));
 		insert_page_olist(page, vm_obj);
-		spin_unlock(&page->lock);
 	}
 
 	return page;
@@ -142,7 +161,7 @@ struct vm_swap_node {
 struct page *swap_page_in(struct vm_object *vm_obj, unsigned long file_offset)
 {
 	/* No swapping yet, so the page is either here or not here. */
-	return find_page(vm_obj, page_offset);
+	return find_page(vm_obj, file_offset);
 }
 
 struct vm_pager swap_pager = {
@@ -151,6 +170,27 @@ struct vm_pager swap_pager = {
 		.release_pages = default_release_pages,
 	},
 };
+
+/*
+ * Just releases the page structures since the actual pages are
+ * already in memory as read-only.
+ */
+int bootfile_release_pages(struct vm_object *vm_obj)
+{
+	struct page *p, *n;
+
+	list_for_each_entry_safe(p, n, &vm_obj->page_cache, list) {
+		list_del(&p->list);
+		BUG_ON(p->refcnt);
+
+		/* Free the page structure */
+		kfree(p);
+
+		/* Reduce object page count */
+		BUG_ON(--vm_obj->npages < 0);
+	}
+	return 0;
+}
 
 /* Returns the page with given offset in this vm_object */
 struct page *bootfile_page_in(struct vm_object *vm_obj,
@@ -161,12 +201,18 @@ struct page *bootfile_page_in(struct vm_object *vm_obj,
 	struct page *page = phys_to_page(img->phys_start +
 					 __pfn_to_addr(offset));
 
-	spin_lock(&page->lock);
-	page->count++;
-	spin_unlock(&page->lock);
+	/* TODO: Check file length against page offset! */
 
-	/* FIXME: Why not add pages to linked list and update npages? */
+	/* Update page */
+	page_init(page);
+	page->refcnt++;
+
+	/* Update object */
 	vm_obj->npages++;
+
+	/* Add the page to owner's list of in-memory pages */
+	BUG_ON(!list_empty(&page->list));
+	insert_page_olist(page, vm_obj);
 
 	return page;
 }
@@ -174,10 +220,10 @@ struct page *bootfile_page_in(struct vm_object *vm_obj,
 struct vm_pager bootfile_pager = {
 	.ops = {
 		.page_in = bootfile_page_in,
+		.release_pages = bootfile_release_pages,
 	},
 };
 
-LIST_HEAD(boot_file_list);
 
 /* From bare boot images, create mappable device files */
 int init_boot_files(struct initdata *initdata)
@@ -196,7 +242,7 @@ int init_boot_files(struct initdata *initdata)
 		boot_file->type = VM_FILE_BOOTFILE;
 
 		/* Initialise the vm object */
-		boot_file->vm_obj.type = VM_OBJ_FILE;
+		boot_file->vm_obj.flags = VM_OBJ_FILE;
 		boot_file->vm_obj.pager = &bootfile_pager;
 
 		/* Add the object to global vm_object list */
@@ -219,8 +265,8 @@ struct page *devzero_page_in(struct vm_object *vm_obj,
 
 	/* Update zero page struct. */
 	spin_lock(&zpage->lock);
-	BUG_ON(zpage->count < 0);
-	zpage->count++;
+	BUG_ON(zpage->refcnt < 0);
+	zpage->refcnt++;
 	spin_unlock(&zpage->lock);
 
 	return zpage;
@@ -254,13 +300,13 @@ int init_devzero(void)
 	zvirt = l4_map_helper(zphys, 1);
 	memset(zvirt, 0, PAGE_SIZE);
 	l4_unmap_helper(zvirt, 1);
-	zpage->count++;
+	zpage->refcnt++;
 
 	/* Allocate and initialise devzero file */
 	devzero = vmfile_alloc_init();
 	devzero->vm_obj.npages = ~0;
 	devzero->vm_obj.pager = &devzero_pager;
-	devzero->vm_obj.type = VM_OBJ_FILE;
+	devzero->vm_obj.flags = VM_OBJ_FILE;
 	devzero->type = VM_FILE_DEVZERO;
 	devzero->priv_data = zpage;
 

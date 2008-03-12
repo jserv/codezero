@@ -31,15 +31,6 @@
 #define VMA_COW				(1 << 7)
 #define VMA_FIXED			(1 << 8)
 
-/*
- * A suggestion to how a non-page_array (i.e. a device)
- * page could tell its physical address.
- */
-struct devpage {
-	struct page page;
-	unsigned long phys;
-};
-
 struct page {
 	int refcnt;		/* Refcount */
 	struct spinlock lock;	/* Page lock. */
@@ -50,6 +41,15 @@ struct page {
 	unsigned long offset;	/* The offset page resides in its owner */
 };
 extern struct page *page_array;
+
+/*
+ * A suggestion to how a non-page_array (i.e. a device)
+ * page could tell its physical address.
+ */
+struct devpage {
+	struct page page;
+	unsigned long phys;
+};
 
 #define page_refcnt(x)		((x)->count + 1)
 #define virtual(x)		((x)->virtual)
@@ -119,7 +119,6 @@ struct vm_object {
 	struct list_head list;	    /* List of all vm objects in memory */
 	struct vm_pager *pager;	    /* The pager for this object */
 	struct list_head page_cache;/* List of in-memory pages */
-	struct vm_object_ops ops;   /* Operations on the object */
 };
 
 /* In memory representation of either a vfs file, a device. */
@@ -133,7 +132,7 @@ struct vm_file {
 };
 
 /* To create per-vma vm_object lists */
-struct vma_obj_link {
+struct vm_obj_link {
 	struct list_head list;
 	struct list_head shref;	/* Ref to shadowers by original objects */
 	struct vm_object *obj;
@@ -176,18 +175,26 @@ static inline struct vm_area *find_vma(unsigned long addr,
 /* Adds a page to its vm_objects's page cache in order of offset. */
 int insert_page_olist(struct page *this, struct vm_object *vm_obj);
 
+/* Find a page in page cache via page offset */
+struct page *find_page(struct vm_object *obj, unsigned long pfn);
+
 /* Pagers */
 extern struct vm_pager file_pager;
 extern struct vm_pager bootfile_pager;
 extern struct vm_pager devzero_pager;
+extern struct vm_pager swap_pager;
+
+/* Pager initialisation, Special files */
 
 /* vm object and vm file lists */
 extern struct list_head vm_object_list;
-extern struct list_head vm_file_list;
 
 /* vm file and object initialisation */
 struct vm_file *vm_file_alloc_init(void);
 struct vm_object *vm_object_alloc_init(void);
+struct vm_object *vm_object_create(void);
+struct vm_file *vm_file_create(void);
+int vm_object_delete(struct vm_object *vmo);
 
 /* Main page fault entry point */
 void page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);

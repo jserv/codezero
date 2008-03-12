@@ -5,7 +5,6 @@
  */
 #include <stdio.h>
 #include <string.h>
-#include <kdata.h>
 #include <memory.h>
 #include <mm/alloc_page.h>
 #include <kmalloc/kmalloc.h>
@@ -57,7 +56,7 @@ void init_mm(struct initdata *initdata)
 	printf("%s: Initialised devzero.\n", __TASKNAME__);
 
 	/* Initialise in-memory boot files */
-	init_boot_files();
+	init_boot_files(initdata);
 	printf("%s: Initialised in-memory boot files.\n", __TASKNAME__);
 
 	shm_init();

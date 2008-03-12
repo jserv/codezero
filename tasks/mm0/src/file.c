@@ -14,14 +14,16 @@
 #include <posix/sys/types.h>
 #include <string.h>
 
+/* List of all generic files */
+LIST_HEAD(vm_file_list);
 
-int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
-	     void *pagebuf)
+int vfs_read(unsigned long vnum, unsigned long file_offset,
+	     unsigned long npages, void *pagebuf)
 {
 	int err;
 
 	write_mr(L4SYS_ARG0, vnum);
-	write_mr(L4SYS_ARG1, f_offset);
+	write_mr(L4SYS_ARG1, file_offset);
 	write_mr(L4SYS_ARG2, npages);
 	write_mr(L4SYS_ARG3, (u32)pagebuf);
 
@@ -39,13 +41,13 @@ int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 	return err;
 }
 
-int vfs_write(unsigned long vnum, unsigned long f_offset, unsigned long npages,
-	      void *pagebuf)
+int vfs_write(unsigned long vnum, unsigned long file_offset,
+	      unsigned long npages, void *pagebuf)
 {
 	int err;
 
 	write_mr(L4SYS_ARG0, vnum);
-	write_mr(L4SYS_ARG1, f_offset);
+	write_mr(L4SYS_ARG1, file_offset);
 	write_mr(L4SYS_ARG2, npages);
 	write_mr(L4SYS_ARG3, (u32)pagebuf);
 
@@ -81,7 +83,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	if (!(t = find_task(opener)))
 		return -EINVAL;
 
-	if (fd < 0 || fd > TASK_OFILES_MAX)
+	if (fd < 0 || fd > TASK_FILES_MAX)
 		return -EINVAL;
 
 	/* Assign vnum to given fd on the task */
@@ -93,20 +95,20 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 		if (vmfile->vnum == vnum) {
 			/* Add a reference to it from the task */
 			t->fd[fd].vmfile = vmfile;
-			vmfile->refcnt++;
+			vmfile->vm_obj.refcnt++;
 			return 0;
 		}
 	}
 
 	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vmfile_alloc_init()))
+	if (IS_ERR(vmfile = vm_file_create()))
 		return (int)vmfile;
 
 	/* Initialise and add it to global list */
 	vmfile->vnum = vnum;
 	vmfile->length = length;
-	vmfile->pager = &default_file_pager;
-	list_add(&vmfile->list, &vm_file_list);
+	vmfile->vm_obj.pager = &file_pager;
+	list_add(&vmfile->vm_obj.list, &vm_file_list);
 
 	return 0;
 }
@@ -154,6 +156,7 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 	BUG();
 }
 
+
 /*
  * This reads-in a range of pages from a file and populates the page cache
  * just like a page fault, but its not in the page fault path.
@@ -164,34 +167,13 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	struct page *page;
 
 	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++) {
-		/* The page is not resident in page cache. */
-		if (!(page = find_page(vmfile, f_offset))) {
-			/* Allocate a new page */
-			void *paddr = alloc_page(1);
-			void *vaddr = phys_to_virt(paddr);
-			page = phys_to_page(paddr);
-
-			/*
-			 * Map new page at a self virtual address.
-			 * NOTE: this is not unmapped here but in
-			 * read_cache_pages where mm0's work with the
-			 * page is done.
-			 */
-			l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
-
-			/* Read-in the page using the file's pager */
-			vmfile->pager->ops.read_page(vmfile, f_offset, vaddr);
-
-			spin_lock(&page->lock);
-			page->count++;
-			page->owner = vmfile;
-			page->f_offset = f_offset;
-			page->virtual = 0;
-
-			/* Add the page to owner's list of in-memory pages */
-			BUG_ON(!list_empty(&page->list));
-			insert_page_olist(page, vmfile);
-			spin_unlock(&page->lock);
+		page = vmfile->vm_obj.pager->ops.page_in(&vmfile->vm_obj,
+						  f_offset);
+		if (IS_ERR(page)) {
+			printf("%s: %s:Could not read page %d "
+			       "from file with vnum: 0x%x\n", __TASKNAME__,
+			       __FUNCTION__, f_offset, vmfile->vnum);
+			break;
 		}
 	}
 
@@ -207,8 +189,8 @@ int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
 	int copysize, left;
 	void *page_virtual;
 
-	list_for_each_entry(head, &vmfile->page_cache_list, list)
-		if (head->f_offset == pfn_start)
+	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
+		if (head->offset == pfn_start)
 			goto copy;
 	BUG();
 
@@ -230,7 +212,7 @@ copy:
 
 	/* Copy the rest and unmap. */
 	list_for_each_entry(next, &head->list, list) {
-		if (left == 0 || next->f_offset == pfn_end)
+		if (left == 0 || next->offset == pfn_end)
 			break;
 		copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
 		page_virtual = phys_to_virt((void *)page_to_phys(next));
@@ -243,7 +225,6 @@ copy:
 	return 0;
 }
 
-
 int sys_read(l4id_t sender, int fd, void *buf, int count)
 {
 	unsigned long foff_pfn_start, foff_pfn_end;
@@ -255,7 +236,7 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	BUG_ON(!(t = find_task(sender)));
 
 	/* TODO: Check user buffer and count validity */
-	if (fd < 0 || fd > TASK_OFILES_MAX)
+	if (fd < 0 || fd > TASK_FILES_MAX)
 		return -EINVAL;
 
 	vmfile = t->fd[fd].vmfile;
