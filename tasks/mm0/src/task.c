@@ -257,7 +257,8 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	 */
 	if ((err = do_mmap(file, 0, task, task->text_start,
 			   VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
-			   __pfn(page_align_up(task->text_end)))) < 0) {
+			   __pfn(page_align_up(task->text_end) -
+			   task->text_start))) < 0) {
 		printf("do_mmap: failed with %d.\n", err);
 		goto error;
 	}

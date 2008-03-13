@@ -64,7 +64,7 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.axf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
-		  LIBS = [libc_name, 'gcc', libc_name, 'libl4', 'libposix'],
+		  LIBS = [libc_name, 'gcc', libc_name, 'libl4', 'libposix', libc_name],
 		  CPPFLAGS = "-D__USERSPACE__",
 		  CPPPATH = ['#include', libl4_incpath, libposix_incpath, kernel_incpath])
 
