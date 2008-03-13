@@ -407,13 +407,13 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 
 	/* If no vmas, first map slot is available. */
 	if (list_empty(&task->vm_area_list))
-		return __pfn(task->map_start);
+		return USER_AREA_START;
 
 	/* First vma to check our range against */
 	vma = list_entry(task->vm_area_list.next, struct vm_area, list);
 
 	/* Start searching from task's end of data to start of stack */
-	while (pfn_end <= __pfn(task->map_end)) {
+	while (pfn_end <= __pfn(USER_AREA_END)) {
 
 		/* If intersection, skip the vma and fast-forward to next */
 		if (vma_intersect(pfn_start, pfn_end, vma)) {
@@ -427,10 +427,10 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 			 * Are we out of task map area?
 			 */
 			if (vma->list.next == &task->vm_area_list) {
-				if (pfn_end > __pfn(task->map_end))
+				if (pfn_end > __pfn(USER_AREA_END))
 					break; /* Yes, fail */
-				else
-					return pfn_start; /* No, success */
+				else	/* No, success */
+					return __pfn_to_addr(pfn_start);
 			}
 
 			/* Otherwise get next vma entry */
@@ -438,8 +438,8 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 					 struct vm_area, list);
 			continue;
 		}
-		BUG_ON(pfn_start + npages > __pfn(task->map_end));
-		return pfn_start;
+		BUG_ON(pfn_start + npages > __pfn(USER_AREA_END));
+		return __pfn_to_addr(pfn_start);
 	}
 	return 0;
 }
@@ -482,14 +482,11 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 	}
 
 	/* Check invalid map address */
-	if (map_address == 0 || map_address < task->data_end ||
-	    map_address >= task->stack_start) {
-		/* Address invalid or not specified */
-		if (flags & VMA_FIXED)
-			return -EINVAL;
+	if (map_address == 0 || map_address < USER_AREA_START ||
+	    map_address >= USER_AREA_END) {
 
 		/* Get new map address for region of this size */
-		else if ((int)(map_address =
+		if ((int)(map_address =
 			       find_unmapped_area(npages, task)) < 0)
 			return (int)map_address;
 
@@ -526,6 +523,7 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	     int flags, int fd, unsigned long pfn)
 {
 	unsigned long npages = __pfn(page_align_up(length));
+	unsigned long base = (unsigned long)start;
 	struct vm_file *file = 0;
 	unsigned int vmflags = 0;
 	struct tcb *task;
@@ -536,8 +534,16 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	if ((fd < 0 && !(flags & MAP_ANONYMOUS)) || fd > TASK_FILES_MAX)
 		return -EINVAL;
 
-	if ((unsigned long)start < USER_AREA_START || (unsigned long)start >= USER_AREA_END)
+	if (base < USER_AREA_START || base >= USER_AREA_END)
 		return -EINVAL;
+
+	/* Exclude task's stack, text and data from mmappable area in task's space */
+	if (base < task->map_start || base >= task->map_end || !base) {
+		if (flags & MAP_FIXED)	/* Its fixed, we cannot satisfy it */
+			return -EINVAL;
+		else
+			start = 0;
+	}
 
 	/* TODO:
 	 * Check that @start does not already have a mapping.
@@ -568,7 +574,7 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 		vmflags |= VM_EXEC;
 
 	if ((err =  do_mmap(file, __pfn_to_addr(pfn), task,
-			    (unsigned long)start, vmflags, npages)) < 0)
+			    base, vmflags, npages)) < 0)
 		return err;
 
 	return 0;
