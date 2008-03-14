@@ -454,17 +454,22 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task,
 	    unsigned long map_address, unsigned int flags, unsigned int npages)
 {
-	unsigned long file_npages = __pfn(page_align_up(mapfile->length));
+	unsigned long file_npages;
 	unsigned long map_pfn = __pfn(map_address);
 	struct vm_area *new, *mapped;
 
+	/* Set up devzero if none given */
 	if (!mapfile) {
 	       if (flags & VMA_ANONYMOUS) {
 			mapfile = get_devzero();
 			file_offset = 0;
 	       } else
 			BUG();
-	} else if (npages > file_npages - file_offset) {
+	}
+
+	/* Get total file pages, check if mappin is within file size */
+	file_npages = __pfn(page_align_up(mapfile->length));
+	if (npages > file_npages - file_offset) {
 		printf("%s: Trying to map %d pages from page %d, "
 		       "but file length is %d\n", __FUNCTION__,
 		       npages, file_offset, file_npages);
