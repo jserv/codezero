@@ -186,6 +186,7 @@ extern struct vm_pager swap_pager;
 extern struct list_head vm_object_list;
 
 /* vm object link related functions */
+struct vm_obj_link *vm_objlink_create(void);
 struct vm_obj_link *vma_next_link(struct list_head *link,
 				  struct list_head *head);
 

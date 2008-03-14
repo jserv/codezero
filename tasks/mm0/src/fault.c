@@ -31,8 +31,8 @@ unsigned long fault_to_file_offset(struct fault_data *fault)
 }
 
 /*
- * Given a reference to a vm_object link, returns the next link.
- * If back to given head, returns 0.
+ * Given a reference to a vm_object link, returns the next link but
+ * avoids wrapping around back to head. If next is head, returns 0.
  *
  * vma->link1->link2->link3
  *       |      |      |
@@ -47,7 +47,7 @@ struct vm_obj_link *vma_next_link(struct list_head *link,
 				  struct list_head *head)
 {
 	BUG_ON(list_empty(link));
-	if (link == head)
+	if (link->next == head)
 		return 0;
 	else
 		return list_entry(link->next, struct vm_obj_link, list);
@@ -179,6 +179,18 @@ int vma_merge_link(struct vm_object *vmo)
 	return 0;
 }
 
+struct vm_obj_link *vm_objlink_create(void)
+{
+	struct vm_obj_link *vmo_link;
+
+	if (!(vmo_link = kzalloc(sizeof(*vmo_link))))
+		return PTR_ERR(-ENOMEM);
+	INIT_LIST_HEAD(&vmo_link->list);
+	INIT_LIST_HEAD(&vmo_link->shref);
+
+	return vmo_link;
+}
+
 /*
  * Creates a bare vm_object along with its vma link, since
  * the shadow will be immediately used in a vma object list.
@@ -196,6 +208,7 @@ struct vm_obj_link *vma_create_shadow(void)
 		return 0;
 	}
 	INIT_LIST_HEAD(&vmo_link->list);
+	INIT_LIST_HEAD(&vmo_link->shref);
 	vmo->flags = VM_OBJ_SHADOW;
 	vmo_link->obj = vmo;
 

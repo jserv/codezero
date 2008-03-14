@@ -481,12 +481,14 @@ int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
  * The actual paging in/out of the file from/into memory pages is handled by
  * the file's pager upon page faults.
  */
-int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task,
-	    unsigned long map_address, unsigned int flags, unsigned int npages)
+int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
+	    struct tcb *task, unsigned long map_address, unsigned int flags,
+	    unsigned int npages)
 {
-	unsigned long file_npages;
 	unsigned long map_pfn = __pfn(map_address);
+	unsigned long file_npages;
 	struct vm_area *new, *mapped;
+	struct vm_obj_link *vmo_link;
 
 	/* Set up devzero if none given */
 	if (!mapfile) {
@@ -497,7 +499,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 			BUG();
 	}
 
-	/* Get total file pages, check if mappin is within file size */
+	/* Get total file pages, check if mapping is within file size */
 	file_npages = __pfn(page_align_up(mapfile->length));
 	if (npages > file_npages - file_offset) {
 		printf("%s: Trying to map %d pages from page %d, "
@@ -518,33 +520,35 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 
 	/* Check invalid map address */
 	if (!mmap_address_validate(map_address, flags)) {
-
 		/* Get new map address for region of this size */
-		if ((int)(map_address =
-			       find_unmapped_area(npages, task)) < 0)
+		map_address = find_unmapped_area(npages, task);
+		if ((int)map_address < 0)
 			return (int)map_address;
-
-		/* Create a new vma for newly allocated address */
-		else if (!(new = vma_new(__pfn(map_address), npages,
-					 flags, file_offset, mapfile)))
-			return -ENOMEM;
-		/* Successful? Add it to list and return */
-		goto out_success;
+	} else {
+		/*
+		 * FIXME: Currently we don't allow overlapping vmas.
+		 * To be fixed soon. We need to handle intersection,
+		 * splitting, shrink/grow etc.
+		 */
+		list_for_each_entry(mapped, &task->vm_area_list, list)
+			BUG_ON(vma_intersect(map_pfn, map_pfn + npages,
+					     mapped));
 	}
-
-	/*
-	 * FIXME: Currently we don't allow overlapping vmas. To be fixed soon
-	 * We need to handle intersection, splitting, shrink/grow etc.
-	 */
-	list_for_each_entry(mapped, &task->vm_area_list, list)
-		BUG_ON(vma_intersect(map_pfn, map_pfn + npages, mapped));
 
 	/* For valid regions that aren't allocated by us, create the vma. */
 	if (!(new = vma_new(__pfn(map_address), npages, flags, file_offset,
 			    mapfile)))
 		return -ENOMEM;
 
-out_success:
+	/* Attach the file as the first vm object of this vma */
+	if (!(vmo_link = vm_objlink_create())) {
+		kfree(new);
+		return -ENOMEM;
+	}
+	vmo_link->obj = &mapfile->vm_obj;
+	list_add_tail(&vmo_link->list, &new->vm_obj_list);
+
+	/* Finished initialising the vma, add it to task */
 	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
 	       map_address, map_address + npages * PAGE_SIZE);
 	list_add(&new->list, &task->vm_area_list);
