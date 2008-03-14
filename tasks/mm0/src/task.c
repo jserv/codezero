@@ -285,7 +285,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	       task->utcb_address);
 	if ((err = do_mmap(0, 0, task, task->utcb_address,
 			   VM_READ | VM_WRITE | VMA_SHARED | VMA_ANONYMOUS,
-			   DEFAULT_UTCB_SIZE) < 0)) {
+			   __pfn(DEFAULT_UTCB_SIZE)) < 0)) {
 		printf("do_mmap: Mapping utcb failed with %d.\n", err);
 		goto error;
 	}
@@ -318,6 +318,7 @@ int start_boot_tasks(struct initdata *initdata)
 	struct task_ids ids;
 	int total = 0;
 
+	INIT_LIST_HEAD(&tcb_head.list);
 	do {
 		file = 0;
 		list_for_each_entry_safe(file, n, &initdata->boot_file_list,

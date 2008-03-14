@@ -444,6 +444,35 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 	return 0;
 }
 
+/* Validate an address that is a possible candidate for an mmap() region */
+int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
+{
+	if (map_address == 0)
+		return 0;
+
+	/* Private mappings can only go in task address space */
+	if (vm_flags & VMA_PRIVATE) {
+		if (map_address >= USER_AREA_START ||
+	    	    map_address < USER_AREA_END) {
+			return 1;
+		} else
+			return 0;
+	/*
+	 * Shared mappings can *also* go in the utcb address space,
+	 * taking in account that utcb's are shared mappings done
+	 * by individual tasks.
+	 */
+	} else if (vm_flags & VMA_SHARED) {
+		if ((map_address >= UTCB_AREA_START &&
+		     map_address < UTCB_AREA_END) ||
+		    (map_address >= USER_AREA_START &&
+	    	     map_address < USER_AREA_END))
+			return 1;
+		else
+			return 0;
+	} else
+		BUG();
+}
 /*
  * Maps the given file with given flags at the given page offset to the given
  * task's address space at the specified virtual memory address and length.
@@ -487,8 +516,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 	}
 
 	/* Check invalid map address */
-	if (map_address == 0 || map_address < USER_AREA_START ||
-	    map_address >= USER_AREA_END) {
+	if (!mmap_address_validate(map_address, flags)) {
 
 		/* Get new map address for region of this size */
 		if ((int)(map_address =
