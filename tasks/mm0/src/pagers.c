@@ -266,7 +266,7 @@ struct vm_file *get_devzero(void)
 	struct vm_file *f;
 
 	list_for_each_entry(f, &vm_file_list, list)
-		if (f->type & VM_FILE_DEVZERO)
+		if ((f->type & VM_FILE_DEVZERO) == VM_FILE_DEVZERO)
 			return f;
 	return 0;
 }

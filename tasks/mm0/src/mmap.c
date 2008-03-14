@@ -461,7 +461,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset, struct tcb *task
 	/* Set up devzero if none given */
 	if (!mapfile) {
 	       if (flags & VMA_ANONYMOUS) {
-			mapfile = get_devzero();
+			BUG_ON(!(mapfile = get_devzero()));
 			file_offset = 0;
 	       } else
 			BUG();
