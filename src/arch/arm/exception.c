@@ -16,6 +16,14 @@
 #include INC_GLUE(message.h)
 #include INC_SUBARCH(mm.h)
 
+/* Abort debugging conditions */
+#define DEBUG_ABORTS
+#if defined (DEBUG_ABORTS)
+#define dbg_abort(...)	dprintk(__VA_ARGS__)
+#else
+#define dbg_abort(...)
+#endif
+
 /* Send data fault ipc to the faulty task's pager */
 void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 {
@@ -88,22 +96,22 @@ int check_aborts(u32 faulted_pc, u32 fsr, u32 far)
 	int ret = 0;
 
 	if (is_prefetch_abort(fsr)) {
-//		dprintk("Prefetch abort @ ", faulted_pc);
+		dprintk("Prefetch abort @ ", faulted_pc);
 		return 0;
 	}
 
 	switch (fsr & ARM_FSR_MASK) {
 	/* Aborts that are expected on page faults: */
 	case DABT_PERM_PAGE:
-//		dprintk("Page permission fault @ ", far);
+		dbg_abort("Page permission fault @ ", far);
 		ret = 0;
 		break;
 	case DABT_XLATE_PAGE:
-//		dprintk("Page translation fault @ ", far);
+		dbg_abort("Page translation fault @ ", far);
 		ret = 0;
 		break;
 	case DABT_XLATE_SECT:
-//		dprintk("Section translation fault @ ", far);
+		dbg_abort("Section translation fault @ ", far);
 		ret = 0;
 		break;
 
@@ -172,7 +180,7 @@ int check_aborts(u32 faulted_pc, u32 fsr, u32 far)
 void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 {
 	set_abort_type(fsr, ARM_DABT);
-//	dprintk("Data abort @ PC: ", faulted_pc);
+	dbg_abort("Data abort @ PC: ", faulted_pc);
 	if (check_aborts(faulted_pc, fsr, far) < 0) {
 		printascii("This abort can't be handled by any pager.\n");
 		goto error;
