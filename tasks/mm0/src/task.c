@@ -307,31 +307,38 @@ error:
 	BUG();
 }
 
+struct vm_file *initdata_next_bootfile(struct initdata *initdata)
+{
+	struct vm_file *file, *n;
+	list_for_each_entry_safe(file, n, &initdata->boot_file_list,
+				 list) {
+		list_del(&file->list);
+		return file;
+	}
+	return 0;
+}
+
 /*
  * Reads boot files from init data, determines their task ids if they
  * match with particular servers, and starts the tasks.
  */
 int start_boot_tasks(struct initdata *initdata)
 {
-	struct vm_file *file, *n;
+	struct vm_file *file;
 	struct svc_image *img;
 	struct task_ids ids;
 	int total = 0;
 
 	INIT_LIST_HEAD(&tcb_head.list);
 	do {
-		file = 0;
-		list_for_each_entry_safe(file, n, &initdata->boot_file_list,
-					 list) {
-			list_del(&file->list);
-			break;
-		}
+		file = initdata_next_bootfile(initdata);
 
 		if (file) {
 			BUG_ON(file->type != VM_FILE_BOOTFILE);
 			img = file->priv_data;
-			if (!strcmp(img->name, __PAGERNAME__))
+			if (!strcmp(img->name, __PAGERNAME__)) {
 				continue;
+			}
 			/* Set up task ids */
 			if (!strcmp(img->name, __VFSNAME__)) {
 				ids.tid = VFS_TID;

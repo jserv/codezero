@@ -473,6 +473,7 @@ int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
 	} else
 		BUG();
 }
+
 /*
  * Maps the given file with given flags at the given page offset to the given
  * task's address space at the specified virtual memory address and length.

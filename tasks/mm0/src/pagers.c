@@ -232,7 +232,7 @@ int init_boot_files(struct initdata *initdata)
 		list_add(&boot_file->vm_obj.list, &vm_object_list);
 
 		/* Add the file to initdata's bootfile list */
-		list_add(&boot_file->list, &initdata->boot_file_list);
+		list_add_tail(&boot_file->list, &initdata->boot_file_list);
 	}
 	return 0;
 }
