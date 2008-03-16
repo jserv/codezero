@@ -546,6 +546,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		return -ENOMEM;
 	}
 	vmo_link->obj = &mapfile->vm_obj;
+	mapfile->vm_obj.refcnt++;
 	list_add_tail(&vmo_link->list, &new->vm_obj_list);
 
 	/* Finished initialising the vma, add it to task */

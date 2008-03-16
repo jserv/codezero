@@ -86,38 +86,55 @@ directories for their respective licenses.
 Why yet another POSIX microkernel?
 
 There are many open source POSIX operating systems with advanced features such
-as *BSD and Linux. However these were originally not designed for embedded
-systems. Unix itself and all the tools built upon weren't meant for using on
-small devices. Accordingly, these operating systems contain a lot of historical
-code. Linux is well established, and targets a broad range of platforms and
-uses, but consequently embedded platforms don't always get enough emphasis. Also
-such well established, mature systems tend to oppose major design overhauls,
-which limits innovation to a certain extent. In addition, their code base is so
-big, that it gets more and more difficult to understand how their internals
-work. Usually much of the code is irrelevant to the problem, in case of embedded
-systems. Codezero is written from scratch to solely target embedded systems and
+as BSD versions and Linux. However, neither of these were originally designed
+for embedded systems. Multiple problems arise due to this fact.
+
+These systems are well established. They target a broad range of platforms and
+uses, but consequently their user base has saturated, and embedded platforms
+don't get enough emphasis.
+
+Unix itself and all the tools built upon weren't meant for using on small
+devices. Accordingly, these operating systems contain a lot of historical code.
+Their code base is so big, that it gets more and more difficult to understand
+how their internals work. On these systems usually much of the code is
+irrelevant to a new problem, and embedded systems tend to raise new problems
+often. Codezero is written from scratch to solely target embedded systems and
 as such the source code is %100 relevant. It is small and free from legacy code.
-Finally monolithic kernels may have issues with dependability due to much of the
-code sharing the same address space. Being a microkernel design, Codezero aims
-to defeat this problem and increase dependability.
 
-Other than these modern kernels, there is systems software targeting embedded
-devices. Most of them are proprietary, with their own users. Some of the open
-source ones are structurally too simplistic, and lack modern features such as
-paging. There are existing embedded OS'es that are well-designed, but Codezero
-provides alternative that will follow the open source development principles
-more closely. This will prove useful because many embedded systems still use
-older development methods and the right open source methodology would prove
-favorable in the fast-paced nature of development.
+From a design perspective, due to these kernels having a monolithic design, they
+may have issues with dependability due to much of the code sharing the same
+address space. This is an important issue on embedded systems since their
+operation is more sensitive to disruptions. Being a microkernel design, Codezero
+aims to defeat this problem and increase dependability.
 
-Finally, there are new ideas in OS literature that would improve Unix but aren't
-implemented either because they have no existing users or may break compatibility
-somewhat (e.g. some are presented in Plan 9). As well as practising realistic
-development methodologies, Codezero project aims to keep up with the latest OS
-literature and provide the opportunity to incorporate the latest ideas in OS
-technology.
+Other than these modern kernels, there are existing operating systems targeting
+embedded devices. Most of them are proprietary, with their own users. Some of
+them are structurally too simplistic, and lack modern features such as paging.
+There ones that are well established, but Codezero will contrast them by
+providing an alternative that will follow the open source development principles
+more closely. Many embedded systems still use older development methods and the
+right open source methodology would prove favorable in the fast-paced nature of
+development.
+
+Finally, there are new ideas in literature that would improve systems software
+but aren't implemented either because they have no existing users or may break
+compatibility (e.g. some are presented in Plan 9). Existing kernels tend to
+oppose major design overhauls, which limits their innovation capability for this
+kind of experimentation. As well as practising realistic development methods
+Codezero project aims to keep up with the latest OS literature and provide the
+opportunity to incorporate the latest ideas in OS technology.
 
 
+Can you summarise all this? Why should I use Codezero, again?
 
+Codezero is an operating system that targets embedded systems. It supports the
+most fundamental posix system calls. Different from other posix-like systems,
+it is based on a microkernel design. It supports modern features such as
+demand-paging, virtual filesystem support. It has a cleanly separated set of
+services, and it is small. Therefore it is a good candidate as systems software
+to be used on embedded systems. Currently it has little or no users, and yet it
+is about to become usable, therefore compared to systems with a saturated user
+base it is possible to tailor it rapidly towards the needs of any users who want
+to be the first to use it.
 
 

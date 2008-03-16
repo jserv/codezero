@@ -96,7 +96,7 @@ int check_aborts(u32 faulted_pc, u32 fsr, u32 far)
 	int ret = 0;
 
 	if (is_prefetch_abort(fsr)) {
-		dprintk("Prefetch abort @ ", faulted_pc);
+		dbg_abort("Prefetch abort @ ", faulted_pc);
 		return 0;
 	}
 

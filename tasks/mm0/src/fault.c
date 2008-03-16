@@ -271,10 +271,10 @@ int copy_on_write(struct fault_data *fault)
 	 * when there are shadows one is created because a fork had just
 	 * happened, in which case all shadows are rendered read-only.
 	 */
-	if (!(vmo->flags & VM_WRITE)) {
+	if (!(vmo_link->obj->flags & VM_WRITE)) {
 		if (!(shadow_link = vma_create_shadow()))
 			return -ENOMEM;
-
+		printf("%s: Created a shadow.\n", __TASKNAME__);
 		/* Initialise the shadow */
 		shadow = shadow_link->obj;
 		shadow->refcnt = 1;
@@ -328,7 +328,7 @@ int copy_on_write(struct fault_data *fault)
 
 	/* Update page details */
 	spin_lock(&new_page->lock);
-	new_page->refcnt = 1;
+	new_page->refcnt = 0;
 	new_page->owner = copier_link->obj;
 	new_page->offset = file_offset;
 	new_page->virtual = 0;
@@ -343,6 +343,8 @@ int copy_on_write(struct fault_data *fault)
 	       (void *)page_align(fault->address), 1,
 	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 	       fault->task->tid);
+	printf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
+	       page_align(fault->address), fault->task->tid);
 
 	/*
 	 * Finished handling the actual fault, now check for possible
@@ -403,11 +405,14 @@ int __do_page_fault(struct fault_data *fault)
 			       __TASKNAME__);
 			BUG();
 		}
+
 		/* Map it to faulty task */
 		l4_map((void *)page_to_phys(page),
 		       (void *)page_align(fault->address), 1,
 		       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 		       fault->task->tid);
+		printf("%s: Mapped 0x%x as readable to tid %d.\n", __TASKNAME__,
+		       page_align(fault->address), fault->task->tid);
 	}
 
 	/* Handle write */
@@ -435,6 +440,8 @@ int __do_page_fault(struct fault_data *fault)
 			       (void *)page_align(fault->address), 1,
 			       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 			       fault->task->tid);
+			printf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
+			       page_align(fault->address), fault->task->tid);
 		}
 		/* FIXME: Just do fs files for now, anon shm objects later. */
 		BUG_ON((vma_flags & VMA_SHARED) && (vma_flags & VMA_ANONYMOUS));

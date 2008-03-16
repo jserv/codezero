@@ -2,6 +2,7 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <arch/mm.h>
+#include <task.h>
 
 /* Extracts generic protection flags from architecture-specific pte */
 unsigned int vm_prot_flags(pte_t pte)
@@ -51,11 +52,9 @@ void set_generic_fault_params(struct fault_data *fault)
 		else
 			BUG();
 	}
-	/*
 	printf("%s: Handling %s fault (%s abort) from %d. fault @ 0x%x\n",
 	       __TASKNAME__, (fault->reason & VM_READ) ? "read" : "write",
 	       is_prefetch_abort(fault->kdata->fsr) ? "prefetch" : "data",
 	       fault->task->tid, fault->address);
-	*/
 }
 

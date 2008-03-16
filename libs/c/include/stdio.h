@@ -161,7 +161,7 @@ int setvbuf(FILE *, char *, int, size_t);
 /* 7.19.6 Format i/o functions */
 int fprintf(FILE *, const char *, ...);
 int fscanf(FILE *, const char *, ...);
-int printf(const char *, ...);
+int printf(const char *format, ...); __attribute__((format (printf, 1, 2)));
 int scanf(const char *, ...);
 int snprintf(char *, size_t , const char *, ...);
 int sprintf(char *, const char *, ...);

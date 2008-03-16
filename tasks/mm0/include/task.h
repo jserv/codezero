@@ -13,6 +13,7 @@
 #include <l4lib/types.h>
 #include <l4lib/utcb.h>
 #include <lib/addr.h>
+#include <l4/api/kip.h>
 
 #define __TASKNAME__		__PAGERNAME__
 

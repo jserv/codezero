@@ -181,21 +181,33 @@ struct page *bootfile_page_in(struct vm_object *vm_obj,
 {
 	struct vm_file *boot_file = vm_object_to_file(vm_obj);
 	struct svc_image *img = boot_file->priv_data;
-	struct page *page = phys_to_page(img->phys_start +
-					 __pfn_to_addr(offset));
+	struct page *page;
 
-	/* TODO: Check file length against page offset! */
+	/* Check first if the file has such a page at all */
+	if (__pfn(page_align_up(boot_file->length) <= offset)) {
+		printf("%s: %s: Trying to look up page %d, but file length "
+		       "is %d bytes.\n", __TASKNAME__, __FUNCTION__,
+		       offset, boot_file->length);
+		BUG();
+	}
 
-	/* Update page */
-	page_init(page);
-	page->refcnt++;
+	/* The page is not resident in page cache. */
+	if (!(page = find_page(vm_obj, offset))) {
+		page = phys_to_page(img->phys_start + __pfn_to_addr(offset));
 
-	/* Update object */
-	vm_obj->npages++;
+		/* Update page */
+		page_init(page);
+		page->refcnt++;
+		page->owner = vm_obj;
+		page->offset = offset;
 
-	/* Add the page to owner's list of in-memory pages */
-	BUG_ON(!list_empty(&page->list));
-	insert_page_olist(page, vm_obj);
+		/* Update object */
+		vm_obj->npages++;
+
+		/* Add the page to owner's list of in-memory pages */
+		BUG_ON(!list_empty(&page->list));
+		insert_page_olist(page, vm_obj);
+	}
 
 	return page;
 }
