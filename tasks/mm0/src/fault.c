@@ -19,6 +19,13 @@
 #include <shm.h>
 #include <file.h>
 
+#define DEBUG_FAULT_HANDLING
+#ifdef DEBUG_FAULT_HANDLING
+#define dprint(...)	printf(__VA_ARGS__)
+#else
+#define dprint(...)
+#endif
+
 unsigned long fault_to_file_offset(struct fault_data *fault)
 {
 	/* Fault's offset in its vma */
@@ -61,7 +68,22 @@ int vma_drop_link(struct vm_obj_link *shadower_link,
 	list_del(&orig_link->list);
 
 	/* Reduce object's ref count */
-	BUG_ON(--orig_link->obj->refcnt <= 0);
+	orig_link->obj->refcnt--;
+
+	/*
+	 * Refcount could go as low as 1 but not zero because shortly
+	 * after it goes down to one, it is removed from the link
+	 * chain so it can never exist with a refcount less than 1
+	 * in the chain.
+	 */
+	if (orig_link->obj->refcnt < 1) {
+		printf("%s: Shadower:\n", __FUNCTION__);
+		vm_object_print(shadower_link->obj);
+
+		printf("%s: Original:\n", __FUNCTION__);
+		vm_object_print(orig_link->obj);
+		BUG();
+	}
 
 	/*
 	 * Remove the shadower from original's shadower list.
@@ -81,14 +103,14 @@ int vma_drop_link(struct vm_obj_link *shadower_link,
  * Note this just checks the page cache, so if any objects have pages
  * swapped to disk, this function does not rule.
  */
-int vm_object_check_subset(struct vm_object *copier,
-			   struct vm_object *lesser)
+int vm_object_is_subset(struct vm_object *copier,
+			struct vm_object *lesser)
 {
 	struct page *pc, *pl;
 
 	/* Copier must have equal or more pages to overlap lesser */
 	if (copier->npages < lesser->npages)
-		return 1;
+		return 0;
 
 	/*
 	 * Do a page by page comparison. Every lesser page
@@ -96,12 +118,12 @@ int vm_object_check_subset(struct vm_object *copier,
 	 */
 	list_for_each_entry(pl, &lesser->page_cache, list)
 		if (!(pc = find_page(copier, pl->offset)))
-			return 1;
+			return 0;
 	/*
 	 * For all pages of lesser vmo, there seems to be a page
 	 * in the copier vmo. So lesser is a subset of copier
 	 */
-	return 0;
+	return 1;
 }
 
 /* Merges link 1 to link 2 */
@@ -262,6 +284,8 @@ int copy_on_write(struct fault_data *fault)
 		       __TASKNAME__, __FUNCTION__);
 		BUG();
 	}
+	printf("Top object:\n");
+	vm_object_print(vmo_link->obj);
 
 	/* Is the object read-only? Create a shadow object if so.
 	 *
@@ -292,9 +316,13 @@ int copy_on_write(struct fault_data *fault)
 		 */
 		list_add(&shadow_link->list, &vma->vm_obj_list);
 
+		/* Add to global object list */
+		list_add(&shadow->list, &vm_object_list);
+
 		/* Shadow is the copier object */
 		copier_link = shadow_link;
 	} else {
+		printf("No shadows. Going to add to topmost r/w shadow object\n");
 		/* No new shadows, the topmost r/w vmo is the copier object */
 		copier_link = vmo_link;
 
@@ -332,11 +360,12 @@ int copy_on_write(struct fault_data *fault)
 	new_page->owner = copier_link->obj;
 	new_page->offset = file_offset;
 	new_page->virtual = 0;
+	BUG_ON(!list_empty(&new_page->list));
+	spin_unlock(&page->lock);
 
 	/* Add the page to owner's list of in-memory pages */
-	BUG_ON(!list_empty(&new_page->list));
 	insert_page_olist(new_page, new_page->owner);
-	spin_unlock(&page->lock);
+	new_page->owner->npages++;
 
 	/* Map the new page to faulty task */
 	l4_map((void *)page_to_phys(new_page),
@@ -345,6 +374,7 @@ int copy_on_write(struct fault_data *fault)
 	       fault->task->tid);
 	printf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
 	       page_align(fault->address), fault->task->tid);
+	vm_object_print(new_page->owner);
 
 	/*
 	 * Finished handling the actual fault, now check for possible
@@ -358,7 +388,7 @@ int copy_on_write(struct fault_data *fault)
 	}
 
 	/* Compare whether page caches overlap */
-	if (vm_object_check_subset(copier_link->obj, vmo_link->obj)) {
+	if (vm_object_is_subset(copier_link->obj, vmo_link->obj)) {
 		/*
 		 * They do overlap, so keep reference to object but
 		 * drop and delete the vma link.
@@ -405,6 +435,7 @@ int __do_page_fault(struct fault_data *fault)
 			       __TASKNAME__);
 			BUG();
 		}
+		BUG_ON(!page);
 
 		/* Map it to faulty task */
 		l4_map((void *)page_to_phys(page),
@@ -413,6 +444,7 @@ int __do_page_fault(struct fault_data *fault)
 		       fault->task->tid);
 		printf("%s: Mapped 0x%x as readable to tid %d.\n", __TASKNAME__,
 		       page_align(fault->address), fault->task->tid);
+		vm_object_print(vmo);
 	}
 
 	/* Handle write */
@@ -423,6 +455,8 @@ int __do_page_fault(struct fault_data *fault)
 		}
 		/* Regular files */
 		if ((vma_flags & VMA_SHARED) && !(vma_flags & VMA_ANONYMOUS)) {
+			/* No regular files are mapped yet */
+			BUG();
 			file_offset = fault_to_file_offset(fault);
 			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
 							  &vma->vm_obj_list)));
@@ -434,6 +468,7 @@ int __do_page_fault(struct fault_data *fault)
 				       __TASKNAME__);
 				BUG();
 			}
+			BUG_ON(!page);
 
 			/* Map it to faulty task */
 			l4_map((void *)page_to_phys(page),
@@ -442,6 +477,7 @@ int __do_page_fault(struct fault_data *fault)
 			       fault->task->tid);
 			printf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
 			       page_align(fault->address), fault->task->tid);
+			vm_object_print(vmo);
 		}
 		/* FIXME: Just do fs files for now, anon shm objects later. */
 		BUG_ON((vma_flags & VMA_SHARED) && (vma_flags & VMA_ANONYMOUS));

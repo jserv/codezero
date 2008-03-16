@@ -12,7 +12,7 @@
 #include <file.h>
 #include <init.h>
 #include INC_ARCH(bootdesc.h)
-
+#include <l4/api/errno.h>
 
 struct page *page_init(struct page *page)
 {
@@ -143,8 +143,13 @@ struct vm_swap_node {
  */
 struct page *swap_page_in(struct vm_object *vm_obj, unsigned long file_offset)
 {
+	struct page *p;
+
 	/* No swapping yet, so the page is either here or not here. */
-	return find_page(vm_obj, file_offset);
+	if (!(p = find_page(vm_obj, file_offset)))
+		return PTR_ERR(-EINVAL);
+	else
+		return p;
 }
 
 struct vm_pager swap_pager = {
@@ -278,7 +283,7 @@ struct vm_file *get_devzero(void)
 	struct vm_file *f;
 
 	list_for_each_entry(f, &vm_file_list, list)
-		if ((f->type & VM_FILE_DEVZERO) == VM_FILE_DEVZERO)
+		if (f->type == VM_FILE_DEVZERO)
 			return f;
 	return 0;
 }
@@ -299,11 +304,12 @@ int init_devzero(void)
 
 	/* Allocate and initialise devzero file */
 	devzero = vm_file_create();
-	devzero->vm_obj.npages = ~0;
-	devzero->vm_obj.pager = &devzero_pager;
-	devzero->vm_obj.flags = VM_OBJ_FILE;
 	devzero->type = VM_FILE_DEVZERO;
 	devzero->priv_data = zpage;
+	devzero->length = page_align(~0UL); /* So we dont wraparound to 0! */
+	devzero->vm_obj.npages = __pfn(devzero->length);
+	devzero->vm_obj.pager = &devzero_pager;
+	devzero->vm_obj.flags = VM_OBJ_FILE;
 
 	list_add(&devzero->vm_obj.list, &vm_object_list);
 	list_add(&devzero->list, &vm_file_list);

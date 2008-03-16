@@ -266,7 +266,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	/* mmap each task's environment as anonymous memory. */
 	if ((err = do_mmap(0, 0, task, task->env_start,
 			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
-			   __pfn(task->env_end - task->env_start)) < 0)) {
+			   __pfn(task->env_end - task->env_start))) < 0) {
 		printf("do_mmap: Mapping environment failed with %d.\n",
 		       err);
 		goto error;
@@ -275,7 +275,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	/* mmap each task's stack as anonymous memory. */
 	if ((err = do_mmap(0, 0, task, task->stack_start,
 			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
-			   __pfn(task->stack_end - task->stack_start)) < 0)) {
+			   __pfn(task->stack_end - task->stack_start))) < 0) {
 		printf("do_mmap: Mapping stack failed with %d.\n", err);
 		goto error;
 	}
@@ -285,7 +285,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	       task->utcb_address);
 	if ((err = do_mmap(0, 0, task, task->utcb_address,
 			   VM_READ | VM_WRITE | VMA_SHARED | VMA_ANONYMOUS,
-			   __pfn(DEFAULT_UTCB_SIZE)) < 0)) {
+			   __pfn(DEFAULT_UTCB_SIZE))) < 0) {
 		printf("do_mmap: Mapping utcb failed with %d.\n", err);
 		goto error;
 	}
@@ -296,7 +296,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 
 	/* Start the thread */
 	printf("Starting task with id %d\n", task->tid);
-	if ((err = l4_thread_control(THREAD_RUN, ids) < 0)) {
+	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
 		printf("l4_thread_control failed with %d\n", err);
 		goto error;
 	}

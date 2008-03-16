@@ -196,6 +196,7 @@ struct vm_object *vm_object_alloc_init(void);
 struct vm_object *vm_object_create(void);
 struct vm_file *vm_file_create(void);
 int vm_object_delete(struct vm_object *vmo);
+void vm_object_print(struct vm_object *vmo);
 
 /* Main page fault entry point */
 void page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);

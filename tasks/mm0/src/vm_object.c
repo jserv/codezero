@@ -9,6 +9,36 @@
 #include <kmalloc/kmalloc.h>
 
 
+void print_cache_pages(struct vm_object *vmo)
+{
+	struct page *p;
+
+	printf("Pages:\n======\n");
+	list_for_each_entry(p, &vmo->page_cache, list) {
+		printf("Page offset: 0x%x, virtual: 0x%x, refcnt: %d\n", p->offset,
+		       p->virtual, p->refcnt);
+	}
+}
+
+void vm_object_print(struct vm_object *vmo)
+{
+	struct vm_file *f;
+
+	printf("Object type: %s %s. Refs: %d. Pages in cache: %d.\n",
+	       vmo->flags & VM_WRITE ? "writeable" : "read-only",
+	       vmo->flags & VM_OBJ_FILE ? "file" : "shadow", vmo->refcnt,
+	       vmo->npages);
+	if (vmo->flags & VM_OBJ_FILE) {
+		f = vm_object_to_file(vmo);
+		printf("File type: %s\n",
+		       (f->type == VM_FILE_DEVZERO) ? "devzero" :
+		       ((f->type == VM_FILE_BOOTFILE) ? "bootfile" : "regular"));
+		// printf("File type: 0x%x\n", f->type);
+	}
+	print_cache_pages(vmo);
+	printf("\n");
+}
+
 /* Global list of in-memory vm objects. */
 LIST_HEAD(vm_object_list);
 

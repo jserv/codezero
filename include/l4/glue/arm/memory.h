@@ -25,7 +25,7 @@
 #define SECTION_MASK			ARM_SECTION_MASK
 #define SECTION_BITS			ARM_SECTION_BITS
 
-/* Aligns to the upper page (ceiling) */
+/* Aligns to the upper page (ceiling) FIXME: Must add a wraparound checker. */
 #define page_align_up(addr) 		((((unsigned int)(addr)) + \
 					  (PAGE_SIZE - 1)) & \
 					 (~PAGE_MASK))
