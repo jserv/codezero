@@ -19,13 +19,6 @@
 #include <shm.h>
 #include <file.h>
 
-#define DEBUG_FAULT_HANDLING
-#ifdef DEBUG_FAULT_HANDLING
-#define dprint(...)	printf(__VA_ARGS__)
-#else
-#define dprint(...)
-#endif
-
 unsigned long fault_to_file_offset(struct fault_data *fault)
 {
 	/* Fault's offset in its vma */
@@ -284,8 +277,6 @@ int copy_on_write(struct fault_data *fault)
 		       __TASKNAME__, __FUNCTION__);
 		BUG();
 	}
-	printf("Top object:\n");
-	vm_object_print(vmo_link->obj);
 
 	/* Is the object read-only? Create a shadow object if so.
 	 *
@@ -298,7 +289,7 @@ int copy_on_write(struct fault_data *fault)
 	if (!(vmo_link->obj->flags & VM_WRITE)) {
 		if (!(shadow_link = vma_create_shadow()))
 			return -ENOMEM;
-		printf("%s: Created a shadow.\n", __TASKNAME__);
+		dprintf("%s: Created a shadow.\n", __TASKNAME__);
 		/* Initialise the shadow */
 		shadow = shadow_link->obj;
 		shadow->refcnt = 1;
@@ -322,7 +313,7 @@ int copy_on_write(struct fault_data *fault)
 		/* Shadow is the copier object */
 		copier_link = shadow_link;
 	} else {
-		printf("No shadows. Going to add to topmost r/w shadow object\n");
+		dprintf("No shadows. Going to add to topmost r/w shadow object\n");
 		/* No new shadows, the topmost r/w vmo is the copier object */
 		copier_link = vmo_link;
 
@@ -336,7 +327,7 @@ int copy_on_write(struct fault_data *fault)
 	}
 
 	/* Traverse the list of read-only vm objects and search for the page */
-	while (!(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+	while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
 							  file_offset))) {
 		if (!(vmo_link = vma_next_link(&vmo_link->list,
 					       &vma->vm_obj_list))) {
@@ -372,8 +363,8 @@ int copy_on_write(struct fault_data *fault)
 	       (void *)page_align(fault->address), 1,
 	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 	       fault->task->tid);
-	printf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
-	       page_align(fault->address), fault->task->tid);
+	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
+		page_align(fault->address), fault->task->tid);
 	vm_object_print(new_page->owner);
 
 	/*
@@ -419,21 +410,30 @@ int __do_page_fault(struct fault_data *fault)
 	struct vm_area *vma = fault->vma;
 	unsigned long file_offset;
 	struct vm_obj_link *vmo_link;
-	struct vm_object *vmo;
 	struct page *page;
 
 	/* Handle read */
 	if ((reason & VM_READ) && (pte_flags & VM_NONE)) {
 		file_offset = fault_to_file_offset(fault);
-		BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
-						  &vma->vm_obj_list)));
-		vmo = vmo_link->obj;
 
-		/* Get the page from its pager */
-		if (IS_ERR(page = vmo->pager->ops.page_in(vmo, file_offset))) {
-			printf("%s: Could not obtain faulty page.\n",
-			       __TASKNAME__);
+		/* Get the first object, either original file or a shadow */
+		if (!(vmo_link = vma_next_link(&vma->vm_obj_list, &vma->vm_obj_list))) {
+			printf("%s:%s: No vm object in vma!\n",
+			       __TASKNAME__, __FUNCTION__);
 			BUG();
+		}
+
+		/* Traverse the list of read-only vm objects and search for the page */
+		while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+								       file_offset))) {
+			if (!(vmo_link = vma_next_link(&vmo_link->list,
+						       &vma->vm_obj_list))) {
+				printf("%s:%s: Traversed all shadows and the original "
+				       "file's vm_object, but could not find the "
+				       "faulty page in this vma.\n",__TASKNAME__,
+				       __FUNCTION__);
+				BUG();
+			}
 		}
 		BUG_ON(!page);
 
@@ -442,17 +442,17 @@ int __do_page_fault(struct fault_data *fault)
 		       (void *)page_align(fault->address), 1,
 		       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 		       fault->task->tid);
-		printf("%s: Mapped 0x%x as readable to tid %d.\n", __TASKNAME__,
-		       page_align(fault->address), fault->task->tid);
-		vm_object_print(vmo);
+		dprintf("%s: Mapped 0x%x as readable to tid %d.\n", __TASKNAME__,
+			page_align(fault->address), fault->task->tid);
+		vm_object_print(vmo_link->obj);
 	}
 
 	/* Handle write */
 	if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
 		/* Copy-on-write */
-		if (vma_flags & VMA_PRIVATE) {
+		if (vma_flags & VMA_PRIVATE)
 			copy_on_write(fault);
-		}
+
 		/* Regular files */
 		if ((vma_flags & VMA_SHARED) && !(vma_flags & VMA_ANONYMOUS)) {
 			/* No regular files are mapped yet */
@@ -460,10 +460,10 @@ int __do_page_fault(struct fault_data *fault)
 			file_offset = fault_to_file_offset(fault);
 			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
 							  &vma->vm_obj_list)));
-			vmo = vmo_link->obj;
 
 			/* Get the page from its pager */
-			if (IS_ERR(page = vmo->pager->ops.page_in(vmo, file_offset))) {
+			if (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+									    file_offset))) {
 				printf("%s: Could not obtain faulty page.\n",
 				       __TASKNAME__);
 				BUG();
@@ -475,11 +475,16 @@ int __do_page_fault(struct fault_data *fault)
 			       (void *)page_align(fault->address), 1,
 			       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 			       fault->task->tid);
-			printf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
-			       page_align(fault->address), fault->task->tid);
-			vm_object_print(vmo);
+			dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
+				page_align(fault->address), fault->task->tid);
+			vm_object_print(vmo_link->obj);
 		}
 		/* FIXME: Just do fs files for now, anon shm objects later. */
+		/* Things to think about:
+		 * - Is utcb a shm memory really? Then each task must map it in via
+		 *   shmget(). FS0 must map all user tasks' utcb via shmget() as well.
+		 *   For example to pass on pathnames etc.
+		 */
 		BUG_ON((vma_flags & VMA_SHARED) && (vma_flags & VMA_ANONYMOUS));
 	}
 

@@ -3,6 +3,7 @@
  */
 #include <arch/mm.h>
 #include <task.h>
+#include <vm_area.h>
 
 /* Extracts generic protection flags from architecture-specific pte */
 unsigned int vm_prot_flags(pte_t pte)
@@ -23,6 +24,18 @@ unsigned int vm_prot_flags(pte_t pte)
 
 	return vm_prot_flags;
 }
+
+#if defined(DEBUG_FAULT_HANDLING)
+void print_fault_params(struct fault_data *fault)
+{
+	printf("%s: Handling %s fault (%s abort) from %d. fault @ 0x%x\n",
+	       __TASKNAME__, (fault->reason & VM_READ) ? "read" : "write",
+	       is_prefetch_abort(fault->kdata->fsr) ? "prefetch" : "data",
+	       fault->task->tid, fault->address);
+}
+#else
+void print_fault_params(struct fault_data *fault) { }
+#endif
 
 
 /*
@@ -52,9 +65,6 @@ void set_generic_fault_params(struct fault_data *fault)
 		else
 			BUG();
 	}
-	printf("%s: Handling %s fault (%s abort) from %d. fault @ 0x%x\n",
-	       __TASKNAME__, (fault->reason & VM_READ) ? "read" : "write",
-	       is_prefetch_abort(fault->kdata->fsr) ? "prefetch" : "data",
-	       fault->task->tid, fault->address);
+	print_fault_params(fault);
 }
 

@@ -14,6 +14,13 @@
 #include <arch/mm.h>
 #include <lib/spinlock.h>
 
+// #define DEBUG_FAULT_HANDLING
+#ifdef DEBUG_FAULT_HANDLING
+#define dprintf(...)	printf(__VA_ARGS__)
+#else
+#define dprintf(...)
+#endif
+
 /* Protection flags */
 #define VM_NONE				(1 << 0)
 #define VM_READ				(1 << 1)

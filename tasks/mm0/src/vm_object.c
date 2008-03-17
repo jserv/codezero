@@ -9,13 +9,23 @@
 #include <kmalloc/kmalloc.h>
 
 
+// #define DEBUG_FAULT_HANDLING
+#ifdef DEBUG_FAULT_HANDLING
+#define dprintf(...)	printf(__VA_ARGS__)
+#else
+#define dprintf(...)
+#endif
+
+#if defined(DEBUG_FAULT_HANDLING)
 void print_cache_pages(struct vm_object *vmo)
 {
 	struct page *p;
 
-	printf("Pages:\n======\n");
+	if (!list_empty(&vmo->page_cache))
+		printf("Pages:\n======\n");
+
 	list_for_each_entry(p, &vmo->page_cache, list) {
-		printf("Page offset: 0x%x, virtual: 0x%x, refcnt: %d\n", p->offset,
+		dprintf("Page offset: 0x%x, virtual: 0x%x, refcnt: %d\n", p->offset,
 		       p->virtual, p->refcnt);
 	}
 }
@@ -38,6 +48,10 @@ void vm_object_print(struct vm_object *vmo)
 	print_cache_pages(vmo);
 	printf("\n");
 }
+#else
+void print_cache_pages(struct vm_object *vmo) { }
+void vm_object_print(struct vm_object *vmo) { }
+#endif
 
 /* Global list of in-memory vm objects. */
 LIST_HEAD(vm_object_list);

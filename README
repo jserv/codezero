@@ -101,8 +101,8 @@ irrelevant to a new problem, and embedded systems tend to raise new problems
 often. Codezero is written from scratch to solely target embedded systems and
 as such the source code is %100 relevant. It is small and free from legacy code.
 
-From a design perspective, due to these kernels having a monolithic design, they
-may have issues with dependability due to much of the code sharing the same
+From a design perspective, these kernels have a monolithic design, and as such
+they may have issues with dependability due to much of the code sharing the same
 address space. This is an important issue on embedded systems since their
 operation is more sensitive to disruptions. Being a microkernel design, Codezero
 aims to defeat this problem and increase dependability.
@@ -112,9 +112,9 @@ embedded devices. Most of them are proprietary, with their own users. Some of
 them are structurally too simplistic, and lack modern features such as paging.
 There ones that are well established, but Codezero will contrast them by
 providing an alternative that will follow the open source development principles
-more closely. Many embedded systems still use older development methods and the
-right open source methodology would prove favorable in the fast-paced nature of
-development.
+more closely. Many embedded software projects still use older development
+methods and the right open source methodology would prove favorable in the
+fast-paced nature of development.
 
 Finally, there are new ideas in literature that would improve systems software
 but aren't implemented either because they have no existing users or may break
@@ -128,13 +128,13 @@ opportunity to incorporate the latest ideas in OS technology.
 Can you summarise all this? Why should I use Codezero, again?
 
 Codezero is an operating system that targets embedded systems. It supports the
-most fundamental posix system calls. Different from other posix-like systems,
+most fundamental posix features. Different from other posix-like systems,
 it is based on a microkernel design. It supports modern features such as
 demand-paging, virtual filesystem support. It has a cleanly separated set of
-services, and it is small. Therefore it is a good candidate as systems software
-to be used on embedded systems. Currently it has little or no users, and yet it
-is about to become usable, therefore compared to systems with a saturated user
-base it is possible to tailor it rapidly towards the needs of any users who want
-to be the first to use it.
+services, and it is small. For these reasons it is a good candidate as systems
+software to be used on embedded systems. Currently it has little or no users,
+therefore compared to systems with a saturated user base it is possible to
+tailor it rapidly towards the needs of any users who want to be the first to
+incorporate it to their needs.
 
 
