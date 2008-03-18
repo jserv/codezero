@@ -15,23 +15,20 @@
  * needed for all ipcs. Those mrs are defined the kernel message.h
  */
 
-/* Compact utcb for now! :-) */
+/*
+ * This is a per-task private structure where message registers are
+ * pushed for ipc. Its *not* TLS, but can be part of TLS when it is
+ * supported.
+ */
 struct utcb {
 	u32 mr[MR_TOTAL];
 	u32 tid;		/* Thread id */
-
-	/*
-	 * For passing ipc data larger than mrs,
-	 * that is, if the callee is allowed to map it
-	 */
-	char buf[];
-};
-extern struct utcb *utcb;
+}; __attribute__((__packed__));
+extern struct utcb utcb;
 
 static inline struct utcb *l4_get_utcb()
 {
-	return utcb;
-	// (struct utcb **)USER_UTCB_REF;
+	return &utcb;
 }
 
 /* Functions to read/write utcb registers */

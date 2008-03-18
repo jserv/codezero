@@ -19,10 +19,10 @@
 /* For ping ponging */
 #define L4_IPC_TAG_WAIT			3
 
-/* To negotiate a shared memory mapping */
-#define L4_IPC_TAG_SHM			4
+/* To obtain utcb address */
+#define L4_IPC_TAG_UTCB			4
 
-/* To negotiate a grant mapping */
+/* XXX: unused */
 #define L4_IPC_TAG_GRANT		5
 
 /* Posix system call tags */

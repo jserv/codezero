@@ -20,7 +20,7 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 	write_mr(L4SYS_ARG1, (unsigned long)buf);
 	write_mr(L4SYS_ARG2, count);
 
-	/* Call pager with shmget() request. Check ipc error. */
+	/* Call pager with readdir() request. Check ipc error. */
 	if ((cnt = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_READDIR)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
@@ -42,8 +42,8 @@ static inline int l4_read(int fd, void *buf, size_t count)
 	write_mr(L4SYS_ARG1, (unsigned long)buf);
 	write_mr(L4SYS_ARG2, count);
 
-	/* Call pager with shmget() request. Check ipc error. */
-	if ((cnt = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_READ)) < 0) {
+	/* Call pager with read() request. Check ipc error. */
+	if ((cnt = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_READ)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
 	}
