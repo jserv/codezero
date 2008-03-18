@@ -1,7 +1,7 @@
 
 		Codezero Microkernel 'Toy' release
 
-		Copyright (C) 2007 Bahadir Balban
+		Copyright (C) 2007, 2008 Bahadir Balban
 
 
 What is Codezero?
@@ -62,11 +62,13 @@ for its own memory partition. This feature provides the option of having an
 adjustable mixture of generalisation and specialisation of system services at
 the same run-time, by using a combination of Codezero's abstract posix-like
 page/file management services and an application-specific pager that depends on
-its own paging abilities. For example a critical task could both use posix-like
-files benefiting from the abstraction and simplification that it brings, but at
-the same time rely on its own page-fault handling for its critical data so that
-even though it handles its memory in a specialised way, it does not depend on
-another pager's grace for correct, stable operation.
+its own paging abilities. For example a critical task could both use mm0/fs0's
+posix-like files benefiting from the abstraction and simplification that it
+brings, but at the same time rely on its own page-fault handling for its
+critical data so that even though it handles its memory in a specialised way,
+it does not depend on another pager's grace for correct, stable operation.
+Similarly, a whole operating system can be virtualised and both native and
+virtualised applications can run on the same run-time.
 
 
 License:
@@ -128,13 +130,13 @@ opportunity to incorporate the latest ideas in OS technology.
 Can you summarise all this? Why should I use Codezero, again?
 
 Codezero is an operating system that targets embedded systems. It supports the
-most fundamental posix features. Different from other posix-like systems,
-it is based on a microkernel design. It supports modern features such as
-demand-paging, virtual filesystem support. It has a cleanly separated set of
-services, and it is small. For these reasons it is a good candidate as systems
-software to be used on embedded systems. Currently it has little or no users,
-therefore compared to systems with a saturated user base it is possible to
-tailor it rapidly towards the needs of any users who want to be the first to
-incorporate it to their needs.
+most fundamental posix calls and modern features such as demand-paging and has a
+virtual filesystem layer. Different from other posix-like systems, it is based
+on a microkernel design. It has a cleanly separated set of services, it is small
+and well-focused. Its source code is also freely available. For these reasons it
+is a good candidate as systems software to be used on embedded platforms.
+Currently it has little or no users, therefore compared to systems with a
+saturated user base it is possible to tailor it rapidly towards the needs of any
+users who want to be the first to incorporate it for their needs.
 
 

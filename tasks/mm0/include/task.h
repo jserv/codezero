@@ -20,7 +20,7 @@
 #define TASK_FILES_MAX			32
 
 /* POSIX minimum is 4Kb */
-#define DEFAULT_ENV_SIZE		SZ_16K
+#define DEFAULT_ENV_SIZE		SZ_4K
 #define DEFAULT_STACK_SIZE		SZ_16K
 #define DEFAULT_UTCB_SIZE		PAGE_SIZE
 
