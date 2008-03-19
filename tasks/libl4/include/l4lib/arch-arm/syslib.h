@@ -65,10 +65,14 @@ static inline int l4_send(l4id_t to, unsigned int tag)
 
 static inline int l4_sendrecv(l4id_t to, l4id_t from, unsigned int tag)
 {
+	int err;
+
 	BUG_ON(to == L4_NILTHREAD || from == L4_NILTHREAD);
 	l4_set_tag(tag);
 
-	return l4_ipc(to, from);
+	err = l4_ipc(to, from);
+
+	return err;
 }
 
 static inline int l4_receive(l4id_t from)
@@ -93,16 +97,25 @@ static inline int l4_get_retval(void)
 	return read_mr(MR_RETURN);
 }
 
+static inline void l4_print_mrs()
+{
+	printf("Message registers: 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n",
+	       read_mr(0), read_mr(1), read_mr(2), read_mr(3),
+	       read_mr(4), read_mr(5));
+}
+
 /* Servers:
  * Return the ipc result back to requesting task.
  */
 static inline int l4_ipc_return(int retval)
 {
-	unsigned int tag = l4_get_tag();
+	// unsigned int tag = l4_get_tag();
 	l4id_t sender = l4_get_sender();
 
 	l4_set_retval(retval);
-	return l4_send(sender, tag);
+
+	/* Setting the tag may overwrite retval so we l4_send without tagging */
+	return l4_ipc(sender, L4_NILTHREAD);
 }
 
 /* A helper that translates and maps a physical address to virtual */

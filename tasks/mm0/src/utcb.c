@@ -52,7 +52,6 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 			task->utcb_address = (unsigned long)utcb_vaddr_new();
 
 		/* Return it to requester */
-		printf("%s: Returning 0x%x\n", __FUNCTION__, task->utcb_address);
 		return l4_ipc_return(task->utcb_address);
 
 	/* A task is asking for someone else's utcb */
@@ -64,8 +63,6 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 			 * none allocated so far, requester gets 0. We don't
 			 * allocate one here.
 			 */
-			printf("%s: Returning 0x%x\n", __FUNCTION__,
-			       task->utcb_address);
 			return l4_ipc_return(task->utcb_address);
 		}
 	}
