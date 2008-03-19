@@ -27,13 +27,13 @@ int l4_shmget(l4id_t key, int size, int shmflg)
 		return err;
 	}
 	/* Check if syscall itself was successful */
-	if ((err = l4_get_retval()) < 0) {
+	if (IS_ERR(err = l4_get_retval())) {
 		printf("%s: SHMGET Error: %d.\n", __FUNCTION__, err);
 		return err;
-
 	}
-	/* Obtain shmid. */
-	return read_mr(L4SYS_ARG0);
+
+	/* Otherwise err has the positive id number */
+	return err;
 }
 
 void *l4_shmat(l4id_t shmid, const void *shmaddr, int shmflg)
@@ -50,13 +50,13 @@ void *l4_shmat(l4id_t shmid, const void *shmaddr, int shmflg)
 		return PTR_ERR(err);
 	}
 	/* Check if syscall itself was successful */
-	if ((err = l4_get_retval()) < 0) {
+	if (IS_ERR(err = l4_get_retval())) {
 		printf("%s: SHMAT Error: %d.\n", __FUNCTION__, err);
 		return PTR_ERR(err);
 
 	}
 	/* Obtain shm base. */
-	return (void *)read_mr(L4SYS_ARG0);
+	return (void *)err;
 }
 
 int l4_shmdt(const void *shmaddr)

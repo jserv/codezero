@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  *
  * Posix shared memory implementation
  */
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <task.h>
 #include <mmap.h>
+#include <vm_area.h>
 #include <l4/lib/string.h>
 #include <kmalloc/kmalloc.h>
 #include <l4lib/arch/syscalls.h>
@@ -27,8 +28,6 @@
 /* The list of shared memory areas that are already set up and working */
 static struct list_head shm_desc_list;
 
-/* The single global in-memory swap file for shared memory segments */
-
 /* Unique shared memory ids */
 static struct id_pool *shm_ids;
 
@@ -47,16 +46,16 @@ void shm_init()
 }
 
 /*
- * TODO:
- * Implement means to return back ipc results, i.e. sender always does ipc_sendrecv()
- * and it blocks on its own receive queue. Server then responds back without blocking.
- *
- * Later on: mmap can be done using vm_areas and phsyical pages can be accessed by vm_areas.
+ * Attaches to given shm segment mapped at shm_addr if the shm descriptor
+ * does not already have a base address assigned. If neither shm_addr nor
+ * the descriptor has an address, allocates one from the shm address pool.
+ * FIXME: This pool is currently outside the range of mmap'able addresses.
  */
-static int do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
-		    l4id_t tid)
+static void *do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
+		      l4id_t tid)
 {
 	struct tcb *task = find_task(tid);
+	unsigned int vmflags;
 	int err;
 
 	if (!task) {
@@ -65,59 +64,60 @@ static int do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
 		BUG();
 	}
 
-	/*
-	 * Currently shared memory base addresses are the same among all
-	 * processes for every unique shm segment. They line up easier on
-	 * the shm swap file this way. Also currently shm_addr argument is
-	 * ignored, and mm0 allocates shm segment addresses.
-	 */
-	if (shm->shm_addr)
-		shm_addr = shm->shm_addr;
-	else
-		shm_addr = address_new(&shm_vaddr_pool, __pfn(shm->size));
+	if (shm_addr)
+		shm_addr = (void *)page_align(shm_addr);
 
-	BUG_ON(!is_page_aligned(shm_addr));
+	/* Determine mmap flags for segment */
+	if (shmflg & SHM_RDONLY)
+		vmflags = VM_READ | VMA_SHARED | VMA_ANONYMOUS;
+	else
+		vmflags = VM_READ | VM_WRITE |
+			  VMA_SHARED | VMA_ANONYMOUS;
+
+	/*
+	 * The first user of the segment who supplies a valid
+	 * address sets the base address of the segment. Currently
+	 * all tasks use the same address for each unique segment.
+	 */
+
+	/* First user? */
+	if (!shm->refcnt)
+		if (mmap_address_validate((unsigned long)shm_addr, vmflags))
+			shm->shm_addr = shm_addr;
+		else
+			shm->shm_addr = address_new(&shm_vaddr_pool,
+						    __pfn(shm->size));
+	else /* Address must be already assigned */
+		BUG_ON(!shm->shm_addr);
 
 	/*
 	 * mmap the area to the process as shared. Page fault handler would
 	 * handle allocating and paging-in the shared pages.
-	 *
-	 * For anon && shared pages do_mmap() handles allocation of the
-	 * shm swap file and the file offset for the segment. The segment can
-	 * be identified because segment virtual address is globally unique
-	 * per segment and its the same for all the system tasks.
 	 */
-	if ((err = do_mmap(0, 0, task, (unsigned long)shm_addr,
-			   VM_READ | VM_WRITE | VMA_ANONYMOUS | VMA_SHARED,
-			   shm->size)) < 0) {
+	if ((err = do_mmap(0, 0, task, (unsigned long)shm->shm_addr,
+			   vmflags, shm->size)) < 0) {
 		printf("do_mmap: Mapping shm area failed with %d.\n", err);
 		BUG();
-	} else
-		printf("%s: %s: Success.\n", __TASKNAME__, __FUNCTION__);
-
+	}
 	/* Now update the shared memory descriptor */
 	shm->refcnt++;
 
-	return 0;
+	return shm->shm_addr;
 }
 
-void *sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
+int sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct shm_descriptor *shm_desc, *n;
-	int err;
 
 	list_for_each_entry_safe(shm_desc, n, &shm_desc_list, list) {
 		if (shm_desc->shmid == shmid) {
-			if ((err = do_shmat(shm_desc, shmaddr,
-					    shmflg, requester) < 0)) {
-				l4_ipc_return(err);
-				return 0;
-			} else
-				break;
+			shmaddr = do_shmat(shm_desc, shmaddr,
+					   shmflg, requester);
+			l4_ipc_return((int)shmaddr);
+			return 0;
 		}
 	}
-	l4_ipc_return(0);
-
+	l4_ipc_return(-EINVAL);
 	return 0;
 }
 
@@ -158,42 +158,48 @@ int sys_shmdt(l4id_t requester, const void *shmaddr)
 	return 0;
 }
 
-static struct shm_descriptor *shm_new(key_t key)
+static struct shm_descriptor *shm_new(key_t key, unsigned long npages)
 {
 	/* It doesn't exist, so create a new one */
 	struct shm_descriptor *shm_desc;
 
 	if ((shm_desc = kzalloc(sizeof(struct shm_descriptor))) < 0)
 		return 0;
-	if ((shm_desc->shmid = id_new(shm_ids)) < 0)
+	if ((shm_desc->shmid = id_new(shm_ids)) < 0) {
+		kfree(shm_desc);
 		return 0;
-
+	}
+	BUG_ON(!npages);
 	shm_desc->key = (int)key;
+	shm_desc->size = npages;
 	INIT_LIST_HEAD(&shm_desc->list);
 	list_add(&shm_desc->list, &shm_desc_list);
+
 	return shm_desc;
 }
 
 int sys_shmget(key_t key, int size, int shmflg)
 {
 	struct shm_descriptor *shm_desc;
+	unsigned long npages;
 
 	/* First check argument validity */
 	if (size > SHM_SHMMAX || size < SHM_SHMMIN) {
 		l4_ipc_return(-EINVAL);
 		return 0;
-	}
+	} else
+		npages = __pfn(page_align_up(size));
 
 	/*
 	 * IPC_PRIVATE means create a no-key shm area, i.e. private to this
-	 * process so that it would only share it with its descendants.
+	 * process so that it would only share it with its forked children.
 	 */
 	if (key == IPC_PRIVATE) {
 		key = -1;		/* Our meaning of no key */
-		if (!shm_new(key))
+		if (!(shm_desc = shm_new(key, npages)))
 			l4_ipc_return(-ENOSPC);
 		else
-			l4_ipc_return(0);
+			l4_ipc_return(shm_desc->shmid);
 		return 0;
 	}
 
@@ -214,9 +220,10 @@ int sys_shmget(key_t key, int size, int shmflg)
 			return 0;
 		}
 	}
-	/* Key doesn't exist and create set, so we create */
+
+	/* Key doesn't exist and create is set, so we create */
 	if (shmflg & IPC_CREAT)
-		if (!(shm_desc = shm_new(key)))
+		if (!(shm_desc = shm_new(key, npages)))
 			l4_ipc_return(-ENOSPC);
 		else
 			l4_ipc_return(shm_desc->shmid);

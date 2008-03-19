@@ -458,17 +458,18 @@ int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
 		} else
 			return 0;
 	/*
-	 * Shared mappings can *also* go in the utcb address space,
-	 * taking in account that utcb's are shared mappings done
-	 * by individual tasks.
+	 * Shared mappings can go in task, utcb, and shared
+	 * memory address space,
 	 */
 	} else if (vm_flags & VMA_SHARED) {
 		if ((map_address >= UTCB_AREA_START &&
 		     map_address < UTCB_AREA_END) ||
 		    (map_address >= USER_AREA_START &&
-	    	     map_address < USER_AREA_END))
+	    	     map_address < USER_AREA_END) ||
+		    (map_address >= SHM_AREA_START &&
+	    	     map_address < SHM_AREA_END))
 			return 1;
-		else
+		else 
 			return 0;
 	} else
 		BUG();

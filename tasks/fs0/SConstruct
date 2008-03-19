@@ -34,6 +34,10 @@ libmem_incpath = "../libmem"
 libl4_path = "../libl4"
 libl4_incpath1 = join(libl4_path, "include")
 
+# libposix paths:
+libposix_path = "../libposix"
+libposix_incpath = join(libposix_path, "include")
+
 # kernel paths:
 kernel_incpath = join(project_root, "include")
 
@@ -52,13 +56,14 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
 		  LINKFLAGS = ['-nostdlib', '-T' + ld_script, "-L" + libc_libpath, "-L" + libl4_path,\
-			       "-L" + libmem_path],
+			       "-L" + libmem_path, "-L" + libposix_path],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.axf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
-		  LIBS = [libc_name, 'gcc', 'libmc', 'libl4', 'gcc', libc_name],
+		  LIBS = [libc_name, 'gcc', 'libmc', 'libl4', 'gcc', libc_name, "posix"],
 		  CPPFLAGS = "-D__USERSPACE__",
-		  CPPPATH = ['#include', libl4_incpath1, kernel_incpath, libc_incpath, libmem_incpath])
+		  CPPPATH = ['#include', libl4_incpath1, kernel_incpath, libc_incpath, \
+		  		libposix_incpath, libmem_incpath])
 
 src = [glob("src/*.c"), glob("*.c"), glob("src/arch/arm/*.c"), glob("src/memfs/*.c"), glob("src/lib/*.c")]
 objs = env.Object(src)

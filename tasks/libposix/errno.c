@@ -1,8 +1,8 @@
 #include <errno.h>
 
-int errno;
+int errno_variable;
 
 int *__errno_location(void)
 {
-	return &errno;
+	return &errno_variable;
 }

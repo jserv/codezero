@@ -8,6 +8,10 @@ import sys
 from os.path import join
 from string import split
 
+# libposix paths:
+libposix_libpath = "../libposix"
+libposix_incpath = "../libposix/include/posix"
+
 project_root = "../.."
 kernel_headers = join(project_root, "include")
 config_h = join(project_root, "include/l4/config.h")
@@ -17,7 +21,8 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  LINKFLAGS = ['-nostdlib'],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = 'gcc')
+		  LIBS = 'gcc',
+		  CPPPATH = ['#include', libposix_incpath])
 
 
 def extract_arch_subarch_plat(config_header):

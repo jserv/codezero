@@ -10,6 +10,8 @@
 #include <l4/macros.h>
 #include INC_GLUE(memlayout.h)
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/shm.h>
 
 __l4_ipc_t __l4_ipc = 0;
 __l4_map_t __l4_map = 0;
@@ -71,6 +73,40 @@ static void *l4_utcb_page(void)
 	return addr;
 }
 
+/*
+ * Initialises a non-pager task's shared memory utcb page
+ * using posix semantics.
+ */
+int utcb_init(void)
+{
+	int shmid;
+	void *shmaddr;
+
+	/*
+	 * Initialise utcb only if we're not the pager.
+	 * The pager does it differently for itself.
+	 */
+	if (self_tid() != PAGER_TID) {
+
+		/* Obtain our utcb page address */
+		utcb_page = l4_utcb_page();
+		printf("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
+		       (unsigned long)utcb_page);
+
+		/* Use it as a key to create a shared memory region */
+		BUG_ON((shmid = shmget((key_t)utcb_page,
+				       PAGE_SIZE, IPC_CREAT)) < 0);
+		printf("Shmget success. shmid: %d\n", shmid);
+
+		/* Attach to the region */
+		BUG_ON((shmaddr = shmat(shmid, utcb_page, 0)) < 0);
+		BUG_ON(shmaddr != utcb_page);
+		printf("Shmat success. Attached %d @ 0x%x\n", shmid, (unsigned long)shmaddr);
+	}
+
+	return 0;
+}
+
 void __l4_init(void)
 {
 	kip = l4_kernel_interface(0, 0, 0);
@@ -89,11 +125,6 @@ void __l4_init(void)
 	__l4_kmem_grant =	(__l4_kmem_grant_t)kip->kmem_grant;
 	__l4_kmem_reclaim =	(__l4_kmem_reclaim_t)kip->kmem_reclaim;
 
-	/* Initialise utcb only if we're not the pager */
-	if (self_tid() != PAGER_TID) {
-		utcb_page = l4_utcb_page();
-		printf("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
-		(unsigned long)utcb_page);
-	}
+	utcb_init();
 }
 

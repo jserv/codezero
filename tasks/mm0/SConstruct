@@ -60,11 +60,12 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror' ],
-		  LINKFLAGS = ['-nostdlib', '-T' + ld_script, "-L" + libc_libpath, "-L" + libl4_path, "-L" + libmem_path],
+		  LINKFLAGS = ['-nostdlib', '-T' + ld_script, "-L" + libc_libpath, "-L" + libl4_path, \
+		 	 	"-L" + libposix_path, "-L" + libmem_path],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.axf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
-		  LIBS = [libc_name, 'libl4', 'libmm', 'libmc', 'libkm', \
+		  LIBS = [libc_name, 'libl4', 'libmm', 'libmc', 'libkm', 'libposix', \
 		  'gcc', libc_name],		# libgcc.a - This is required for division routines.
 		  CPPFLAGS = "-D__USERSPACE__",
 		  CPPPATH = ['#include', libl4_incpath, libc_incpath, kernel_incpath, \

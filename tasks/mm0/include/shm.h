@@ -12,7 +12,7 @@ struct shm_descriptor {
 	struct list_head list;		/* SHM list, used by mm0 */
 	struct vm_file *owner;
 	void *shm_addr;			/* The virtual address for segment. */
-	unsigned long size;		/* Size of the area */
+	unsigned long size;		/* Size of the area in pages */
 	unsigned int flags;
 	int refcnt;
 };
@@ -22,12 +22,6 @@ struct shm_descriptor {
 /* Up to 10 pages per area, and at least 1 byte (implies 1 page) */
 #define SHM_SHMMIN			1
 #define SHM_SHMMAX			(PAGE_SIZE * 10)
-
-/*
- * NOTE: This flags the unique shm vaddr pool. If its not globally unique
- * and shm areas are cached, on ARMv5 cache aliasing occurs.
- */
-#define SHM_DISJOINT_VADDR_POOL
 
 /* Initialises shared memory bookkeeping structures */
 void shm_init();
