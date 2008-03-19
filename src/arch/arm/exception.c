@@ -8,6 +8,7 @@
 #include <l4/generic/tcb.h>
 #include <l4/lib/printk.h>
 #include <l4/api/ipc.h>
+#include <l4/api/kip.h>
 #include <l4/api/errno.h>
 #include INC_PLAT(printascii.h)
 #include INC_ARCH(exception.h)
@@ -17,7 +18,7 @@
 #include INC_SUBARCH(mm.h)
 
 /* Abort debugging conditions */
-// #define DEBUG_ABORTS
+//#define DEBUG_ABORTS
 #if defined (DEBUG_ABORTS)
 #define dbg_abort(...)	dprintk(__VA_ARGS__)
 #else
@@ -180,7 +181,15 @@ int check_aborts(u32 faulted_pc, u32 fsr, u32 far)
 void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 {
 	set_abort_type(fsr, ARM_DABT);
+
+	/*
+	 * FIXME: Find why if we use a clause like if tid == PAGER_TID
+	 * this prints just the faulted_pc but not the text "Data abort @ PC:"
+	 * Strange.
+	 */
 	dbg_abort("Data abort @ PC: ", faulted_pc);
+
+	/* Check for more details */
 	if (check_aborts(faulted_pc, fsr, far) < 0) {
 		printascii("This abort can't be handled by any pager.\n");
 		goto error;

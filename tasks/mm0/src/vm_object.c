@@ -8,14 +8,6 @@
 #include <l4/api/errno.h>
 #include <kmalloc/kmalloc.h>
 
-
-// #define DEBUG_FAULT_HANDLING
-#ifdef DEBUG_FAULT_HANDLING
-#define dprintf(...)	printf(__VA_ARGS__)
-#else
-#define dprintf(...)
-#endif
-
 #if defined(DEBUG_FAULT_HANDLING)
 void print_cache_pages(struct vm_object *vmo)
 {

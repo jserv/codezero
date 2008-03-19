@@ -1,7 +1,7 @@
 /*
  * Initialise system call offsets.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <l4lib/kip.h>
 #include <l4lib/arch/syslib.h>
@@ -52,6 +52,9 @@ static void *l4_utcb_page(void)
 	void *addr;
 	int err;
 
+	/* We're asking it for ourself. */
+	write_mr(L4SYS_ARG0, self_tid());
+
 	/* Call pager with utcb address request. Check ipc error. */
 	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_UTCB)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
@@ -89,7 +92,7 @@ void __l4_init(void)
 	/* Initialise utcb only if we're not the pager */
 	if (self_tid() != PAGER_TID) {
 		utcb_page = l4_utcb_page();
-		printf("UTCB Read from mm0 as: 0x%x\n",
+		printf("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
 		(unsigned long)utcb_page);
 	}
 }

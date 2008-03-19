@@ -23,8 +23,10 @@
 struct utcb {
 	u32 mr[MR_TOTAL];
 	u32 tid;		/* Thread id */
-}; __attribute__((__packed__));
+} __attribute__((__packed__));
+
 extern struct utcb utcb;
+extern void *utcb_page;
 
 static inline struct utcb *l4_get_utcb()
 {

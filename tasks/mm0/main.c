@@ -18,7 +18,7 @@
 #include <syscalls.h>
 #include <file.h>
 #include <shm.h>
-#include <task.h>
+#include <utcb.h>
 
 void handle_requests(void)
 {
@@ -82,6 +82,10 @@ void handle_requests(void)
 		/* vfs opens a file and tells us about it here. */
 		vfs_receive_sys_open(sender, (l4id_t)mr[0], (int)mr[1],
 				     (unsigned long)mr[2], (unsigned long)mr[3]);
+		break;
+
+	case L4_IPC_TAG_UTCB:
+		task_send_utcb_address(sender, (l4id_t)mr[0]);
 		break;
 
 	case L4_IPC_TAG_READ:

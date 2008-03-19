@@ -9,7 +9,6 @@
 
 	.macro	utcb_address	rx
 		ldr	\rx, =utcb
-		ldr	\rx, [\rx]
 	.endm
 
 BEGIN_PROC(l4_thread_switch)

@@ -79,13 +79,10 @@ struct task_data_head {
 	struct task_data tdata[];
 };
 
-/* Read task information into the utcb buffer, since it wont fit into mrs. */
+/* Read task information into the utcb page, since it won't fit into mrs. */
 struct task_data_head *receive_pager_taskdata(void)
 {
 	int err;
-
-	/* Ask pager to write the data at this address */
-	write_mr(L4SYS_ARG0, (unsigned long)utcb->buf);
 
 	/* Make the actual ipc call */
 	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID,
@@ -100,10 +97,11 @@ struct task_data_head *receive_pager_taskdata(void)
 		return PTR_ERR(err);
 	}
 
+	/* Data is expected in the utcb page */
 	printf("%s: %d Total tasks.\n", __FUNCTION__,
-	       ((struct task_data_head *)utcb->buf)->total);
+	       ((struct task_data_head *)utcb_page)->total);
 
-	return (struct task_data_head *)utcb->buf;
+	return (struct task_data_head *)utcb_page;
 }
 
 /* Allocate a task struct and initialise it */

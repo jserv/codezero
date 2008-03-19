@@ -182,10 +182,10 @@ void kip_init()
 
 	kip_init_syscalls();
 
-	/* KIP + 0xFF0 is pointer to UTCB area for this thread group. */
+	/* KIP + 0xFF0 is pointer to UTCB segment start address */
 	utcb_ref = (struct utcb **)((unsigned long)&kip + UTCB_KIP_OFFSET);
 
-	/* All thread groups have their utcb mapped at UTCB_AREA_START */
+	/* All thread utcbs are allocated starting from UTCB_AREA_START */
 	*utcb_ref = (struct utcb *)UTCB_AREA_START;
 
 	add_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,

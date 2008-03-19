@@ -14,7 +14,7 @@
 #include <arch/mm.h>
 #include <lib/spinlock.h>
 
-// #define DEBUG_FAULT_HANDLING
+//#define DEBUG_FAULT_HANDLING
 #ifdef DEBUG_FAULT_HANDLING
 #define dprintf(...)	printf(__VA_ARGS__)
 #else

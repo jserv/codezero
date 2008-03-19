@@ -13,6 +13,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
+#include <l4lib/utcb.h>
 #include <fcntl.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
@@ -25,7 +26,7 @@
 void *copy_to_utcb(void *arg, int size)
 {
 	BUG_ON(size > PAGE_SIZE);
-	memcpy(utcb->buf, arg, size);
+	memcpy(utcb_page, arg, size);
 }
 
 static inline int l4_open(const char *pathname, int flags, mode_t mode)

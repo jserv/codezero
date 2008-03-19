@@ -218,9 +218,6 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	task->tid = ids->tid;
 	task->spid = ids->spid;
 
-	/* Allocate a utcb virtual address */
-	task->utcb_address = (unsigned long)utcb_vaddr_new();
-
 	/* Prepare environment boundaries. */
 	task->env_end = USER_AREA_END;
 	task->env_start = task->env_end - DEFAULT_ENV_SIZE;
@@ -277,16 +274,6 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
 			   __pfn(task->stack_end - task->stack_start))) < 0) {
 		printf("do_mmap: Mapping stack failed with %d.\n", err);
-		goto error;
-	}
-
-	/* mmap each task's utcb as single page anonymous memory. */
-	printf("%s: Mapping utcb for new task at: 0x%x\n", __TASKNAME__,
-	       task->utcb_address);
-	if ((err = do_mmap(0, 0, task, task->utcb_address,
-			   VM_READ | VM_WRITE | VMA_SHARED | VMA_ANONYMOUS,
-			   __pfn(DEFAULT_UTCB_SIZE))) < 0) {
-		printf("do_mmap: Mapping utcb failed with %d.\n", err);
 		goto error;
 	}
 
@@ -440,7 +427,6 @@ void send_task_data(l4id_t requester)
 {
 	int li, err;
 	struct tcb *t, *vfs;
-	struct utcb *vfs_utcb;
 	struct task_data_head *tdata_head;
 
 	if (requester != VFS_TID) {
@@ -451,16 +437,14 @@ void send_task_data(l4id_t requester)
 	}
 
 	BUG_ON(!(vfs = find_task(requester)));
+	BUG_ON(!vfs->utcb_address);
 
 	/* Map in vfs's utcb. FIXME: Whatif it is already mapped? */
 	l4_map((void *)page_to_phys(task_virt_to_page(vfs, vfs->utcb_address)),
 	       (void *)vfs->utcb_address, 1, MAP_USR_RW_FLAGS, self_tid());
 
-	/* Get a handle on vfs utcb */
-	vfs_utcb = (struct utcb *)vfs->utcb_address;
-
 	/* Write all requested task information to utcb's user buffer area */
-	tdata_head = (struct task_data_head *)vfs_utcb->buf;
+	tdata_head = (struct task_data_head *)vfs->utcb_address;
 
 	/* First word is total number of tcbs */
 	tdata_head->total = tcb_head.total;
