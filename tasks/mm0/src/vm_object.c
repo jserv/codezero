@@ -32,10 +32,20 @@ void vm_object_print(struct vm_object *vmo)
 	       vmo->npages);
 	if (vmo->flags & VM_OBJ_FILE) {
 		f = vm_object_to_file(vmo);
-		printf("File type: %s\n",
-		       (f->type == VM_FILE_DEVZERO) ? "devzero" :
-		       ((f->type == VM_FILE_BOOTFILE) ? "bootfile" : "regular"));
-		// printf("File type: 0x%x\n", f->type);
+		char *ftype;
+
+		if (f->type == VM_FILE_DEVZERO)
+			ftype = "devzero";
+		else if (f->type == VM_FILE_BOOTFILE)
+			ftype = "bootfile";
+		else if (f->type == VM_FILE_SHM)
+			ftype = "shm file";
+		else if (f->type == VM_FILE_REGULAR)
+			ftype = "regular";
+		else
+			BUG();
+
+		printf("File type: %s\n", ftype);
 	}
 	print_cache_pages(vmo);
 	printf("\n");
