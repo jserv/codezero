@@ -258,9 +258,14 @@ struct page *copy_page(struct page *orig)
 /* TODO:
  * - Why not allocate a swap descriptor in vma_create_shadow() rather than
  *   a bare vm_object? It will be needed.
- * - Does vm_write clash with any other object flags???
  * - Check refcounting of shadows, their references, page refs,
  *   reduces increases etc.
+ *
+ *   This handles copy-on-write semantics in various situations.
+ *
+ *   1) Copy-on-write of read-only files. (Creates r/w shadows/adds pages)
+ *   2) Copy-on-write of forked RO shadows (Creates r/w shadows/adds pages)
+ *   3) Copy-on-write of shm files. (Adds pages to r/w shm file from devzero).
  */
 int copy_on_write(struct fault_data *fault)
 {
