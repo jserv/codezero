@@ -302,7 +302,7 @@ int copy_on_write(struct fault_data *fault)
 		 *
  		 * vma->link0->link1
  		 *       |      |
- 		 *       V      V
+ 		 *       v      v
  		 *       shadow original
 		 */
 		list_add(&shadow_link->list, &vma->vm_obj_list);
@@ -313,7 +313,8 @@ int copy_on_write(struct fault_data *fault)
 		/* Shadow is the copier object */
 		copier_link = shadow_link;
 	} else {
-		dprintf("No shadows. Going to add to topmost r/w shadow object\n");
+		dprintf("No new shadows. Going to add to "
+			"topmost r/w shadow object\n");
 		/* No new shadows, the topmost r/w vmo is the copier object */
 		copier_link = vmo_link;
 
@@ -328,7 +329,7 @@ int copy_on_write(struct fault_data *fault)
 
 	/* Traverse the list of read-only vm objects and search for the page */
 	while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
-							  file_offset))) {
+							       file_offset))) {
 		if (!(vmo_link = vma_next_link(&vmo_link->list,
 					       &vma->vm_obj_list))) {
 			printf("%s:%s: Traversed all shadows and the original "
@@ -366,6 +367,10 @@ int copy_on_write(struct fault_data *fault)
 	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
 		page_align(fault->address), fault->task->tid);
 	vm_object_print(new_page->owner);
+
+	/* Shm faults don't have shadows so we're done here. */
+	if (vma->flags & VMA_SHARED)
+		return 0;
 
 	/*
 	 * Finished handling the actual fault, now check for possible
@@ -408,8 +413,8 @@ int __do_page_fault(struct fault_data *fault)
 	unsigned int vma_flags = fault->vma->flags;
 	unsigned int pte_flags = vm_prot_flags(fault->kdata->pte);
 	struct vm_area *vma = fault->vma;
-	unsigned long file_offset;
 	struct vm_obj_link *vmo_link;
+	unsigned long file_offset;
 	struct page *page;
 
 	/* Handle read */
@@ -449,8 +454,8 @@ int __do_page_fault(struct fault_data *fault)
 
 	/* Handle write */
 	if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
-		/* Copy-on-write */
-		if (vma_flags & VMA_PRIVATE)
+		/* Copy-on-write. For all private 'union' all anonymous vmas. */
+		if ((vma_flags & VMA_PRIVATE) || (vma_flags & VMA_ANONYMOUS))
 			copy_on_write(fault);
 
 		/* Regular files */
@@ -479,13 +484,6 @@ int __do_page_fault(struct fault_data *fault)
 				page_align(fault->address), fault->task->tid);
 			vm_object_print(vmo_link->obj);
 		}
-		/* FIXME: Just do fs files for now, anon shm objects later. */
-		/* Things to think about:
-		 * - Is utcb a shm memory really? Then each task must map it in via
-		 *   shmget(). FS0 must map all user tasks' utcb via shmget() as well.
-		 *   For example to pass on pathnames etc.
-		 */
-		BUG_ON((vma_flags & VMA_SHARED) && (vma_flags & VMA_ANONYMOUS));
 	}
 
 	return 0;

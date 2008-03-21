@@ -42,6 +42,7 @@ enum VM_FILE_TYPE {
 	VM_FILE_DEVZERO = 1,
 	VM_FILE_REGULAR,
 	VM_FILE_BOOTFILE,
+	VM_FILE_SHM,
 };
 
 /* Defines the type of object. A file? Just a standalone object? */

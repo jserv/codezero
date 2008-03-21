@@ -284,9 +284,8 @@ int vma_unmap(struct vm_area **actual, struct vm_area **split,
 }
 
 /* Unmaps given address range from its vma. Releases those pages in that vma. */
-int do_munmap(void *vaddr, unsigned long size, struct tcb *task)
+int do_munmap(void *vaddr, unsigned long npages, struct tcb *task)
 {
-	unsigned long npages = __pfn(size);
 	unsigned long pfn_start = __pfn(vaddr);
 	unsigned long pfn_end = pfn_start + npages;
 	struct vm_area *vma, *vma_new = 0;
@@ -332,7 +331,7 @@ pgtable_unmap:
 #endif
 
 
-int do_munmap(void *vaddr, unsigned long size, struct tcb *task)
+int do_munmap(void *vaddr, unsigned long npages, struct tcb *task)
 {
 	return 0;
 }
@@ -343,7 +342,7 @@ int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
 
 	BUG_ON(!(task = find_task(sender)));
 
-	return do_munmap(vaddr, size, task);
+	return do_munmap(vaddr, __pfn(page_align_up(size)), task);
 }
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
@@ -351,17 +350,10 @@ struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			struct vm_file *mapfile)
 {
 	struct vm_area *vma;
-	struct vm_obj_link *obj_link;
 
 	/* Allocate new area */
 	if (!(vma = kzalloc(sizeof(struct vm_area))))
 		return 0;
-
-	/* Allocate vm object link */
-	if (!(obj_link = kzalloc(sizeof(struct vm_obj_link)))) {
-		kfree(vma);
-		return 0;
-	}
 
 	INIT_LIST_HEAD(&vma->list);
 	INIT_LIST_HEAD(&vma->vm_obj_list);
@@ -370,11 +362,6 @@ struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 	vma->pfn_end = pfn_start + npages;
 	vma->flags = flags;
 	vma->file_offset = file_offset;
-
-	INIT_LIST_HEAD(&obj_link->list);
-	INIT_LIST_HEAD(&obj_link->shref);
-	obj_link->obj = &mapfile->vm_obj;
-	list_add(&obj_link->list, &vma->vm_obj_list);
 
 	return vma;
 }
@@ -469,7 +456,7 @@ int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
 		    (map_address >= SHM_AREA_START &&
 	    	     map_address < SHM_AREA_END))
 			return 1;
-		else 
+		else
 			return 0;
 	} else
 		BUG();
@@ -487,9 +474,9 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	    unsigned int npages)
 {
 	unsigned long map_pfn = __pfn(map_address);
-	unsigned long file_npages;
 	struct vm_area *new, *mapped;
-	struct vm_obj_link *vmo_link;
+	struct vm_obj_link *vmo_link, *vmo_link2;
+	unsigned long file_npages;
 
 	/* Set up devzero if none given */
 	if (!mapfile) {
@@ -549,6 +536,30 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	vmo_link->obj = &mapfile->vm_obj;
 	mapfile->vm_obj.refcnt++;
 	list_add_tail(&vmo_link->list, &new->vm_obj_list);
+
+	/*
+	 * If the file is a shm file, also map devzero behind it. i.e.
+	 * vma -> vm_link -> vm_link
+	 * 	     |          |
+	 * 	     v          v
+	 * 	  shm_file	devzero
+	 *
+	 * So that faults go through shm file and then devzero, as in
+	 * the shadow object copy_on_write setup in fault.c
+	 */
+	if (mapfile->type == VM_FILE_SHM) {
+		struct vm_file *dzero = get_devzero();
+
+		/* Attach the file as the first vm object of this vma */
+		if (!(vmo_link2 = vm_objlink_create())) {
+			kfree(new);
+			kfree(vmo_link);
+			return -ENOMEM;
+		}
+		vmo_link2->obj = &dzero->vm_obj;
+		dzero->vm_obj.refcnt++;
+		list_add_tail(&vmo_link2->list, &new->vm_obj_list);
+	}
 
 	/* Finished initialising the vma, add it to task */
 	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,

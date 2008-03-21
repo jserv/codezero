@@ -96,12 +96,10 @@ int utcb_init(void)
 		/* Use it as a key to create a shared memory region */
 		BUG_ON((shmid = shmget((key_t)utcb_page,
 				       PAGE_SIZE, IPC_CREAT)) < 0);
-		printf("Shmget success. shmid: %d\n", shmid);
 
 		/* Attach to the region */
 		BUG_ON((shmaddr = shmat(shmid, utcb_page, 0)) < 0);
 		BUG_ON(shmaddr != utcb_page);
-		printf("Shmat success. Attached %d @ 0x%x\n", shmid, (unsigned long)shmaddr);
 	}
 
 	return 0;

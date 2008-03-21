@@ -25,8 +25,11 @@
 #include <posix/sys/shm.h>
 #include <posix/sys/types.h>
 
+#define shm_file_to_desc(shm_file)	\
+	((struct shm_descriptor *)shm_file->priv_data)
+
 /* The list of shared memory areas that are already set up and working */
-static struct list_head shm_desc_list;
+static LIST_HEAD(shm_file_list);
 
 /* Unique shared memory ids */
 static struct id_pool *shm_ids;
@@ -36,8 +39,6 @@ static struct address_pool shm_vaddr_pool;
 
 void shm_init()
 {
-	INIT_LIST_HEAD(&shm_desc_list);
-
 	/* Initialise shm id pool */
 	shm_ids = id_pool_new_init(SHM_AREA_MAX);
 
@@ -49,11 +50,11 @@ void shm_init()
  * Attaches to given shm segment mapped at shm_addr if the shm descriptor
  * does not already have a base address assigned. If neither shm_addr nor
  * the descriptor has an address, allocates one from the shm address pool.
- * FIXME: This pool is currently outside the range of mmap'able addresses.
  */
-static void *do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
+static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 		      l4id_t tid)
 {
+	struct shm_descriptor *shm = shm_file_to_desc(shm_file);
 	struct tcb *task = find_task(tid);
 	unsigned int vmflags;
 	int err;
@@ -81,12 +82,12 @@ static void *do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
 	 */
 
 	/* First user? */
-	if (!shm->refcnt)
+	if (!shm_file->vm_obj.refcnt)
 		if (mmap_address_validate((unsigned long)shm_addr, vmflags))
 			shm->shm_addr = shm_addr;
 		else
 			shm->shm_addr = address_new(&shm_vaddr_pool,
-						    __pfn(shm->size));
+						    shm->npages);
 	else /* Address must be already assigned */
 		BUG_ON(!shm->shm_addr);
 
@@ -94,34 +95,34 @@ static void *do_shmat(struct shm_descriptor *shm, void *shm_addr, int shmflg,
 	 * mmap the area to the process as shared. Page fault handler would
 	 * handle allocating and paging-in the shared pages.
 	 */
-	if ((err = do_mmap(0, 0, task, (unsigned long)shm->shm_addr,
-			   vmflags, shm->size)) < 0) {
+	if ((err = do_mmap(shm_file, 0, task, (unsigned long)shm->shm_addr,
+			   vmflags, shm->npages)) < 0) {
 		printf("do_mmap: Mapping shm area failed with %d.\n", err);
 		BUG();
 	}
-	/* Now update the shared memory descriptor */
-	shm->refcnt++;
 
 	return shm->shm_addr;
 }
 
 int sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
 {
-	struct shm_descriptor *shm_desc, *n;
+	struct vm_file *shm_file, *n;
 
-	list_for_each_entry_safe(shm_desc, n, &shm_desc_list, list) {
-		if (shm_desc->shmid == shmid) {
-			shmaddr = do_shmat(shm_desc, shmaddr,
+	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
+		if (shm_file_to_desc(shm_file)->shmid == shmid) {
+			shmaddr = do_shmat(shm_file, shmaddr,
 					   shmflg, requester);
+
 			l4_ipc_return((int)shmaddr);
 			return 0;
 		}
 	}
+
 	l4_ipc_return(-EINVAL);
 	return 0;
 }
 
-int do_shmdt(struct shm_descriptor *shm, l4id_t tid)
+int do_shmdt(struct vm_file *shm, l4id_t tid)
 {
 	struct tcb *task = find_task(tid);
 	int err;
@@ -131,64 +132,91 @@ int do_shmdt(struct shm_descriptor *shm, l4id_t tid)
 		       __TASKNAME__, __FUNCTION__, tid);
 		BUG();
 	}
-	if ((err = do_munmap(shm->shm_addr, shm->size, task)) < 0) {
+	if ((err = do_munmap(shm_file_to_desc(shm)->shm_addr,
+			     shm_file_to_desc(shm)->npages, task)) < 0) {
 		printf("do_munmap: Unmapping shm segment failed with %d.\n",
 		       err);
 		BUG();
 	}
+
 	return err;
 }
 
 int sys_shmdt(l4id_t requester, const void *shmaddr)
 {
-	struct shm_descriptor *shm_desc, *n;
+	struct vm_file *shm_file, *n;
 	int err;
 
-	list_for_each_entry_safe(shm_desc, n, &shm_desc_list, list) {
-		if (shm_desc->shm_addr == shmaddr) {
-			if ((err = do_shmdt(shm_desc, requester) < 0)) {
+	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
+		if (shm_file_to_desc(shm_file)->shm_addr == shmaddr) {
+			if ((err = do_shmdt(shm_file, requester) < 0)) {
 				l4_ipc_return(err);
 				return 0;
 			} else
 				break;
 		}
 	}
-	l4_ipc_return(0);
 
+	l4_ipc_return(-EINVAL);
 	return 0;
 }
 
-static struct shm_descriptor *shm_new(key_t key, unsigned long npages)
-{
-	/* It doesn't exist, so create a new one */
-	struct shm_descriptor *shm_desc;
 
-	if ((shm_desc = kzalloc(sizeof(struct shm_descriptor))) < 0)
+/* Creates an shm area and glues its details with shm pager and devzero */
+static struct vm_file *shm_new(key_t key, unsigned long npages)
+{
+	struct shm_descriptor *shm_desc;
+	struct vm_file *shm_file;
+
+	BUG_ON(!npages);
+
+	/* Allocate file and shm structures */
+	if (IS_ERR(shm_file = vm_file_create()))
+		return PTR_ERR(shm_file);
+
+	if (!(shm_desc = kzalloc(sizeof(struct shm_descriptor)))) {
+		kfree(shm_file);
 		return 0;
+	}
+
+	/* Initialise the shm descriptor */
 	if ((shm_desc->shmid = id_new(shm_ids)) < 0) {
+		kfree(shm_file);
 		kfree(shm_desc);
 		return 0;
 	}
-	BUG_ON(!npages);
 	shm_desc->key = (int)key;
-	shm_desc->size = npages;
-	INIT_LIST_HEAD(&shm_desc->list);
-	list_add(&shm_desc->list, &shm_desc_list);
+	shm_desc->npages = npages;
 
-	return shm_desc;
+	/* Initialise the file */
+	shm_file->length = __pfn_to_addr(npages);
+	shm_file->type = VM_FILE_SHM;
+	shm_file->priv_data = shm_desc;
+
+	/* Initialise the vm object */
+	shm_file->vm_obj.pager = &swap_pager;
+	shm_file->vm_obj.flags = VM_OBJ_FILE;
+
+	list_add(&shm_file->list, &shm_file_list);
+	list_add(&shm_file->vm_obj.list, &vm_object_list);
+
+	return shm_file;
 }
 
+/*
+ * FIXME: Make sure hostile tasks don't subvert other tasks' utcbs
+ * by early-registring their utcb address here.
+ */
 int sys_shmget(key_t key, int size, int shmflg)
 {
-	struct shm_descriptor *shm_desc;
-	unsigned long npages;
+	unsigned long npages = __pfn(page_align_up(size));
+	struct vm_file *shm;
 
 	/* First check argument validity */
-	if (size > SHM_SHMMAX || size < SHM_SHMMIN) {
+	if (npages > SHM_SHMMAX || npages < SHM_SHMMIN) {
 		l4_ipc_return(-EINVAL);
 		return 0;
 	} else
-		npages = __pfn(page_align_up(size));
 
 	/*
 	 * IPC_PRIVATE means create a no-key shm area, i.e. private to this
@@ -196,14 +224,16 @@ int sys_shmget(key_t key, int size, int shmflg)
 	 */
 	if (key == IPC_PRIVATE) {
 		key = -1;		/* Our meaning of no key */
-		if (!(shm_desc = shm_new(key, npages)))
+		if (!(shm = shm_new(key, npages)))
 			l4_ipc_return(-ENOSPC);
 		else
-			l4_ipc_return(shm_desc->shmid);
+			l4_ipc_return(shm_file_to_desc(shm)->shmid);
 		return 0;
 	}
 
-	list_for_each_entry(shm_desc, &shm_desc_list, list) {
+	list_for_each_entry(shm, &shm_file_list, list) {
+		struct shm_descriptor *shm_desc = shm_file_to_desc(shm);
+
 		if (shm_desc->key == key) {
 			/*
 			 * Exclusive means create request
@@ -213,7 +243,7 @@ int sys_shmget(key_t key, int size, int shmflg)
 				l4_ipc_return(-EEXIST);
 			else
 				/* Found it but do we have a size problem? */
-				if (shm_desc->size < size)
+				if (shm_desc->npages < npages)
 					l4_ipc_return(-EINVAL);
 				else /* Return shmid of the existing key */
 					l4_ipc_return(shm_desc->shmid);
@@ -223,14 +253,13 @@ int sys_shmget(key_t key, int size, int shmflg)
 
 	/* Key doesn't exist and create is set, so we create */
 	if (shmflg & IPC_CREAT)
-		if (!(shm_desc = shm_new(key, npages)))
+		if (!(shm = shm_new(key, npages)))
 			l4_ipc_return(-ENOSPC);
 		else
-			l4_ipc_return(shm_desc->shmid);
+			l4_ipc_return(shm_file_to_desc(shm)->shmid);
 	else	/* Key doesn't exist, yet create isn't set, its an -ENOENT */
 		l4_ipc_return(-ENOENT);
 
 	return 0;
 }
-
 
