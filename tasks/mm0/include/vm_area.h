@@ -81,6 +81,7 @@ struct fault_data {
 	fault_kdata_t *kdata;		/* Generic data flonged by the kernel */
 	unsigned int reason;		/* Generic fault reason flags */
 	unsigned int address;		/* Aborted address */
+	unsigned int pte_flags;		/* Generic protection flags on pte */
 	struct vm_area *vma;		/* Inittask-related fault data */
 	struct tcb *task;		/* Inittask-related fault data */
 };
@@ -206,7 +207,14 @@ struct vm_file *vm_file_create(void);
 int vm_object_delete(struct vm_object *vmo);
 void vm_object_print(struct vm_object *vmo);
 
+/* Used for pre-faulting a page from mm0 */
+int prefault_page(struct tcb *task, unsigned long address,
+		  unsigned int vmflags);
+
+/* To get currently mapped page of a virtual address on a task */
+struct page *task_virt_to_page(struct tcb *t, unsigned long virtual);
+
 /* Main page fault entry point */
-void page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);
+int page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);
 
 #endif /* __VM_AREA_H__ */

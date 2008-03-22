@@ -11,6 +11,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <task.h>
+#include <vm_area.h>
 #include INC_GLUE(memlayout.h)
 
 static struct address_pool utcb_vaddr_pool;
@@ -35,7 +36,8 @@ void *utcb_vaddr_new(void)
 /*
  * Sends utcb address information to requester task, allocates
  * an address if it doesn't exist and the requester is asking
- * for its own.
+ * for its own. The requester then uses this address as a shm key and
+ * maps its own utcb via shmget/shmat.
  */
 int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 {
@@ -69,5 +71,41 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 	return 0;
 }
 
+/*
+ * Triggered during a sys_shmat() by a client task when mapping its utcb.
+ * This prefaults the utcb and maps it in to mm0 so that it can freely
+ * access it anytime later.
+ */
+int utcb_prefault(struct tcb *task, unsigned int vmflags)
+{
+	int err;
+	struct page *pg;
+
+	/* First map in the page to task with given flags, e.g. read/write */
+	if ((err = prefault_page(task, task->utcb_address, vmflags)) < 0) {
+		printf("%s: Failed: %d\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/*
+	 * Get the topmost page. Since we did both a VM_READ and VM_WRITE
+	 * prefault, this gets a writeable instead of a read-only page.
+	 */
+	pg = task_virt_to_page(task, task->utcb_address);
+	if (!pg || IS_ERR(pg)) {
+		printf("%s: Cannot retrieve task %d's utcb page.\n",
+		       __FUNCTION__, task->tid);
+		BUG();
+	}
+
+	/* Map it in to self */
+	l4_map((void *)page_to_phys(pg), (void *)task->utcb_address, 1,
+	       MAP_USR_RW_FLAGS, self_tid());
+
+	/* Flag that says this task's utcb is mapped to mm0 as r/w */
+	task->utcb_mapped = 1;
+
+	return 0;
+}
 
 

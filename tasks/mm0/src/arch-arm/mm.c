@@ -26,7 +26,7 @@ unsigned int vm_prot_flags(pte_t pte)
 }
 
 #if defined(DEBUG_FAULT_HANDLING)
-void print_fault_params(struct fault_data *fault)
+void arch_print_fault_params(struct fault_data *fault)
 {
 	printf("%s: Handling %s fault (%s abort) from %d. fault @ 0x%x\n",
 	       __TASKNAME__, (fault->reason & VM_READ) ? "read" : "write",
@@ -34,7 +34,7 @@ void print_fault_params(struct fault_data *fault)
 	       fault->task->tid, fault->address);
 }
 #else
-void print_fault_params(struct fault_data *fault) { }
+void arch_print_fault_params(struct fault_data *fault) { }
 #endif
 
 
@@ -49,7 +49,9 @@ void print_fault_params(struct fault_data *fault) { }
 void set_generic_fault_params(struct fault_data *fault)
 {
 	unsigned int prot_flags = vm_prot_flags(fault->kdata->pte);
+
 	fault->reason = 0;
+	fault->pte_flags = prot_flags;
 
 	if (is_prefetch_abort(fault->kdata->fsr)) {
 		fault->reason |= VM_READ;
@@ -65,6 +67,6 @@ void set_generic_fault_params(struct fault_data *fault)
 		else
 			BUG();
 	}
-	print_fault_params(fault);
+	arch_print_fault_params(fault);
 }
 

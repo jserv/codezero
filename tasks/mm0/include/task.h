@@ -68,8 +68,9 @@ struct tcb {
 	unsigned long map_start;
 	unsigned long map_end;
 
-	/* UTCB address */
+	/* UTCB information */
 	unsigned long utcb_address;
+	int utcb_mapped;
 
 	/* Virtual memory areas */
 	struct list_head vm_area_list;
@@ -83,6 +84,6 @@ struct tcb *find_task(int tid);
 struct initdata;
 void init_pm(struct initdata *initdata);
 
-void send_task_data(l4id_t requester);
+int send_task_data(l4id_t requester);
 
 #endif /* __TASK_H__ */

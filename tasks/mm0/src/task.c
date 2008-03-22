@@ -359,55 +359,6 @@ void init_pm(struct initdata *initdata)
 	start_boot_tasks(initdata);
 }
 
-/*
- * Makes the virtual to page translation for a given user task.
- * If page is not mapped (either not faulted or swapped), returns 0.
- */
-struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
-{
-	unsigned long vma_offset;
-	unsigned long file_offset;
-	struct vm_obj_link *vmo_link;
-	struct vm_area *vma;
-	struct page *page;
-
-	/* First find the vma that maps that virtual address */
-	if (!(vma = find_vma(virtual, &t->vm_area_list))) {
-		printf("%s: No VMA found for 0x%x on task: %d\n",
-		       __FUNCTION__, virtual, t->tid);
-		return PTR_ERR(-EINVAL);
-	}
-
-	/* Find the pfn offset of virtual address in this vma */
-	BUG_ON(__pfn(virtual) < vma->pfn_start ||
-	       __pfn(virtual) > vma->pfn_end);
-	vma_offset = __pfn(virtual) - vma->pfn_start;
-
-	/* Find the file offset of virtual address in this file */
-	file_offset = vma->file_offset + vma_offset;
-
-	/* Get the initial link */
-	BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
-					  &vma->vm_obj_list)));
-
-	/* Is page there in the cache ??? */
-	while(!(page = find_page(vmo_link->obj, file_offset))) {
-		/* No, check the next link */
-		if (!(vmo_link = vma_next_link(&vma->vm_obj_list,
-					       &vma->vm_obj_list)));
-			/* Exhausted the objects. The page is not there. */
-			return 0;
-	}
-
-	/* Found it */
-	printf("%s: %s: Found page @ 0x%x, file_offset: 0x%x, "
-	       "with vma @ 0x%x, vm object @ 0x%x\n", __TASKNAME__,
-	       __FUNCTION__, (unsigned long)page, page->offset,
-	       vma, vmo_link->obj);
-
-	return page;
-}
-
 struct task_data {
 	unsigned long tid;
 	unsigned long utcb_address;
@@ -423,7 +374,7 @@ struct task_data_head {
  * are running, and their tids, which includes itself. This function
  * provides that information.
  */
-void send_task_data(l4id_t requester)
+int send_task_data(l4id_t requester)
 {
 	int li, err;
 	struct tcb *t, *vfs;
@@ -433,15 +384,21 @@ void send_task_data(l4id_t requester)
 		printf("%s: Task data requested by %d, which is not "
 		       "FS0 id %d, ignoring.\n", __TASKNAME__, requester,
 		       VFS_TID);
-		return;
+		return 0;
 	}
 
 	BUG_ON(!(vfs = find_task(requester)));
 	BUG_ON(!vfs->utcb_address);
 
-	/* Map in vfs's utcb. FIXME: Whatif it is already mapped? */
-	l4_map((void *)page_to_phys(task_virt_to_page(vfs, vfs->utcb_address)),
-	       (void *)vfs->utcb_address, 1, MAP_USR_RW_FLAGS, self_tid());
+	/*
+	 * When task does shmat() for its utcb, mm0 prefaults and maps it
+	 * to itself, and sets this flag. Check that this has occured
+	 * to ensure we have access to it. Otherwise return error.
+	 */
+	if (!vfs->utcb_mapped) {
+		l4_ipc_return(-ENOENT);
+		return 0;
+	}
 
 	/* Write all requested task information to utcb's user buffer area */
 	tdata_head = (struct task_data_head *)vfs->utcb_address;
@@ -462,5 +419,7 @@ void send_task_data(l4id_t requester)
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		BUG();
 	}
+
+	return 0;
 }
 

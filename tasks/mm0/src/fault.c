@@ -416,7 +416,7 @@ int __do_page_fault(struct fault_data *fault)
 {
 	unsigned int reason = fault->reason;
 	unsigned int vma_flags = fault->vma->flags;
-	unsigned int pte_flags = vm_prot_flags(fault->kdata->pte);
+	unsigned int pte_flags = fault->pte_flags;
 	struct vm_area *vma = fault->vma;
 	struct vm_obj_link *vmo_link;
 	unsigned long file_offset;
@@ -452,6 +452,8 @@ int __do_page_fault(struct fault_data *fault)
 		       (void *)page_align(fault->address), 1,
 		       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
 		       fault->task->tid);
+
+		/* Print about the action, if debug enabled */
 		dprintf("%s: Mapped 0x%x as readable to tid %d.\n", __TASKNAME__,
 			page_align(fault->address), fault->task->tid);
 		vm_object_print(vmo_link->obj);
@@ -858,7 +860,6 @@ int do_page_fault(struct fault_data *fault)
 {
 	unsigned int vma_flags = (fault->vma) ? fault->vma->flags : VM_NONE;
 	unsigned int reason = fault->reason;
-	int err;
 
 	/* vma flags show no access */
 	if (vma_flags & VM_NONE) {
@@ -880,15 +881,12 @@ int do_page_fault(struct fault_data *fault)
 	}
 
 	/* Handle legitimate faults */
-	__do_page_fault(fault);
-
-	/* Return the ipc and by doing so restart the faulty thread */
-	l4_ipc_return(err);
-	return 0;
+	return __do_page_fault(fault);
 }
 
-void page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
+int page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 {
+	int err;
 	struct fault_data fault = {
 		/* Fault data from kernel */
 		.kdata = fkdata,
@@ -909,6 +907,118 @@ void page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 		       "Bad things will happen.\n");
 
 	/* Handle the actual fault */
-	do_page_fault(&fault);
+	err = do_page_fault(&fault);
+
+	/*
+	 * Return the ipc and by doing so restart the faulty thread.
+	 * FIXME: We could kill the thread if there was an error???
+	 * Perhaps via a kill message to kernel?
+	 */
+	l4_ipc_return(err);
+	return 0;
 }
+
+/*
+ * Makes the virtual to page translation for a given user task.
+ * It traverses the vm_objects and returns the first encountered
+ * instance of the page. If page is not mapped in the task's address
+ * space, (not faulted at all), returns error.
+ */
+struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
+{
+	unsigned long vma_offset;
+	unsigned long file_offset;
+	struct vm_obj_link *vmo_link;
+	struct vm_area *vma;
+	struct page *page;
+
+	/* First find the vma that maps that virtual address */
+	if (!(vma = find_vma(virtual, &t->vm_area_list))) {
+		printf("%s: No VMA found for 0x%x on task: %d\n",
+		       __FUNCTION__, virtual, t->tid);
+		return PTR_ERR(-EINVAL);
+	}
+
+	/* Find the pfn offset of virtual address in this vma */
+	BUG_ON(__pfn(virtual) < vma->pfn_start ||
+	       __pfn(virtual) > vma->pfn_end);
+	vma_offset = __pfn(virtual) - vma->pfn_start;
+
+	/* Find the file offset of virtual address in this file */
+	file_offset = vma->file_offset + vma_offset;
+
+	/* Get the first object, either original file or a shadow */
+	if (!(vmo_link = vma_next_link(&vma->vm_obj_list, &vma->vm_obj_list))) {
+		printf("%s:%s: No vm object in vma!\n",
+		       __TASKNAME__, __FUNCTION__);
+		BUG();
+	}
+
+	/* Traverse the list of read-only vm objects and search for the page */
+	while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+							       file_offset))) {
+		if (!(vmo_link = vma_next_link(&vmo_link->list,
+					       &vma->vm_obj_list))) {
+			printf("%s:%s: Traversed all shadows and the original "
+			       "file's vm_object, but could not find the "
+			       "faulty page in this vma.\n",__TASKNAME__,
+			       __FUNCTION__);
+			BUG();
+		}
+	}
+
+	/* Found it */
+	printf("%s: %s: Found page with file_offset: 0x%x. vm object:\n",
+	       __TASKNAME__,  __FUNCTION__, (unsigned long)page, page->offset);
+	vm_object_print(vmo_link->obj);
+
+	return page;
+}
+
+/*
+ * Prefaults the page with given virtual address, to given task
+ * with given reasons. Multiple reasons are allowed, they are
+ * handled separately in order.
+ */
+int prefault_page(struct tcb *task, unsigned long address,
+		  unsigned int vmflags)
+{
+	int err;
+	struct fault_data fault = {
+		.task = task,
+		.address = address,
+	};
+
+	dprintf("Pre-faulting address 0x%x, on task %d, with flags: 0x%x\n",
+		address, task->tid, vmflags);
+
+	/* Find the vma */
+	if (!(fault.vma = find_vma(fault.address,
+				   &fault.task->vm_area_list))) {
+		err = -EINVAL;
+		dprintf("%s: Invalid: No vma for given address. %d\n",
+			__FUNCTION__, err);
+		return err;
+	}
+
+	/* Flags may indicate multiple fault reasons. First do the read */
+	if (vmflags & VM_READ) {
+		fault.pte_flags = VM_NONE;
+		fault.reason = VM_READ;
+		if ((err = do_page_fault(&fault)) < 0)
+			return err;
+	}
+	/* Now write */
+	if (vmflags & VM_WRITE) {
+		fault.pte_flags = VM_READ;
+		fault.reason = VM_WRITE;
+		if ((err = do_page_fault(&fault)) < 0)
+			return err;
+	}
+	/* No exec or any other fault reason allowed. */
+	BUG_ON(vmflags & ~(VM_READ | VM_WRITE));
+
+	return 0;
+}
+
 

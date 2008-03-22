@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <task.h>
 #include <mmap.h>
+#include <utcb.h>
 #include <vm_area.h>
 #include <l4/lib/string.h>
 #include <kmalloc/kmalloc.h>
@@ -52,16 +53,15 @@ void shm_init()
  * the descriptor has an address, allocates one from the shm address pool.
  */
 static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
-		      l4id_t tid)
+		      struct tcb *task)
 {
 	struct shm_descriptor *shm = shm_file_to_desc(shm_file);
-	struct tcb *task = find_task(tid);
 	unsigned int vmflags;
 	int err;
 
 	if (!task) {
 		printf("%s:%s: Cannot find caller task with tid %d\n",
-		       __TASKNAME__, __FUNCTION__, tid);
+		       __TASKNAME__, __FUNCTION__, task->tid);
 		BUG();
 	}
 
@@ -107,11 +107,22 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 int sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct vm_file *shm_file, *n;
+	struct tcb *task = find_task(requester);
 
 	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
 		if (shm_file_to_desc(shm_file)->shmid == shmid) {
 			shmaddr = do_shmat(shm_file, shmaddr,
-					   shmflg, requester);
+					   shmflg, task);
+
+			/*
+			 * UTCBs get special treatment here. If the task
+			 * is attaching to its utcb, mm0 prefaults it so
+			 * that it can access it later on whether or not
+			 * the task makes a syscall to mm0 without first
+			 * faulting the utcb.
+			 */
+			if ((unsigned long)shmaddr == task->utcb_address)
+				utcb_prefault(task, VM_READ | VM_WRITE);
 
 			l4_ipc_return((int)shmaddr);
 			return 0;
@@ -216,7 +227,7 @@ int sys_shmget(key_t key, int size, int shmflg)
 	if (npages > SHM_SHMMAX || npages < SHM_SHMMIN) {
 		l4_ipc_return(-EINVAL);
 		return 0;
-	} else
+	}
 
 	/*
 	 * IPC_PRIVATE means create a no-key shm area, i.e. private to this
@@ -236,8 +247,8 @@ int sys_shmget(key_t key, int size, int shmflg)
 
 		if (shm_desc->key == key) {
 			/*
-			 * Exclusive means create request
-			 * on existing key should fail.
+			 * Exclusive means a create request
+			 * on an existing key should fail.
 			 */
 			if ((shmflg & IPC_CREAT) && (shmflg & IPC_EXCL))
 				l4_ipc_return(-EEXIST);
