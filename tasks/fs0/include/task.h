@@ -16,12 +16,18 @@
 struct tcb {
 	l4id_t tid;
 	unsigned long utcb_address;
+	int utcb_mapped;		/* Set if we mapped their utcb */
 	struct list_head list;
 	int fd[TASK_OFILES_MAX];
 	struct id_pool *fdpool;
 	struct vnode *curdir;
 	struct vnode *rootdir;
 };
+
+static inline int task_is_utcb_mapped(struct tcb *t)
+{
+	return t->utcb_mapped;
+}
 
 struct tcb *find_task(int tid);
 int init_task_data(void);

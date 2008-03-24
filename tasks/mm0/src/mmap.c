@@ -1,7 +1,7 @@
 /*
  * mmap/munmap and friends.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <vm_area.h>
 #include <kmalloc/kmalloc.h>
@@ -394,13 +394,13 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 
 	/* If no vmas, first map slot is available. */
 	if (list_empty(&task->vm_area_list))
-		return USER_AREA_START;
+		return task->start;
 
 	/* First vma to check our range against */
 	vma = list_entry(task->vm_area_list.next, struct vm_area, list);
 
 	/* Start searching from task's end of data to start of stack */
-	while (pfn_end <= __pfn(USER_AREA_END)) {
+	while (pfn_end <= __pfn(task->end)) {
 
 		/* If intersection, skip the vma and fast-forward to next */
 		if (vma_intersect(pfn_start, pfn_end, vma)) {
@@ -414,7 +414,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 			 * Are we out of task map area?
 			 */
 			if (vma->list.next == &task->vm_area_list) {
-				if (pfn_end > __pfn(USER_AREA_END))
+				if (pfn_end > __pfn(task->end))
 					break; /* Yes, fail */
 				else	/* No, success */
 					return __pfn_to_addr(pfn_start);
@@ -425,22 +425,24 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 					 struct vm_area, list);
 			continue;
 		}
-		BUG_ON(pfn_start + npages > __pfn(USER_AREA_END));
+		BUG_ON(pfn_start + npages > __pfn(task->end));
 		return __pfn_to_addr(pfn_start);
 	}
+
 	return 0;
 }
 
 /* Validate an address that is a possible candidate for an mmap() region */
-int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
+int mmap_address_validate(struct tcb *task, unsigned long map_address,
+			  unsigned int vm_flags)
 {
 	if (map_address == 0)
 		return 0;
 
 	/* Private mappings can only go in task address space */
 	if (vm_flags & VMA_PRIVATE) {
-		if (map_address >= USER_AREA_START ||
-	    	    map_address < USER_AREA_END) {
+		if (map_address >= task->start ||
+	    	    map_address < task->end) {
 			return 1;
 		} else
 			return 0;
@@ -451,8 +453,8 @@ int mmap_address_validate(unsigned long map_address, unsigned int vm_flags)
 	} else if (vm_flags & VMA_SHARED) {
 		if ((map_address >= UTCB_AREA_START &&
 		     map_address < UTCB_AREA_END) ||
-		    (map_address >= USER_AREA_START &&
-	    	     map_address < USER_AREA_END) ||
+		    (map_address >= task->start &&
+	    	     map_address < task->end) ||
 		    (map_address >= SHM_AREA_START &&
 	    	     map_address < SHM_AREA_END))
 			return 1;
@@ -507,7 +509,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	}
 
 	/* Check invalid map address */
-	if (!mmap_address_validate(map_address, flags)) {
+	if (!mmap_address_validate(task, map_address, flags)) {
 		/* Get new map address for region of this size */
 		map_address = find_unmapped_area(npages, task);
 		if ((int)map_address < 0)
@@ -585,7 +587,7 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	if ((fd < 0 && !(flags & MAP_ANONYMOUS)) || fd > TASK_FILES_MAX)
 		return -EINVAL;
 
-	if (base < USER_AREA_START || base >= USER_AREA_END)
+	if (base < task->start || base >= task->end)
 		return -EINVAL;
 
 	/* Exclude task's stack, text and data from mmappable area in task's space */

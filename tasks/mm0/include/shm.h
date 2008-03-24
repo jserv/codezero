@@ -8,6 +8,10 @@
 #include <l4/api/space.h>
 #include <l4/macros.h>
 #include <l4lib/types.h>
+#include <task.h>
+#include <posix/sys/ipc.h>
+#include <posix/sys/shm.h>
+#include <posix/sys/types.h>
 
 struct shm_descriptor {
 	int key;
@@ -38,5 +42,8 @@ struct shm_descriptor {
 
 /* Initialises shared memory bookkeeping structures */
 void shm_init();
+
+void *shmat_shmget_internal(key_t key, void *shmaddr);
+struct vm_file *shm_new(key_t key, unsigned long npages);
 
 #endif /* __SHM_H__ */

@@ -25,6 +25,7 @@ int do_munmap(void *vaddr, unsigned long size, struct tcb *task);
 int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 	    unsigned long map_address, unsigned int flags, unsigned int pages);
 
-int mmap_address_validate(unsigned long map_address, unsigned int vm_flags);
+int mmap_address_validate(struct tcb *t, unsigned long map_address,
+			  unsigned int vm_flags);
 
 #endif /* __MM0_MMAP_H__ */

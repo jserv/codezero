@@ -12,7 +12,10 @@
 #include <lib/malloc.h>
 #include <task.h>
 #include <vfs.h>
-
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <errno.h>
 
 struct tcb_head {
 	struct list_head list;
@@ -119,6 +122,36 @@ struct tcb *create_tcb(void)
 	return t;
 }
 
+/* Attaches to task's utcb. FIXME: Add SHM_RDONLY and test it. */
+int task_utcb_attach(struct tcb *t)
+{
+	int shmid;
+	void *shmaddr;
+
+	/* Use it as a key to create a shared memory region */
+	if ((shmid = shmget((key_t)t->utcb_address, PAGE_SIZE, 0)) == -1)
+		goto out_err;
+
+	/* Attach to the region */
+	if ((int)(shmaddr = shmat(shmid, (void *)t->utcb_address, 0)) == -1)
+		goto out_err;
+
+	/* Ensure address is right */
+	if ((unsigned long)shmaddr != t->utcb_address)
+		return -EINVAL;
+
+	printf("%s: Mapped utcb of task %d @ 0x%x\n",
+	       __TASKNAME__, t->tid, shmaddr);
+
+	return 0;
+
+out_err:
+	printf("%s: Mapping utcb of task %d failed with err: %d.\n",
+	       __TASKNAME__, t->tid, errno);
+	return -EINVAL;
+}
+
+
 int init_task_structs(struct task_data_head *tdata_head)
 {
 	struct tcb *t;
@@ -134,6 +167,15 @@ int init_task_structs(struct task_data_head *tdata_head)
 		/* Initialise vfs specific fields. */
 		t->rootdir = vfs_root.pivot;
 		t->curdir = vfs_root.pivot;
+
+		/* Print task information */
+		printf("%s: Task info received from mm0:\n", __TASKNAME__);
+		printf("%s: task id: %d, utcb address: 0x%x\n",
+		       __TASKNAME__, t->tid, t->utcb_address);
+
+		/* shm attach to the utcbs for all these tasks except own */
+		if (t->tid != self_tid())
+			task_utcb_attach(t);
 	}
 
 	return 0;

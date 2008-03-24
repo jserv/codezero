@@ -48,6 +48,10 @@ struct tcb {
 	/* Related task ids */
 	unsigned int pagerid;	/* Task's pager */
 
+	/* Task's main address space region, usually USER_AREA_START/END */
+	unsigned long start;
+	unsigned long end;
+
 	/* Page aligned program segment marks, ends exclusive as usual */
 	unsigned long text_start;
 	unsigned long text_end;
@@ -69,8 +73,7 @@ struct tcb {
 	unsigned long map_end;
 
 	/* UTCB information */
-	unsigned long utcb_address;
-	int utcb_mapped;
+	void *utcb;
 
 	/* Virtual memory areas */
 	struct list_head vm_area_list;

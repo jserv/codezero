@@ -78,7 +78,14 @@
 /* Functions who may either return a pointer or an error code can use these: */
 #define PTR_ERR(x)		((void *)(x))
 /* checks up to -1000, the rest might be valid pointers!!! E.g. 0xE0000000 */
-#define IS_ERR(x)		((((int)(x)) < 0) && (((int)(x) > -1000)))
+// #define IS_ERR(x)		((((int)(x)) < 0) && (((int)(x) > -1000)))
+#if !defined(__ASSEMBLY__)
+#define IS_ERR(x)	is_err((int)(x))
+static inline int is_err(int x)
+{
+	return x < 0 && x > -0x1000;
+}
+#endif
 
 /* TEST: Is this type of printk well tested? */
 #define BUG()			{do {								\

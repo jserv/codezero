@@ -50,11 +50,10 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 		 * but only because the requester is requesting for its
 		 * own utcb.
 		 */
-		if (!task->utcb_address)
-			task->utcb_address = (unsigned long)utcb_vaddr_new();
+		BUG_ON(!task->utcb);
 
 		/* Return it to requester */
-		return l4_ipc_return(task->utcb_address);
+		return l4_ipc_return((int)task->utcb);
 
 	/* A task is asking for someone else's utcb */
 	} else {
@@ -65,12 +64,15 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 			 * none allocated so far, requester gets 0. We don't
 			 * allocate one here.
 			 */
-			return l4_ipc_return(task->utcb_address);
+			return l4_ipc_return((int)task->utcb);
 		}
 	}
 	return 0;
 }
 
+#if 0
+
+To be ditched
 /*
  * Triggered during a sys_shmat() by a client task when mapping its utcb.
  * This prefaults the utcb and maps it in to mm0 so that it can freely
@@ -108,4 +110,4 @@ int utcb_prefault(struct tcb *task, unsigned int vmflags)
 	return 0;
 }
 
-
+#endif

@@ -54,8 +54,12 @@ Virtual memory layout on Codezero/ARMv5:
 
 
 
-User task layout on Codezero/ARMv5:
-===================================
+User task address space layout on Codezero/ARMv5:
+=================================================
+
+0xF8xx x000	.---------------.
+		|  Task's UTCB  |
+0xF8xx x000	'---------------'
 
 
 0x2000 0000	.---------------. End of user task address space

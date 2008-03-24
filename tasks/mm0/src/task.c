@@ -23,144 +23,11 @@
 #include <memory.h>
 #include <file.h>
 #include <utcb.h>
-#include <proc.h>
 #include <task.h>
+#include <shm.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
 LIST_HEAD(boot_file_list);
-
-#if 0
-int start_boot_tasks(struct initdata *initdata, struct tcb_head *tcbs)
-{
-	int err;
-	unsigned int sp, pc;
-	struct tcb *task;
-	struct task_ids ids;
-	struct vm_object *vm_obj;
-
-	bd = initdata->bootdesc;
-	INIT_LIST_HEAD(&tcb_head.list);
-
-	for (int i = 0; i < bd->total_images; i++) {
-		img = &bd->images[i];
-
-		/* Skip self */
-		if (!strcmp(img->name, __PAGERNAME__))
-			continue;
-
-		/* Set up task ids */
-		if (!strcmp(img->name, __VFSNAME__)) {
-			ids.tid = VFS_TID;
-			ids.spid = VFS_TID;
-		} else {
-			ids.tid = -1;
-			ids.spid = -1;
-		}
-
-		printf("Creating new thread.\n");
-		/* Create the thread structures and address space */
-		if ((err = l4_thread_control(THREAD_CREATE, &ids)) < 0) {
-			printf("l4_thread_control failed with %d.\n", err);
-			goto error;
-		}
-
-		/* Create a task and use returned space and thread ids. */
-		printf("New task with id: %d, space id: %d\n", ids.tid, ids.spid);
-		task = tcb_alloc_init(tcbs);
-		task->tid = ids.tid;
-		task->spid = ids.spid;
-
-		/* Allocate a utcb virtual address */
-		task->utcb_address = (unsigned long)utcb_vaddr_new();
-
-		/* Prepare environment boundaries. Posix minimum is 4Kb */
-		task->env_end = USER_AREA_END;
-		task->env_start = task->env_end - PAGE_SIZE;
-		task->args_start = task->env_start;
-		task->args_end = task->env_start;
-
-		/*
-		 * Prepare the task environment file and data.
-		 * Currently it only has the utcb address. The env pager
-		 * when faulted, simply copies the task env data to the
-		 * allocated page.
-		 */
-		if (task_prepare_proc_files(task) < 0) {
-			printf("Could not create environment file.\n");
-			goto error;
-		}
-
-		/*
-		 * Task stack starts right after the environment,
-		 * and is of 4 page size.
-		 */
-		task->stack_end = task->env_start;
-		task->stack_start = task->stack_end - PAGE_SIZE * 4;
-
-		/* Currently RO text and RW data are one region */
-		task->data_start = USER_AREA_START;
-		task->data_end = USER_AREA_START + file->length;
-		task->text_start = task->data_start;
-		task->text_end = task->data_end;
-
-		/* Set up task's registers */
-		sp = align(task->stack_end - 1, 8);
-		pc = task->text_start;
-
-		/* mmap each task's physical image to task's address space. */
-		if ((err = do_mmap(file, 0, task, USER_AREA_START,
-				   VM_READ | VM_WRITE,
-				   __pfn(page_align_up(file->length)))) < 0) {
-			printf("do_mmap: failed with %d.\n", err);
-			goto error;
-		}
-
-		/* mmap each task's environment from its env file. */
-		if ((err = do_mmap(task->proc_files->env_file, 0, task,
-				   task->env_start, VM_READ | VM_WRITE,
-				   __pfn(task->env_end - task->env_start)) < 0)) {
-			printf("do_mmap: Mapping environment failed with %d.\n",
-			       err);
-			goto error;
-		}
-
-		/* mmap each task's stack as 4-page anonymous memory. */
-		if ((err = do_mmap(0, 0, task, task->stack_start,
-				   VM_READ | VM_WRITE | VMA_ANON,
-				   __pfn(task->stack_end - task->stack_start)) < 0)) {
-			printf("do_mmap: Mapping stack failed with %d.\n", err);
-			goto error;
-		}
-
-		/* mmap each task's utcb as single page anonymous memory. */
-		printf("%s: Mapping utcb for new task at: 0x%x\n", __TASKNAME__,
-		       task->utcb_address);
-		if ((err = do_mmap(0, 0, task, task->utcb_address,
-				   VM_READ | VM_WRITE | VMA_ANON, 1) < 0)) {
-			printf("do_mmap: Mapping utcb failed with %d.\n", err);
-			goto error;
-		}
-
-		/* Set up the task's thread details, (pc, sp, pager etc.) */
-		if ((err = l4_exchange_registers(pc, sp, self_tid(), task->tid) < 0)) {
-			printf("l4_exchange_registers failed with %d.\n", err);
-			goto error;
-		}
-
-		printf("Starting task with id %d\n", task->tid);
-
-		/* Start the thread */
-		if ((err = l4_thread_control(THREAD_RUN, &ids) < 0)) {
-			printf("l4_thread_control failed with %d\n", err);
-			goto error;
-		}
-	}
-	return 0;
-
-error:
-	BUG();
-}
-#endif
 
 struct tcb_head {
 	struct list_head list;
@@ -171,9 +38,13 @@ struct tcb *find_task(int tid)
 {
 	struct tcb *t;
 
-	list_for_each_entry(t, &tcb_head.list, list)
-		if (t->tid == tid)
+	list_for_each_entry(t, &tcb_head.list, list) {
+		/* A temporary precaution */
+		BUG_ON(t->tid != t->spid);
+		if (t->tid == tid) {
 			return t;
+		}
+	}
 	return 0;
 }
 
@@ -195,11 +66,232 @@ struct tcb *tcb_alloc_init(void)
 	return task;
 }
 
+
+struct tcb *task_create(struct task_ids *ids)
+{
+	struct tcb *task;
+	int err;
+
+	/* Create the thread structures and address space */
+	printf("Creating new thread with ids: %d, %d.\n", ids->tid, ids->spid);
+	if ((err = l4_thread_control(THREAD_CREATE, ids)) < 0) {
+		printf("l4_thread_control failed with %d.\n", err);
+		return PTR_ERR(err);
+	}
+
+	/* Create a task and use given space and thread ids. */
+	printf("New task with id: %d, space id: %d\n", ids->tid, ids->spid);
+	if (IS_ERR(task = tcb_alloc_init()))
+		return PTR_ERR(task);
+
+	task->tid = ids->tid;
+	task->spid = ids->spid;
+
+	return task;
+}
+
+
+int task_mmap_regions(struct tcb *task, struct vm_file *file)
+{
+	int err;
+
+	/*
+	 * mmap each task's physical image to task's address space.
+	 * TODO: Map data and text separately when available from bootdesc.
+	 */
+	if ((err = do_mmap(file, 0, task, task->text_start,
+			   VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
+			   __pfn(page_align_up(task->text_end) -
+			   task->text_start))) < 0) {
+		printf("do_mmap: failed with %d.\n", err);
+		return err;
+	}
+
+	/* mmap each task's environment as anonymous memory. */
+	if ((err = do_mmap(0, 0, task, task->env_start,
+			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
+			   __pfn(task->env_end - task->env_start))) < 0) {
+		printf("do_mmap: Mapping environment failed with %d.\n",
+		       err);
+		return err;
+	}
+
+	/* mmap each task's stack as anonymous memory. */
+	if ((err = do_mmap(0, 0, task, task->stack_start,
+			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
+			   __pfn(task->stack_end - task->stack_start))) < 0) {
+		printf("do_mmap: Mapping stack failed with %d.\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+int task_setup_regions(struct vm_file *file, struct tcb *task,
+		       unsigned long task_start, unsigned long task_end)
+{
+	struct vm_file *shm;
+
+	/*
+	 * Set task's main address space boundaries. Not all tasks
+	 * run in the default user boundaries, e.g. mm0 pager.
+	 */
+	task->start = task_start;
+	task->end = task_end;
+
+	/* Prepare environment boundaries. */
+	task->env_end = task->end;
+	task->env_start = task->env_end - DEFAULT_ENV_SIZE;
+	task->args_end = task->env_start;
+	task->args_start = task->env_start;
+
+	/* Task stack starts right after the environment. */
+	task->stack_end = task->env_start;
+	task->stack_start = task->stack_end - DEFAULT_STACK_SIZE;
+
+	/* Currently RO text and RW data are one region. TODO: Fix this */
+	task->data_start = task->start;
+	task->data_end = task->start + page_align_up(file->length);
+	task->text_start = task->data_start;
+	task->text_end = task->data_end;
+
+	/* Task's region available for mmap */
+	task->map_start = task->data_end;
+	task->map_end = task->stack_start;
+
+	/* Task's utcb */
+	task->utcb = utcb_vaddr_new();
+
+	/* Create a shared memory segment available for shmat() */
+	if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
+		return (int)shm;
+
+	return 0;
+}
+
+int task_setup_registers(struct tcb *task, unsigned int pc,
+			 unsigned int sp, l4id_t pager)
+{
+	int err;
+
+	/* Set up task's registers to default. */
+	if (!sp)
+		sp = align(task->stack_end - 1, 8);
+	if (!pc)
+		pc = task->text_start;
+	if (!pager)
+		pager = self_tid();
+
+	/* Set up the task's thread details, (pc, sp, pager etc.) */
+	if ((err = l4_exchange_registers(pc, sp, pager, task->tid) < 0)) {
+		printf("l4_exchange_registers failed with %d.\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+int task_start(struct tcb *task, struct task_ids *ids)
+{
+	int err;
+
+	/* Start the thread */
+	printf("Starting task with id %d\n", task->tid);
+	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
+		printf("l4_thread_control failed with %d\n", err);
+		return err;
+	}
+
+	return 0;
+}
+
+/*
+ * A specialised function for setting up the task environment of mm0.
+ * Essentially all the memory regions are set up but a new task isn't
+ * created, registers aren't assigned, and thread not started, since
+ * these are all already done by the kernel. But we do need a memory
+ * environment for mm0, hence this function.
+ */
+int mm0_task_init(struct vm_file *f, unsigned long task_start,
+		  unsigned long task_end, struct task_ids *ids)
+{
+	int err;
+	struct tcb *task;
+
+	/*
+	 * The thread itself is already known by the kernel, so we just
+	 * allocate a local task structure.
+	 */
+	BUG_ON(IS_ERR(task = tcb_alloc_init()));
+
+	task->tid = ids->tid;
+	task->spid = ids->spid;
+
+	if ((err = task_setup_regions(f, task, task_start, task_end)) < 0)
+		return err;
+
+	if ((err =  task_mmap_regions(task, f)) < 0)
+		return err;
+
+	/* Add the task to the global task list */
+	list_add_tail(&task->list, &tcb_head.list);
+	tcb_head.total++;
+
+	/* Add the file to global vm lists */
+	list_del_init(&f->list);
+	list_del_init(&f->vm_obj.list);
+	list_add(&f->list, &vm_file_list);
+	list_add(&f->vm_obj.list, &vm_object_list);
+
+	return 0;
+}
+
+/*
+ * Main entry point for the creation, initialisation and
+ * execution of a new task.
+ */
+int task_exec(struct vm_file *f, unsigned long task_region_start,
+	      unsigned long task_region_end, struct task_ids *ids)
+{
+	struct tcb *task;
+	int err;
+
+	if (IS_ERR(task = task_create(ids)))
+		return (int)task;
+
+	if ((err = task_setup_regions(f, task, task_region_start,
+				      task_region_end)) < 0)
+		return err;
+
+	if ((err = task_mmap_regions(task, f)) < 0)
+		return err;
+
+	if ((err =  task_setup_registers(task, 0, 0, 0)) < 0)
+		return err;
+
+	/* Add the task to the global task list */
+	list_add_tail(&task->list, &tcb_head.list);
+	tcb_head.total++;
+
+	/* Add the file to global vm lists */
+	list_del_init(&f->list);
+	list_del_init(&f->vm_obj.list);
+	list_add(&f->list, &vm_file_list);
+	list_add(&f->vm_obj.list, &vm_object_list);
+
+	if ((err = task_start(task, ids)) < 0)
+		return err;
+
+	return 0;
+}
+
+#if 0
 /*
  * Creates a process environment, mmaps the given file along
  * with any other necessary segment, and executes it as a task.
  */
-int start_boot_task(struct vm_file *file, struct task_ids *ids)
+int start_boot_task(struct vm_file *file, unsigned long task_start,
+		    unsigned long task_end, struct task_ids *ids)
 {
 	int err;
 	struct tcb *task;
@@ -219,7 +311,7 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	task->spid = ids->spid;
 
 	/* Prepare environment boundaries. */
-	task->env_end = USER_AREA_END;
+	task->env_end = task_end;
 	task->env_start = task->env_end - DEFAULT_ENV_SIZE;
 	task->args_end = task->env_start;
 	task->args_start = task->env_start;
@@ -229,14 +321,20 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 	task->stack_start = task->stack_end - DEFAULT_STACK_SIZE;
 
 	/* Currently RO text and RW data are one region. TODO: Fix this */
-	task->data_start = USER_AREA_START;
-	task->data_end = USER_AREA_START + page_align_up(file->length);
+	task->data_start = task_start;
+	task->data_end = task_start + page_align_up(file->length);
 	task->text_start = task->data_start;
 	task->text_end = task->data_end;
 
 	/* Task's region available for mmap */
 	task->map_start = task->data_end;
 	task->map_end = task->stack_start;
+
+	/* Task's utcb */
+	task->utcb = utcb_vaddr_new();
+
+	/* Create a shared memory segment available for shmat() */
+	shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE));
 
 	/* Set up task's registers */
 	sp = align(task->stack_end - 1, 8);
@@ -293,13 +391,14 @@ int start_boot_task(struct vm_file *file, struct task_ids *ids)
 error:
 	BUG();
 }
+#endif
 
 struct vm_file *initdata_next_bootfile(struct initdata *initdata)
 {
 	struct vm_file *file, *n;
 	list_for_each_entry_safe(file, n, &initdata->boot_file_list,
 				 list) {
-		list_del(&file->list);
+		list_del_init(&file->list);
 		return file;
 	}
 	return 0;
@@ -311,40 +410,65 @@ struct vm_file *initdata_next_bootfile(struct initdata *initdata)
  */
 int start_boot_tasks(struct initdata *initdata)
 {
-	struct vm_file *file;
+	struct vm_file *file, *fs0, *mm0, *n;
 	struct svc_image *img;
 	struct task_ids ids;
+	struct list_head files;
 	int total = 0;
 
 	INIT_LIST_HEAD(&tcb_head.list);
+	INIT_LIST_HEAD(&files);
+
+	/* Separate out special server tasks and regular files */
 	do {
 		file = initdata_next_bootfile(initdata);
 
 		if (file) {
 			BUG_ON(file->type != VM_FILE_BOOTFILE);
 			img = file->priv_data;
-			if (!strcmp(img->name, __PAGERNAME__)) {
-				continue;
-			}
-			/* Set up task ids */
-			if (!strcmp(img->name, __VFSNAME__)) {
-				ids.tid = VFS_TID;
-				ids.spid = VFS_TID;
-			} else {
-				ids.tid = -1;
-				ids.spid = -1;
-			}
+			if (!strcmp(img->name, __PAGERNAME__))
+				mm0 = file;
+			else if (!strcmp(img->name, __VFSNAME__))
+				fs0 = file;
+			else
+				list_add(&file->list, &files);
 		} else
 			break;
-
-		/* Add the file to global vm lists */
-		list_add(&file->list, &vm_file_list);
-		list_add(&file->vm_obj.list, &vm_object_list);
-
-		/* Start the file as a task */
-		start_boot_task(file, &ids);
-		total++;
 	} while (1);
+
+	/* MM0 needs partial initialisation, since its already running. */
+	printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
+	ids.tid = PAGER_TID;
+	ids.tid = PAGER_TID;
+	if (mm0_task_init(mm0, INITTASK_AREA_START, INITTASK_AREA_END, &ids) < 0)
+		BUG();
+	total++;
+
+	/* Initialise vfs with its predefined id */
+	ids.tid = VFS_TID;
+	ids.spid = VFS_TID;
+	printf("%s: Initialising fs0\n",__TASKNAME__);
+	if (task_exec(fs0, USER_AREA_START, USER_AREA_END, &ids) < 0)
+		BUG();
+	total++;
+
+	/* Initialise other tasks */
+	list_for_each_entry_safe(file, n, &files, list) {
+		printf("%s: Initialising new boot task.\n", __TASKNAME__);
+		ids.tid = TASK_ID_INVALID;
+		ids.spid = TASK_ID_INVALID;
+		if (task_exec(file, USER_AREA_START, USER_AREA_END, &ids) < 0)
+			BUG();
+		total++;
+	}
+	{
+		struct tcb *t;
+		printf("Tasks:\n========\n");
+		list_for_each_entry(t, &tcb_head.list, list) {
+			printf("Task tid: %d, spid: %d\n", t->tid, t->spid);
+			BUG_ON(t->tid != t->spid);
+		}
+	}
 
 	if (!total) {
 		printf("%s: Could not start any tasks.\n", __TASKNAME__);
@@ -376,8 +500,8 @@ struct task_data_head {
  */
 int send_task_data(l4id_t requester)
 {
-	int li, err;
-	struct tcb *t, *vfs;
+	int li = 0, err;
+	struct tcb *t, *vfs, *self;
 	struct task_data_head *tdata_head;
 
 	if (requester != VFS_TID) {
@@ -388,29 +512,27 @@ int send_task_data(l4id_t requester)
 	}
 
 	BUG_ON(!(vfs = find_task(requester)));
-	BUG_ON(!vfs->utcb_address);
+	BUG_ON(!(self = find_task(self_tid())));
+	BUG_ON(!vfs->utcb);
 
-	/*
-	 * When task does shmat() for its utcb, mm0 prefaults and maps it
-	 * to itself, and sets this flag. Check that this has occured
-	 * to ensure we have access to it. Otherwise return error.
-	 */
-	if (!vfs->utcb_mapped) {
-		l4_ipc_return(-ENOENT);
-		return 0;
-	}
+	/* Attach mm0 to vfs's utcb segment just like a normal task */
+	BUG_ON(IS_ERR(shmat_shmget_internal((key_t)vfs->utcb, vfs->utcb)));
+
+	/* Prefault those pages to self. */
+	for (int i = 0; i < __pfn(DEFAULT_UTCB_SIZE); i++)
+		prefault_page(self, (unsigned long)vfs->utcb + __pfn_to_addr(i),
+			      VM_READ | VM_WRITE);
 
 	/* Write all requested task information to utcb's user buffer area */
-	tdata_head = (struct task_data_head *)vfs->utcb_address;
+	tdata_head = (struct task_data_head *)vfs->utcb;
 
 	/* First word is total number of tcbs */
 	tdata_head->total = tcb_head.total;
 
 	/* Write per-task data for all tasks */
-	li = 0;
 	list_for_each_entry(t, &tcb_head.list, list) {
 		tdata_head->tdata[li].tid = t->tid;
-		tdata_head->tdata[li].utcb_address = t->utcb_address;
+		tdata_head->tdata[li].utcb_address = (unsigned long)t->utcb;
 		li++;
 	}
 

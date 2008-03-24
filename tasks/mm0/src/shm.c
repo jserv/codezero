@@ -83,7 +83,8 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 
 	/* First user? */
 	if (!shm_file->vm_obj.refcnt)
-		if (mmap_address_validate((unsigned long)shm_addr, vmflags))
+		if (mmap_address_validate(task, (unsigned long)shm_addr,
+					  vmflags))
 			shm->shm_addr = shm_addr;
 		else
 			shm->shm_addr = address_new(&shm_vaddr_pool,
@@ -121,8 +122,10 @@ int sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
 			 * the task makes a syscall to mm0 without first
 			 * faulting the utcb.
 			 */
+			/*
 			if ((unsigned long)shmaddr == task->utcb_address)
 				utcb_prefault(task, VM_READ | VM_WRITE);
+			*/
 
 			l4_ipc_return((int)shmaddr);
 			return 0;
@@ -174,7 +177,7 @@ int sys_shmdt(l4id_t requester, const void *shmaddr)
 
 
 /* Creates an shm area and glues its details with shm pager and devzero */
-static struct vm_file *shm_new(key_t key, unsigned long npages)
+struct vm_file *shm_new(key_t key, unsigned long npages)
 {
 	struct shm_descriptor *shm_desc;
 	struct vm_file *shm_file;
@@ -187,14 +190,14 @@ static struct vm_file *shm_new(key_t key, unsigned long npages)
 
 	if (!(shm_desc = kzalloc(sizeof(struct shm_descriptor)))) {
 		kfree(shm_file);
-		return 0;
+		return PTR_ERR(-ENOMEM);
 	}
 
 	/* Initialise the shm descriptor */
-	if ((shm_desc->shmid = id_new(shm_ids)) < 0) {
+	if (IS_ERR(shm_desc->shmid = id_new(shm_ids))) {
 		kfree(shm_file);
 		kfree(shm_desc);
-		return 0;
+		return PTR_ERR(shm_desc->shmid);
 	}
 	shm_desc->key = (int)key;
 	shm_desc->npages = npages;
@@ -212,6 +215,26 @@ static struct vm_file *shm_new(key_t key, unsigned long npages)
 	list_add(&shm_file->vm_obj.list, &vm_object_list);
 
 	return shm_file;
+}
+
+/*
+ * Fast internal path to do shmget/shmat() together for mm0's
+ * convenience. Works for existing areas.
+ */
+void *shmat_shmget_internal(key_t key, void *shmaddr)
+{
+	struct vm_file *shm_file;
+	struct shm_descriptor *shm_desc;
+
+	list_for_each_entry(shm_file, &shm_file_list, list) {
+		shm_desc = shm_file_to_desc(shm_file);
+		/* Found the key, shmat that area */
+		if (shm_desc->key == key)
+			return do_shmat(shm_file, shmaddr,
+					0, find_task(self_tid()));
+	}
+
+	return PTR_ERR(-EEXIST);
 }
 
 /*
