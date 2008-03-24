@@ -91,7 +91,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 
 	/* Get the vnode */
 	if (IS_ERR(v = vfs_lookup_bypath(task, pathbuf))) {
-		if (!flags & O_CREAT) {
+		if (!(flags & O_CREAT)) {
 			return (int)v;
 		} else {
 			if ((err = vfs_create(task, pathname, mode)) < 0)
@@ -100,7 +100,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	}
 
 	/* Get a new fd */
-	BUG_ON(!(fd = id_new(task->fdpool)));
+	BUG_ON((fd = id_new(task->fdpool)) < 0);
 
 	/* Assign the new fd with the vnode's number */
 	task->fd[fd] = v->vnum;

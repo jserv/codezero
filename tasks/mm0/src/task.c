@@ -34,6 +34,15 @@ struct tcb_head {
 	int total;			/* Total threads */
 } tcb_head;
 
+void print_tasks(void)
+{
+	struct tcb *task;
+	printf("Tasks:\n========\n");
+	list_for_each_entry(task, &tcb_head.list, list) {
+		printf("Task tid: %d, spid: %d\n", task->tid, task->spid);
+	}
+}
+
 struct tcb *find_task(int tid)
 {
 	struct tcb *t;
@@ -73,14 +82,12 @@ struct tcb *task_create(struct task_ids *ids)
 	int err;
 
 	/* Create the thread structures and address space */
-	printf("Creating new thread with ids: %d, %d.\n", ids->tid, ids->spid);
 	if ((err = l4_thread_control(THREAD_CREATE, ids)) < 0) {
 		printf("l4_thread_control failed with %d.\n", err);
 		return PTR_ERR(err);
 	}
 
 	/* Create a task and use given space and thread ids. */
-	printf("New task with id: %d, space id: %d\n", ids->tid, ids->spid);
 	if (IS_ERR(task = tcb_alloc_init()))
 		return PTR_ERR(task);
 
@@ -195,7 +202,7 @@ int task_start(struct tcb *task, struct task_ids *ids)
 	int err;
 
 	/* Start the thread */
-	printf("Starting task with id %d\n", task->tid);
+	printf("Starting task with id %d, spid: %d\n", task->tid, task->spid);
 	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
 		printf("l4_thread_control failed with %d\n", err);
 		return err;
@@ -409,7 +416,7 @@ struct vm_file *initdata_next_bootfile(struct initdata *initdata)
  */
 int start_boot_tasks(struct initdata *initdata)
 {
-	struct vm_file *file, *fs0, *mm0, *n;
+	struct vm_file *file = 0, *fs0 = 0, *mm0 = 0, *n;
 	struct svc_image *img;
 	struct task_ids ids;
 	struct list_head files;
@@ -438,7 +445,7 @@ int start_boot_tasks(struct initdata *initdata)
 	/* MM0 needs partial initialisation, since its already running. */
 	printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
 	ids.tid = PAGER_TID;
-	ids.tid = PAGER_TID;
+	ids.spid = PAGER_TID;
 	if (mm0_task_init(mm0, INITTASK_AREA_START, INITTASK_AREA_END, &ids) < 0)
 		BUG();
 	total++;
@@ -459,14 +466,6 @@ int start_boot_tasks(struct initdata *initdata)
 		if (task_exec(file, USER_AREA_START, USER_AREA_END, &ids) < 0)
 			BUG();
 		total++;
-	}
-	{
-		struct tcb *t;
-		printf("Tasks:\n========\n");
-		list_for_each_entry(t, &tcb_head.list, list) {
-			printf("Task tid: %d, spid: %d\n", t->tid, t->spid);
-			BUG_ON(t->tid != t->spid);
-		}
 	}
 
 	if (!total) {

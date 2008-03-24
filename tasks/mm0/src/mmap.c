@@ -564,8 +564,8 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	}
 
 	/* Finished initialising the vma, add it to task */
-	printf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
-	       map_address, map_address + npages * PAGE_SIZE);
+	dprintf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
+		map_address, map_address + npages * PAGE_SIZE);
 	list_add(&new->list, &task->vm_area_list);
 
 	return 0;

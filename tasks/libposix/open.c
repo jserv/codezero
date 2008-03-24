@@ -35,6 +35,7 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 
 	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
 	copy_to_utcb((void *)pathname, strlen(pathname));
+	write_mr(L4SYS_ARG0, (unsigned long)utcb_page);
 	write_mr(L4SYS_ARG1, flags);
 	write_mr(L4SYS_ARG2, (u32)mode);
 

@@ -65,8 +65,10 @@ void handle_fs_requests(void)
 
 	/* Read mrs not used by syslib */
 	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
-		mr[i] = read_mr(i);
+		mr[i] = read_mr(MR_UNUSED_START + i);
 
+	/* FIXME: Fix all these syscalls to read any buffer data from the caller task's utcb.
+	 * Make sure to return -EINVAL if data is not valid. */
 	switch(tag) {
 	case L4_IPC_TAG_WAIT:
 		printf("%s: Synced with waiting thread.\n", __TASKNAME__);
