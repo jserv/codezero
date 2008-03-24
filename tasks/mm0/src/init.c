@@ -1,7 +1,7 @@
 /*
  * Initialise the system.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <stdio.h>
 #include <string.h>
@@ -17,26 +17,6 @@
 #include <init.h>
 #include <utcb.h>
 
-/*
- * Initialise the utcb virtual address pool and its own utcb.
- * NOTE: This allocates memory so kmalloc must be initialised first.
- * FIXME: Is this necessary anymore??? Who maps mm0's page to share?
- */
-void init_utcb_page(void)
-{
-	void *utcb_virt, *utcb_phys;
-
-	/* Allocate and map one for self */
-	if (utcb_pool_init() < 0)
-		printf("UTCB initialisation failed.\n");
-	utcb_virt = utcb_vaddr_new();
-	printf("%s: Mapping 0x%x as utcb to self.\n", __TASKNAME__, utcb_virt);
-	utcb_phys = alloc_page(1);
-	l4_map(utcb_phys, utcb_virt, 1, MAP_USR_RW_FLAGS, self_tid());
-
-	/* Initialise the utcb page that is inside l4lib. */
-	utcb_page = utcb_virt;
-}
 
 void init_mm(struct initdata *initdata)
 {
@@ -63,8 +43,11 @@ void init_mm(struct initdata *initdata)
 	shm_init();
 	printf("%s: Initialised shm structures.\n", __TASKNAME__);
 
-	init_utcb_page();
-	printf("%s: Initialised mm0 utcb page.\n", __TASKNAME__);
+	if (utcb_pool_init() < 0) {
+		printf("UTCB initialisation failed.\n");
+		BUG();
+	}
+	printf("%s: Initialised utcb address pool.\n", __TASKNAME__);
 
 	/* Give the kernel some memory to use for its allocators */
 	l4_kmem_grant(__pfn(alloc_page(__pfn(SZ_1MB))), __pfn(SZ_1MB));

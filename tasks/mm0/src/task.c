@@ -94,6 +94,7 @@ struct tcb *task_create(struct task_ids *ids)
 int task_mmap_regions(struct tcb *task, struct vm_file *file)
 {
 	int err;
+	struct vm_file *shm;
 
 	/*
 	 * mmap each task's physical image to task's address space.
@@ -124,14 +125,19 @@ int task_mmap_regions(struct tcb *task, struct vm_file *file)
 		return err;
 	}
 
+	/* Task's utcb */
+	task->utcb = utcb_vaddr_new();
+
+	/* Create a shared memory segment available for shmat() */
+	if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
+		return (int)shm;
+
 	return 0;
 }
 
 int task_setup_regions(struct vm_file *file, struct tcb *task,
 		       unsigned long task_start, unsigned long task_end)
 {
-	struct vm_file *shm;
-
 	/*
 	 * Set task's main address space boundaries. Not all tasks
 	 * run in the default user boundaries, e.g. mm0 pager.
@@ -158,13 +164,6 @@ int task_setup_regions(struct vm_file *file, struct tcb *task,
 	/* Task's region available for mmap */
 	task->map_start = task->data_end;
 	task->map_end = task->stack_start;
-
-	/* Task's utcb */
-	task->utcb = utcb_vaddr_new();
-
-	/* Create a shared memory segment available for shmat() */
-	if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
-		return (int)shm;
 
 	return 0;
 }
