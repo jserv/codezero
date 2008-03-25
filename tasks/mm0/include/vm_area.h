@@ -130,7 +130,6 @@ struct vm_object {
 
 /* In memory representation of either a vfs file, a device. */
 struct vm_file {
-	unsigned long vnum;
 	unsigned long length;
 	unsigned int type;
 	struct list_head list;

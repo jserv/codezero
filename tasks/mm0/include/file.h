@@ -17,5 +17,6 @@ int sys_read(l4id_t sender, int fd, void *buf, int count);
 int sys_write(l4id_t sender, int fd, void *buf, int count);
 int sys_lseek(l4id_t sender, int fd, off_t offset, int whence);
 
+#define vm_file_to_vnum(f)	(*(unsigned long *)((f)->priv_data))
 extern struct list_head vm_file_list;
 #endif /* __MM0_FILE_H__ */

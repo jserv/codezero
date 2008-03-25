@@ -88,7 +88,8 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
 
 		/* Syscall to vfs to read into the page. */
-		if ((err = vfs_read(f->vnum, page_offset, 1, vaddr)) < 0)
+		if ((err = vfs_read(vm_file_to_vnum(f), page_offset,
+				    1, vaddr)) < 0)
 			goto out_err;
 
 		/* Unmap it from vfs */

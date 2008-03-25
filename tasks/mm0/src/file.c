@@ -13,6 +13,7 @@
 #include <l4/api/kip.h>
 #include <posix/sys/types.h>
 #include <string.h>
+#include <file.h>
 
 /* List of all generic files */
 LIST_HEAD(vm_file_list);
@@ -92,7 +93,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 
 	/* Check if that vm_file is already in the list */
 	list_for_each_entry(vmfile, &vm_file_list, list) {
-		if (vmfile->vnum == vnum) {
+		if (vm_file_to_vnum(vmfile) == vnum) {
 			/* Add a reference to it from the task */
 			t->fd[fd].vmfile = vmfile;
 			vmfile->vm_obj.refcnt++;
@@ -105,7 +106,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 		return (int)vmfile;
 
 	/* Initialise and add it to global list */
-	vmfile->vnum = vnum;
+	vm_file_to_vnum(vmfile) = vnum;
 	vmfile->length = length;
 	vmfile->vm_obj.pager = &file_pager;
 	list_add(&vmfile->vm_obj.list, &vm_file_list);
@@ -172,7 +173,7 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 		if (IS_ERR(page)) {
 			printf("%s: %s:Could not read page %d "
 			       "from file with vnum: 0x%x\n", __TASKNAME__,
-			       __FUNCTION__, f_offset, vmfile->vnum);
+			       __FUNCTION__, f_offset, vm_file_to_vnum(vmfile));
 			return (int)page;
 		}
 	}
