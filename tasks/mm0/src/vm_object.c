@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
+#include <file.h>
 #include <vm_area.h>
 #include <l4/macros.h>
 #include <l4/api/errno.h>
@@ -40,7 +41,7 @@ void vm_object_print(struct vm_object *vmo)
 			ftype = "bootfile";
 		else if (f->type == VM_FILE_SHM)
 			ftype = "shm file";
-		else if (f->type == VM_FILE_REGULAR)
+		else if (f->type == VM_FILE_VFS)
 			ftype = "regular";
 		else
 			BUG();
@@ -87,6 +88,23 @@ struct vm_file *vm_file_create(void)
 	INIT_LIST_HEAD(&f->list);
 	vm_object_init(&f->vm_obj);
 	f->vm_obj.flags = VM_OBJ_FILE;
+
+	return f;
+}
+
+/*
+ * Populates the priv_data with vfs-file-specific
+ * information.
+ */
+struct vm_file *vfs_file_create(void)
+{
+	struct vm_file *f = vm_file_create();
+
+	if (IS_ERR(f))
+		return f;
+
+	f->priv_data = kzalloc(sizeof(struct vfs_file_data));
+	f->type = VM_FILE_VFS;
 
 	return f;
 }

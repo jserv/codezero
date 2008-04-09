@@ -92,10 +92,13 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Get the vnode */
 	if (IS_ERR(v = vfs_lookup_bypath(task, pathbuf))) {
 		if (!(flags & O_CREAT)) {
-			return (int)v;
+			l4_ipc_return((int)v);
+			return 0;
 		} else {
-			if ((err = vfs_create(task, pathname, mode)) < 0)
-				return err;
+			if ((err = vfs_create(task, pathname, mode)) < 0) {
+				l4_ipc_return(err);
+				return 0;
+			}
 		}
 	}
 
@@ -108,6 +111,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Tell the pager about opened vnode information */
 	BUG_ON(pager_sys_open(sender, fd, v->vnum, v->size) < 0);
 
+	l4_ipc_return(0);
 	return 0;
 }
 
@@ -203,6 +207,26 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 }
 
 /*
+ * FIXME: Here's how this should have been:
+ * v->ops.readdir() -> Reads fs-specific directory contents. i.e. reads
+ * the directory buffer, doesn't care however contained vnode details are
+ * stored.
+ *
+ * After reading, it converts the fs-spceific contents into generic vfs
+ * dentries and populates the dentries of those vnodes.
+ *
+ * If vfs_readdir() is issued, those generic dentries are converted into
+ * the posix-defined directory record structure. During this on-the-fly
+ * generation, pseudo-entries such as . and .. are also added.
+ *
+ * If this layering is not done, i.e. the low-level dentry buffer already
+ * keeps this record structure and we try to return that, then we wont
+ * have a chance to add the pseudo-entries . and .. These record entries
+ * are essentially created from parent vnode and current vnode but using
+ * the names . and ..
+ */
+
+/*
  * Reads @count bytes of posix struct dirents into @buf. This implements
  * the raw dirent read syscall upon which readdir() etc. posix calls
  * can be built in userspace.
@@ -219,19 +243,25 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	BUG_ON(!(t = find_task(sender)));
 
 	/* Convert fd to vnum. */
-	BUG_ON(!(vnum = t->fd[fd]));
+	BUG_ON((vnum = t->fd[fd]) < 0);
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL; /* No such vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
+		l4_ipc_return(-EINVAL);
+		return 0; /* No such vnode */
+	}
 
 	/* Ensure vnode is a directory */
-	if (!vfs_isdir(v))
-		return -ENOTDIR;
+	if (!vfs_isdir(v)) {
+		l4_ipc_return(-ENOTDIR);
+		return 0;
+	}
 
 	/* Read the whole content from fs, if haven't done so yet */
-	if ((err = v->ops.readdir(v)) < 0)
-		return err;
+	if ((err = v->ops.readdir(v)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
 
 	/* Bytes to read, minimum of vnode size and count requested */
 	nbytes = (v->size <= count) ? v->size : count;
@@ -239,7 +269,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	/* Do we have those bytes at hand? */
 	if (v->dirbuf.buffer && (v->dirbuf.npages * PAGE_SIZE) >= nbytes) {
 		memcpy(buf, v->dirbuf.buffer, nbytes);
-		return nbytes;
+		l4_ipc_return(nbytes);
 	}
 
 	return 0;

@@ -40,7 +40,7 @@
 /* Defines the type of file. A device file? Regular file? One used at boot? */
 enum VM_FILE_TYPE {
 	VM_FILE_DEVZERO = 1,
-	VM_FILE_REGULAR,
+	VM_FILE_VFS,
 	VM_FILE_BOOTFILE,
 	VM_FILE_SHM,
 };

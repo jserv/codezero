@@ -93,7 +93,9 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 
 	/* Check if that vm_file is already in the list */
 	list_for_each_entry(vmfile, &vm_file_list, list) {
-		if (vm_file_to_vnum(vmfile) == vnum) {
+		/* Check it is a vfs file and if so vnums match. */
+		if ((vmfile->type & VM_FILE_VFS) &&
+		    vm_file_to_vnum(vmfile) == vnum) {
 			/* Add a reference to it from the task */
 			t->fd[fd].vmfile = vmfile;
 			vmfile->vm_obj.refcnt++;
@@ -102,7 +104,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	}
 
 	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vm_file_create()))
+	if (IS_ERR(vmfile = vfs_file_create()))
 		return (int)vmfile;
 
 	/* Initialise and add it to global list */

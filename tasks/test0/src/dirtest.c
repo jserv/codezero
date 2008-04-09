@@ -113,14 +113,15 @@ int lsdir(char *path)
 		perror("OPEN");
 		return 0;
 	} else
-		// printf("OPEN OK.\n");
+		printf("OPEN OK.\n");
 
 	if ((bytes = os_readdir(fd, dents, sizeof(struct dirent) * DENTS_TOTAL)) < 0) {
 		perror("GETDENTS");
 		return 0;
-	}
-		//printf("GETDENTS OK.\n");
+	} else {
+		printf("GETDENTS OK.\n");
 		print_dirents(path, dents, bytes);
+	}
 
 	return 0;
 }

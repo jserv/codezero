@@ -141,8 +141,8 @@ int task_utcb_attach(struct tcb *t)
 	if ((unsigned long)shmaddr != t->utcb_address)
 		return -EINVAL;
 
-	printf("%s: Mapped utcb of task %d @ 0x%x\n",
-	       __TASKNAME__, t->tid, shmaddr);
+	//printf("%s: Mapped utcb of task %d @ 0x%x\n",
+	//       __TASKNAME__, t->tid, shmaddr);
 
 	return 0;
 
@@ -170,9 +170,9 @@ int init_task_structs(struct task_data_head *tdata_head)
 		t->curdir = vfs_root.pivot;
 
 		/* Print task information */
-		printf("%s: Task info received from mm0:\n", __TASKNAME__);
-		printf("%s: task id: %d, utcb address: 0x%x\n",
-		       __TASKNAME__, t->tid, t->utcb_address);
+		//printf("%s: Task info received from mm0:\n", __TASKNAME__);
+		//printf("%s: task id: %d, utcb address: 0x%x\n",
+		//       __TASKNAME__, t->tid, t->utcb_address);
 
 		/* shm attach to the utcbs for all these tasks except own */
 		if (t->tid != self_tid())
