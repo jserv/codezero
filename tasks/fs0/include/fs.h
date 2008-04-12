@@ -48,6 +48,7 @@ struct vnode_ops {
 	vnode_op_t create;
 	struct vnode *(*lookup)(struct vnode *root, char *path);
 	int (*readdir)(struct vnode *v);
+	int (*filldir)(struct vnode *v);
 	vnode_op_t link;
 	vnode_op_t unlink;
 	int (*mkdir)(struct vnode *parent, char *name);
@@ -91,13 +92,23 @@ struct dentry {
 };
 
 /*
- * Buffer to keep directory content. This is the only vnode content
- * that fs0 maintains. All other file data is in mm0 page cache.
+ * Buffer that maintains directory content for a directory vnode. This is the
+ * only vnode content that fs0 maintains. All other file data is in mm0 page
+ * cache.
  */
 struct dirbuf {
 	unsigned long npages;
 	int dirty;
 	u8 *buffer;
+};
+
+/* Posix-style dirent format used by userspace. Returned by sys_readdir() */
+#define DIRENT_NAME_MAX			32
+struct dirent {
+	u32 inum;			/* Inode number */
+	u32 offset;			/* Dentry offset in its buffer */
+	u32 rlength;			/* Record length */
+	u8  name[DIRENT_NAME_MAX];	/* Name string */
 };
 
 struct vnode {

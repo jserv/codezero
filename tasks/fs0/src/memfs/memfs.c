@@ -66,12 +66,6 @@ int memfs_format_filesystem(void *buffer)
 	INIT_LIST_HEAD(&sb->inode_cache_list);
 	memfs_init_caches(sb);
 
-	/* We allocate and fix a root inode so the sb is ready for mount */
-	sb->root = memfs_create_inode(sb);
-
-	/* Some early-init code relies on root having inode number 0 */
-	BUG_ON(sb->root->inum != 0);
-
 	return 0;
 }
 
@@ -115,6 +109,50 @@ struct file_system_type memfs_fstype = {
 	},
 };
 
+/*
+ * Initialise root inode as a directory, as in the mknod() call
+ * but differently since root is parentless and is the parent of itself.
+ */
+int memfs_init_rootdir(struct superblock *sb)
+{
+	struct memfs_superblock *msb = sb->fs_super;
+	struct dentry *d;
+	struct vnode *v;
+	int err;
+
+	/*
+	 * Create the root vnode. Since this is memfs, root vnode is
+	 * not read-in but dynamically created here. We expect this
+	 * first vnode to have vnum = 0.
+	 */
+	v = sb->root = vfs_sb->ops->alloc_vnode(vfs_sb);
+	msb->root_vnum = vfs_sb->root->vnum;
+	BUG_ON(msb->root_vnum != 0);
+
+	/* Initialise fields */
+	vfs_set_type(v, S_IFDIR);
+
+	/* Allocate a new vfs dentry */
+	if (!(d = vfs_alloc_dentry()))
+		return -ENOMEM;
+
+	/* Initialise it. NOTE: On root, parent is itself */
+	strncpy(d->name, "/", VFS_DNAME_MAX);
+	d->ops = generic_dentry_operations;
+	d->parent = d;
+	d->vnode = v;
+
+	/* Associate dentry with its vnode */
+	list_add(&d->vref, &d->vnode->dentries);
+
+	/* Associate dentry with its parent */
+	list_add(&d->child, &parent->children);
+
+	/* Add both vnode and dentry to their flat caches */
+	list_add(&d->cache_list, &dentry_cache);
+	list_add(&v->cache_list, &vnode_cache);
+}
+
 /* Copies fs-specific superblock into generic vfs superblock */
 struct superblock *memfs_fill_superblock(struct memfs_superblock *sb,
 					 struct superblock *vfs_sb)
@@ -125,11 +163,8 @@ struct superblock *memfs_fill_superblock(struct memfs_superblock *sb,
 	vfs_sb->fssize = sb->fssize;
 	vfs_sb->blocksize = sb->blocksize;
 
-	/*
-	 * Create the first vnode. Since this is memfs, root vnode is
-	 * not read-in but dynamically created here.
-	 */
-	vfs_sb->ops->alloc_vnode(vfs_sb);
+	/* We initialise the root vnode as the root directory */
+	memfs_init_rootdir(vfs_sb);
 
 	return vfs_sb;
 }

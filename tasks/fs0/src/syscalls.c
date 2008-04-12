@@ -226,17 +226,33 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
  * the names . and ..
  */
 
+int fill_dirent(void *buf, unsigned long vnum, int offset, char *name)
+{
+	struct dirent *d = buf;
+
+	d->inum = (unsigned int)vnum;
+	d->offset = offset;
+	d->rlength = sizeof(struct dirent);
+	strncpy(d->name, name, DIRENT_NAME_MAX);
+
+	return d->rlength;
+}
+
 /*
  * Reads @count bytes of posix struct dirents into @buf. This implements
  * the raw dirent read syscall upon which readdir() etc. posix calls
  * can be built in userspace.
+ *
+ * FIXME: Ensure buf is in shared utcb, and count does not exceed it.
  */
 int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 {
+	struct dentry *d = list_entry(v->dentries.next, struct dentry, vref);
+	int dirent_size = sizeof(struct dirent);
+	int total = 0, nbytes = 0;
 	unsigned long vnum;
 	struct vnode *v;
 	struct tcb *t;
-	unsigned long nbytes;
 	int err;
 
 	/* Get the task */
@@ -257,20 +273,30 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 		return 0;
 	}
 
-	/* Read the whole content from fs, if haven't done so yet */
-	if ((err = v->ops.readdir(v)) < 0) {
-		l4_ipc_return(err);
+	/* Write pseudo-entries . and .. to user buffer */
+	if (count < dirent_size)
+		return 0;
+
+	fill_dirent(buf, v->vnum, nbytes, ".");
+	nbytes += dirent_size;
+	buf += dirent_size;
+	count -= dirent_size;
+
+	if (count < dirent_size)
+		return 0;
+
+	fill_dirent(buf, d->parent->vnode->vnum, nbytes, "..");
+	nbytes += dirent_size;
+	buf += dirent_size;
+	count -= dirent_size;
+
+	/* Copy fs-specific dir to buf in struct dirent format */
+	if ((total = v->ops.filldir(buf, v, count)) < 0) {
+		l4_ipc_return(total);
 		return 0;
 	}
-
-	/* Bytes to read, minimum of vnode size and count requested */
-	nbytes = (v->size <= count) ? v->size : count;
-
-	/* Do we have those bytes at hand? */
-	if (v->dirbuf.buffer && (v->dirbuf.npages * PAGE_SIZE) >= nbytes) {
-		memcpy(buf, v->dirbuf.buffer, nbytes);
-		l4_ipc_return(nbytes);
-	}
+	nbytes += total;
+	l4_ipc_return(nbytes);
 
 	return 0;
 }

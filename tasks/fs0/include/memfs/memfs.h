@@ -47,6 +47,7 @@
 #define MEMFS_MAGIC			0xB
 #define MEMFS_NAME			"memfs"
 #define MEMFS_NAME_SIZE			8
+
 struct memfs_inode {
 	u32 inum;	/* Inode number */
 	u32 mode;	/* File permissions */
@@ -64,7 +65,7 @@ struct memfs_superblock {
 	u32 blocksize;		/* Filesystem block size */
 	u64 fmaxblocks;		/* Maximum number of blocks per file */
 	u64 fssize;		/* Total size of filesystem */
-	struct memfs_inode *root; /* The root of this superblock */
+	unsigned long root_vnum;	/* The root vnum of this superblock */
 	struct list_head inode_cache_list;	/* Chain of alloc caches */
 	struct list_head block_cache_list;	/* Chain of alloc caches */
 	struct id_pool *ipool;			/* Index pool for inodes */

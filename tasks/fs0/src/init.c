@@ -49,8 +49,6 @@ void vfs_register_filesystems(void)
 	memfs_register_fstype(&fs_type_list);
 }
 
-extern struct list_head vm_file_list;
-
 /*
  * Filesystem initialisation.
  */

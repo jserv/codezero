@@ -10,9 +10,6 @@
 #include INC_GLUE(memory.h)
 #include <stdio.h>
 
-/* List of all in-memory files. */
-struct list_head vm_file_list;
-
 /*
  * This reads contents of a file in pages, calling the fs-specific file read function to read-in
  * those pages' contents.

@@ -204,6 +204,7 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 	return 0;
 }
 
+
 /*
  * Creates ordinary files and directories at the moment. In the future,
  * other file types will be added.
@@ -247,6 +248,8 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	/* Get the next directory entry available on the parent vnode */
 	if (v->dirbuf.npages * PAGE_SIZE <= v->size)
 		return -ENOSPC;
+
+	/* Fill in the new entry to parent directory entry */
 	memfsd = (struct memfs_dentry *)&v->dirbuf.buffer[v->size];
 	memfsd->offset = v->size;
 	memfsd->rlength = sizeof(*memfsd);
@@ -254,8 +257,7 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	strncpy((char *)memfsd->name, dirname, MEMFS_DNAME_MAX);
 	memfsd->name[MEMFS_DNAME_MAX - 1] = '\0';
 
-	BUG(); /* FIXME: Fix this issue. */
-	/* Write the updated directory buffer back to disk */
+	/* Write the updated directory buffer back to disk block */
 	v->fops.write(v, 0, 1, v->dirbuf.buffer);
 
 	/* Update parent vnode */
@@ -269,6 +271,7 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	newd->ops = generic_dentry_operations;
 	newd->parent = parent;
 	newd->vnode = newv;
+	strncpy(newd->name, dirname, VFS_DNAME_MAX);
 
 	/* Associate dentry with its vnode */
 	list_add(&newd->vref, &newd->vnode->dentries);
@@ -374,8 +377,33 @@ int memfs_vnode_readdir(struct vnode *v)
 }
 
 
+int memfs_vnode_filldir(void *usrbuf, struct vnode *v, int count)
+{
+	int size;
+
+	/* Bytes to read, minimum of vnode size and count requested */
+	nbytes = (v->size <= count) ? v->size : count;
+
+	/* Read the dir content from fs, if haven't done so yet */
+	if ((err = v->ops.readdir(v)) < 0)
+		return err;
+
+	/* Do we have those bytes at hand? */
+	if (v->dirbuf.buffer && (v->dirbuf.npages * PAGE_SIZE) >= nbytes) {
+		/* 
+		 * Memfs does a direct copy since memfs dirent format
+		 * is the same as generic dirent format.
+		 */
+		memcpy(buf, v->dirbuf.buffer, nbytes);
+		return nbytes;
+	}
+	return 0;
+}
+
+
 struct vnode_ops memfs_vnode_operations = {
 	.readdir = memfs_vnode_readdir,
+	.filldir = memfs_vnode_filldir,
 	.mknod = memfs_vnode_mknod,
 };
 
