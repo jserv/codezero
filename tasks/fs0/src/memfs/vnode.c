@@ -127,6 +127,7 @@ struct vnode *memfs_alloc_vnode(struct superblock *sb)
 	/* Associate memfs-specific fields with vnode */
 	v->ops = memfs_vnode_operations;
 	v->fops = memfs_file_operations;
+	v->sb = sb;
 
 	/* Return the vnode */
 	return v;
@@ -315,7 +316,10 @@ int memfs_vnode_readdir(struct vnode *v)
 		return 0;
 
 	/* This is as big as a page */
-	v->dirbuf.buffer = vfs_alloc_dirpage();
+	if (IS_ERR(v->dirbuf.buffer = vfs_alloc_dirpage(v))) {
+		printf("%s: Could not allocate dirbuf.\n", __FUNCTION__);
+		return (int)v->dirbuf.buffer;
+	}
 	v->dirbuf.npages = 1;
 
 	/*

@@ -86,8 +86,6 @@ extern struct vnode_ops memfs_vnode_operations;
 extern struct superblock_ops memfs_superblock_operations;
 extern struct file_ops memfs_file_operations;
 
-extern struct memfs_superblock *memfs_superblock;
-
 int memfs_format_filesystem(void *buffer);
 struct memfs_inode *memfs_create_inode(struct memfs_superblock *sb);
 void memfs_register_fstype(struct list_head *);

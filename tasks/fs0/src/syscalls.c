@@ -277,6 +277,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	if (count < dirent_size)
 		return 0;
 
+	printf("%s: Filling in . (curdir)\n", __TASKNAME__);
 	fill_dirent(buf, v->vnum, nbytes, ".");
 	nbytes += dirent_size;
 	buf += dirent_size;
@@ -285,11 +286,13 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	if (count < dirent_size)
 		return 0;
 
+	printf("%s: Filling in .. (pardir)\n", __TASKNAME__);
 	fill_dirent(buf, d->parent->vnode->vnum, nbytes, "..");
 	nbytes += dirent_size;
 	buf += dirent_size;
 	count -= dirent_size;
 
+	printf("%s: Filling in other dir contents\n", __TASKNAME__);
 	/* Copy fs-specific dir to buf in struct dirent format */
 	if ((total = v->ops.filldir(buf, v, count)) < 0) {
 		l4_ipc_return(total);

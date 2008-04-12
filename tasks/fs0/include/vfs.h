@@ -27,19 +27,18 @@ extern struct list_head dentry_cache;
  * Normally mm0 tracks all vnode pages, but this is used to track pages in
  * directory vnodes, which are normally never mapped by tasks.
  */
-extern struct memfs_superblock *memfs_superblock;
-static inline void *vfs_alloc_dirpage(void)
+static inline void *vfs_alloc_dirpage(struct vnode *v)
 {
 	/*
 	 * Urgh, we allocate from the block cache of memfs to store generic vfs directory
 	 * pages. This is currently the quickest we can allocate page-aligned memory.
 	 */
-	return memfs_alloc_block(memfs_superblock);
+	return memfs_alloc_block(v->sb->fs_super);
 }
 
-static inline void vfs_free_dirpage(void *block)
+static inline void vfs_free_dirpage(struct vnode *v, void *block)
 {
-	memfs_free_block(memfs_superblock, block);
+	memfs_free_block(v->sb->fs_super, block);
 }
 
 static inline struct dentry *vfs_alloc_dentry(void)

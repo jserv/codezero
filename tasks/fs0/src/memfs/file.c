@@ -52,11 +52,12 @@ int memfs_write_block(struct vnode *v, int blknum, void *buf)
  * this use, its meant for retrieving an unknown inode under the vnode with valid vnum.
  * here we already have the inode.
  */
-int memfs_file_read_write(struct vnode *v, unsigned long pfn,
-			  unsigned long npages, void *buf, int wr)
+int memfs_file_read_write(struct vnode *v, unsigned int pfn,
+			  unsigned int npages, void *buf, int wr)
 {
 	struct memfs_inode *i;
 	struct memfs_superblock *memfs_sb;
+	unsigned int start, end, count;
 	u32 blocksize;
 
 	/* Don't support different block and page sizes for now */
@@ -79,17 +80,16 @@ int memfs_file_read_write(struct vnode *v, unsigned long pfn,
 
 	/* Read-specific operations */
 	if (!wr) {
-		/* Check if read is beyond EOF */
-		if ((pfn + npages) > __pfn(v->size)) {
-			printf("%s: Trying to read beyond end of file: %x-%x\n",
-			       __FUNCTION__, pfn, pfn + npages);
-			return -EINVAL;	/* Same error that posix llseek returns */
-		}
+		/* Find read boundaries from expected range and file's current range */
+		start = pfn < __pfn(v->size) ? pfn : __pfn(v->size);
+		end = pfn + npages < __pfn(v->size) ? pfn + npages : __pfn(v->size);
+		count = end - start;
 
 		/* Copy the data from inode blocks into page buffer */
-		for (int x = pfn, bufpage = 0; x < pfn + npages; x++, bufpage++)
+		for (int x = start, bufpage = 0; x < end; x++, bufpage++)
 			memcpy(((void *)buf) + (bufpage * blocksize),
 			       &i->block[x], blocksize);
+		return (int)(count * blocksize);
 	} else { /* Write-specific operations */
 		/* Is the write beyond current file size? */
 		if (v->size < ((pfn + npages) * (blocksize))) {
@@ -121,8 +121,7 @@ int memfs_file_read_write(struct vnode *v, unsigned long pfn,
 		for (int x = pfn, bufpage = 0; x < pfn + npages; x++, bufpage++)
 			memcpy(i->block[x], ((void *)buf) + (bufpage * blocksize), blocksize);
 	}
-
-	return npages * blocksize;
+	return (int)(npages * blocksize);
 }
 
 int memfs_file_write(struct vnode *v, unsigned long pfn, unsigned long npages, void *buf)
