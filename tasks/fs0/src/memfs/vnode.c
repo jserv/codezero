@@ -377,9 +377,10 @@ int memfs_vnode_readdir(struct vnode *v)
 }
 
 
-int memfs_vnode_filldir(void *usrbuf, struct vnode *v, int count)
+int memfs_vnode_filldir(void *userbuf, struct vnode *v, int count)
 {
-	int size;
+	int nbytes;
+	int err;
 
 	/* Bytes to read, minimum of vnode size and count requested */
 	nbytes = (v->size <= count) ? v->size : count;
@@ -390,11 +391,11 @@ int memfs_vnode_filldir(void *usrbuf, struct vnode *v, int count)
 
 	/* Do we have those bytes at hand? */
 	if (v->dirbuf.buffer && (v->dirbuf.npages * PAGE_SIZE) >= nbytes) {
-		/* 
+		/*
 		 * Memfs does a direct copy since memfs dirent format
 		 * is the same as generic dirent format.
 		 */
-		memcpy(buf, v->dirbuf.buffer, nbytes);
+		memcpy(userbuf, v->dirbuf.buffer, nbytes);
 		return nbytes;
 	}
 	return 0;

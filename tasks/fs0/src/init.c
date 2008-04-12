@@ -72,10 +72,6 @@ int initialise(void)
 	 */
 	memfs_format_filesystem(rootdev_blocks);
 
-	INIT_LIST_HEAD(&vm_file_list);
-	INIT_LIST_HEAD(&vnode_cache);
-	INIT_LIST_HEAD(&dentry_cache);
-
 	/* Search for a filesystem on the root device */
 	BUG_ON(IS_ERR(root_sb = vfs_probe_filesystems(rootdev_blocks)));
 

@@ -48,7 +48,7 @@ struct vnode_ops {
 	vnode_op_t create;
 	struct vnode *(*lookup)(struct vnode *root, char *path);
 	int (*readdir)(struct vnode *v);
-	int (*filldir)(struct vnode *v);
+	int (*filldir)(void *buf, struct vnode *v, int count);
 	vnode_op_t link;
 	vnode_op_t unlink;
 	int (*mkdir)(struct vnode *parent, char *name);

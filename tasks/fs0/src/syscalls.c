@@ -233,7 +233,7 @@ int fill_dirent(void *buf, unsigned long vnum, int offset, char *name)
 	d->inum = (unsigned int)vnum;
 	d->offset = offset;
 	d->rlength = sizeof(struct dirent);
-	strncpy(d->name, name, DIRENT_NAME_MAX);
+	strncpy((char *)d->name, name, DIRENT_NAME_MAX);
 
 	return d->rlength;
 }
@@ -247,13 +247,12 @@ int fill_dirent(void *buf, unsigned long vnum, int offset, char *name)
  */
 int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 {
-	struct dentry *d = list_entry(v->dentries.next, struct dentry, vref);
 	int dirent_size = sizeof(struct dirent);
 	int total = 0, nbytes = 0;
 	unsigned long vnum;
 	struct vnode *v;
+	struct dentry *d;
 	struct tcb *t;
-	int err;
 
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
@@ -266,6 +265,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 		l4_ipc_return(-EINVAL);
 		return 0; /* No such vnode */
 	}
+	d = list_entry(v->dentries.next, struct dentry, vref);
 
 	/* Ensure vnode is a directory */
 	if (!vfs_isdir(v)) {

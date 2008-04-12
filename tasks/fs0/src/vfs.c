@@ -69,9 +69,9 @@ struct vnode *vfs_lookup_bypath(struct tcb *task, char *path)
 
 	/* Do we start from root or curdir? */
 	if (path[0] == '/')
-		vnstart = task->rootdir;
+		vstart = task->rootdir;
 	else
-		vnstart = task->curdir;
+		vstart = task->curdir;
 
 	/*
 	 * This does vfs cache + fs lookup.

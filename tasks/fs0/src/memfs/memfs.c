@@ -118,15 +118,14 @@ int memfs_init_rootdir(struct superblock *sb)
 	struct memfs_superblock *msb = sb->fs_super;
 	struct dentry *d;
 	struct vnode *v;
-	int err;
 
 	/*
 	 * Create the root vnode. Since this is memfs, root vnode is
 	 * not read-in but dynamically created here. We expect this
 	 * first vnode to have vnum = 0.
 	 */
-	v = sb->root = vfs_sb->ops->alloc_vnode(vfs_sb);
-	msb->root_vnum = vfs_sb->root->vnum;
+	v = sb->root = sb->ops->alloc_vnode(sb);
+	msb->root_vnum = sb->root->vnum;
 	BUG_ON(msb->root_vnum != 0);
 
 	/* Initialise fields */
@@ -146,11 +145,13 @@ int memfs_init_rootdir(struct superblock *sb)
 	list_add(&d->vref, &d->vnode->dentries);
 
 	/* Associate dentry with its parent */
-	list_add(&d->child, &parent->children);
+	list_add(&d->child, &d->children);
 
 	/* Add both vnode and dentry to their flat caches */
 	list_add(&d->cache_list, &dentry_cache);
 	list_add(&v->cache_list, &vnode_cache);
+
+	return 0;
 }
 
 /* Copies fs-specific superblock into generic vfs superblock */
