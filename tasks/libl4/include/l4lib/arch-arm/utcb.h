@@ -9,6 +9,9 @@
 #include <l4lib/types.h>
 #include <l4/macros.h>
 #include INC_GLUE(message.h)
+#include INC_GLUE(memory.h)
+#include <string.h>
+#include <stdio.h>
 
 /*
  * NOTE: In syslib.h the first few mrs are used by data frequently
@@ -43,6 +46,25 @@ static inline void write_mr(unsigned int offset, unsigned int val)
 {
 	l4_get_utcb()->mr[offset] = val;
 }
+
+/*
+ * Arguments that are too large to fit in message registers are
+ * copied onto another area that is still on the utcb, and the servers
+ * map-in the task utcb and read those arguments from there.
+ */
+
+static inline void copy_to_utcb(void *arg, int offset, int size)
+{
+	BUG_ON(size > PAGE_SIZE);
+	memcpy(utcb_page, arg, size);
+}
+
+static inline void copy_from_utcb(void *buf, int offset, int size)
+{
+	BUG_ON(size > PAGE_SIZE);
+	memcpy(buf, utcb_page + offset, size);
+}
+
 #endif /* !__ASSEMBLY__ */
 
 #endif /* __ARM_UTCB_H__ */

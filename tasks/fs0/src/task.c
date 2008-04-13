@@ -141,8 +141,8 @@ int task_utcb_attach(struct tcb *t)
 	if ((unsigned long)shmaddr != t->utcb_address)
 		return -EINVAL;
 
-	//printf("%s: Mapped utcb of task %d @ 0x%x\n",
-	//       __TASKNAME__, t->tid, shmaddr);
+	printf("%s: Mapped utcb of task %d @ 0x%x\n",
+	       __TASKNAME__, t->tid, shmaddr);
 
 	return 0;
 

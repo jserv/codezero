@@ -257,6 +257,13 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
 
+	/* Check address is in task's utcb */
+	if ((unsigned long)buf < t->utcb_address ||
+	    (unsigned long)buf > t->utcb_address + PAGE_SIZE) {
+		l4_ipc_return(-EINVAL);
+		return 0;
+	}
+
 	/* Convert fd to vnum. */
 	BUG_ON((vnum = t->fd[fd]) < 0);
 

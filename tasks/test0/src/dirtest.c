@@ -12,6 +12,7 @@
 #include <sys/syscall.h>
 #include <sys/stat.h>
 #include <l4lib/os/posix/readdir.h>
+#include <tests.h>
 
 #define DENTS_TOTAL	50
 
@@ -116,7 +117,7 @@ int lsdir(char *path)
 		printf("OPEN OK.\n");
 
 	if ((bytes = os_readdir(fd, dents, sizeof(struct dirent) * DENTS_TOTAL)) < 0) {
-		perror("GETDENTS");
+		printf("%s: GETDENTS failed.\n", __TASKNAME__);
 		return 0;
 	} else {
 		printf("GETDENTS OK.\n");

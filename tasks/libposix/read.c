@@ -5,19 +5,23 @@
  */
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/os/posix/readdir.h>
+#include <l4/macros.h>
+#include INC_GLUE(memory.h)
+
 
 static inline int l4_readdir(int fd, void *buf, size_t count)
 {
 	size_t cnt;
 
 	write_mr(L4SYS_ARG0, fd);
-	write_mr(L4SYS_ARG1, (unsigned long)buf);
+	write_mr(L4SYS_ARG1, (unsigned long)utcb_page);
 	write_mr(L4SYS_ARG2, count);
 
 	/* Call pager with readdir() request. Check ipc error. */
@@ -31,6 +35,8 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 		return cnt;
 
 	}
+
+	copy_from_utcb(buf, 0, cnt);
 	return cnt;
 }
 

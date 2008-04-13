@@ -9,7 +9,6 @@
 #include <mmap.h>
 #include <utcb.h>
 #include <vm_area.h>
-#include <l4/lib/string.h>
 #include <kmalloc/kmalloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>

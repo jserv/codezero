@@ -11,7 +11,6 @@
 #include <l4lib/ipcdefs.h>
 #include <tests.h>
 
-#define __TASKNAME__			"test0"
 
 void wait_pager(l4id_t partner)
 {

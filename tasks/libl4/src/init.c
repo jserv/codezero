@@ -90,8 +90,8 @@ int utcb_init(void)
 
 		/* Obtain our utcb page address */
 		utcb_page = l4_utcb_page();
-		//printf("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
-		//       (unsigned long)utcb_page);
+		printf("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
+		       (unsigned long)utcb_page);
 
 		/* Use it as a key to create a shared memory region */
 		BUG_ON((shmid = shmget((key_t)utcb_page,
