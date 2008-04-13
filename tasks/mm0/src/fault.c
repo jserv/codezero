@@ -461,14 +461,24 @@ int __do_page_fault(struct fault_data *fault)
 
 	/* Handle write */
 	if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
-		/* Copy-on-write. For all private 'union' all anonymous vmas. */
-		if ((vma_flags & VMA_PRIVATE) || (vma_flags & VMA_ANONYMOUS))
+		/* Copy-on-write. All private vmas are always COW */
+		if (vma_flags & VMA_PRIVATE)
 			copy_on_write(fault);
 
-		/* Regular files */
-		if ((vma_flags & VMA_SHARED) && !(vma_flags & VMA_ANONYMOUS)) {
-			/* No regular files are mapped yet */
-			BUG();
+		/*
+		 * This handles shared pages that are both anon and non-anon.
+		 *
+		 * Anon/Shared pages:
+		 * First access from first process is COW. All subsequent RW
+		 * accesses (which are attempts of *sharing*) simply map that
+		 * page to faulting processes.
+		 *
+		 * Non-anon/shared pages:
+		 * First access from first process simply writes to the pages
+		 * of that file. All subsequent accesses by other processes
+		 * do so as well.
+		 */
+		else if ((vma_flags & VMA_SHARED)) {
 			file_offset = fault_to_file_offset(fault);
 			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
 							  &vma->vm_obj_list)));
@@ -476,9 +486,23 @@ int __do_page_fault(struct fault_data *fault)
 			/* Get the page from its pager */
 			if (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
 									    file_offset))) {
-				printf("%s: Could not obtain faulty page.\n",
-				       __TASKNAME__);
-				BUG();
+				/*
+				 * Writable page does not exist,
+				 * if it is anonymous, it needs to be COW'ed,
+				 * otherwise the file must have paged-in this
+				 * page, so its a bug.
+				 */
+				if (vma_flags & VMA_ANONYMOUS) {
+					copy_on_write(fault);
+
+					/* We're done. So return */
+					return 0;
+				} else {
+					printf("%s: Could not obtain faulty "
+					       "page from regular file.\n",
+					       __TASKNAME__);
+					BUG();
+				}
 			}
 			BUG_ON(!page);
 
@@ -490,7 +514,8 @@ int __do_page_fault(struct fault_data *fault)
 			dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
 				page_align(fault->address), fault->task->tid);
 			vm_object_print(vmo_link->obj);
-		}
+		} else
+			BUG();
 	}
 
 	return 0;
