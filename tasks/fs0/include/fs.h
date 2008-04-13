@@ -107,7 +107,7 @@ struct dirbuf {
 struct dirent {
 	u32 inum;			/* Inode number */
 	u32 offset;			/* Dentry offset in its buffer */
-	u32 rlength;			/* Record length */
+	u16 rlength;			/* Record length */
 	u8  name[DIRENT_NAME_MAX];	/* Name string */
 };
 

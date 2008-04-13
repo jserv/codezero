@@ -104,9 +104,9 @@ void print_dirents(char *path, void *buf, int cnt)
 
 int lsdir(char *path)
 {
-	int fd;
 	struct dirent dents[DENTS_TOTAL];
 	int bytes;
+	int fd;
 
 	memset(dents, 0, sizeof(struct dirent) * DENTS_TOTAL);
 

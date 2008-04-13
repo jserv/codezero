@@ -78,7 +78,7 @@ struct memfs_superblock {
 struct memfs_dentry {
 	u32 inum;			/* Inode number */
 	u32 offset;			/* Dentry offset in its buffer */
-	u32 rlength;			/* Record length */
+	u16 rlength;			/* Record length */
 	u8  name[MEMFS_DNAME_MAX];	/* Name string */
 };
 

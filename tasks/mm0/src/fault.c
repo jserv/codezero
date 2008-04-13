@@ -261,19 +261,19 @@ struct page *copy_page(struct page *orig)
  * - Check refcounting of shadows, their references, page refs,
  *   reduces increases etc.
  *
- *   This handles copy-on-write semantics in various situations.
+ *   This handles copy-on-write semantics in various situations. Returns
+ *   page struct for copy page availabe for mapping.
  *
  *   1) Copy-on-write of read-only files. (Creates r/w shadows/adds pages)
  *   2) Copy-on-write of forked RO shadows (Creates r/w shadows/adds pages)
  *   3) Copy-on-write of shm files. (Adds pages to r/w shm file from devzero).
  */
-int copy_on_write(struct fault_data *fault)
+struct page *copy_on_write(struct fault_data *fault)
 {
 	struct vm_obj_link *vmo_link, *shadow_link, *copier_link;
 	struct vm_object *vmo, *shadow;
 	struct page *page, *new_page;
 	struct vm_area *vma = fault->vma;
-	unsigned int reason = fault->reason;
 	unsigned long file_offset = fault_to_file_offset(fault);
 
 	/* Get the first object, either original file or a shadow */
@@ -293,7 +293,7 @@ int copy_on_write(struct fault_data *fault)
 	 */
 	if (!(vmo_link->obj->flags & VM_WRITE)) {
 		if (!(shadow_link = vma_create_shadow()))
-			return -ENOMEM;
+			return PTR_ERR(-ENOMEM);
 		dprintf("%s: Created a shadow.\n", __TASKNAME__);
 		/* Initialise the shadow */
 		shadow = shadow_link->obj;
@@ -364,54 +364,62 @@ int copy_on_write(struct fault_data *fault)
 	insert_page_olist(new_page, new_page->owner);
 	new_page->owner->npages++;
 
-	/* Map the new page to faulty task */
-	l4_map((void *)page_to_phys(new_page),
-	       (void *)page_align(fault->address), 1,
-	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
-	       fault->task->tid);
-	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
-		page_align(fault->address), fault->task->tid);
-	vm_object_print(new_page->owner);
+	/* Shared faults don't have shadows so we don't look for collapses */
+	if (!(vma->flags & VMA_SHARED)) {
 
-	/* Shm faults don't have shadows so we're done here. */
-	if (vma->flags & VMA_SHARED)
-		return 0;
-
-	/*
-	 * Finished handling the actual fault, now check for possible
-	 * shadow collapses. Does the copier completely shadow the one
-	 * underlying it?
-	 */
-	if (!(vmo_link = vma_next_link(&copier_link->list, &vma->vm_obj_list))) {
-		/* Copier must have an object under it */
-		printf("Copier must have had an object under it!\n");
-		BUG();
-	}
-
-	/* Compare whether page caches overlap */
-	if (vm_object_is_subset(copier_link->obj, vmo_link->obj)) {
 		/*
-		 * They do overlap, so keep reference to object but
-		 * drop and delete the vma link.
+		 * Finished handling the actual fault, now check for possible
+		 * shadow collapses. Does the copier completely shadow the one
+		 * underlying it?
 		 */
-		vmo = vmo_link->obj;
-		vma_drop_link(copier_link, vmo_link);
-		vmo_link = 0;
+		if (!(vmo_link = vma_next_link(&copier_link->list,
+					       &vma->vm_obj_list))) {
+			/* Copier must have an object under it */
+			printf("Copier must have had an object under it!\n");
+			BUG();
+		}
 
-		/* vm object reference down to one and object is mergeable? */
-		if ((vmo->refcnt == 1) &&
-		    (vmo->flags != VM_OBJ_FILE))
-			vma_merge_link(vmo);
+		/* Compare whether page caches overlap */
+		if (vm_object_is_subset(copier_link->obj, vmo_link->obj)) {
+			/*
+			 * They do overlap, so keep reference to object but
+			 * drop and delete the vma link.
+			 */
+			vmo = vmo_link->obj;
+			vma_drop_link(copier_link, vmo_link);
+			vmo_link = 0;
+
+			/*
+			 * vm object reference down to one
+			 * and object is mergeable?
+			 */
+			if ((vmo->refcnt == 1) &&
+			    (vmo->flags != VM_OBJ_FILE))
+				vma_merge_link(vmo);
+		}
 	}
 
-	return 0;
+	return new_page;
 }
 
 
 /*
- * Handles the page fault, all entries here are assumed *legal* faults,
- * i.e. do_page_fault() should have already checked for illegal accesses.
+ * Handles the page fault, all entries here are assumed *legal*
+ * faults, i.e. do_page_fault() should have already checked
+ * for illegal accesses.
+ *
+ * NOTE:
+ * Anon/Shared pages:
+ * First access from first process is COW. All subsequent RW
+ * accesses (which are attempts of *sharing*) simply map that
+ * page to faulting processes.
+ *
+ * Non-anon/shared pages:
+ * First access from first process simply writes to the pages
+ * of that file. All subsequent accesses by other processes
+ * do so as well.
  */
+
 int __do_page_fault(struct fault_data *fault)
 {
 	unsigned int reason = fault->reason;
@@ -446,39 +454,18 @@ int __do_page_fault(struct fault_data *fault)
 			}
 		}
 		BUG_ON(!page);
-
-		/* Map it to faulty task */
-		l4_map((void *)page_to_phys(page),
-		       (void *)page_align(fault->address), 1,
-		       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
-		       fault->task->tid);
-
-		/* Print about the action, if debug enabled */
-		dprintf("%s: Mapped 0x%x as readable to tid %d.\n", __TASKNAME__,
-			page_align(fault->address), fault->task->tid);
-		vm_object_print(vmo_link->obj);
 	}
 
 	/* Handle write */
 	if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
 		/* Copy-on-write. All private vmas are always COW */
-		if (vma_flags & VMA_PRIVATE)
-			copy_on_write(fault);
+		if (vma_flags & VMA_PRIVATE) {
+			BUG_ON(IS_ERR(page = copy_on_write(fault)));
 
 		/*
 		 * This handles shared pages that are both anon and non-anon.
-		 *
-		 * Anon/Shared pages:
-		 * First access from first process is COW. All subsequent RW
-		 * accesses (which are attempts of *sharing*) simply map that
-		 * page to faulting processes.
-		 *
-		 * Non-anon/shared pages:
-		 * First access from first process simply writes to the pages
-		 * of that file. All subsequent accesses by other processes
-		 * do so as well.
 		 */
-		else if ((vma_flags & VMA_SHARED)) {
+		} else if ((vma_flags & VMA_SHARED)) {
 			file_offset = fault_to_file_offset(fault);
 			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
 							  &vma->vm_obj_list)));
@@ -493,10 +480,8 @@ int __do_page_fault(struct fault_data *fault)
 				 * page, so its a bug.
 				 */
 				if (vma_flags & VMA_ANONYMOUS) {
-					copy_on_write(fault);
-
-					/* We're done. So return */
-					return 0;
+					BUG_ON(IS_ERR(page = copy_on_write(fault)));
+					goto out_success;
 				} else {
 					printf("%s: Could not obtain faulty "
 					       "page from regular file.\n",
@@ -505,18 +490,19 @@ int __do_page_fault(struct fault_data *fault)
 				}
 			}
 			BUG_ON(!page);
-
-			/* Map it to faulty task */
-			l4_map((void *)page_to_phys(page),
-			       (void *)page_align(fault->address), 1,
-			       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
-			       fault->task->tid);
-			dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
-				page_align(fault->address), fault->task->tid);
-			vm_object_print(vmo_link->obj);
 		} else
 			BUG();
 	}
+
+out_success:
+	/* Map the new page to faulty task */
+	l4_map((void *)page_to_phys(page),
+	       (void *)page_align(fault->address), 1,
+	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
+	       fault->task->tid);
+	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
+		page_align(fault->address), fault->task->tid);
+	vm_object_print(page->owner);
 
 	return 0;
 }

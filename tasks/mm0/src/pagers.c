@@ -301,7 +301,6 @@ int init_devzero(void)
 	zvirt = l4_map_helper(zphys, 1);
 	memset(zvirt, 0, PAGE_SIZE);
 	l4_unmap_helper(zvirt, 1);
-	zpage->refcnt++;
 
 	/* Allocate and initialise devzero file */
 	devzero = vm_file_create();
@@ -311,6 +310,10 @@ int init_devzero(void)
 	devzero->vm_obj.npages = __pfn(devzero->length);
 	devzero->vm_obj.pager = &devzero_pager;
 	devzero->vm_obj.flags = VM_OBJ_FILE;
+
+	/* Initialise zpage */
+	zpage->refcnt++;
+	zpage->owner = &devzero->vm_obj;
 
 	list_add(&devzero->vm_obj.list, &vm_object_list);
 	list_add(&devzero->list, &vm_file_list);
