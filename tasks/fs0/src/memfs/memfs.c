@@ -135,8 +135,13 @@ int memfs_init_rootdir(struct superblock *sb)
 	if (!(d = vfs_alloc_dentry()))
 		return -ENOMEM;
 
-	/* Initialise it. NOTE: On root, parent is itself */
-	strncpy(d->name, "/", VFS_DNAME_MAX);
+	/*
+	 * Initialise it.
+	 * NOTE: On root, parent is itself.
+	 * NOTE: Root has no name. This helps since splitpath
+	 * cuts out the '/' and "" is left for root name search.
+	 */
+	strncpy(d->name, VFS_STR_ROOTDIR, VFS_DNAME_MAX);
 	d->ops = generic_dentry_operations;
 	d->parent = d;
 	d->vnode = v;

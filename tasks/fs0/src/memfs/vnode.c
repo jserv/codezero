@@ -228,8 +228,6 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	BUG_ON(parent->vref.next != &v->dentries);
 	BUG_ON(!vfs_isdir(v));
 
-	printf("Parent name: %s\n", parent->name);
-
 	/* Populate the children */
 	if ((err = v->ops.readdir(v)) < 0)
 		return err;
@@ -263,8 +261,9 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	/* Write the updated directory buffer back to disk block */
 	v->fops.write(v, 0, 1, v->dirbuf.buffer);
 
-	/* Update parent vnode */
+	/* Update parent vnode size */
 	v->size += sizeof(*memfsd);
+	v->sb->ops->write_vnode(v->sb, v);
 
 	/* Allocate a new vfs dentry */
 	if (!(newd = vfs_alloc_dentry()))
@@ -382,7 +381,10 @@ int memfs_vnode_readdir(struct vnode *v)
 	return 0;
 }
 
-
+/*
+ * Copies fs-specific dirent data into user buffer in
+ * generic struct dirent format.
+ */
 int memfs_vnode_filldir(void *userbuf, struct vnode *v, int count)
 {
 	int nbytes;
@@ -412,6 +414,7 @@ struct vnode_ops memfs_vnode_operations = {
 	.readdir = memfs_vnode_readdir,
 	.filldir = memfs_vnode_filldir,
 	.mknod = memfs_vnode_mknod,
+	.lookup = generic_vnode_lookup,
 };
 
 struct superblock_ops memfs_superblock_operations = {

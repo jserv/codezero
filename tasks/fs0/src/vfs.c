@@ -57,18 +57,12 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
  * have, the other is their vnum. This one checks the vnode cache by the path
  * first. If nothing is found, it reads the vnode from disk into the cache.
  */
-struct vnode *vfs_lookup_bypath(struct tcb *task, char *path)
+struct vnode *vfs_lookup_bypath(struct tcb *task, struct pathdata *pdata)
 {
 	struct vnode *vstart;
 
-	/* Is it the root or current directory? If so, we already got it. */
-	if (!strcmp(path, "/"))
-		return task->rootdir;
-	if (!strcmp(path, "."))
-		return task->curdir;
-
 	/* Do we start from root or curdir? */
-	if (path[0] == '/')
+	if (pdata->root)
 		vstart = task->rootdir;
 	else
 		vstart = task->curdir;
@@ -76,7 +70,7 @@ struct vnode *vfs_lookup_bypath(struct tcb *task, char *path)
 	/*
 	 * This does vfs cache + fs lookup.
 	 */
-	return generic_vnode_lookup(vstart, path);
+	return vstart->ops.lookup(vstart, pdata);
 }
 
 int vfs_mount_root(struct superblock *sb)

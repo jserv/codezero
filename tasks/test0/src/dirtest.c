@@ -136,6 +136,20 @@ int dirtest(void)
 	printf("\nCreating directories: usr, etc, tmp, var, home, opt, bin, boot, lib, dev\n");
 	if (mkdir("/usr", 0) < 0)
 		perror("MKDIR");
+	if (mkdir("/etc", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/tmp", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/var", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/bin", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/boot", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/lib", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/dev", 0) < 0)
+		perror("MKDIR");
 
 	printf("\nlsdir root directory:\n");
 	lsdir("/");

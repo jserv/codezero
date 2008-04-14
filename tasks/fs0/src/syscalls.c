@@ -43,21 +43,17 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 }
 
 /* Creates a node under a directory, e.g. a file, directory. */
-int vfs_create(struct tcb *task, const char *pathname, unsigned int mode)
+int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 {
-	char *pathbuf = alloca(strlen(pathname) + 1);
-	char *parentpath = pathbuf;
 	struct vnode *vparent;
 	char *nodename;
 	int err;
 
-	strcpy(pathbuf, pathname);
-
 	/* The last component is to be created */
-	nodename = splitpath_end(&parentpath, '/');
+	nodename = splitpath_end(&pdata->path, '/');
 
 	/* Check that the parent directory exists. */
-	if (IS_ERR(vparent = vfs_lookup_bypath(task, parentpath)))
+	if (IS_ERR(vparent = vfs_lookup_bypath(task, pdata)))
 		return (int)vparent;
 
 	/* The parent vnode must be a directory. */
@@ -71,6 +67,17 @@ int vfs_create(struct tcb *task, const char *pathname, unsigned int mode)
 	return 0;
 }
 
+void init_path_data(struct pathdata *pdata, const char *pathname,
+		    void *pathbuf, struct tcb *task)
+{
+	pdata->path = pathbuf;
+	strcpy(pdata->path, pathname);
+	pdata->task = task;
+
+	if (pdata->path[0] == '/')
+		pdata->root = 1;
+}
+
 /* FIXME:
  * - Is it already open?
  * - Allocate a copy of path string since lookup destroys it
@@ -78,24 +85,25 @@ int vfs_create(struct tcb *task, const char *pathname, unsigned int mode)
  */
 int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {
-	char *pathbuf = alloca(strlen(pathname) + 1);
+	struct pathdata pdata;
 	struct vnode *v;
 	struct tcb *task;
 	int fd;
 	int err;
 
-	strcpy(pathbuf, pathname);
-
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
+	/* Initialise pdata */
+	init_path_data(&pdata, pathname, alloca(strlen(pathname) + 1), task);
+
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(task, pathbuf))) {
+	if (IS_ERR(v = vfs_lookup_bypath(task, &pdata))) {
 		if (!(flags & O_CREAT)) {
 			l4_ipc_return((int)v);
 			return 0;
 		} else {
-			if ((err = vfs_create(task, pathname, mode)) < 0) {
+			if ((err = vfs_create(task, &pdata, mode)) < 0) {
 				l4_ipc_return(err);
 				return 0;
 			}
@@ -123,27 +131,32 @@ int sys_close(l4id_t sender, int fd)
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
 	struct tcb *task;
+	struct pathdata pdata;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
-	l4_ipc_return(vfs_create(task, pathname, mode));
+	/* Init path data */
+	init_path_data(&pdata, pathname, alloca(strlen(pathname) + 1), task);
+
+	l4_ipc_return(vfs_create(task, &pdata, mode));
 	return 0;
 }
 
 int sys_chdir(l4id_t sender, const char *pathname)
 {
-	char *pathbuf = alloca(strlen(pathname) + 1);
 	struct vnode *v;
 	struct tcb *task;
-
-	strcpy(pathbuf, pathname);
+	struct pathdata pdata;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
+	/* Init path data */
+	init_path_data(&pdata, pathname, alloca(strlen(pathname) + 1), task);
+
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(task, pathbuf)))
+	if (IS_ERR(v = vfs_lookup_bypath(task, &pdata)))
 		return (int)v;
 
 	/* Ensure it's a directory */

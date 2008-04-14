@@ -31,10 +31,6 @@ char *splitpath(char **str, char sep)
 	char *cursor = *str;
 	char *end;
 
-	/* Root is the special case, return it as is. */
-	if (strcmp(*str, "/"))
-		return *str;
-
 	/* Move forward until no seperator */
 	while (*cursor == sep) {
 		*cursor = '\0';

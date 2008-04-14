@@ -93,7 +93,7 @@ int memfs_file_read_write(struct vnode *v, unsigned int pfn,
 	} else { /* Write-specific operations */
 		/* Is the write beyond current file size? */
 		if (v->size < ((pfn + npages) * (blocksize))) {
-			unsigned long diff = pfn + npages - __pfn(v->size);
+			unsigned long pagediff = pfn + npages - __pfn(v->size);
 			unsigned long holes;
 
 			/*
@@ -102,19 +102,18 @@ int memfs_file_read_write(struct vnode *v, unsigned int pfn,
 			 */
 			if (pfn > __pfn(v->size))
 				holes = pfn - __pfn(v->size);
+			else
+				holes = 0;
 
 			/* Allocate new blocks */
-			for (int x = 0; x < diff; x++)
-				if (!(i->block[__pfn(v->size) + x] = memfs_alloc_block(memfs_sb)))
+			for (int x = 0; x < pagediff; x++)
+				if (!(i->block[__pfn(v->size) + x] =
+				      memfs_alloc_block(v->sb->fs_super)))
 					return -ENOSPC;
 
 			/* Zero out the holes. FIXME: How do we zero out non-page-aligned bytes?` */
 			for (int x = 0; x < holes; x++)
 				memset(i->block[__pfn(v->size) + x], 0, blocksize);
-
-			/* Update size and the inode. FIXME: How do we handle non page-aligned size */
-			v->size = (pfn + npages) * blocksize;
-			v->sb->ops->write_vnode(v->sb, v);
 		}
 
 		/* Copy the data from page buffer into inode blocks */

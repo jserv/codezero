@@ -8,19 +8,10 @@
 #include <l4/macros.h>
 #include <stdio.h>
 #include <task.h>
+#include <path.h>
 
 extern struct list_head vnode_cache;
 extern struct list_head dentry_cache;
-
-/*
- * FIXME:
- * These ought to be strings and split/comparison functions should
- * always use strings because formats like UTF-8 wouldn't work.
- */
-#define VFS_STR_SEP		'/'
-#define VFS_STR_PARDIR		".."
-#define VFS_STR_CURDIR		"."
-#define VFS_STR_XATDIR		"...."
 
 /*
  * This is a temporary replacement for page cache support provided by mm0.
@@ -91,8 +82,8 @@ struct vfs_mountpoint {
 extern struct vfs_mountpoint vfs_root;
 
 int vfs_mount_root(struct superblock *sb);
-struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path);
-struct vnode *vfs_lookup_bypath(struct tcb *task, char *path);
+struct vnode *generic_vnode_lookup(struct vnode *thisnode, struct pathdata *p);
+struct vnode *vfs_lookup_bypath(struct tcb *task, struct pathdata *p);
 struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum);
 
 #endif /* __VFS_H__ */

@@ -10,7 +10,7 @@
 #include <l4/macros.h>
 #include <l4lib/types.h>
 #include <stat.h>
-
+#include <path.h>
 
 typedef void (*vnode_op_t)(void);
 typedef void (*file_op_t)(void);
@@ -46,7 +46,7 @@ struct file_ops {
 /* Operations that work on vnode fields and associations between vnodes */
 struct vnode_ops {
 	vnode_op_t create;
-	struct vnode *(*lookup)(struct vnode *root, char *path);
+	struct vnode *(*lookup)(struct vnode *root, struct pathdata *pdata);
 	int (*readdir)(struct vnode *v);
 	int (*filldir)(void *buf, struct vnode *v, int count);
 	vnode_op_t link;
