@@ -63,7 +63,7 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode, char *path)
 	}
 
 	/* Not found, return nothing */
-	return 0;
+	return PTR_ERR(-ENOENT);
 }
 
 int generic_dentry_compare(struct dentry *d, char *name)

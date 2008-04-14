@@ -228,6 +228,8 @@ int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
 	BUG_ON(parent->vref.next != &v->dentries);
 	BUG_ON(!vfs_isdir(v));
 
+	printf("Parent name: %s\n", parent->name);
+
 	/* Populate the children */
 	if ((err = v->ops.readdir(v)) < 0)
 		return err;

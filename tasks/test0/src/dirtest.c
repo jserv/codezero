@@ -113,14 +113,12 @@ int lsdir(char *path)
 	if ((fd = open(path, O_RDONLY)) < 0) {
 		perror("OPEN");
 		return 0;
-	} else
-		printf("OPEN OK.\n");
+	}
 
 	if ((bytes = os_readdir(fd, dents, sizeof(struct dirent) * DENTS_TOTAL)) < 0) {
-		printf("%s: GETDENTS failed.\n", __TASKNAME__);
+		perror("GETDENTS\n");
 		return 0;
 	} else {
-		printf("GETDENTS OK.\n");
 		print_dirents(path, dents, bytes);
 	}
 
@@ -132,6 +130,13 @@ int dirtest(void)
 {
 	printf("\nlsdir current directory:\n");
 	lsdir(".");
+	printf("\nlsdir root directory:\n");
+	lsdir("/");
+
+	printf("\nCreating directories: usr, etc, tmp, var, home, opt, bin, boot, lib, dev\n");
+	if (mkdir("/usr", 0) < 0)
+		perror("MKDIR");
+
 	printf("\nlsdir root directory:\n");
 	lsdir("/");
 

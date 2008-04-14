@@ -127,7 +127,8 @@ int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
-	return vfs_create(task, pathname, mode);
+	l4_ipc_return(vfs_create(task, pathname, mode));
+	return 0;
 }
 
 int sys_chdir(l4id_t sender, const char *pathname)
@@ -284,7 +285,6 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	if (count < dirent_size)
 		return 0;
 
-	printf("%s: Filling in . (curdir)\n", __TASKNAME__);
 	fill_dirent(buf, v->vnum, nbytes, ".");
 	nbytes += dirent_size;
 	buf += dirent_size;
@@ -293,13 +293,11 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	if (count < dirent_size)
 		return 0;
 
-	printf("%s: Filling in .. (pardir)\n", __TASKNAME__);
 	fill_dirent(buf, d->parent->vnode->vnum, nbytes, "..");
 	nbytes += dirent_size;
 	buf += dirent_size;
 	count -= dirent_size;
 
-	printf("%s: Filling in other dir contents\n", __TASKNAME__);
 	/* Copy fs-specific dir to buf in struct dirent format */
 	if ((total = v->ops.filldir(buf, v, count)) < 0) {
 		l4_ipc_return(total);

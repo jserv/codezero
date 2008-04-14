@@ -51,8 +51,6 @@ void handle_fs_requests(void)
 	int err;
 	u32 tag;
 
-	printf("%s: Listening requests.\n", __TASKNAME__);
-
 	if ((err = l4_receive(L4_ANYTHREAD)) < 0) {
 		printf("%s: %s: IPC Error: %d. Quitting...\n", __TASKNAME__,
 		       __FUNCTION__, err);
@@ -107,6 +105,7 @@ void main(void)
 
 	wait_pager(PAGER_TID);
 
+	printf("%s: Listening requests.\n", __TASKNAME__);
 	while (1) {
 		handle_fs_requests();
 	}

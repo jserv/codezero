@@ -31,6 +31,10 @@ char *splitpath(char **str, char sep)
 	char *cursor = *str;
 	char *end;
 
+	/* Root is the special case, return it as is. */
+	if (strcmp(*str, "/"))
+		return *str;
+
 	/* Move forward until no seperator */
 	while (*cursor == sep) {
 		*cursor = '\0';
@@ -66,6 +70,9 @@ char *splitpath_end(char **path, char sep)
 
 	/* Reverse the rest back to original. */
 	strreverse(*path);
+
+	/* Reverse component back to original */
+	strreverse(component);
 
 	return component;
 }

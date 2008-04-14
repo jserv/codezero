@@ -101,8 +101,8 @@ struct task_data_head *receive_pager_taskdata(void)
 	}
 
 	/* Data is expected in the utcb page */
-	printf("%s: %d Total tasks.\n", __FUNCTION__,
-	       ((struct task_data_head *)utcb_page)->total);
+	// printf("%s: %d Total tasks.\n", __FUNCTION__,
+	//      ((struct task_data_head *)utcb_page)->total);
 
 	return (struct task_data_head *)utcb_page;
 }
@@ -141,8 +141,8 @@ int task_utcb_attach(struct tcb *t)
 	if ((unsigned long)shmaddr != t->utcb_address)
 		return -EINVAL;
 
-	printf("%s: Mapped utcb of task %d @ 0x%x\n",
-	       __TASKNAME__, t->tid, shmaddr);
+	// printf("%s: Mapped utcb of task %d @ 0x%x\n",
+	//       __TASKNAME__, t->tid, shmaddr);
 
 	return 0;
 
