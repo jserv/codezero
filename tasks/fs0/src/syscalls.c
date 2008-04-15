@@ -48,7 +48,7 @@ void print_vnode(struct vnode *v)
 {
 	struct dentry *d, *c;
 
-	printf("Vnode name:\n");
+	printf("Vnode names:\n");
 	list_for_each_entry(d, &v->dentries, vref) {
 		printf("%s\n", d->name);
 		printf("Children dentries:\n");
@@ -79,7 +79,7 @@ int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 	if ((err = vparent->ops.mknod(vparent, nodename, mode)) < 0)
 		return err;
 
-	//	print_vnode(vparent);
+	print_vnode(vparent);
 	return 0;
 }
 

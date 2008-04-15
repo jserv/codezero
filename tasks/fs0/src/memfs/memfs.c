@@ -136,8 +136,12 @@ int memfs_init_rootdir(struct superblock *sb)
 		return -ENOMEM;
 
 	/*
-	 * Initialise it.
-	 * NOTE: On root, parent is itself.
+	 * Initialise root dentry.
+	 *
+	 * NOTE: Root's parent is itself.
+	 * Here's how it looks like in structures:
+	 * root's parent is root. But root's child is not root.
+	 *
 	 * NOTE: Root has no name. This helps since splitpath
 	 * cuts out the '/' and "" is left for root name search.
 	 */
@@ -148,9 +152,6 @@ int memfs_init_rootdir(struct superblock *sb)
 
 	/* Associate dentry with its vnode */
 	list_add(&d->vref, &d->vnode->dentries);
-
-	/* Associate dentry with its parent */
-	list_add(&d->child, &d->children);
 
 	/* Add both vnode and dentry to their flat caches */
 	list_add(&d->cache_list, &dentry_cache);

@@ -46,10 +46,8 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode,
 	struct vnode *found;
 	int err;
 
-	printf("looking up: %s\n", component);
 	/* Does this path component match with any of this vnode's dentries? */
 	list_for_each_entry(d, &thisnode->dentries, vref) {
-		printf("comparing dentry %s with %s\n", d->name, component);
 		if (d->ops.compare(d, component)) {
 			/* Is this a directory? */
 			if (vfs_isdir(thisnode)) {
