@@ -118,11 +118,14 @@ more closely. Many embedded software projects still use older development
 methods and the right open source methodology would prove favorable in the
 fast-paced nature of development.
 
-Finally, there are new ideas in literature that would improve systems software
-but aren't implemented either because they have no existing users or may break
-compatibility (e.g. some are presented in Plan 9). Existing kernels tend to
-oppose major design overhauls, which limits their innovation capability for this
-kind of experimentation. As well as practising realistic development methods
+Finally, POSIX compliance is only a step, or a temporary aim for the Codezero
+microkernel. It is not limited to the goal of just complying with POSIX, which
+has been done many times by other operating systems. There are new ideas in
+literature that would improve systems software but aren't implemented either
+because they have no existing users or may break compatibility (e.g. some are
+presented in Plan 9). Existing kernels tend to oppose major design overhauls,
+which limits their innovation capability for this kind of experimentation. As
+well as practising realistic development strategies such as POSIX compliance,
 Codezero project aims to keep up with the latest OS literature and provide the
 opportunity to incorporate the latest ideas in OS technology.
 
