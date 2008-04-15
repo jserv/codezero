@@ -27,7 +27,7 @@ DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
 DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
 DRIVER_IRQCTRL_PL190	'ARM Vectored Interrupt Controller PL190'
 
-main_menu		'L4 Project Kernel Configurator'
+main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
 drivers_menu		'Platform Drivers'
 arch_type		'Main architecture'
