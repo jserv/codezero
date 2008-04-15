@@ -46,7 +46,8 @@ struct file_ops {
 /* Operations that work on vnode fields and associations between vnodes */
 struct vnode_ops {
 	vnode_op_t create;
-	struct vnode *(*lookup)(struct vnode *root, struct pathdata *pdata);
+	struct vnode *(*lookup)(struct vnode *root, struct pathdata *pdata,
+				char *component);
 	int (*readdir)(struct vnode *v);
 	int (*filldir)(void *buf, struct vnode *v, int count);
 	vnode_op_t link;

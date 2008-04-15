@@ -82,7 +82,8 @@ struct vfs_mountpoint {
 extern struct vfs_mountpoint vfs_root;
 
 int vfs_mount_root(struct superblock *sb);
-struct vnode *generic_vnode_lookup(struct vnode *thisnode, struct pathdata *p);
+struct vnode *generic_vnode_lookup(struct vnode *thisnode, struct pathdata *p,
+				   char *component);
 struct vnode *vfs_lookup_bypath(struct pathdata *p);
 struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum);
 

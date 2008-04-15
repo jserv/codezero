@@ -20,10 +20,11 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir,
 {
 	struct dentry *childdir;
 	struct vnode *v;
+	char *component = pathdata_next_component(pdata);
 
 	list_for_each_entry(childdir, &parentdir->children, child)
 		if (IS_ERR(v = childdir->vnode->ops.lookup(childdir->vnode,
-							   pdata)))
+							   pdata, component)))
 			/* Means not found, continue search */
 			if ((int)v == -ENOENT)
 				continue;
@@ -38,14 +39,13 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir,
 
 /* Lookup, recursive, assuming single-mountpoint */
 struct vnode *generic_vnode_lookup(struct vnode *thisnode,
-				   struct pathdata *pdata)
+				   struct pathdata *pdata,
+				   char *component)
 {
-	char *component;
 	struct dentry *d;
 	struct vnode *found;
 	int err;
 
-	component = pathdata_next_component(pdata);
 	printf("looking up: %s\n", component);
 	/* Does this path component match with any of this vnode's dentries? */
 	list_for_each_entry(d, &thisnode->dentries, vref) {

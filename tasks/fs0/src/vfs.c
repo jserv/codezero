@@ -61,6 +61,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 struct vnode *vfs_lookup_bypath(struct pathdata *pdata)
 {
 	struct vnode *vstart;
+	char *firstcomp;
 
 	/* Do we start from root or curdir? */
 	if (pdata->root)
@@ -72,7 +73,8 @@ struct vnode *vfs_lookup_bypath(struct pathdata *pdata)
 	 * This does vfs cache + fs lookup.
 	 */
 	BUG_ON(list_empty(&pdata->list));
-	return vstart->ops.lookup(vstart, pdata);
+       	firstcomp = pathdata_next_component(pdata);
+	return vstart->ops.lookup(vstart, pdata, firstcomp);
 }
 
 int vfs_mount_root(struct superblock *sb)
