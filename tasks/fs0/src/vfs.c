@@ -6,6 +6,7 @@
 #include <fs.h>
 #include <vfs.h>
 #include <task.h>
+#include <path.h>
 
 LIST_HEAD(vnode_cache);
 LIST_HEAD(dentry_cache);
@@ -57,19 +58,20 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
  * have, the other is their vnum. This one checks the vnode cache by the path
  * first. If nothing is found, it reads the vnode from disk into the cache.
  */
-struct vnode *vfs_lookup_bypath(struct tcb *task, struct pathdata *pdata)
+struct vnode *vfs_lookup_bypath(struct pathdata *pdata)
 {
 	struct vnode *vstart;
 
 	/* Do we start from root or curdir? */
 	if (pdata->root)
-		vstart = task->rootdir;
+		vstart = pdata->task->rootdir;
 	else
-		vstart = task->curdir;
+		vstart = pdata->task->curdir;
 
 	/*
 	 * This does vfs cache + fs lookup.
 	 */
+	BUG_ON(list_empty(&pdata->list));
 	return vstart->ops.lookup(vstart, pdata);
 }
 

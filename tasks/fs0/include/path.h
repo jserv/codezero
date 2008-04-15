@@ -6,6 +6,8 @@
 #ifndef __PATH_H__
 #define __PATH_H__
 
+#include <l4/lib/list.h>
+
 /*
  * FIXME:
  * These ought to be strings and split/comparison functions should
@@ -18,9 +20,22 @@
 #define VFS_STR_XATDIR		"...."
 
 struct pathdata {
+	struct list_head list;
 	struct tcb *task;
 	int root;
-	char *path;
 };
+
+struct pathcomp {
+	struct list_head list;
+	char *str;
+};
+
+struct pathdata *pathdata_parse(const char *pathname, char *pathbuf,
+				struct tcb *task);
+void pathdata_destroy(struct pathdata *p);
+
+/* Destructive, i.e. unlinks those components from list */
+char *pathdata_next_component(struct pathdata *pdata);
+char *pathdata_last_component(struct pathdata *pdata);
 
 #endif /* __PATH_H__ */

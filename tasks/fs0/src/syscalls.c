@@ -16,6 +16,7 @@
 #include <stat.h>
 #include <vfs.h>
 #include <alloca.h>
+#include <path.h>
 
 /*
  * This notifies mm0 that this is the fd that refers to this vnode number
@@ -49,12 +50,11 @@ int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 	char *nodename;
 	int err;
 
-	printf("%s: %s\n", __FUNCTION__, pdata->path);
 	/* The last component is to be created */
-	nodename = splitpath_end(&pdata->path, '/');
+	nodename = pathdata_last_component(pdata);
 
 	/* Check that the parent directory exists. */
-	if (IS_ERR(vparent = vfs_lookup_bypath(task, pdata)))
+	if (IS_ERR(vparent = vfs_lookup_bypath(pdata)))
 		return (int)vparent;
 
 	/* The parent vnode must be a directory. */
@@ -68,17 +68,6 @@ int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 	return 0;
 }
 
-void init_path_data(struct pathdata *pdata, const char *pathname,
-		    void *pathbuf, struct tcb *task)
-{
-	pdata->path = pathbuf;
-	strcpy(pdata->path, pathname);
-	pdata->task = task;
-
-	if (pdata->path[0] == '/')
-		pdata->root = 1;
-}
-
 /* FIXME:
  * - Is it already open?
  * - Allocate a copy of path string since lookup destroys it
@@ -86,7 +75,7 @@ void init_path_data(struct pathdata *pdata, const char *pathname,
  */
 int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {
-	struct pathdata pdata;
+	struct pathdata *pdata;
 	struct vnode *v;
 	struct tcb *task;
 	int fd;
@@ -95,16 +84,21 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
-	/* Initialise pdata */
-	init_path_data(&pdata, pathname, alloca(strlen(pathname) + 1), task);
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task))) {
+		l4_ipc_return((int)pdata);
+		return 0;
+	}
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(task, &pdata))) {
+	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
 		if (!(flags & O_CREAT)) {
 			l4_ipc_return((int)v);
 			return 0;
 		} else {
-			if ((err = vfs_create(task, &pdata, mode)) < 0) {
+			if ((err = vfs_create(task, pdata, mode)) < 0) {
 				l4_ipc_return(err);
 				return 0;
 			}
@@ -120,6 +114,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Tell the pager about opened vnode information */
 	BUG_ON(pager_sys_open(sender, fd, v->vnum, v->size) < 0);
 
+	pathdata_destroy(pdata);
 	l4_ipc_return(0);
 	return 0;
 }
@@ -132,15 +127,24 @@ int sys_close(l4id_t sender, int fd)
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
 	struct tcb *task;
-	struct pathdata pdata;
+	struct pathdata *pdata;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
-	/* Init path data */
-	init_path_data(&pdata, pathname, alloca(strlen(pathname) + 1), task);
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task))) {
+		l4_ipc_return((int)pdata);
+		return 0;
+	}
 
-	l4_ipc_return(vfs_create(task, &pdata, mode));
+	/* Create the directory or fail */
+	l4_ipc_return(vfs_create(task, pdata, mode));
+
+	/* Destroy extracted path data */
+	pathdata_destroy(pdata);
 	return 0;
 }
 
@@ -148,16 +152,21 @@ int sys_chdir(l4id_t sender, const char *pathname)
 {
 	struct vnode *v;
 	struct tcb *task;
-	struct pathdata pdata;
+	struct pathdata *pdata;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
-	/* Init path data */
-	init_path_data(&pdata, pathname, alloca(strlen(pathname) + 1), task);
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task))) {
+		l4_ipc_return((int)pdata);
+		return 0;
+	}
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(task, &pdata)))
+	if (IS_ERR(v = vfs_lookup_bypath(pdata)))
 		return (int)v;
 
 	/* Ensure it's a directory */
@@ -167,6 +176,8 @@ int sys_chdir(l4id_t sender, const char *pathname)
 	/* Assign the current directory pointer */
 	task->curdir = v;
 
+	/* Destroy extracted path data */
+	pathdata_destroy(pdata);
 	return 0;
 }
 
