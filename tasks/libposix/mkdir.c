@@ -23,7 +23,7 @@ static inline int l4_mkdir(const char *pathname, mode_t mode)
 	int fd;
 
 	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
-	copy_to_utcb((void *)pathname, 0, strlen(pathname));
+	copy_to_utcb((void *)pathname, 0, strlen(pathname) + 1);
 	write_mr(L4SYS_ARG0, (unsigned long)utcb_page);
 	write_mr(L4SYS_ARG1, (u32)mode);
 

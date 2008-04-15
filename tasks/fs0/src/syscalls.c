@@ -49,6 +49,7 @@ int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 	char *nodename;
 	int err;
 
+	printf("%s: %s\n", __FUNCTION__, pdata->path);
 	/* The last component is to be created */
 	nodename = splitpath_end(&pdata->path, '/');
 

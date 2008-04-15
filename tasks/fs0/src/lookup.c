@@ -81,6 +81,8 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode,
 	 * where path = { "//comp1/comp2", "/", "/comp1/comp2", "comp1/comp2" }
 	 */
 
+	printf("Looking up: %s\n", pdata->path);
+
 	/* Handle the special root case */
 	if (pdata->root)
 		component =  pathdata_handle_root(pdata);

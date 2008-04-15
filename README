@@ -134,7 +134,7 @@ most fundamental posix calls and it implements modern features such as
 demand-paging and virtual filesystem layer. Different from other posix-like
 systems, it is based on a microkernel design. It has a cleanly separated set of
 services, it is small and well-focused. Its design is carefully thought out, so
-it's not just a mock-up implementation of an operating system API. Its source
+it's not just a mock-up implementation of the existing POSIX API. Its source
 code is also freely available (See LICENSE heading). For these reasons it is a
 good candidate as systems software to be used on embedded platforms. Currently
 it has little or no users, therefore compared to systems with a saturated user
