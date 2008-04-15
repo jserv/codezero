@@ -151,6 +151,13 @@ int dirtest(void)
 	if (mkdir("/dev", 0) < 0)
 		perror("MKDIR");
 
+	if (mkdir("/usr/bin", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/home/", 0) < 0)
+		perror("MKDIR");
+	if (mkdir("/home/bahadir", 0) < 0)
+		perror("MKDIR");
+
 	printf("\nlsdir root directory:\n");
 	lsdir("/");
 

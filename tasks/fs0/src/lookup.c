@@ -22,11 +22,17 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir,
 	struct vnode *v;
 
 	list_for_each_entry(childdir, &parentdir->children, child)
-		/* Non-zero result means either found it or error occured */
-		if ((v = childdir->vnode->ops.lookup(childdir->vnode, pdata)))
+		if (IS_ERR(v = childdir->vnode->ops.lookup(childdir->vnode,
+							   pdata)))
+			/* Means not found, continue search */
+			if ((int)v == -ENOENT)
+				continue;
+			else	/* A real error */
+				return v;
+		else	/* No error, so found it */
 			return v;
 
-	/* Out of all children dentries, neither was a match, so we return 0 */
+	/* Out of all children dentries, neither was a match */
 	return PTR_ERR(-ENOENT);
 }
 
@@ -40,13 +46,14 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode,
 	int err;
 
 	component = pathdata_next_component(pdata);
-
+	printf("looking up: %s\n", component);
 	/* Does this path component match with any of this vnode's dentries? */
 	list_for_each_entry(d, &thisnode->dentries, vref) {
+		printf("comparing dentry %s with %s\n", d->name, component);
 		if (d->ops.compare(d, component)) {
 			/* Is this a directory? */
 			if (vfs_isdir(thisnode)) {
-				/* Are there any more path components? */
+				/* Are there more path components? */
 				if (!list_empty(&pdata->list)) {
 					/* Read directory contents */
 					if ((err = d->vnode->ops.readdir(d->vnode)) < 0)

@@ -43,6 +43,20 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 	return 0;
 }
 
+/* Directories only for now */
+void print_vnode(struct vnode *v)
+{
+	struct dentry *d, *c;
+
+	printf("Vnode name:\n");
+	list_for_each_entry(d, &v->dentries, vref) {
+		printf("%s\n", d->name);
+		printf("Children dentries:\n");
+		list_for_each_entry(c, &d->children, child)
+			printf("%s\n", c->name);
+	}
+}
+
 /* Creates a node under a directory, e.g. a file, directory. */
 int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 {
@@ -65,6 +79,7 @@ int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 	if ((err = vparent->ops.mknod(vparent, nodename, mode)) < 0)
 		return err;
 
+	//	print_vnode(vparent);
 	return 0;
 }
 
