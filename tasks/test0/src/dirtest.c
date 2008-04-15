@@ -113,7 +113,8 @@ int lsdir(char *path)
 	if ((fd = open(path, O_RDONLY)) < 0) {
 		perror("OPEN");
 		return 0;
-	}
+	} else
+		printf("Got fd: %d for opening %s\n", fd, path);
 
 	if ((bytes = os_readdir(fd, dents, sizeof(struct dirent) * DENTS_TOTAL)) < 0) {
 		perror("GETDENTS\n");
@@ -160,6 +161,9 @@ int dirtest(void)
 
 	printf("\nlsdir root directory:\n");
 	lsdir("/");
+
+	printf("\nlsdir /usr:\n");
+	lsdir("/usr");
 
 	return 0;
 }

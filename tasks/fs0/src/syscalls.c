@@ -79,7 +79,7 @@ int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 	if ((err = vparent->ops.mknod(vparent, nodename, mode)) < 0)
 		return err;
 
-	print_vnode(vparent);
+	// print_vnode(vparent);
 	return 0;
 }
 
@@ -130,7 +130,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	BUG_ON(pager_sys_open(sender, fd, v->vnum, v->size) < 0);
 
 	pathdata_destroy(pdata);
-	l4_ipc_return(0);
+	l4_ipc_return(fd);
 	return 0;
 }
 
