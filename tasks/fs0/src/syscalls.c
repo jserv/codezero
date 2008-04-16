@@ -181,18 +181,23 @@ int sys_chdir(l4id_t sender, const char *pathname)
 	}
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(pdata)))
-		return (int)v;
+	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+		l4_ipc_return((int)v);
+		return 0;
+	}
 
 	/* Ensure it's a directory */
-	if (!vfs_isdir(v))
-		return -ENOTDIR;
+	if (!vfs_isdir(v)) {
+		l4_ipc_return(-ENOTDIR);
+		return 0;
+	}
 
 	/* Assign the current directory pointer */
 	task->curdir = v;
 
 	/* Destroy extracted path data */
 	pathdata_destroy(pdata);
+	l4_ipc_return(0);
 	return 0;
 }
 

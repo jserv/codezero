@@ -111,7 +111,7 @@ int lsdir(char *path)
 	memset(dents, 0, sizeof(struct dirent) * DENTS_TOTAL);
 
 	if ((fd = open(path, O_RDONLY)) < 0) {
-		perror("OPEN");
+		printf("OPEN failed.");
 		return 0;
 	} else
 		printf("Got fd: %d for opening %s\n", fd, path);
@@ -158,6 +158,9 @@ int dirtest(void)
 		perror("MKDIR");
 	if (mkdir("/home/bahadir", 0) < 0)
 		perror("MKDIR");
+	if (chdir("/home/bahadir") < 0)
+		perror("CHDIR");
+	printf("Changed curdir to /home/bahadir\n");
 
 	printf("\nlsdir root directory:\n");
 	lsdir("/");
@@ -165,6 +168,10 @@ int dirtest(void)
 	printf("\nlsdir /usr:\n");
 	lsdir("/usr");
 
+	printf("\nlsdir current directory:\n");
+	lsdir(".");
+	printf("\nlsdir /usr/./././bin//\n");
+	lsdir("/usr/./././bin//");
 	return 0;
 }
 
