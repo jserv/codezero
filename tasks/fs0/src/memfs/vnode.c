@@ -210,7 +210,7 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
  * Creates ordinary files and directories at the moment. In the future,
  * other file types will be added.
  */
-int memfs_vnode_mknod(struct vnode *v, char *dirname, unsigned int mode)
+int memfs_vnode_mknod(struct vnode *v, const char *dirname, unsigned int mode)
 {
 	struct dentry *d, *parent = list_entry(v->dentries.next,
 					       struct dentry, vref);

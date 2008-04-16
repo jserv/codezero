@@ -10,11 +10,13 @@
 #include <lib/malloc.h>
 #include <path.h>
 #include <stdio.h>
+#include <fs.h>
+#include <task.h>
 
-char *pathdata_next_component(struct pathdata *pdata)
+const char *pathdata_next_component(struct pathdata *pdata)
 {
 	struct pathcomp *p, *n;
-	char *pathstr;
+	const char *pathstr;
 
 	list_for_each_entry_safe(p, n, &pdata->list, list) {
 		list_del(&p->list);
@@ -26,10 +28,10 @@ char *pathdata_next_component(struct pathdata *pdata)
 }
 
 /* Check there's at least one element, unlink and return the last element */
-char *pathdata_last_component(struct pathdata *pdata)
+const char *pathdata_last_component(struct pathdata *pdata)
 {
 	struct pathcomp *p;
-	char *pathstr;
+	const char *pathstr;
 
 	if (!list_empty(&pdata->list)) {
 		p = list_entry(pdata->list.prev, struct pathcomp, list);
@@ -77,9 +79,8 @@ struct pathdata *pathdata_parse(const char *pathname,
 	/* Initialise pathdata */
 	INIT_LIST_HEAD(&pdata->list);
 	strcpy(pathbuf, pathname);
-	pdata->task = task;
 
-	/* Handle root if there's a root */
+	/* First component is root if there's a root */
 	if (pathname[0] == VFS_CHAR_SEP) {
 		if (!(comp = kzalloc(sizeof(*comp)))) {
 			kfree(pdata);
@@ -88,19 +89,47 @@ struct pathdata *pathdata_parse(const char *pathname,
 		INIT_LIST_HEAD(&comp->list);
 		comp->str = VFS_STR_ROOTDIR;
 		list_add_tail(&comp->list, &pdata->list);
-		pdata->root = 1;
+
+		/* Lookup start vnode is root vnode */
+		pdata->vstart = task->rootdir;
+
+	/* Otherwise start from current directory */
+	} else {
+		struct dentry *curdir;
+
+		if (!(comp = kzalloc(sizeof(*comp)))) {
+			kfree(pdata);
+			return PTR_ERR(-ENOMEM);
+		}
+		INIT_LIST_HEAD(&comp->list);
+
+		/* Get current dentry for this task */
+		curdir = list_entry(task->curdir->dentries.next,
+				    struct dentry, vref);
+
+		/* Use its name in path component */
+		comp->str = curdir->name;
+		list_add_tail(&comp->list, &pdata->list);
+
+		/* Lookup start vnode is current dir vnode */
+		pdata->vstart = task->curdir;
 	}
 
 	/* Add every other path component */
 	str = splitpath(&pathbuf, VFS_CHAR_SEP);
 	while(*str) {
-		if (!(comp = kzalloc(sizeof(*comp)))) {
-			pathdata_destroy(pdata);
-			return PTR_ERR(-ENOMEM);
+		/* Any curdir components in path are ignored. */
+		if (!strcmp(str, VFS_STR_CURDIR)) {
+			;
+		} else {
+			if (!(comp = kzalloc(sizeof(*comp)))) {
+				pathdata_destroy(pdata);
+				return PTR_ERR(-ENOMEM);
+			}
+			INIT_LIST_HEAD(&comp->list);
+			comp->str = str;
+			list_add_tail(&comp->list, &pdata->list);
 		}
-		INIT_LIST_HEAD(&comp->list);
-		comp->str = str;
-		list_add_tail(&comp->list, &pdata->list);
 
 		/* Next component */
 		str = splitpath(&pathbuf, VFS_CHAR_SEP);

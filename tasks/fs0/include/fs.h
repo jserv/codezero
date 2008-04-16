@@ -22,7 +22,7 @@ struct superblock;
 struct vnode;
 
 struct dentry_ops {
-	int (*compare)(struct dentry *d, char *n);
+	int (*compare)(struct dentry *d, const char *n);
 };
 
 /* Operations that work on file content */
@@ -47,13 +47,13 @@ struct file_ops {
 struct vnode_ops {
 	vnode_op_t create;
 	struct vnode *(*lookup)(struct vnode *root, struct pathdata *pdata,
-				char *component);
+				const char *component);
 	int (*readdir)(struct vnode *v);
 	int (*filldir)(void *buf, struct vnode *v, int count);
 	vnode_op_t link;
 	vnode_op_t unlink;
-	int (*mkdir)(struct vnode *parent, char *name);
-	int (*mknod)(struct vnode *parent, char *name, unsigned int mode);
+	int (*mkdir)(struct vnode *parent, const char *name);
+	int (*mknod)(struct vnode *parent, const char *name, unsigned int mode);
 	vnode_op_t rmdir;
 	vnode_op_t rename;
 	vnode_op_t getattr;

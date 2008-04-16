@@ -20,7 +20,7 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir,
 {
 	struct dentry *childdir;
 	struct vnode *v;
-	char *component = pathdata_next_component(pdata);
+	const char *component = pathdata_next_component(pdata);
 
 	list_for_each_entry(childdir, &parentdir->children, child)
 		if (IS_ERR(v = childdir->vnode->ops.lookup(childdir->vnode,
@@ -40,7 +40,7 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir,
 /* Lookup, recursive, assuming single-mountpoint */
 struct vnode *generic_vnode_lookup(struct vnode *thisnode,
 				   struct pathdata *pdata,
-				   char *component)
+				   const char *component)
 {
 	struct dentry *d;
 	struct vnode *found;
@@ -76,7 +76,7 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode,
 	return PTR_ERR(-ENOENT);
 }
 
-int generic_dentry_compare(struct dentry *d, char *name)
+int generic_dentry_compare(struct dentry *d, const char *name)
 {
 	if (!strcmp(d->name, name) || !strcmp(name, VFS_STR_CURDIR))
 		return 1;

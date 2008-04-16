@@ -61,7 +61,7 @@ void print_vnode(struct vnode *v)
 int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
 {
 	struct vnode *vparent;
-	char *nodename;
+	const char *nodename;
 	int err;
 
 	/* The last component is to be created */
@@ -325,7 +325,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	if (count < dirent_size)
 		return 0;
 
-	fill_dirent(buf, v->vnum, nbytes, ".");
+	fill_dirent(buf, v->vnum, nbytes, VFS_STR_CURDIR);
 	nbytes += dirent_size;
 	buf += dirent_size;
 	count -= dirent_size;
@@ -333,7 +333,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	if (count < dirent_size)
 		return 0;
 
-	fill_dirent(buf, d->parent->vnode->vnum, nbytes, "..");
+	fill_dirent(buf, d->parent->vnode->vnum, nbytes, VFS_STR_PARDIR);
 	nbytes += dirent_size;
 	buf += dirent_size;
 	count -= dirent_size;

@@ -7,6 +7,7 @@
 #define __PATH_H__
 
 #include <l4/lib/list.h>
+#include <task.h>
 
 /*
  * FIXME:
@@ -21,13 +22,13 @@
 
 struct pathdata {
 	struct list_head list;
-	struct tcb *task;
+	struct vnode *vstart;
 	int root;
 };
 
 struct pathcomp {
 	struct list_head list;
-	char *str;
+	const char *str;
 };
 
 struct pathdata *pathdata_parse(const char *pathname, char *pathbuf,
@@ -35,7 +36,7 @@ struct pathdata *pathdata_parse(const char *pathname, char *pathbuf,
 void pathdata_destroy(struct pathdata *p);
 
 /* Destructive, i.e. unlinks those components from list */
-char *pathdata_next_component(struct pathdata *pdata);
-char *pathdata_last_component(struct pathdata *pdata);
+const char *pathdata_next_component(struct pathdata *pdata);
+const char *pathdata_last_component(struct pathdata *pdata);
 
 #endif /* __PATH_H__ */
