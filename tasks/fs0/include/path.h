@@ -23,7 +23,6 @@
 struct pathdata {
 	struct list_head list;
 	struct vnode *vstart;
-	int root;
 };
 
 struct pathcomp {

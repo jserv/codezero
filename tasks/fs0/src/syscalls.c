@@ -136,6 +136,23 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 
 int sys_close(l4id_t sender, int fd)
 {
+	struct tcb *task;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Validate file descriptor */
+	if (fd < 0 || fd > TASK_OFILES_MAX) {
+	       l4_ipc_return(-EBADF);
+	       return 0;
+	}
+	if (!task->fd[fd]) {
+		l4_ipc_return(-EBADF);
+		return 0;
+	}
+
+	/* Finish I/O on file */
+
 	return 0;
 }
 

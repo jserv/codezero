@@ -66,7 +66,7 @@ struct vnode *vfs_lookup_bypath(struct pathdata *pdata)
 	 * This does vfs cache + fs lookup.
 	 */
 	BUG_ON(list_empty(&pdata->list));
-       	firstcomp = pathdata_next_component(pdata);
+	firstcomp = pathdata_next_component(pdata);
 	return pdata->vstart->ops.lookup(pdata->vstart, pdata, firstcomp);
 }
 
