@@ -50,7 +50,7 @@ void init_mm(struct initdata *initdata)
 	// printf("%s: Initialised utcb address pool.\n", __TASKNAME__);
 
 	/* Give the kernel some memory to use for its allocators */
-	l4_kmem_grant(__pfn(alloc_page(__pfn(SZ_1MB))), __pfn(SZ_1MB));
+	l4_kmem_control(__pfn(alloc_page(__pfn(SZ_1MB))), __pfn(SZ_1MB), 1);
 }
 
 void initialise(void)

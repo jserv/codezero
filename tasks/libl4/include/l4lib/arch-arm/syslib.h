@@ -139,49 +139,4 @@ static inline void *l4_unmap_helper(void *virt, int npages)
 	return virt_to_phys(virt);
 }
 
-/*
- * A helper to produce grant ipc between a pager and its client, or a
- * synchronous syscall to the kernel in case the grant is to the kernel.
- */
-static inline int l4_grant_pages(unsigned long pfn, int npages, l4id_t tid)
-{
-	/* Only a pager can grant pages to kernel. */
-	if (tid == KERNEL_TID) {
-		/* Granting physical pages via a system call in kernel case. */
-		return l4_kmem_grant(pfn, npages);
-	} else {
-		/*
-		 * FIXME: This should set up appropriate message registers and
-		 * call l4_ipc() on the target thread. Pages given are virtual.
-		 */
-		while(1);
-	}
-	return 0;
-}
-
-/*
- * NOTE: This is just brainstroming yet.
- * A helper to reclaim unused pages. A pager can reclaim pages from kernel or
- * other tasks this way.
- */
-static inline int l4_reclaim_pages(l4id_t tid)
-{
-	unsigned long pfn;
-	int npages;
-
-	if (tid == KERNEL_TID) {
-		/*
-		 * A single contiguous sequence of physical pages are returned
-		 * by kernel via a syscall. Simpler the better for now.
-		 */
-		l4_kmem_reclaim(&pfn, &npages);
-	} else {
-		/*
-		 * An ipc to a task where pfn and npages come in message regs.
-		 */
-		while(1);
-	}
-	return 0;
-}
-
 #endif /* __L4LIB_SYSLIB_H__ */

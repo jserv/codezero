@@ -11,8 +11,8 @@
 #include INC_GLUE(memory.h)
 
 /* Ticks per second, try ticks = 1000 + timeslice = 1 for regressed preemption test. */
-#define HZ					10
-#define	TASK_TIMESLICE_DEFAULT			500
+#define HZ					100
+#define	TASK_TIMESLICE_DEFAULT			5000
 /* #define	TASK_TIMESLICE_DEFAULT			(HZ/100)*/
 
 static inline struct ktcb *current_task(void)
@@ -42,11 +42,11 @@ void sched_runqueue_init(void);
 void sched_start_task(struct ktcb *task);
 void sched_resume_task(struct ktcb *task);
 void sched_suspend_task(struct ktcb *task);
-void sched_process_post_ipc(struct ktcb *, struct ktcb *);
 void sched_tell(struct ktcb *task, unsigned int flags);
 void scheduler_start(void);
 void sched_yield(void);
 void schedule(void);
+
 /* Asynchronous notifications to scheduler */
 void sched_notify_resume(struct ktcb *task);
 void sched_notify_sleep(struct ktcb *task);

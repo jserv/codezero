@@ -48,8 +48,8 @@ struct kip {
 	u8  api_version;
 	u32 api_flags;
 
-	u32 kmem_reclaim;
-	u32 kmem_grant;
+	u32 kmem_control;
+	u32 time;
 
 	u32 space_control;
 	u32 thread_control;

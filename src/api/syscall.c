@@ -83,32 +83,27 @@ int validate_granted_pages(unsigned long pfn, int npages)
  * this memory is used for thread creation and memory mapping, (e.g. new
  * page tables, page middle directories, per-task kernel stack etc.)
  */
-int sys_kmem_grant(struct syscall_args *regs)
+int sys_kmem_control(struct syscall_args *regs)
 {
 	unsigned long pfn = (unsigned long)regs->r0;
 	int npages = (int)regs->r1;
+	int grant = (int)regs->r2;
 
-	/*
-	 * Check if given set of pages are outside the pages already
-	 * owned by the kernel.
-	 */
-	if (validate_granted_pages(pfn, npages) < 0)
-		return -EINVAL;
+	/* Pager is granting us pages */
+	if (grant) {
+		/*
+		 * Check if given set of pages are outside the pages already
+		 * owned by the kernel.
+		 */
+		if (validate_granted_pages(pfn, npages) < 0)
+			return -EINVAL;
 
-	/* Add the granted pages to the allocator */
-	if (pgalloc_add_new_grant(pfn, npages))
+		/* Add the granted pages to the allocator */
+		if (pgalloc_add_new_grant(pfn, npages))
+			BUG();
+	} else /* Reclaim not implemented yet */
 		BUG();
 
-	return 0;
-}
-
-
-/* FIXME:
- * The pager reclaims memory from the kernel whenever it thinks this is just.
- */
-int sys_kmem_reclaim(struct syscall_args *regs)
-{
-	BUG();
 	return 0;
 }
 

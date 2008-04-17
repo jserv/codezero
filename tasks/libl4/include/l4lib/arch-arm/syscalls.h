@@ -64,13 +64,14 @@ typedef int (*__l4_exchange_registers_t)(unsigned int pc, unsigned int sp,
 extern __l4_exchange_registers_t __l4_exchange_registers;
 int l4_exchange_registers(unsigned int pc, unsigned int sp, int pager, l4id_t tid);
 
-typedef int (*__l4_kmem_reclaim_t)(unsigned long *pfn, int *npages);
-extern __l4_kmem_reclaim_t __l4_kmem_reclaim;
-int l4_kmem_reclaim(unsigned long *pfn, int *npages);
+typedef int (*__l4_kmem_control_t)(unsigned long pfn, int npages, int grant);
+extern __l4_kmem_control_t __l4_kmem_control;
+int l4_kmem_control(unsigned long pfn, int npages, int grant);
 
-typedef int (*__l4_kmem_grant_t)(unsigned long pfn, int npages);
-extern __l4_kmem_grant_t __l4_kmem_grant;
-int l4_kmem_grant(unsigned long pfn, int npages);
+typedef int (*__l4_time_t)(void *time_info, int set);
+extern __l4_time_t __l4_time;
+int l4_time(void *time_info, int set);
+
 
 
 /* To be supplied by server tasks. */

@@ -10,7 +10,10 @@
 #include <l4/generic/irq.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/time.h>
+#include <l4/generic/space.h>
 #include INC_ARCH(exception.h)
+#include <l4/api/syscall.h>
+#include <l4/api/errno.h>
 
 /* TODO:
  * 1) Add RTC support.
@@ -18,7 +21,7 @@
  * 3) Jiffies must be initialised to a reasonable value.
  */
 
-volatile u32 jiffies;
+volatile u32 jiffies = 0;
 
 static inline void increase_jiffies(void)
 {
@@ -26,36 +29,75 @@ static inline void increase_jiffies(void)
 }
 
 
-static int noticks_noresched = 0;
+/* Represents time since epoch */
+struct time_info {
+	int reader;
+	u32 thz;	/* Ticks in this hertz so far */
+	u32 sec;
+	u32 min;
+	u32 hour;
+	u64 day;
+};
+
+static struct time_info systime = { 0 };
 
 /*
- * Check preemption anomalies:
- *
- * This checks how many times no rescheduling has occured even though ticks
- * reached zero. This suggests that preemption was enabled for more than a timer
- * interval. Normally, even if a preemption irq occured during a non-preemptive
- * state, preemption is *guaranteed* to occur before the next irq, provided that
- * the non-preemptive period is less than a timer irq interval (and it must be).
- *
- * Time:
- *
- * |-|---------------------|-|-------------------->
- * | V                     | V
- * | Preemption irq()      | Next irq.
- * V                       V
- * preempt_disabled()   preempt_enabled() && preemption;
+ * A terribly basic (probably erroneous)
+ * rule-of-thumb time calculation.
  */
-void check_noticks_noresched(void)
+void update_system_time(void)
 {
-	if (!current->ticks_left)
-		noticks_noresched++;
+	/* Did we interrupt a reader? Tell it to retry */
+	if (systime.reader)
+		systime.reader = 0;
 
-	if (noticks_noresched >= 2) {
-		printk("Warning, no ticks and yet no rescheduling "
-		       "for %d times.\n", noticks_noresched);
-		printk("Spending more than a timer period"
-		       " as nonpreemptive!!!\n");
+	/* Increase just like jiffies, but reset every HZ */
+	systime.thz++;
+
+	if (systime.thz == HZ) {
+		systime.thz = 0;
+		systime.sec++;
 	}
+	if (systime.sec == 60) {
+		systime.sec = 0;
+		systime.min++;
+	}
+	if (systime.min == 60) {
+		systime.min = 0;
+		systime.hour++;
+	}
+	if (systime.hour == 24) {
+		systime.hour = 0;
+		systime.day++;
+	}
+}
+
+/* Read system time */
+int sys_time(struct syscall_args *args)
+{
+       	struct time_info *ti = (struct time_info *)args->r0;
+	int retries = 20;
+
+	if (check_access((unsigned long)ti, sizeof(*ti), MAP_USR_RW_FLAGS) < 0)
+		return -EINVAL;
+
+	while(retries > 0) {
+		systime.reader = 1;
+		memcpy(ti, &systime, sizeof(*ti));
+		retries--;
+
+		if (systime.reader)
+			break;
+	}
+
+	/*
+	 * No need to reset reader since it will be reset
+	 * on next timer. If no retries return busy.
+	 */
+	if (!retries)
+		return -EBUSY;
+	else
+		return 0;
 }
 
 void update_process_times(void)
@@ -64,17 +106,10 @@ void update_process_times(void)
 
 	BUG_ON(cur->ticks_left < 0);
 
-	/*
-	 * If preemption is disabled we stop reducing ticks when it reaches 0
-	 * but set need_resched so that as soon as preempt-enabled, scheduling
-	 * occurs.
-	 */
 	if (cur->ticks_left == 0) {
 		need_resched = 1;
-		// check_noticks_noresched();
 		return;
 	}
-	// noticks_noresched = 0;
 
 	if (in_kernel())
 		cur->kernel_time++;
@@ -91,6 +126,8 @@ int do_timer_irq(void)
 {
 	increase_jiffies();
 	update_process_times();
+	update_system_time();
+
 	return IRQ_HANDLED;
 }
 

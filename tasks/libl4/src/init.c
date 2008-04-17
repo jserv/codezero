@@ -23,8 +23,8 @@ __l4_thread_control_t __l4_thread_control = 0;
 __l4_ipc_control_t __l4_ipc_control = 0;
 __l4_space_control_t __l4_space_control = 0;
 __l4_exchange_registers_t __l4_exchange_registers = 0;
-__l4_kmem_grant_t __l4_kmem_grant = 0;
-__l4_kmem_reclaim_t __l4_kmem_reclaim = 0;
+__l4_kmem_control_t __l4_kmem_control = 0;
+__l4_time_t __l4_time = 0;
 
 struct kip *kip;
 
@@ -120,8 +120,8 @@ void __l4_init(void)
 	__l4_space_control=	(__l4_space_control_t)kip->space_control;
 	__l4_exchange_registers =
 			(__l4_exchange_registers_t)kip->exchange_registers;
-	__l4_kmem_grant =	(__l4_kmem_grant_t)kip->kmem_grant;
-	__l4_kmem_reclaim =	(__l4_kmem_reclaim_t)kip->kmem_reclaim;
+	__l4_kmem_control =	(__l4_kmem_control_t)kip->kmem_control;
+	__l4_time =		(__l4_time_t)kip->time;
 
 	utcb_init();
 }

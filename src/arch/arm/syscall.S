@@ -28,7 +28,7 @@ BEGIN_PROC(arm_system_calls)
 	swi	0x14		@ memory_control	/* 0x20 */
 	swi	0x14		@ getid			/* 0x24 */
 	swi	0x14		@ kread			/* 0x28 */
-	swi	0x14		@ kmem_grant		/* 0x2C */
-	swi	0x14		@ kmem_reclaim		/* 0x30 */
+	swi	0x14		@ kmem_control		/* 0x2C */
+	swi	0x14		@ time			/* 0x30 */
 END_PROC(arm_system_calls)
 

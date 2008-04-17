@@ -21,9 +21,9 @@
 #define sys_map_offset				0x20
 #define sys_getid_offset			0x24
 #define sys_kread_offset			0x28
-#define sys_kmem_grant_offset			0x2C
-#define sys_kmem_reclaim_offset			0x30
-#define syscalls_end_offset			sys_kmem_reclaim_offset
+#define sys_kmem_control_offset			0x2C
+#define sys_time_offset				0x30
+#define syscalls_end_offset			sys_time_offset
 #define SYSCALLS_TOTAL				((syscalls_end_offset >> 2) + 1)
 
 int sys_ipc(struct syscall_args *);
@@ -37,7 +37,7 @@ int sys_ipc_control(struct syscall_args *);
 int sys_map(struct syscall_args *);
 int sys_getid(struct syscall_args *);
 int sys_kread(struct syscall_args *);
-int sys_kmem_grant(struct syscall_args *);
-int sys_kmem_reclaim(struct syscall_args *);
+int sys_kmem_control(struct syscall_args *);
+int sys_time(struct syscall_args *);
 
 #endif /* __SYSCALL_H__ */

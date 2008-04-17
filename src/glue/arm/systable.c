@@ -26,8 +26,8 @@ void kip_init_syscalls(void)
 	kip.thread_switch = ARM_SYSCALL_PAGE + sys_thread_switch_offset;
 	kip.schedule = ARM_SYSCALL_PAGE + sys_schedule_offset;
 	kip.getid = ARM_SYSCALL_PAGE + sys_getid_offset;
-	kip.kmem_grant = ARM_SYSCALL_PAGE + sys_kmem_grant_offset;
-	kip.kmem_reclaim = ARM_SYSCALL_PAGE + sys_kmem_reclaim_offset;
+	kip.kmem_control = ARM_SYSCALL_PAGE + sys_kmem_control_offset;
+	kip.time = ARM_SYSCALL_PAGE + sys_time_offset;
 }
 
 /* Jump table for all system calls. */
@@ -47,11 +47,11 @@ void syscall_init()
 	syscall_table[sys_getid_offset >> 2]	 		= (syscall_fn_t)sys_getid;
 	syscall_table[sys_unmap_offset >> 2] 			= (syscall_fn_t)sys_unmap;
 	syscall_table[sys_space_control_offset >> 2] 		= (syscall_fn_t)sys_space_control;
-	syscall_table[sys_ipc_control_offset >> 2] 	= (syscall_fn_t)sys_ipc_control;
+	syscall_table[sys_ipc_control_offset >> 2] 		= (syscall_fn_t)sys_ipc_control;
 	syscall_table[sys_map_offset >> 2] 			= (syscall_fn_t)sys_map;
 	syscall_table[sys_kread_offset >> 2]		 	= (syscall_fn_t)sys_kread;
-	syscall_table[sys_kmem_grant_offset >> 2]		= (syscall_fn_t)sys_kmem_grant;
-	syscall_table[sys_kmem_reclaim_offset >> 2]		= (syscall_fn_t)sys_kmem_reclaim;
+	syscall_table[sys_kmem_control_offset >> 2]		= (syscall_fn_t)sys_kmem_control;
+	syscall_table[sys_time_offset >> 2]			= (syscall_fn_t)sys_time;
 
 	add_mapping(virt_to_phys(&__syscall_page_start),
 		    ARM_SYSCALL_PAGE, PAGE_SIZE, MAP_USR_RO_FLAGS);

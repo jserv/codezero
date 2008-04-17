@@ -83,27 +83,28 @@ END_PROC(l4_unmap)
 
 /*
  * System call that grants a set of pages to the kernel.
- * @r0 = physical pfn, @r1 = number of pages
+ * @r0 = physical pfn, @r1 = number of pages, @r2 = whether to
+ * grant or reclaim kernel memory. grant = 1, reclaim = 0.
  */
-BEGIN_PROC(l4_kmem_grant)
+BEGIN_PROC(l4_kmem_control)
 	stmfd	sp!, {lr}
-	ldr	r12, =__l4_kmem_grant
+	ldr	r12, =__l4_kmem_control
 	mov	lr, pc
 	ldr	pc, [r12]
 	ldmfd	sp!, {pc}	@ Restore original lr and return.
-END_PROC(l4_kmem_grant)
+END_PROC(l4_kmem_control)
 
 /*
- * System call that reclaims a set of pages from the kernel.
- * @r0 = ptr to physical pfn, @r1 = ptr to number of pages
+ * System call that gets or sets the time info structure.
+ * @r0 = ptr to time structure @r1 = set or get. set = 1, get = 0.
  */
-BEGIN_PROC(l4_kmem_reclaim)
+BEGIN_PROC(l4_time)
 	stmfd	sp!, {lr}
-	ldr	r12, =__l4_kmem_reclaim
+	ldr	r12, =__l4_time
 	mov	lr, pc
 	ldr	pc, [r12]
 	ldmfd	sp!, {pc}	@ Restore original lr and return.
-END_PROC(l4_kmem_reclaim)
+END_PROC(l4_time)
 
 /*
  * System call that controls thread creation, destruction and modification.
