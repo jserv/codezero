@@ -19,7 +19,7 @@ static inline int l4_write(int fd, const void *buf, size_t count)
 	write_mr(L4SYS_ARG1, (const unsigned long)buf);
 	write_mr(L4SYS_ARG2, count);
 
-	/* Call pager with shmget() request. Check ipc error. */
+	/* Call pager with write() request. Check ipc error. */
 	if ((wrcnt = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_WRITE)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, wrcnt);
 		return wrcnt;

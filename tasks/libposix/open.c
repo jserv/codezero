@@ -22,13 +22,12 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 {
 	int fd;
 
-	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
 	copy_to_utcb((void *)pathname, 0, strlen(pathname) + 1);
 	write_mr(L4SYS_ARG0, (unsigned long)utcb_page);
 	write_mr(L4SYS_ARG1, flags);
 	write_mr(L4SYS_ARG2, (u32)mode);
 
-	/* Call pager with shmget() request. Check ipc error. */
+	/* Call pager with open() request. Check ipc error. */
 	if ((fd = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_OPEN)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;

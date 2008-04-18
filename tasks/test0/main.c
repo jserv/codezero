@@ -28,7 +28,7 @@ void main(void)
 	wait_pager(0);
 
 	dirtest();
-
+	fileio();
 	while (1)
 		wait_pager(0);
 #if 0
