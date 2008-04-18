@@ -16,6 +16,7 @@ config_h = join(project_root, "include/l4/config.h")
 env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  CCFLAGS = ['-g', '-std=gnu99', '-nostdlib', '-ffreestanding'],
 		  LINKFLAGS = ['-nostdlib'],
+		  CPPPATH = ['#include'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = 'gcc')
 

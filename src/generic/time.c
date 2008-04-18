@@ -29,20 +29,23 @@ static inline void increase_jiffies(void)
 }
 
 
-/* Represents time since epoch */
+/* Internal representation of time since epoch */
 struct time_info {
 	int reader;
 	u32 thz;	/* Ticks in this hertz so far */
-	u32 sec;
-	u32 min;
-	u32 hour;
-	u64 day;
+	u64 sec;	/* Seconds so far */
+};
+
+/* Used by posix systems */
+struct timeval {
+	int tv_sec;
+	int tv_usec;
 };
 
 static struct time_info systime = { 0 };
 
 /*
- * A terribly basic (probably erroneous)
+ * A very basic (probably erroneous)
  * rule-of-thumb time calculation.
  */
 void update_system_time(void)
@@ -54,41 +57,31 @@ void update_system_time(void)
 	/* Increase just like jiffies, but reset every HZ */
 	systime.thz++;
 
+	/* On every HZ increase seconds */
 	if (systime.thz == HZ) {
 		systime.thz = 0;
 		systime.sec++;
-	}
-	if (systime.sec == 60) {
-		systime.sec = 0;
-		systime.min++;
-	}
-	if (systime.min == 60) {
-		systime.min = 0;
-		systime.hour++;
-	}
-	if (systime.hour == 24) {
-		systime.hour = 0;
-		systime.day++;
 	}
 }
 
 /* Read system time */
 int sys_time(struct syscall_args *args)
 {
-       	struct time_info *ti = (struct time_info *)args->r0;
+       	struct timeval *tv = (struct timeval *)args->r0;
 	int set = (int)args->r1;
 	int retries = 20;
 
-	if (check_access((unsigned long)ti, sizeof(*ti), MAP_USR_RW_FLAGS) < 0)
+	if (check_access((unsigned long)tv, sizeof(*tv), MAP_USR_RW_FLAGS) < 0)
 		return -EINVAL;
 
 	/* Get time */
 	if (!set) {
 		while(retries > 0) {
 			systime.reader = 1;
-			memcpy(ti, &systime, sizeof(*ti));
-			retries--;
+			tv->tv_sec = systime.sec;
+			tv->tv_usec = 1000000 * systime.thz / HZ;
 
+			retries--;
 			if (systime.reader)
 				break;
 		}
