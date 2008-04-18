@@ -58,35 +58,41 @@ void print_vnode(struct vnode *v)
 }
 
 /* Creates a node under a directory, e.g. a file, directory. */
-int vfs_create(struct tcb *task, struct pathdata *pdata, unsigned int mode)
+struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
+			 unsigned int mode)
 {
-	struct vnode *vparent;
+	struct vnode *vparent, *newnode;
 	const char *nodename;
-	int err;
 
 	/* The last component is to be created */
 	nodename = pathdata_last_component(pdata);
 
 	/* Check that the parent directory exists. */
 	if (IS_ERR(vparent = vfs_lookup_bypath(pdata)))
-		return (int)vparent;
+		return vparent;
 
 	/* The parent vnode must be a directory. */
 	if (!vfs_isdir(vparent))
-		return -ENOENT;
+		return PTR_ERR(-ENOENT);
 
 	/* Create new directory under the parent */
-	if ((err = vparent->ops.mknod(vparent, nodename, mode)) < 0)
-		return err;
+	if (IS_ERR(newnode = vparent->ops.mknod(vparent, nodename, mode)))
+		return newnode;
 
 	// print_vnode(vparent);
-	return 0;
+	return newnode;
 }
 
 /* FIXME:
  * - Is it already open?
  * - Allocate a copy of path string since lookup destroys it
  * - Check flags and mode.
+ *
+ * TODO:
+ * - All return paths should return by destroying pdata.
+ * - Need another pdata for vfs_create since first lookup destroys it.
+ * - Or perhaps we check O_CREAT first, and do lookup once, without the
+ *   last path component which is to be created.
  */
 int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {
@@ -94,7 +100,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	struct vnode *v;
 	struct tcb *task;
 	int fd;
-	int err;
+	int retval;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
@@ -107,16 +113,17 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 		return 0;
 	}
 
-	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
-		if (!(flags & O_CREAT)) {
-			l4_ipc_return((int)v);
-			return 0;
-		} else {
-			if ((err = vfs_create(task, pdata, mode)) < 0) {
-				l4_ipc_return(err);
-				return 0;
-			}
+	/* Creating new node, file or directory */
+	if (flags & O_CREAT) {
+		if (IS_ERR(v = vfs_create(task, pdata, mode))) {
+			retval = (int)v;
+			goto out;
+		}
+	} else {
+		/* Not creating, just opening, get the vnode */
+		if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+			retval = (int)v;
+			goto out;
 		}
 	}
 
@@ -129,8 +136,9 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	/* Tell the pager about opened vnode information */
 	BUG_ON(pager_sys_open(sender, fd, v->vnum, v->size) < 0);
 
+out:
 	pathdata_destroy(pdata);
-	l4_ipc_return(fd);
+	l4_ipc_return(retval);
 	return 0;
 }
 
@@ -160,6 +168,7 @@ int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
 	struct tcb *task;
 	struct pathdata *pdata;
+	struct vnode *v;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
@@ -173,7 +182,10 @@ int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 	}
 
 	/* Create the directory or fail */
-	l4_ipc_return(vfs_create(task, pdata, mode));
+	if (IS_ERR(v = vfs_create(task, pdata, mode)))
+		l4_ipc_return((int)v);
+	else
+		l4_ipc_return(0);
 
 	/* Destroy extracted path data */
 	pathdata_destroy(pdata);

@@ -208,9 +208,10 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 
 /*
  * Creates ordinary files and directories at the moment. In the future,
- * other file types will be added.
+ * other file types will be added. Returns the created node.
  */
-int memfs_vnode_mknod(struct vnode *v, const char *dirname, unsigned int mode)
+struct vnode *memfs_vnode_mknod(struct vnode *v, const char *dirname,
+				unsigned int mode)
 {
 	struct dentry *d, *parent = list_entry(v->dentries.next,
 					       struct dentry, vref);
@@ -230,25 +231,25 @@ int memfs_vnode_mknod(struct vnode *v, const char *dirname, unsigned int mode)
 
 	/* Populate the children */
 	if ((err = v->ops.readdir(v)) < 0)
-		return err;
+		return PTR_ERR(err);
 
 	/* Check there's no existing child with same name */
 	list_for_each_entry(d, &parent->children, child) {
 		/* Does the name exist as a child? */
 		if(d->ops.compare(d, dirname))
-			return -EEXIST;
+			return PTR_ERR(-EEXIST);
 	}
 
 	/* Allocate a new vnode for the new directory */
 	if (IS_ERR(newv = v->sb->ops->alloc_vnode(v->sb)))
-		return (int)newv;
+		return newv;
 
 	/* Initialise the vnode */
 	vfs_set_type(newv, S_IFDIR);
 
 	/* Get the next directory entry available on the parent vnode */
 	if (v->dirbuf.npages * PAGE_SIZE <= v->size)
-		return -ENOSPC;
+		return PTR_ERR(-ENOSPC);
 
 	/* Fill in the new entry to parent directory entry */
 	memfsd = (struct memfs_dentry *)&v->dirbuf.buffer[v->size];
@@ -267,7 +268,7 @@ int memfs_vnode_mknod(struct vnode *v, const char *dirname, unsigned int mode)
 
 	/* Allocate a new vfs dentry */
 	if (!(newd = vfs_alloc_dentry()))
-		return -ENOMEM;
+		return PTR_ERR(-ENOMEM);
 
 	/* Initialise it */
 	newd->ops = generic_dentry_operations;
@@ -285,7 +286,7 @@ int memfs_vnode_mknod(struct vnode *v, const char *dirname, unsigned int mode)
 	list_add(&newd->cache_list, &dentry_cache);
 	list_add(&newv->cache_list, &vnode_cache);
 
-	return 0;
+	return newv;
 }
 
 /*

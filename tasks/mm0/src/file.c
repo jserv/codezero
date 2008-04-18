@@ -268,6 +268,7 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
+	BUG();
 	return 0;
 }
 
