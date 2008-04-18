@@ -99,11 +99,21 @@ void handle_fs_requests(void)
 
 void main(void)
 {
+	struct time_info ti;
+
 	printf("\n%s: Started with tid: %d\n", __TASKNAME__, self_tid());
 
 	initialise();
 
 	wait_pager(PAGER_TID);
+
+	if (l4_time(&ti, 0) < 0) {
+		printf("Reading the time has failed.\n");
+	} else {
+		printf("Current time since system started: %u ticks, "
+		       "%u seconds, %u minutes, %u hours, %llu days.\n",
+		       ti.thz, ti.sec, ti.min, ti.hour, ti.day);
+	}
 
 	printf("%s: Listening requests.\n", __TASKNAME__);
 	while (1) {

@@ -68,7 +68,17 @@ typedef int (*__l4_kmem_control_t)(unsigned long pfn, int npages, int grant);
 extern __l4_kmem_control_t __l4_kmem_control;
 int l4_kmem_control(unsigned long pfn, int npages, int grant);
 
-typedef int (*__l4_time_t)(void *time_info, int set);
+/* Represents time since epoch, a c0 specific structure. */
+struct time_info {
+	int reader;
+	u32 thz;	/* Ticks in this hertz so far */
+	u32 sec;
+	u32 min;
+	u32 hour;
+	u64 day;
+};
+
+typedef int (*__l4_time_t)(struct time_info *ti, int set);
 extern __l4_time_t __l4_time;
 int l4_time(void *time_info, int set);
 

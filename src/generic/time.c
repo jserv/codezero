@@ -76,28 +76,39 @@ void update_system_time(void)
 int sys_time(struct syscall_args *args)
 {
        	struct time_info *ti = (struct time_info *)args->r0;
+	int set = (int)args->r1;
 	int retries = 20;
 
 	if (check_access((unsigned long)ti, sizeof(*ti), MAP_USR_RW_FLAGS) < 0)
 		return -EINVAL;
 
-	while(retries > 0) {
-		systime.reader = 1;
-		memcpy(ti, &systime, sizeof(*ti));
-		retries--;
+	/* Get time */
+	if (!set) {
+		while(retries > 0) {
+			systime.reader = 1;
+			memcpy(ti, &systime, sizeof(*ti));
+			retries--;
 
-		if (systime.reader)
-			break;
+			if (systime.reader)
+				break;
+		}
+
+		/*
+		 * No need to reset reader since it will be reset
+		 * on next timer. If no retries return busy.
+		 */
+		if (!retries)
+			return -EBUSY;
+		else
+			return 0;
+
+	/* Set */
+	} else {
+		/*
+		 * Setting the time not supported yet.
+		 */
+		return -ENOSYS;
 	}
-
-	/*
-	 * No need to reset reader since it will be reset
-	 * on next timer. If no retries return busy.
-	 */
-	if (!retries)
-		return -EBUSY;
-	else
-		return 0;
 }
 
 void update_process_times(void)
