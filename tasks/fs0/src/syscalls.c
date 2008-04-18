@@ -129,6 +129,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 
 	/* Get a new fd */
 	BUG_ON((fd = id_new(task->fdpool)) < 0);
+	retval = fd;
 
 	/* Assign the new fd with the vnode's number */
 	task->fd[fd] = v->vnum;
@@ -337,6 +338,11 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	    (unsigned long)buf > t->utcb_address + PAGE_SIZE) {
 		l4_ipc_return(-EINVAL);
 		return 0;
+	}
+
+	if (fd < 0 || fd > TASK_OFILES_MAX) {
+	       l4_ipc_return(-EBADF);
+	       return 0;
 	}
 
 	/* Convert fd to vnum. */

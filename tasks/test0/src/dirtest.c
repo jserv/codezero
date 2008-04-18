@@ -111,14 +111,14 @@ int lsdir(char *path)
 	memset(dents, 0, sizeof(struct dirent) * DENTS_TOTAL);
 
 	if ((fd = open(path, O_RDONLY)) < 0) {
-		printf("OPEN failed.");
-		return 0;
+		printf("OPEN failed.\n");
+		return -1;
 	} else
 		printf("Got fd: %d for opening %s\n", fd, path);
 
 	if ((bytes = os_readdir(fd, dents, sizeof(struct dirent) * DENTS_TOTAL)) < 0) {
-		perror("GETDENTS\n");
-		return 0;
+		printf("GETDENTS error: %d\n", bytes);
+		return -1;
 	} else {
 		print_dirents(path, dents, bytes);
 	}
@@ -130,9 +130,15 @@ int lsdir(char *path)
 int dirtest(void)
 {
 	printf("\nlsdir current directory:\n");
-	lsdir(".");
+	if (lsdir(".") < 0) {
+		printf("lsdir failed.\n");
+		goto out_err;
+	}
 	printf("\nlsdir root directory:\n");
-	lsdir("/");
+	if (lsdir("/") < 0) {
+		printf("lsdir failed.\n");
+		goto out_err;
+	}
 
 	printf("\nCreating directories: usr, etc, tmp, var, home, opt, bin, boot, lib, dev\n");
 	if (mkdir("/usr", 0) < 0)
@@ -172,6 +178,9 @@ int dirtest(void)
 	lsdir(".");
 	printf("\nlsdir /usr/./././bin//\n");
 	lsdir("/usr/./././bin//");
+	return 0;
+
+out_err:
 	return 0;
 }
 

@@ -93,7 +93,7 @@ void handle_fs_requests(void)
 			        (unsigned long)mr[2], (void *)mr[3]);
 		break;
 	default:
-		printf("%s: Unrecognised ipc tag (%d)"
+		printf("%s: Unrecognised ipc tag (%d) "
 		       "received. Ignoring.\n", __TASKNAME__, mr[MR_TAG]);
 	}
 }
