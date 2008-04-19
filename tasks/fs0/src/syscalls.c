@@ -87,12 +87,6 @@ struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
  * - Is it already open?
  * - Allocate a copy of path string since lookup destroys it
  * - Check flags and mode.
- *
- * TODO:
- * - All return paths should return by destroying pdata.
- * - Need another pdata for vfs_create since first lookup destroys it.
- * - Or perhaps we check O_CREAT first, and do lookup once, without the
- *   last path component which is to be created.
  */
 int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 {

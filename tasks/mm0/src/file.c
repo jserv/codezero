@@ -28,7 +28,7 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 	write_mr(L4SYS_ARG2, npages);
 	write_mr(L4SYS_ARG3, (u32)pagebuf);
 
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_READ)) < 0) {
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_READ)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -52,7 +52,7 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 	write_mr(L4SYS_ARG2, npages);
 	write_mr(L4SYS_ARG3, (u32)pagebuf);
 
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_WRITE)) < 0) {
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_WRITE)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -266,6 +266,14 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	return 0;
 }
 
+/*
+ * TODO:
+ * Page in those writeable pages.
+ * Update them,
+ * Then page them out.
+ *
+ * If they're new, fs0 should allocate those pages accordingly.
+ */
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
 	BUG();

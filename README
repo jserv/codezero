@@ -77,7 +77,7 @@ The current 'Toy' release is distributed under GNU General Public License
 Version 3 and this version only. Any next version will be released in the same
 license, but there are intentions to keep the project in a dual-licensed manner.
 In any case, the project source code will always be released as open source as
-in the OSI definition, and with copyleft clauses.
+in the OSI definition.
 
 The third party source code under the directories loader/ tools/ libs/c libs/elf
 have their own copyright and licenses, separate from this project. All third
@@ -116,25 +116,28 @@ There ones that are well established, but Codezero will contrast them by
 providing an alternative that will follow the open source development principles
 more closely. Many embedded software projects still use older development
 methods and the right open source methodology would prove favorable in the
-fast-paced nature of development.
+fast-paced nature of embedded software development.
 
 Finally, POSIX compliance is only a step, or a temporary aim for the Codezero
 microkernel. It is not limited to the goal of just complying with POSIX, which
 has been done many times by other operating systems. There are new ideas in
 literature that would improve systems software but aren't implemented either
 because they have no existing users or may break compatibility (e.g. some are
-presented in Plan 9). Existing kernels tend to oppose major design overhauls,
-which limits their innovation capability for this kind of experimentation. As
-well as practising realistic development strategies such as POSIX compliance,
-Codezero project aims to keep up with the latest OS literature and provide the
-opportunity to incorporate the latest ideas in OS technology.
+presented in Plan 9). For example file abstractions could be used more
+liberally to cover data exchange and control of devices, services and network
+communication. Existing kernels already have established methods of doing such
+operations and they would oppose major design overhauls, which limits their
+innovation capability for this kind of experimentation. As well as practising
+realistic development strategies such as POSIX compliance, Codezero project aims
+to keep up with the latest OS literature and provide the opportunity to
+incorporate the latest ideas in OS technology.
 
 
 Can you summarise all this? Why should I use Codezero, again?
 
 Codezero is an operating system that targets embedded systems. It supports the
 most fundamental posix calls and it implements modern features such as
-demand-paging and virtual filesystem layer. Different from other posix-like
+demand-paging and virtual filesystem layer. Different from most other posix-like
 systems, it is based on a microkernel design. It has a cleanly separated set of
 services, it is small and well-focused. Its design is carefully thought out, so
 it's not just a mock-up implementation of the existing POSIX API. Its source
