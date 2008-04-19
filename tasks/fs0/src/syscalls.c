@@ -20,13 +20,13 @@
 
 /*
  * This notifies mm0 that this is the fd that refers to this vnode number
- * from now on.
+ * from now on. Note this is a one-way call.
  *
  * MM0 *also* keeps track of fd's because mm0 is a better candidate
  * for handling syscalls that access file content (i.e. read/write) since
  * it maintains the page cache.
  */
-int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
+int vfs2pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
 {
 	int err;
 
@@ -259,7 +259,7 @@ int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 }
 
 int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
-		   unsigned long npages, void *pagebuf)
+		    unsigned long npages, void *pagebuf)
 {
 	struct vnode *v;
 	int err;

@@ -77,7 +77,7 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 		BUG();
 	}
 
-	/* The page is not resident in page cache. */
+	/* Call vfs only if the page is not resident in page cache. */
 	if (!(page = find_page(vm_obj, page_offset))) {
 		/* Allocate a new page */
 		paddr = alloc_page(1);

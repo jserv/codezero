@@ -71,8 +71,8 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
  * about that file so that it can serve that file's content (via
  * read/write/mmap) later to that task.
  */
-int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
-			 unsigned long vnum, unsigned long length)
+int vfs2pager_sys_open(l4id_t sender, l4id_t opener, int fd,
+		       unsigned long vnum, unsigned long length)
 {
 	struct vm_file *vmfile;
 	struct tcb *t;
@@ -183,23 +183,29 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
-/* Reads a page range from an ordered list of pages into buffer */
+/* Reads a page range from an ordered list of pages into buffer.
+ * NOTE: This assumes the page range is consecutively available
+ * in the cache. To ensure this, read_file_pages must be called first.
+ */
 int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
-		     unsigned long pfn_end, unsigned long offset,
-		     int count)
+		     unsigned long pfn_end, unsigned long offset, int count)
 {
 	struct page *head, *next;
 	int copysize, left;
 	void *page_virtual;
 
+	/* Find the head of consecutive pages */
 	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
 		if (head->offset == pfn_start)
 			goto copy;
-	BUG();
+
+	/* Page not found, nothing read */
+	return 0;
 
 copy:
 	left = count;
 
+	/* FIXME: May need to map the page first */
 	/*
 	 * This function assumes the pages are already in-memory and
 	 * they are mapped into the current address space.
@@ -207,9 +213,8 @@ copy:
 	page_virtual = phys_to_virt((void *)page_to_phys(head));
 
 	/* Copy the first page and unmap it from current task. */
-	copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
-	memcpy(buf, page_virtual + offset,
-	       copysize);
+	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+	memcpy(buf, page_virtual + offset, copysize);
 	left -= copysize;
 	l4_unmap(page_virtual, 1, self_tid());
 
@@ -217,7 +222,7 @@ copy:
 	list_for_each_entry(next, &head->list, list) {
 		if (left == 0 || next->offset == pfn_end)
 			break;
-		copysize = (left <= PAGE_SIZE) ? left : PAGE_SIZE;
+		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
 		page_virtual = phys_to_virt((void *)page_to_phys(next));
 		memcpy(buf + count - left, page_virtual, copysize);
 		l4_unmap(page_virtual, 1, self_tid());
@@ -225,45 +230,56 @@ copy:
 	}
 	BUG_ON(left != 0);
 
-	return 0;
+	return count - left;
 }
 
 int sys_read(l4id_t sender, int fd, void *buf, int count)
 {
-	unsigned long foff_pfn_start, foff_pfn_end;
-	unsigned long cursor, first_pgoff;
+	unsigned long pfn_start, pfn_end;
+	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
 	struct tcb *t;
-	int err;
+	int cnt;
 
 	BUG_ON(!(t = find_task(sender)));
 
-	/* TODO: Check user buffer and count validity */
-	if (fd < 0 || fd > TASK_FILES_MAX)
-		return -EINVAL;
+	/* TODO: Check user buffer, count and fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX) {
+		l4_ipc_return(-EBADF);
+		return 0;
+	}
 
 	vmfile = t->fd[fd].vmfile;
 	cursor = t->fd[fd].cursor;
 
-	foff_pfn_start = __pfn(cursor);
-	foff_pfn_end = __pfn(page_align_up(cursor + count));
+	/* Start and end pages expected to be read by user */
+	pfn_start = __pfn(cursor);
+	pfn_end = __pfn(page_align_up(cursor + count));
+
+	/* But we can read up to minimum of file size and expected pfn_end */
+	pfn_end = __pfn(vmfile->length) < pfn_end ?
+		  __pfn(vmfile->length) : pfn_end;
 
 	/* Read the page range into the cache from file */
-	if ((err =  read_file_pages(vmfile, foff_pfn_start, foff_pfn_end) < 0))
-		return err;
+	if ((err = read_file_pages(vmfile, pfn_start, pfn_end)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
 
 	/* The offset of cursor on first page */
-	first_pgoff = PAGE_MASK & cursor;
+	byte_offset = PAGE_MASK & cursor;
 
 	/* Read it into the user buffer from the cache */
-	if ((err = read_cache_pages(vmfile, buf, foff_pfn_start, foff_pfn_end,
-				    first_pgoff, count)) < 0)
-		return err;
+	if ((cnt = read_cache_pages(vmfile, buf, pfn_start, pfn_end,
+				    byte_offset, count)) < 0) {
+		l4_ipc_return(cnt);
+		return 0;
+	}
 
 	/* Update cursor on success */
-	t->fd[fd].cursor += count;
+	t->fd[fd].cursor += cnt;
 
-	return 0;
+	return cnt;
 }
 
 /*
