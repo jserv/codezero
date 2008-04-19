@@ -113,8 +113,10 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 		return 0;
 	}
 
-	/* Creating new node, file or directory */
+	/* Creating new file */
 	if (flags & O_CREAT) {
+		/* Make sure mode identifies a file */
+		mode |= S_IFREG;
 		if (IS_ERR(v = vfs_create(task, pdata, mode))) {
 			retval = (int)v;
 			goto out;
@@ -181,6 +183,9 @@ int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 		l4_ipc_return((int)pdata);
 		return 0;
 	}
+
+	/* Make sure we create a directory */
+	mode |= S_IFDIR;
 
 	/* Create the directory or fail */
 	if (IS_ERR(v = vfs_create(task, pdata, mode)))

@@ -21,6 +21,7 @@ int fileio(void)
 		perror("OPEN");
 		return -1;
 	}
+	printf("Created newfile.txt\n");
 
 	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {
 		perror("WRITE");

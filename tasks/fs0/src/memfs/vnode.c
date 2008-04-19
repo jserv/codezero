@@ -245,7 +245,7 @@ struct vnode *memfs_vnode_mknod(struct vnode *v, const char *dirname,
 		return newv;
 
 	/* Initialise the vnode */
-	vfs_set_type(newv, S_IFDIR);
+	vfs_set_type(newv, mode);
 
 	/* Get the next directory entry available on the parent vnode */
 	if (v->dirbuf.npages * PAGE_SIZE <= v->size)
