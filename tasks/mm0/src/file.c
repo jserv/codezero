@@ -287,6 +287,45 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	return cnt;
 }
 
+/* FIXME: Add error handling to this */
+/* Extends a file's size by adding it new pages */
+int new_file_pages(struct vmfile *f, unsigned long start, unsigned long end)
+{
+	unsigned long npages = end - start;
+	struct page *page;
+	void *vaddr, *paddr;
+	int err;
+
+	/* Allocate the memory for new pages */
+	paddr = alloc_page(npages);
+
+	/* Process each page */
+	for (unsigned long i = 0; i < npages; i++) {
+		page = phys_to_page(paddr + PAGE_SIZE * i);
+		page_init(page);
+		page->refcnt++;
+		page->owner = &f->vm_obj;
+		page->offset = start + i;
+		page->virtual = 0;
+
+		/* Add the page to file's vm object */
+		BUG_ON(!list_empty(&page->list));
+		insert_page_olist(page, &f->vm_obj);
+
+	}
+
+	/* Update vm object */
+	f->vm_obj.npages += npages;
+}
+
+/* Writes user data in buffer into pages in cache */
+int write_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
+		     unsigned long pfn_end, unsigned long cur_pgoff, int count)
+{
+	BUG();
+	return 0;
+}
+
 /*
  * TODO:
  * Page in those writeable pages.
@@ -297,7 +336,98 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
  */
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
-	BUG();
+	unsigned long pfn_wstart, pfn_wend;	/* Write start/end */
+	unsigned long pfn_fstart, pfn_fend;	/* File start/end */
+	unsigned long pfn_nstart, pfn_nend;	/* New pages start/end */
+	unsigned long cursor, byte_offset;
+	struct vm_file *vmfile;
+	struct tcb *t;
+	int cnt;
+	int err;
+
+	BUG_ON(!(t = find_task(sender)));
+
+	/* TODO: Check user buffer, count and fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX) {
+		l4_ipc_return(-EBADF);
+		return 0;
+	}
+
+	vmfile = t->fd[fd].vmfile;
+	cursor = t->fd[fd].cursor;
+
+	/* See what pages user wants to write */
+	pfn_wstart = __pfn(cursor);
+	pfn_wend = __pfn(page_align_up(cursor + count));
+
+	/* Get file start and end pages */
+	pfn_fstart = 0;
+	pfn_fend = __pfn(page_align_up(vmfile->length));
+
+	/*
+	 * Find the intersection to determine which pages are
+	 * already part of the file, and which ones are new.
+	 */
+	if (pfn_wstart < pfn_fend) {
+		pfn_fstart = pfn_wstart;
+
+		/*
+		 * Shorten the end if end page is
+		 * less than file size
+		 */
+		if (pfn_wend < pfn_fend) {
+			pfn_fend = pfn_wend;
+
+			/* This also means no new pages in file */
+			pfn_nstart = 0;
+			pfn_nend = 0;
+		} else {
+
+			/* The new pages start from file end,
+			 * and end by write end. */
+			pfn_nstart = pfn_fend;
+			pfn_nend = pfn_wend;
+		}
+
+	} else {
+		/* No intersection, its all new pages */
+		pfn_fstart = 0;
+		pfn_fend = 0;
+		pfn_nstart = pfn_wstart;
+		pfn_nend = pfn_wend;
+	}
+
+	/*
+	 * Read in the portion that's already part of the file.
+	 */
+	if ((err = read_file_pages(vmfile, pfn_fstart, pfn_fend)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
+
+	/* Create new pages for the part that's new in the file */
+	if ((err = new_file_pages(vmfile, pfn_nstart, pfn_nend)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
+
+	/*
+	 * At this point be it new or existing file pages, all pages
+	 * to be written are expected to be in the page cache. Write.
+	 */
+	byte_offset = PAGE_MASK & cursor;
+	if ((err = write_cache_pages(vmfile, buf, pfn_wstart,
+				     pfn_wend, byte_offset, count)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
+
+	/*
+	 * Update the file size, vfs will be notified of this change
+	 * when the file is flushed (e.g. via fflush() or close())
+	 */
+	vmfile->length += count;
+
 	return 0;
 }
 
