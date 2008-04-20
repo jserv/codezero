@@ -80,8 +80,9 @@ void handle_requests(void)
 
 	case L4_IPC_TAG_PAGER_OPEN:
 		/* vfs opens a file and tells us about it here. */
-		vfs2pager_sys_open(sender, (l4id_t)mr[0], (int)mr[1],
-				   (unsigned long)mr[2], (unsigned long)mr[3]);
+		vfs_receive_sys_open(sender, (l4id_t)mr[0], (int)mr[1],
+				     (unsigned long)mr[2],
+				     (unsigned long)mr[3]);
 		break;
 
 	case L4_IPC_TAG_UTCB:

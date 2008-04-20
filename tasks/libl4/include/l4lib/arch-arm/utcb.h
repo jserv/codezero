@@ -55,13 +55,13 @@ static inline void write_mr(unsigned int offset, unsigned int val)
 
 static inline void copy_to_utcb(void *arg, int offset, int size)
 {
-	BUG_ON(size > PAGE_SIZE);
-	memcpy(utcb_page, arg, size);
+	BUG_ON(offset + size > PAGE_SIZE);
+	memcpy(utcb_page + offset, arg, size);
 }
 
 static inline void copy_from_utcb(void *buf, int offset, int size)
 {
-	BUG_ON(size > PAGE_SIZE);
+	BUG_ON(offset + size > PAGE_SIZE);
 	memcpy(buf, utcb_page + offset, size);
 }
 

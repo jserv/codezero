@@ -13,7 +13,7 @@
 
 static inline int l4_write(int fd, const void *buf, size_t count)
 {
-	size_t wrcnt;
+	int wrcnt;
 
 	write_mr(L4SYS_ARG0, fd);
 	write_mr(L4SYS_ARG1, (const unsigned long)buf);

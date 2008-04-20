@@ -71,8 +71,8 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
  * about that file so that it can serve that file's content (via
  * read/write/mmap) later to that task.
  */
-int vfs2pager_sys_open(l4id_t sender, l4id_t opener, int fd,
-		       unsigned long vnum, unsigned long length)
+int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
+			 unsigned long vnum, unsigned long length)
 {
 	struct vm_file *vmfile;
 	struct tcb *t;
@@ -183,16 +183,18 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
-/* Reads a page range from an ordered list of pages into buffer.
+/*
+ * Reads a page range from an ordered list of pages into buffer.
  * NOTE: This assumes the page range is consecutively available
  * in the cache. To ensure this, read_file_pages must be called first.
  */
 int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
 		     unsigned long pfn_end, unsigned long offset, int count)
 {
-	struct page *head, *next;
+	struct page *head, *this;
 	int copysize, left;
 	void *page_virtual;
+	unsigned long last_offset;	/* Last copied page's offset */
 
 	/* Find the head of consecutive pages */
 	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
@@ -205,28 +207,30 @@ int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
 copy:
 	left = count;
 
-	/* FIXME: May need to map the page first */
-	/*
-	 * This function assumes the pages are already in-memory and
-	 * they are mapped into the current address space.
-	 */
-	page_virtual = phys_to_virt((void *)page_to_phys(head));
+	/* Map the page */
+	page_virtual = l4_map_helper((void *)page_to_phys(head), 1);
 
-	/* Copy the first page and unmap it from current task. */
+	/* Copy the first page and unmap. */
 	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
 	memcpy(buf, page_virtual + offset, copysize);
 	left -= copysize;
-	l4_unmap(page_virtual, 1, self_tid());
+	l4_unmap_helper(page_virtual, 1);
+	last_offset = head->offset;
 
-	/* Copy the rest and unmap. */
-	list_for_each_entry(next, &head->list, list) {
-		if (left == 0 || next->offset == pfn_end)
+	/* Map the rest, copy and unmap. */
+	list_for_each_entry(this, &head->list, list) {
+		if (left == 0 || this->offset == pfn_end)
 			break;
+
+		/* Make sure we're advancing on pages consecutively */
+		BUG_ON(this->offset != last_offset + 1);
+
 		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-		page_virtual = phys_to_virt((void *)page_to_phys(next));
+		page_virtual = l4_map_helper((void *)page_to_phys(this), 1);
 		memcpy(buf + count - left, page_virtual, copysize);
-		l4_unmap(page_virtual, 1, self_tid());
+		l4_unmap_helper(page_virtual, 1);
 		left -= copysize;
+		last_offset = this->offset;
 	}
 	BUG_ON(left != 0);
 
@@ -240,6 +244,7 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	struct vm_file *vmfile;
 	struct tcb *t;
 	int cnt;
+	int err;
 
 	BUG_ON(!(t = find_task(sender)));
 

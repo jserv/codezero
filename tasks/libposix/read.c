@@ -18,7 +18,7 @@
 
 static inline int l4_readdir(int fd, void *buf, size_t count)
 {
-	size_t cnt;
+	int cnt;
 
 	write_mr(L4SYS_ARG0, fd);
 	write_mr(L4SYS_ARG1, (unsigned long)utcb_page);
@@ -31,7 +31,7 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 	}
 	/* Check if syscall itself was successful */
 	if ((cnt = l4_get_retval()) < 0) {
-		printf("%s: READ Error: %d.\n", __FUNCTION__, (int)cnt);
+		printf("%s: READDIR Error: %d.\n", __FUNCTION__, (int)cnt);
 		return cnt;
 
 	}
@@ -42,7 +42,7 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 
 static inline int l4_read(int fd, void *buf, size_t count)
 {
-	size_t cnt;
+	int cnt;
 
 	write_mr(L4SYS_ARG0, fd);
 	write_mr(L4SYS_ARG1, (unsigned long)buf);

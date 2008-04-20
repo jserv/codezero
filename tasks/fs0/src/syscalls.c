@@ -26,7 +26,7 @@
  * for handling syscalls that access file content (i.e. read/write) since
  * it maintains the page cache.
  */
-int vfs2pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
+int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
 {
 	int err;
 
