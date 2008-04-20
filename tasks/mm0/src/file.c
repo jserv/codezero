@@ -42,29 +42,6 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 	return err;
 }
 
-int vfs_write(unsigned long vnum, unsigned long file_offset,
-	      unsigned long npages, void *pagebuf)
-{
-	int err;
-
-	write_mr(L4SYS_ARG0, vnum);
-	write_mr(L4SYS_ARG1, file_offset);
-	write_mr(L4SYS_ARG2, npages);
-	write_mr(L4SYS_ARG3, (u32)pagebuf);
-
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_WRITE)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	/* Check if syscall was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	return err;
-}
 
 /*
  * When a new file is opened by the vfs this receives the information
@@ -320,12 +297,85 @@ int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
 	return 0;
 }
 
+int vfs_write(unsigned long vnum, unsigned long file_offset,
+	      unsigned long npages, void *pagebuf)
+{
+	int err;
+
+	write_mr(L4SYS_ARG0, vnum);
+	write_mr(L4SYS_ARG1, file_offset);
+	write_mr(L4SYS_ARG2, npages);
+	write_mr(L4SYS_ARG3, (u32)pagebuf);
+
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_WRITE)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	return err;
+}
+
+/* TODO:
+ * Re-evaluate. Possibly merge with read_cache_pages.
+ */
+
 /* Writes user data in buffer into pages in cache */
 int write_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
-		     unsigned long pfn_end, unsigned long cur_pgoff, int count)
+		     unsigned long pfn_end, unsigned long cursor_offset, int count)
 {
+	struct page *head, *this;
+	int copysize, left;
+	void *page_virtual;
+	unsigned long last_offset;	/* Last copied page's offset */
+
+	/* Find the head of consecutive pages */
+	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
+		if (head->offset == pfn_start)
+			goto copy;
+
+	/*
+	 * Page not found, this is a bug.
+	 * The page range must have been ready.
+	 */
 	BUG();
-	return 0;
+
+copy:
+	left = count;
+
+	/* Map the page */
+	page_virtual = l4_map_helper((void *)page_to_phys(head), 1);
+
+	/* Copy the first page and unmap. */
+	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+	memcpy(page_virtual + cursor_offset, buf, copysize);
+	left -= copysize;
+	l4_unmap_helper(page_virtual, 1);
+	last_offset = head->offset;
+
+	/* Map the rest, copy and unmap. */
+	list_for_each_entry(this, &head->list, list) {
+		if (left == 0 || this->offset == pfn_end)
+			break;
+
+		/* Make sure we're advancing on pages consecutively */
+		BUG_ON(this->offset != last_offset + 1);
+
+		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+		page_virtual = l4_map_helper((void *)page_to_phys(this), 1);
+		memcpy(page_virtual, buf + count - left, copysize);
+		l4_unmap_helper(page_virtual, 1);
+		left -= copysize;
+		last_offset = this->offset;
+	}
+	BUG_ON(left != 0);
+
+	return count - left;
 }
 
 /*
