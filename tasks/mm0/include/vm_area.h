@@ -209,6 +209,7 @@ void vm_object_print(struct vm_object *vmo);
 /* Used for pre-faulting a page from mm0 */
 int prefault_page(struct tcb *task, unsigned long address,
 		  unsigned int vmflags);
+struct page *page_init(struct page *page);
 
 /* To get currently mapped page of a virtual address on a task */
 struct page *task_virt_to_page(struct tcb *t, unsigned long virtual);

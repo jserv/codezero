@@ -289,15 +289,15 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 
 /* FIXME: Add error handling to this */
 /* Extends a file's size by adding it new pages */
-int new_file_pages(struct vmfile *f, unsigned long start, unsigned long end)
+int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
 {
 	unsigned long npages = end - start;
 	struct page *page;
-	void *vaddr, *paddr;
-	int err;
+	void *paddr;
 
 	/* Allocate the memory for new pages */
-	paddr = alloc_page(npages);
+	if (!(paddr = alloc_page(npages)))
+		return -ENOMEM;
 
 	/* Process each page */
 	for (unsigned long i = 0; i < npages; i++) {
@@ -316,6 +316,8 @@ int new_file_pages(struct vmfile *f, unsigned long start, unsigned long end)
 
 	/* Update vm object */
 	f->vm_obj.npages += npages;
+
+	return 0;
 }
 
 /* Writes user data in buffer into pages in cache */
@@ -342,7 +344,6 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
 	struct tcb *t;
-	int cnt;
 	int err;
 
 	BUG_ON(!(t = find_task(sender)));
