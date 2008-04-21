@@ -35,7 +35,8 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager from VFS read error: %d.\n", __FUNCTION__, err);
+		printf("%s: Pager from VFS read error: %d.\n",
+		       __FUNCTION__, err);
 		return err;
 	}
 
@@ -55,14 +56,20 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	struct tcb *t;
 
 	/* Check argument validity */
-	if (sender != VFS_TID)
-		return -EPERM;
+	if (sender != VFS_TID) {
+		l4_ipc_return(-EPERM);
+		return 0;
+	}
 
-	if (!(t = find_task(opener)))
-		return -EINVAL;
+	if (!(t = find_task(opener))) {
+		l4_ipc_return(-EINVAL);
+		return 0;
+	}
 
-	if (fd < 0 || fd > TASK_FILES_MAX)
-		return -EINVAL;
+	if (fd < 0 || fd > TASK_FILES_MAX) {
+		l4_ipc_return(-EINVAL);
+		return 0;
+	}
 
 	/* Assign vnum to given fd on the task */
 	t->fd[fd].vnum = vnum;
@@ -76,13 +83,16 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 			/* Add a reference to it from the task */
 			t->fd[fd].vmfile = vmfile;
 			vmfile->vm_obj.refcnt++;
+			l4_ipc_return(0);
 			return 0;
 		}
 	}
 
 	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vfs_file_create()))
-		return (int)vmfile;
+	if (IS_ERR(vmfile = vfs_file_create())) {
+		l4_ipc_return((int)vmfile);
+		return 0;
+	}
 
 	/* Initialise and add it to global list */
 	vm_file_to_vnum(vmfile) = vnum;
@@ -90,6 +100,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	vmfile->vm_obj.pager = &file_pager;
 	list_add(&vmfile->vm_obj.list, &vm_file_list);
 
+	l4_ipc_return(0);
 	return 0;
 }
 
@@ -288,7 +299,6 @@ int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
 		/* Add the page to file's vm object */
 		BUG_ON(!list_empty(&page->list));
 		insert_page_olist(page, &f->vm_obj);
-
 	}
 
 	/* Update vm object */

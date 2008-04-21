@@ -35,8 +35,15 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 	write_mr(L4SYS_ARG2, vnum);
 	write_mr(L4SYS_ARG3, size);
 
-	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_PAGER_OPEN)) < 0) {
+	/* Tell pager about open request. Check ipc error. */
+	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_PAGER_OPEN)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall itself was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Pager open Error: %d.\n", __FUNCTION__, fd);
 		return err;
 	}
 
@@ -94,7 +101,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	struct vnode *v;
 	struct tcb *task;
 	int fd;
-	int retval;
+	int retval, err;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
@@ -131,7 +138,10 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	task->fd[fd] = v->vnum;
 
 	/* Tell the pager about opened vnode information */
-	BUG_ON(pager_sys_open(sender, fd, v->vnum, v->size) < 0);
+	if ((err = pager_sys_open(sender, fd, v->vnum, v->size)) < 0) {
+		retval = err;
+		goto out;
+	}
 
 out:
 	pathdata_destroy(pdata);

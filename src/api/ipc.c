@@ -273,7 +273,7 @@ int sys_ipc(struct syscall_args *regs)
 	return ret;
 
 error:
-	printk("Erroneous ipc by: %d\n", current->tid);
+	printk("Erroneous ipc by: %d. Err: %d\n", current->tid, ret);
 	ipc_type = IPC_INVALID;
 	return ret;
 }
