@@ -25,7 +25,8 @@
  */
 struct utcb {
 	u32 mr[MR_TOTAL];
-	u32 tid;		/* Thread id */
+	u32 saved_tag;
+	u32 saved_sender;
 } __attribute__((__packed__));
 
 extern struct utcb utcb;

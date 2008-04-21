@@ -38,6 +38,17 @@ static inline l4id_t l4_get_sender(void)
 	return (l4id_t)read_mr(MR_SENDER);
 }
 
+/*
+ * When doing an ipc the sender never has to be explicitly set in
+ * the utcb via this function since it is passed in the argument
+ * registers. This is only used for restoring the sender on the
+ * utcb in order to complete an earlier ipc.
+ */
+static inline void l4_set_sender(l4id_t sender)
+{
+	write_mr(MR_SENDER, sender);
+}
+
 static inline unsigned int l4_get_tag(void)
 {
 	return read_mr(MR_TAG);
@@ -46,6 +57,23 @@ static inline unsigned int l4_get_tag(void)
 static inline void l4_set_tag(unsigned int tag)
 {
 	write_mr(MR_TAG, tag);
+}
+
+/*
+ * If we're about to do another ipc, this saves the last ipc's
+ * parameters such as the sender and tag information.
+ * Any previously saved data in save slots are destroyed.
+ */
+static inline void l4_save_ipcregs(void)
+{
+	l4_get_utcb()->saved_sender = l4_get_sender();
+	l4_get_utcb()->saved_tag = l4_get_tag();
+}
+
+static inline void l4_restore_ipcregs(void)
+{
+	l4_set_tag(l4_get_utcb()->saved_tag);
+	l4_set_sender(l4_get_utcb()->saved_sender);
 }
 
 static inline l4id_t self_tid(void)

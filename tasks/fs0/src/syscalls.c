@@ -30,6 +30,8 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 {
 	int err;
 
+	l4_save_ipcregs();
+
 	write_mr(L4SYS_ARG0, sender);
 	write_mr(L4SYS_ARG1, fd);
 	write_mr(L4SYS_ARG2, vnum);
@@ -46,6 +48,7 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 		printf("%s: Pager open Error: %d.\n", __FUNCTION__, fd);
 		return err;
 	}
+	l4_restore_ipcregs();
 
 	return 0;
 }
