@@ -412,6 +412,11 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 
 	BUG_ON(!(t = find_task(sender)));
 
+	if ((err = check_access(t, buf, count)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
+
 	/* TODO: Check user buffer, count and fd validity */
 	if (fd < 0 || fd > TASK_FILES_MAX) {
 		l4_ipc_return(-EBADF);

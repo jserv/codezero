@@ -114,9 +114,9 @@ embedded devices. Most of them are proprietary, with their own users. Some of
 them are structurally too simplistic, and lack modern features such as paging.
 There ones that are well established, but Codezero will contrast them by
 providing an alternative that will follow the open source development principles
-more closely. Many embedded software projects still use older development
-methods and the right open source methodology would prove favorable in the
-fast-paced nature of embedded software development.
+more closely. Many embedded software projects still use older or closed
+development methods and the right open source methodology would prove favorable
+in the fast-paced nature of embedded software development.
 
 Finally, POSIX compliance is only a step, or a temporary aim for the Codezero
 microkernel. It is not limited to the goal of just complying with POSIX, which

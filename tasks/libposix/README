@@ -16,15 +16,28 @@ shmdt
 mmap
 munmap
 read
+readdir
 write
 lseek
 open
 close
 creat
+mkdir
+mknod
+link
 unlink
 fork
 execve
 getpid
+wait
+kill
+
+Others:
+pipe
+mount
+unmount
+swapon
+
 
 New ones will be added as needed.
 
