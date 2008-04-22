@@ -94,10 +94,14 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 		return 0;
 	}
 
-	/* Initialise and add it to global list */
+	/* Initialise and add a reference to it from the task */
 	vm_file_to_vnum(vmfile) = vnum;
 	vmfile->length = length;
 	vmfile->vm_obj.pager = &file_pager;
+	t->fd[fd].vmfile = vmfile;
+	vmfile->vm_obj.refcnt++;
+
+	/* Add to global list */
 	list_add(&vmfile->vm_obj.list, &vm_file_list);
 
 	l4_ipc_return(0);
