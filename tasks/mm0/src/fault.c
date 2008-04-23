@@ -231,7 +231,7 @@ struct vm_obj_link *vma_create_shadow(void)
 }
 
 /* Allocates a new page, copies the original onto it and returns. */
-struct page *copy_page(struct page *orig)
+struct page *copy_to_new_page(struct page *orig)
 {
 	void *new_vaddr, *vaddr, *paddr;
 	struct page *new;
@@ -349,7 +349,7 @@ struct page *copy_on_write(struct fault_data *fault)
 	 * Copy the page. This traverse and copy is like a page-in operation
 	 * of a pager, except that the page is moving along vm_objects.
 	 */
-	new_page = copy_page(page);
+	new_page = copy_to_new_page(page);
 
 	/* Update page details */
 	spin_lock(&new_page->lock);
@@ -929,6 +929,28 @@ int page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 	return 0;
 }
 
+/* Checks if an address range is a validly mapped area for a task */
+int validate_task_range(struct tcb *t, unsigned long start,
+			unsigned long end, unsigned int vmflags)
+{
+	struct vm_area *vma;
+
+	start = page_align(start);
+	end = page_align_up(end);
+
+	/* Find the vma that maps that virtual address */
+	for (unsigned long vaddr = start; vaddr < end; vaddr += PAGE_SIZE) {
+		if (!(vma = find_vma(vaddr, &t->vm_area_list))) {
+			printf("%s: No VMA found for 0x%x on task: %d\n",
+			       __FUNCTION__, vaddr, t->tid);
+			return -EINVAL;
+		}
+		if ((vma->flags & vmflags) != vmflags)
+			return -EINVAL;
+	}
+	return 0;
+}
+
 /*
  * Makes the virtual to page translation for a given user task.
  * It traverses the vm_objects and returns the first encountered
@@ -979,8 +1001,8 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 	}
 
 	/* Found it */
-	printf("%s: %s: Found page with file_offset: 0x%x. vm object:\n",
-	       __TASKNAME__,  __FUNCTION__, (unsigned long)page, page->offset);
+	// printf("%s: %s: Found page with file_offset: 0x%x\n",
+	//       __TASKNAME__,  __FUNCTION__, page->offset);
 	vm_object_print(vmo_link->obj);
 
 	return page;

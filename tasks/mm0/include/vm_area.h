@@ -213,6 +213,8 @@ struct page *page_init(struct page *page);
 
 /* To get currently mapped page of a virtual address on a task */
 struct page *task_virt_to_page(struct tcb *t, unsigned long virtual);
+int validate_task_range(struct tcb *t, unsigned long start,
+			unsigned long end, unsigned int vmflags);
 
 /* Main page fault entry point */
 int page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);

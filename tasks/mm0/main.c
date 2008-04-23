@@ -97,6 +97,10 @@ void handle_requests(void)
 		sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 
+	case L4_IPC_TAG_LSEEK:
+		sys_lseek(sender, (int)mr[0], (off_t)mr[1], (int)mr[2]);
+		break;
+
 	case L4_IPC_TAG_MMAP2: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)mr[0];
 		sys_mmap(sender, args->start, args->length, args->prot,

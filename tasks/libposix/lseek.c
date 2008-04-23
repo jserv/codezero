@@ -20,7 +20,7 @@ static inline off_t l4_lseek(int fildes, off_t offset, int whence)
 	write_mr(L4SYS_ARG2, whence);
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((offres = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_LSEEK)) < 0) {
+	if ((offres = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_LSEEK)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, offres);
 		return offres;
 	}

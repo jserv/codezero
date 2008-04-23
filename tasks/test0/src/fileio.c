@@ -23,17 +23,20 @@ int fileio(void)
 	}
 	printf("Created newfile.txt\n");
 
+	printf("%s: write.\n", __TASKNAME__);
 	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {
 		perror("WRITE");
 		return -1;
 	}
 
+	printf("%s: lseek.\n", __TASKNAME__);
 	if ((int)(offset = lseek(fd, 0, SEEK_SET)) < 0) {
 		perror("LSEEK");
 		return -1;
 	}
+	printf("%s: read.\n", __TASKNAME__);
 	if ((int)(cnt = read(fd, buf, strlen(str))) < 0) {
-		perror("WRITE");
+		perror("READ");
 		return -1;
 	}
 

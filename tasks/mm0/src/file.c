@@ -18,6 +18,25 @@
 /* List of all generic files */
 LIST_HEAD(vm_file_list);
 
+
+/* Copy from one page's buffer into another page */
+int page_copy(struct page *dst, struct page *src,
+	      unsigned long offset, unsigned long size)
+{
+	void *dstvaddr, *srcvaddr;
+
+	BUG_ON(offset + size > PAGE_SIZE);
+	dstvaddr = l4_map_helper((void *)page_to_phys(dst), 1);
+	srcvaddr = l4_map_helper((void *)page_to_phys(src), 1);
+
+	memcpy(dstvaddr + offset, srcvaddr + offset, size);
+
+	l4_unmap_helper(dstvaddr, 1);
+	l4_unmap_helper(srcvaddr, 1);
+
+	return 0;
+}
+
 int vfs_read(unsigned long vnum, unsigned long file_offset,
 	     unsigned long npages, void *pagebuf)
 {
@@ -340,12 +359,12 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
  */
 
 /* Writes user data in buffer into pages in cache */
-int write_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
-		     unsigned long pfn_end, unsigned long cursor_offset, int count)
+int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
+		      unsigned long pfn_start, unsigned long pfn_end,
+		      unsigned long cursor_offset, int count)
 {
 	struct page *head, *this;
 	int copysize, left;
-	void *page_virtual;
 	unsigned long last_offset;	/* Last copied page's offset */
 
 	/* Find the head of consecutive pages */
@@ -354,22 +373,19 @@ int write_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start
 			goto copy;
 
 	/*
-	 * Page not found, this is a bug.
-	 * The page range must have been ready.
+	 * Page not found, this is a bug. The writeable page range
+	 * must have been readied by read_file_pages()/new_file_pages().
 	 */
 	BUG();
 
 copy:
 	left = count;
 
-	/* Map the page */
-	page_virtual = l4_map_helper((void *)page_to_phys(head), 1);
-
 	/* Copy the first page and unmap. */
 	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-	memcpy(page_virtual + cursor_offset, buf, copysize);
+	page_copy(head, task_virt_to_page(task, (unsigned long)buf),
+					  cursor_offset, copysize);
 	left -= copysize;
-	l4_unmap_helper(page_virtual, 1);
 	last_offset = head->offset;
 
 	/* Map the rest, copy and unmap. */
@@ -381,9 +397,9 @@ copy:
 		BUG_ON(this->offset != last_offset + 1);
 
 		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-		page_virtual = l4_map_helper((void *)page_to_phys(this), 1);
-		memcpy(page_virtual, buf + count - left, copysize);
-		l4_unmap_helper(page_virtual, 1);
+		page_copy(this, task_virt_to_page(task, (unsigned long)buf +
+						  count - left),
+			  0, copysize);
 		left -= copysize;
 		last_offset = this->offset;
 	}
@@ -392,14 +408,6 @@ copy:
 	return count - left;
 }
 
-/*
- * TODO:
- * Page in those writeable pages.
- * Update them,
- * Then page them out.
- *
- * If they're new, fs0 should allocate those pages accordingly.
- */
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
 	unsigned long pfn_wstart, pfn_wend;	/* Write start/end */
@@ -407,24 +415,36 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	unsigned long pfn_nstart, pfn_nend;	/* New pages start/end */
 	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
-	struct tcb *t;
-	int err;
+	int err = 0, retval = 0;
+	struct tcb *task;
 
-	BUG_ON(!(t = find_task(sender)));
+	BUG_ON(!(task = find_task(sender)));
 
-	if ((err = check_access(t, buf, count)) < 0) {
-		l4_ipc_return(err);
-		return 0;
+	/* Check fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+		retval = -EBADF;
+		goto out;
 	}
 
-	/* TODO: Check user buffer, count and fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX) {
-		l4_ipc_return(-EBADF);
-		return 0;
+	/* Check count validity */
+	if (count < 0) {
+		retval = -EINVAL;
+		goto out;
+	} else if (!count) {
+		retval = 0;
+		goto out;
 	}
 
-	vmfile = t->fd[fd].vmfile;
-	cursor = t->fd[fd].cursor;
+	/* Check user buffer validity. */
+	if ((err = validate_task_range(task, (unsigned long)buf,
+				       (unsigned long)(buf + count),
+				       VM_WRITE | VM_READ)) < 0) {
+		retval = err;
+		goto out;
+	}
+
+	vmfile = task->fd[fd].vmfile;
+	cursor = task->fd[fd].cursor;
 
 	/* See what pages user wants to write */
 	pfn_wstart = __pfn(cursor);
@@ -471,14 +491,14 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	 * Read in the portion that's already part of the file.
 	 */
 	if ((err = read_file_pages(vmfile, pfn_fstart, pfn_fend)) < 0) {
-		l4_ipc_return(err);
-		return 0;
+		retval = err;
+		goto out;
 	}
 
 	/* Create new pages for the part that's new in the file */
 	if ((err = new_file_pages(vmfile, pfn_nstart, pfn_nend)) < 0) {
-		l4_ipc_return(err);
-		return 0;
+		retval = err;
+		goto out;
 	}
 
 	/*
@@ -486,10 +506,10 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	 * to be written are expected to be in the page cache. Write.
 	 */
 	byte_offset = PAGE_MASK & cursor;
-	if ((err = write_cache_pages(vmfile, buf, pfn_wstart,
+	if ((err = write_cache_pages(vmfile, task, buf, pfn_wstart,
 				     pfn_wend, byte_offset, count)) < 0) {
-		l4_ipc_return(err);
-		return 0;
+		retval = err;
+		goto out;
 	}
 
 	/*
@@ -497,7 +517,11 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	 * when the file is flushed (e.g. via fflush() or close())
 	 */
 	vmfile->length += count;
+	task->fd[fd].cursor += count;
+	retval = count;
 
+out:
+	l4_ipc_return(retval);
 	return 0;
 }
 
