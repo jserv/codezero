@@ -42,6 +42,8 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 {
 	int err;
 
+	l4_save_ipcregs();
+
 	write_mr(L4SYS_ARG0, vnum);
 	write_mr(L4SYS_ARG1, file_offset);
 	write_mr(L4SYS_ARG2, npages);
@@ -58,6 +60,7 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 		       __FUNCTION__, err);
 		return err;
 	}
+	l4_restore_ipcregs();
 
 	return err;
 }
@@ -194,109 +197,6 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
-/*
- * Reads a page range from an ordered list of pages into buffer.
- * NOTE: This assumes the page range is consecutively available
- * in the cache. To ensure this, read_file_pages must be called first.
- */
-int read_cache_pages(struct vm_file *vmfile, void *buf, unsigned long pfn_start,
-		     unsigned long pfn_end, unsigned long offset, int count)
-{
-	struct page *head, *this;
-	int copysize, left;
-	void *page_virtual;
-	unsigned long last_offset;	/* Last copied page's offset */
-
-	/* Find the head of consecutive pages */
-	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
-		if (head->offset == pfn_start)
-			goto copy;
-
-	/* Page not found, nothing read */
-	return 0;
-
-copy:
-	left = count;
-
-	/* Map the page */
-	page_virtual = l4_map_helper((void *)page_to_phys(head), 1);
-
-	/* Copy the first page and unmap. */
-	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-	memcpy(buf, page_virtual + offset, copysize);
-	left -= copysize;
-	l4_unmap_helper(page_virtual, 1);
-	last_offset = head->offset;
-
-	/* Map the rest, copy and unmap. */
-	list_for_each_entry(this, &head->list, list) {
-		if (left == 0 || this->offset == pfn_end)
-			break;
-
-		/* Make sure we're advancing on pages consecutively */
-		BUG_ON(this->offset != last_offset + 1);
-
-		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-		page_virtual = l4_map_helper((void *)page_to_phys(this), 1);
-		memcpy(buf + count - left, page_virtual, copysize);
-		l4_unmap_helper(page_virtual, 1);
-		left -= copysize;
-		last_offset = this->offset;
-	}
-	BUG_ON(left != 0);
-
-	return count - left;
-}
-
-int sys_read(l4id_t sender, int fd, void *buf, int count)
-{
-	unsigned long pfn_start, pfn_end;
-	unsigned long cursor, byte_offset;
-	struct vm_file *vmfile;
-	struct tcb *t;
-	int cnt;
-	int err;
-
-	BUG_ON(!(t = find_task(sender)));
-
-	/* TODO: Check user buffer, count and fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX) {
-		l4_ipc_return(-EBADF);
-		return 0;
-	}
-
-	vmfile = t->fd[fd].vmfile;
-	cursor = t->fd[fd].cursor;
-
-	/* Start and end pages expected to be read by user */
-	pfn_start = __pfn(cursor);
-	pfn_end = __pfn(page_align_up(cursor + count));
-
-	/* But we can read up to minimum of file size and expected pfn_end */
-	pfn_end = __pfn(vmfile->length) < pfn_end ?
-		  __pfn(vmfile->length) : pfn_end;
-
-	/* Read the page range into the cache from file */
-	if ((err = read_file_pages(vmfile, pfn_start, pfn_end)) < 0) {
-		l4_ipc_return(err);
-		return 0;
-	}
-
-	/* The offset of cursor on first page */
-	byte_offset = PAGE_MASK & cursor;
-
-	/* Read it into the user buffer from the cache */
-	if ((cnt = read_cache_pages(vmfile, buf, pfn_start, pfn_end,
-				    byte_offset, count)) < 0) {
-		l4_ipc_return(cnt);
-		return 0;
-	}
-
-	/* Update cursor on success */
-	t->fd[fd].cursor += cnt;
-
-	return cnt;
-}
 
 /* FIXME: Add error handling to this */
 /* Extends a file's size by adding it new pages */
@@ -335,6 +235,8 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 {
 	int err;
 
+	l4_save_ipcregs();
+
 	write_mr(L4SYS_ARG0, vnum);
 	write_mr(L4SYS_ARG1, file_offset);
 	write_mr(L4SYS_ARG2, npages);
@@ -351,6 +253,8 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 		return err;
 	}
 
+	l4_restore_ipcregs();
+
 	return err;
 }
 
@@ -364,8 +268,9 @@ int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 		      unsigned long cursor_offset, int count)
 {
 	struct page *head, *this;
+	unsigned long last_pgoff;	/* Last copied page's offset */
+	unsigned long copy_offset;	/* Current copy offset on the buffer */
 	int copysize, left;
-	unsigned long last_offset;	/* Last copied page's offset */
 
 	/* Find the head of consecutive pages */
 	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
@@ -383,10 +288,11 @@ copy:
 
 	/* Copy the first page and unmap. */
 	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-	page_copy(head, task_virt_to_page(task, (unsigned long)buf),
-					  cursor_offset, copysize);
+	copy_offset = (unsigned long)buf;
+	page_copy(head, task_virt_to_page(task, copy_offset),
+		  cursor_offset, copysize);
 	left -= copysize;
-	last_offset = head->offset;
+	last_pgoff = head->offset;
 
 	/* Map the rest, copy and unmap. */
 	list_for_each_entry(this, &head->list, list) {
@@ -394,18 +300,164 @@ copy:
 			break;
 
 		/* Make sure we're advancing on pages consecutively */
-		BUG_ON(this->offset != last_offset + 1);
+		BUG_ON(this->offset != last_pgoff + 1);
 
 		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-		page_copy(this, task_virt_to_page(task, (unsigned long)buf +
-						  count - left),
+		copy_offset = (unsigned long)buf + count - left;
+
+		/* Must be page aligned */
+		BUG_ON(!is_page_aligned(copy_offset));
+
+		page_copy(this, task_virt_to_page(task, copy_offset),
 			  0, copysize);
 		left -= copysize;
-		last_offset = this->offset;
+		last_pgoff = this->offset;
 	}
 	BUG_ON(left != 0);
 
 	return count - left;
+}
+
+/*
+ * Reads a page range from an ordered list of pages into buffer.
+ *
+ * NOTE:
+ * This assumes the page range is consecutively available in the cache
+ * and count bytes are available. To ensure this, read_file_pages must
+ * be called first and count must be checked. Since it has read-checking
+ * assumptions, count must be satisfied.
+ */
+int read_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
+		     unsigned long pfn_start, unsigned long pfn_end,
+		     unsigned long cursor_offset, int count)
+{
+	struct page *head, *this;
+	int copysize, left;
+	unsigned long last_pgoff;	/* Last copied page's offset */
+	unsigned long copy_offset;	/* Current copy offset on the buffer */
+
+	/* Find the head of consecutive pages */
+	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
+		if (head->offset == pfn_start)
+			goto copy;
+
+	/* Page not found, nothing read */
+	return 0;
+
+copy:
+	left = count;
+
+	/* Copy the first page and unmap. */
+	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+	copy_offset = (unsigned long)buf;
+	page_copy(task_virt_to_page(task, copy_offset), head,
+		  cursor_offset, copysize);
+	left -= copysize;
+	last_pgoff = head->offset;
+
+	/* Map the rest, copy and unmap. */
+	list_for_each_entry(this, &head->list, list) {
+		if (left == 0 || this->offset == pfn_end)
+			break;
+
+		/* Make sure we're advancing on pages consecutively */
+		BUG_ON(this->offset != last_pgoff + 1);
+
+		/* Get copying size and start offset */
+		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+		copy_offset = (unsigned long)buf + count - left;
+
+		/* MUST be page aligned */
+		BUG_ON(!is_page_aligned(copy_offset));
+
+		page_copy(task_virt_to_page(task, copy_offset),
+			  this, 0, copysize);
+		left -= copysize;
+		last_pgoff = this->offset;
+	}
+	BUG_ON(left != 0);
+
+	return count - left;
+}
+
+int sys_read(l4id_t sender, int fd, void *buf, int count)
+{
+	unsigned long pfn_start, pfn_end;
+	unsigned long cursor, byte_offset;
+	struct vm_file *vmfile;
+	int err, retval = 0;
+	struct tcb *task;
+
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Check fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+		retval = -EBADF;
+		goto out;
+	}
+
+	/* Check count validity */
+	if (count < 0) {
+		retval = -EINVAL;
+		goto out;
+	} else if (!count) {
+		retval = 0;
+		goto out;
+	}
+
+	/* Check user buffer validity. */
+	if ((err = validate_task_range(task, (unsigned long)buf,
+				       (unsigned long)(buf + count),
+				       VM_READ)) < 0) {
+		retval = err;
+		goto out;
+	}
+
+	vmfile = task->fd[fd].vmfile;
+	cursor = task->fd[fd].cursor;
+
+	/* If cursor is beyond file end, simply return 0 */
+	if (cursor >= vmfile->length) {
+		retval = 0;
+		goto out;
+	}
+
+	/* Start and end pages expected to be read by user */
+	pfn_start = __pfn(cursor);
+	pfn_end = __pfn(page_align_up(cursor + count));
+
+	/* But we can read up to maximum file size */
+	pfn_end = __pfn(page_align_up(vmfile->length)) < pfn_end ?
+		  __pfn(page_align_up(vmfile->length)) : pfn_end;
+
+	/* If trying to read more than end of file, reduce it to max possible */
+	if (cursor + count > vmfile->length)
+		count = vmfile->length - cursor;
+
+	/* Read the page range into the cache from file */
+	if ((err = read_file_pages(vmfile, pfn_start, pfn_end)) < 0) {
+		retval = err;
+		goto out;
+	}
+
+	/* The offset of cursor on first page */
+	byte_offset = PAGE_MASK & cursor;
+
+	/* Read it into the user buffer from the cache */
+	if ((count = read_cache_pages(vmfile, task, buf, pfn_start, pfn_end,
+				    byte_offset, count)) < 0) {
+		retval = count;
+		goto out;
+	}
+
+	/* Update cursor on success */
+	task->fd[fd].cursor += count;
+	retval = count;
+
+out:
+	l4_ipc_return(retval);
+	return 0;
+
 }
 
 int sys_write(l4id_t sender, int fd, void *buf, int count)
@@ -513,8 +565,9 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	}
 
 	/*
-	 * Update the file size, vfs will be notified of this change
-	 * when the file is flushed (e.g. via fflush() or close())
+	 * Update the file size, and cursor. vfs will be notified
+	 * of this change when the file is flushed (e.g. via fflush()
+	 * or close())
 	 */
 	vmfile->length += count;
 	task->fd[fd].cursor += count;
@@ -525,29 +578,54 @@ out:
 	return 0;
 }
 
-/* FIXME: Check for invalid cursor values */
+/* FIXME: Check for invalid cursor values. Check for total, sometimes negative. */
 int sys_lseek(l4id_t sender, int fd, off_t offset, int whence)
 {
-	struct tcb *t;
+	struct tcb *task;
+	int retval = 0;
+	unsigned long long total, cursor;
 
-	BUG_ON(!(t = find_task(sender)));
+	BUG_ON(!(task = find_task(sender)));
 
-	if (offset < 0)
-		return -EINVAL;
+	/* Check fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+		retval = -EBADF;
+		goto out;
+	}
+
+	/* Offset validity */
+	if (offset < 0) {
+		retval = -EINVAL;
+		goto out;
+	}
 
 	switch (whence) {
-		case SEEK_SET:
-			t->fd[fd].cursor = offset;
-			break;
-		case SEEK_CUR:
-			t->fd[fd].cursor += offset;
-			break;
-		case SEEK_END:
-			t->fd[fd].cursor = t->fd[fd].vmfile->length + offset;
-			break;
-		default:
-			return -EINVAL;
+	case SEEK_SET:
+		retval = task->fd[fd].cursor = offset;
+		break;
+	case SEEK_CUR:
+		cursor = (unsigned long long)task->fd[fd].cursor;
+		if (cursor + offset > 0xFFFFFFFF)
+			retval = -EINVAL;
+		else
+			retval = task->fd[fd].cursor += offset;
+		break;
+	case SEEK_END:
+		cursor = (unsigned long long)task->fd[fd].cursor;
+		total = (unsigned long long)task->fd[fd].vmfile->length;
+		if (cursor + total > 0xFFFFFFFF)
+			retval = -EINVAL;
+		else {
+			retval = task->fd[fd].cursor =
+				task->fd[fd].vmfile->length + offset;
+		}
+	default:
+		retval = -EINVAL;
+		break;
 	}
+
+out:
+	l4_ipc_return(retval);
 	return 0;
 }
 
