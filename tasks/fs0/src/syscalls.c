@@ -152,28 +152,6 @@ out:
 	return 0;
 }
 
-int sys_close(l4id_t sender, int fd)
-{
-	struct tcb *task;
-
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
-
-	/* Validate file descriptor */
-	if (fd < 0 || fd > TASK_OFILES_MAX) {
-	       l4_ipc_return(-EBADF);
-	       return 0;
-	}
-	if (!task->fd[fd]) {
-		l4_ipc_return(-EBADF);
-		return 0;
-	}
-
-	/* Finish I/O on file */
-
-	return 0;
-}
-
 int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
 {
 	struct tcb *task;
@@ -271,6 +249,13 @@ int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	return 0;
 }
 
+/*
+ * This can be solely called by the pager and is not the posix write call.
+ * That call is in the pager. This writes the dirty pages of a file
+ * back to disk via vfs.
+ *
+ * The buffer must be contiguous by page, if npages > 1.
+ */
 int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		    unsigned long npages, void *pagebuf)
 {

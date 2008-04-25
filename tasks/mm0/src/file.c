@@ -257,14 +257,38 @@ int write_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
-int do_flush_file_pages(struct vm_file *vmfile)
+int flush_file_pages(struct vm_file *vmfile)
 {
 
 }
 
-int sys_close(void)
+int sys_close(l4id_t sender, int fd)
 {
+	struct tcb *task;
+	struct vm_file *f;
+	int retval, err;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Check fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+		retval = -EBADF;
+		goto out;
+	}
+
+	/* Finish I/O on file */
+	f = task->fd[fd].vmfile;
+	if ((err = flush_file_pages(f)) < 0) {
+		retval = err;
+		goto out;
+	}
+
+out:
+	l4_ipc_return(retval);
+	return 0;
 }
+
 int sys_flush(void)
 {
 }
