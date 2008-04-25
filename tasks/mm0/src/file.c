@@ -21,15 +21,28 @@ LIST_HEAD(vm_file_list);
 
 /* Copy from one page's buffer into another page */
 int page_copy(struct page *dst, struct page *src,
-	      unsigned long offset, unsigned long size)
+	      unsigned long dst_offset, unsigned long src_offset,
+	      unsigned long size)
 {
 	void *dstvaddr, *srcvaddr;
 
-	BUG_ON(offset + size > PAGE_SIZE);
+	BUG_ON(dst_offset + size > PAGE_SIZE);
+	BUG_ON(src_offset + size > PAGE_SIZE);
+
 	dstvaddr = l4_map_helper((void *)page_to_phys(dst), 1);
 	srcvaddr = l4_map_helper((void *)page_to_phys(src), 1);
 
-	memcpy(dstvaddr + offset, srcvaddr + offset, size);
+#if 0
+	printf("%s: Copying from page with offset %d to page with offset %d\n"
+	       "src copy offset: 0x%x, dst copy offset: 0x%x, copy size: %d\n",
+	       __FUNCTION__, src->offset, dst->offset, src_offset, dst_offset,
+	       size);
+
+	printf("%s: Copying string: %s\n", __FUNCTION__,
+	       srcvaddr + src_offset);
+#endif
+
+	memcpy(dstvaddr + dst_offset, srcvaddr + src_offset, size);
 
 	l4_unmap_helper(dstvaddr, 1);
 	l4_unmap_helper(srcvaddr, 1);
@@ -290,7 +303,7 @@ copy:
 	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
 	copy_offset = (unsigned long)buf;
 	page_copy(head, task_virt_to_page(task, copy_offset),
-		  cursor_offset, copysize);
+		  cursor_offset, copy_offset & PAGE_MASK, copysize);
 	left -= copysize;
 	last_pgoff = head->offset;
 
@@ -309,7 +322,7 @@ copy:
 		BUG_ON(!is_page_aligned(copy_offset));
 
 		page_copy(this, task_virt_to_page(task, copy_offset),
-			  0, copysize);
+			  0, 0, copysize);
 		left -= copysize;
 		last_pgoff = this->offset;
 	}
@@ -351,7 +364,7 @@ copy:
 	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
 	copy_offset = (unsigned long)buf;
 	page_copy(task_virt_to_page(task, copy_offset), head,
-		  cursor_offset, copysize);
+		  PAGE_MASK & copy_offset, cursor_offset, copysize);
 	left -= copysize;
 	last_pgoff = head->offset;
 
@@ -371,7 +384,7 @@ copy:
 		BUG_ON(!is_page_aligned(copy_offset));
 
 		page_copy(task_virt_to_page(task, copy_offset),
-			  this, 0, copysize);
+			  this, 0, 0, copysize);
 		left -= copysize;
 		last_pgoff = this->offset;
 	}
@@ -460,6 +473,12 @@ out:
 
 }
 
+/* FIXME:
+ *
+ * Error:
+ * We find the page buffer is in, and then copy from the *start* of the page
+ * rather than buffer's offset in that page.
+ */
 int sys_write(l4id_t sender, int fd, void *buf, int count)
 {
 	unsigned long pfn_wstart, pfn_wend;	/* Write start/end */
