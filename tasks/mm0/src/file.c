@@ -186,7 +186,6 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 	BUG();
 }
 
-
 /*
  * This reads-in a range of pages from a file and populates the page cache
  * just like a page fault, but its not in the page fault path.
@@ -210,6 +209,65 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
+int vfs_write(unsigned long vnum, unsigned long file_offset,
+	      unsigned long npages, void *pagebuf)
+{
+	int err;
+
+	l4_save_ipcregs();
+
+	write_mr(L4SYS_ARG0, vnum);
+	write_mr(L4SYS_ARG1, file_offset);
+	write_mr(L4SYS_ARG2, npages);
+	write_mr(L4SYS_ARG3, (u32)pagebuf);
+
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_WRITE)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	l4_restore_ipcregs();
+
+	return err;
+}
+
+/* Writes pages in cache back to their file */
+int write_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
+		     unsigned long pfn_end)
+{
+	int err;
+
+	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++) {
+		err = vmfile->vm_obj.pager->ops.page_out(&vmfile->vm_obj,
+							 f_offset);
+		if (err < 0) {
+			printf("%s: %s:Could not write page %d "
+			       "to file with vnum: 0x%x\n", __TASKNAME__,
+			       __FUNCTION__, f_offset, vm_file_to_vnum(vmfile));
+			return err;
+		}
+	}
+
+	return 0;
+}
+
+int do_flush_file_pages(struct vm_file *vmfile)
+{
+
+}
+
+int sys_close(void)
+{
+}
+int sys_flush(void)
+{
+}
 
 /* FIXME: Add error handling to this */
 /* Extends a file's size by adding it new pages */
@@ -241,34 +299,6 @@ int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
 	f->vm_obj.npages += npages;
 
 	return 0;
-}
-
-int vfs_write(unsigned long vnum, unsigned long file_offset,
-	      unsigned long npages, void *pagebuf)
-{
-	int err;
-
-	l4_save_ipcregs();
-
-	write_mr(L4SYS_ARG0, vnum);
-	write_mr(L4SYS_ARG1, file_offset);
-	write_mr(L4SYS_ARG2, npages);
-	write_mr(L4SYS_ARG3, (u32)pagebuf);
-
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_WRITE)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	/* Check if syscall was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	l4_restore_ipcregs();
-
-	return err;
 }
 
 /* TODO:

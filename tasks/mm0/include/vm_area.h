@@ -36,6 +36,8 @@
 #define VMA_PRIVATE			(1 << 6)
 /* Copy-on-write semantics */
 #define VMA_FIXED			(1 << 7)
+/* Set when the page is dirty in cache but not written to disk */
+#define VM_DIRTY			(1 << 8)
 
 /* Defines the type of file. A device file? Regular file? One used at boot? */
 enum VM_FILE_TYPE {
@@ -89,8 +91,8 @@ struct fault_data {
 struct vm_pager_ops {
 	struct page *(*page_in)(struct vm_object *vm_obj,
 				unsigned long pfn_offset);
-	struct page *(*page_out)(struct vm_object *vm_obj,
-				 unsigned long pfn_offset);
+	int (*page_out)(struct vm_object *vm_obj,
+			unsigned long pfn_offset);
 	int (*release_pages)(struct vm_object *vm_obj);
 };
 

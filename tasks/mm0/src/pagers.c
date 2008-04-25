@@ -61,6 +61,48 @@ int default_release_pages(struct vm_object *vm_obj)
 	return 0;
 }
 
+int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
+{
+	struct vm_file *f = vm_object_to_file(vm_obj);
+	struct page *page;
+	void *vaddr, *paddr;
+	int err;
+
+	/* Check first if the file has such a page at all */
+	if (__pfn(page_align_up(f->length) <= page_offset)) {
+		printf("%s: %s: Trying to look up page %d, but file length "
+		       "is %d bytes.\n", __TASKNAME__, __FUNCTION__,
+		       page_offset, f->length);
+		BUG();
+	}
+
+	/* If the page is not in the page cache, simply return. */
+	if (!(page = find_page(vm_obj, page_offset)))
+		return 0;
+
+	/* If the page is not dirty, simply return */
+	if (!(page->flags & VM_DIRTY))
+		return 0;
+
+	/* Map the page to vfs task */
+	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
+
+	/* Syscall to vfs to read into the page. */
+	if ((err = vfs_write(vm_file_to_vnum(f), page_offset, 1, vaddr)) < 0)
+		goto out_err;
+
+	/* Unmap it from vfs */
+	l4_unmap(vaddr, 1, VFS_TID);
+
+	/* Update page details */
+	page->flags &= ~VM_DIRTY;
+
+	return 0;
+
+out_err:
+	l4_unmap(vaddr, 1, VFS_TID);
+	return err;
+}
 
 struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 {
@@ -125,6 +167,7 @@ out_err:
 struct vm_pager file_pager = {
 	.ops = {
 		.page_in = file_page_in,
+		.page_out = file_page_out,
 		.release_pages = default_release_pages,
 	},
 };
