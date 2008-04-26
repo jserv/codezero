@@ -230,22 +230,32 @@ int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		   unsigned long npages, void *pagebuf)
 {
 	struct vnode *v;
-	int err;
+	int err, retval = 0;
 
-	if (sender != PAGER_TID)
-		return -EINVAL;
+	if (sender != PAGER_TID) {
+		retval = -EINVAL;
+		goto out;
+	}
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL; /* No such vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
+		retval = -EINVAL; /* No such vnode */
+		goto out;
+	}
 
 	/* Ensure vnode is not a directory */
-	if (vfs_isdir(v))
-		return -EISDIR;
+	if (vfs_isdir(v)) {
+		retval = -EISDIR;
+		goto out;
+	}
 
-	if ((err = v->fops.read(v, f_offset, npages, pagebuf)) < 0)
-		return err;
+	if ((err = v->fops.read(v, f_offset, npages, pagebuf)) < 0) {
+		retval = err;
+		goto out;
+	}
 
+out:
+	l4_ipc_return(retval);
 	return 0;
 }
 
@@ -260,22 +270,39 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		    unsigned long npages, void *pagebuf)
 {
 	struct vnode *v;
-	int err;
+	int err, retval = 0;
+	int bytes = 0;
 
-	if (sender != PAGER_TID)
-		return -EINVAL;
+	if (sender != PAGER_TID) {
+		retval = -EINVAL;
+		goto out;
+	}
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL; /* No such vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
+		retval = -EINVAL; /* No such vnode */
+		goto out;
+	}
 
 	/* Ensure vnode is not a directory */
-	if (vfs_isdir(v))
-		return -EISDIR;
+	if (vfs_isdir(v)) {
+		retval = -EISDIR;
+		goto out;
+	}
 
-	if ((err = v->fops.write(v, f_offset, npages, pagebuf)) < 0)
-		return err;
+	/* If the file is extended, write automatically extends it */
+	if ((err = v->fops.write(v, f_offset, npages, pagebuf)) < 0) {
+		retval = err;
+		goto out;
+	}
 
+	/* FIXME: Find a way to properly update new bytes */
+	BUG();
+	v->size += bytes;
+	v->sb->ops->write_vnode(v->sb, v);
+
+out:
+	l4_ipc_return(retval);
 	return 0;
 }
 

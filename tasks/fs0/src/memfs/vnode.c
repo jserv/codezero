@@ -260,7 +260,8 @@ struct vnode *memfs_vnode_mknod(struct vnode *v, const char *dirname,
 	memfsd->name[MEMFS_DNAME_MAX - 1] = '\0';
 
 	/* Write the updated directory buffer back to disk block */
-	v->fops.write(v, 0, 1, v->dirbuf.buffer);
+	if ((err = v->fops.write(v, 0, 1, v->dirbuf.buffer)) < 0)
+		return PTR_ERR(err); /* FIXME: free all you allocated so far */
 
 	/* Update parent vnode size */
 	v->size += sizeof(*memfsd);

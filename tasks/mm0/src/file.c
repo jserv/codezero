@@ -238,18 +238,18 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 }
 
 /* Writes pages in cache back to their file */
-int write_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
+int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 		     unsigned long pfn_end)
 {
 	int err;
 
+	BUG_ON(pfn_end != __pfn(page_align_up(f->length)));
 	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++) {
-		err = vmfile->vm_obj.pager->ops.page_out(&vmfile->vm_obj,
-							 f_offset);
+		err = f->vm_obj.pager->ops.page_out(&f->vm_obj, f_offset);
 		if (err < 0) {
 			printf("%s: %s:Could not write page %d "
 			       "to file with vnum: 0x%x\n", __TASKNAME__,
-			       __FUNCTION__, f_offset, vm_file_to_vnum(vmfile));
+			       __FUNCTION__, f_offset, vm_file_to_vnum(f));
 			return err;
 		}
 	}
@@ -257,9 +257,11 @@ int write_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
-int flush_file_pages(struct vm_file *vmfile)
+int flush_file_pages(struct vm_file *f)
 {
+	write_file_pages(f, 0, __pfn(page_align_up(f->length)));
 
+	return 0;
 }
 
 int sys_close(l4id_t sender, int fd)
@@ -289,8 +291,9 @@ out:
 	return 0;
 }
 
-int sys_flush(void)
+int sys_fsync(int fd)
 {
+	return 0;
 }
 
 /* FIXME: Add error handling to this */
