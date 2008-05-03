@@ -87,7 +87,7 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	/* Map the page to vfs task */
 	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
 
-	/* Syscall to vfs to read into the page. */
+	/* Syscall to vfs to write page back to file. */
 	if ((err = vfs_write(vm_file_to_vnum(f), page_offset, 1, vaddr)) < 0)
 		goto out_err;
 

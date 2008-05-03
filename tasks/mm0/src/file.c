@@ -645,7 +645,9 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	 * of this change when the file is flushed (e.g. via fflush()
 	 * or close())
 	 */
-	vmfile->length += count;
+	if (task->fd[fd].cursor + count > vmfile->length)
+		vmfile->length = task->fd[fd].cursor + count;
+
 	task->fd[fd].cursor += count;
 	retval = count;
 
