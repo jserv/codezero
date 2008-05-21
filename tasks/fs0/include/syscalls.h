@@ -18,4 +18,7 @@ int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 
 int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		   unsigned long npages, void *pagebuf);
+
+int pager_update_stats(l4id_t sender, unsigned long vnum,
+		       unsigned long newsize);
 #endif /* __FS0_SYSCALLS_H__ */

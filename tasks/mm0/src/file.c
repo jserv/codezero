@@ -237,6 +237,34 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 	return err;
 }
 
+/* Writes updated file stats back to vfs. (e.g. new file size) */
+int vfs_update_file_stats(struct vm_file *f)
+{
+	int err;
+
+	l4_save_ipcregs();
+
+	write_mr(L4SYS_ARG0, vm_file_to_vnum(f));
+	write_mr(L4SYS_ARG1, f->length);
+
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
+			       L4_IPC_TAG_PAGER_UPDATE_STATS)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	l4_restore_ipcregs();
+
+	return err;
+
+}
+
 /* Writes pages in cache back to their file */
 int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 		     unsigned long pfn_end)
@@ -260,6 +288,8 @@ int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 int flush_file_pages(struct vm_file *f)
 {
 	write_file_pages(f, 0, __pfn(page_align_up(f->length)));
+
+	vfs_update_file_stats(f);
 
 	return 0;
 }

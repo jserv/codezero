@@ -49,5 +49,6 @@
 #define L4_IPC_TAG_PAGER_OPEN		26	/* vfs sends the pager open file data. */
 #define L4_IPC_TAG_PAGER_READ		27	/* Pager reads file contents from vfs */
 #define L4_IPC_TAG_PAGER_WRITE		28	/* Pager writes file contents to vfs */
+#define L4_IPC_TAG_PAGER_UPDATE_STATS	29	/* Pager updates file stats in vfs */
 
 #endif /* __IPCDEFS_H__ */

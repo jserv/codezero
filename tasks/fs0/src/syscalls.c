@@ -259,6 +259,31 @@ out:
 	return 0;
 }
 
+int pager_update_stats(l4id_t sender, unsigned long vnum,
+		       unsigned long newsize)
+{
+	struct vnode *v;
+	int retval = 0;
+
+	if (sender != PAGER_TID) {
+		retval = -EINVAL;
+		goto out;
+	}
+
+	/* Lookup vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
+		retval = -EINVAL; /* No such vnode */
+		goto out;
+	}
+
+	v->size = newsize;
+	v->sb->ops->write_vnode(v->sb, v);
+
+out:
+	l4_ipc_return(retval);
+	return 0;
+}
+
 /*
  * This can be solely called by the pager and is not the posix write call.
  * That call is in the pager. This writes the dirty pages of a file
@@ -271,7 +296,6 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 {
 	struct vnode *v;
 	int err, retval = 0;
-	int bytes = 0;
 
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
@@ -290,16 +314,15 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		goto out;
 	}
 
-	/* If the file is extended, write automatically extends it */
+	/*
+	 * If the file is extended, write silently extends it.
+	 * But we expect an explicit pager_update_stats from the
+	 * pager to update the new file size on the vnode.
+	 */
 	if ((err = v->fops.write(v, f_offset, npages, pagebuf)) < 0) {
 		retval = err;
 		goto out;
 	}
-
-	/* FIXME: Find a way to properly update new bytes */
-	BUG();
-	v->size += bytes;
-	v->sb->ops->write_vnode(v->sb, v);
 
 out:
 	l4_ipc_return(retval);
