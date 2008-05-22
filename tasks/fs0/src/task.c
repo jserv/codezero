@@ -115,7 +115,7 @@ struct tcb *create_tcb(void)
 	if (!(t = kmalloc(sizeof(*t))))
 		return PTR_ERR(-ENOMEM);
 
-	t->fdpool = id_pool_new_init(TASK_OFILES_MAX);
+	t->fdpool = id_pool_new_init(TASK_FILES_MAX);
 	INIT_LIST_HEAD(&t->list);
 	list_add_tail(&t->list, &tcb_head.list);
 	tcb_head.total++;

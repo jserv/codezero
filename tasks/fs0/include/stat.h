@@ -62,4 +62,21 @@
 #define O_NOATIME	01000000
 #define O_NDELAY	O_NONBLOCK
 
+/*
+ * Internal codezero-specific stat structure.
+ * This is converted to posix stat in userspace
+ */
+struct kstat {
+	u64 vnum;
+	u32 mode;
+	int links;
+	u16 uid;
+	u16 gid;
+	u64 size;
+	int blksize;
+	u64 atime;
+	u64 mtime;
+	u64 ctime;
+};
+
 #endif /* __FS0_STAT_H__ */

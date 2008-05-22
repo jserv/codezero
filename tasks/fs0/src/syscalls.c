@@ -221,6 +221,85 @@ int sys_chdir(l4id_t sender, const char *pathname)
 	return 0;
 }
 
+void fill_kstat(struct vnode *v, struct kstat *ks)
+{
+	ks->vnum = (u64)v->vnum;
+	ks->mode = v->mode;
+	ks->links = v->links;
+	ks->uid = v->owner & 0xFFFF;
+	ks->gid = (v->owner >> 16) & 0xFFFF;
+	ks->size = v->size;
+	ks->blksize = v->sb->blocksize;
+	ks->atime = v->atime;
+	ks->mtime = v->mtime;
+	ks->ctime = v->ctime;
+}
+
+int sys_fstat(l4id_t sender, int fd, void *statbuf)
+{
+	struct vnode *v;
+	struct tcb *task;
+	unsigned long vnum;
+	int retval;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Get the vnum */
+	if (fd < 0 || fd > TASK_FILES_MAX) {
+		l4_ipc_return(-EINVAL);
+		return 0;
+	}
+	vnum = task->fd[fd];
+
+	/* Lookup vnode */
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
+		retval = -EINVAL; /* No such vnode */
+		return 0;
+	}
+
+	/* Fill in the c0-style stat structure */
+	fill_kstat(v, statbuf);
+
+	l4_ipc_return(0);
+	return 0;
+}
+
+/*
+ * Returns codezero-style stat structure which in turn is
+ * converted to posix style stat structure via the libposix
+ * library in userspace.
+ */
+int sys_stat(l4id_t sender, const char *pathname, void *statbuf)
+{
+	struct vnode *v;
+	struct tcb *task;
+	struct pathdata *pdata;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task))) {
+		l4_ipc_return((int)pdata);
+		return 0;
+	}
+
+	/* Get the vnode */
+	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+		l4_ipc_return((int)v);
+		return 0;
+	}
+
+	/* Fill in the c0-style stat structure */
+	fill_kstat(v, statbuf);
+
+	l4_ipc_return(0);
+	return 0;
+}
+
 /*
  * Note this can be solely called by the pager and is not the posix read call.
  * That call is in the pager. This merely supplies the pages the pager needs
@@ -387,7 +466,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 		return 0;
 	}
 
-	if (fd < 0 || fd > TASK_OFILES_MAX) {
+	if (fd < 0 || fd > TASK_FILES_MAX) {
 	       l4_ipc_return(-EBADF);
 	       return 0;
 	}
