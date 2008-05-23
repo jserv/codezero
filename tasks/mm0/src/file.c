@@ -237,6 +237,31 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 	return err;
 }
 
+int vfs_close(l4id_t sender, int fd)
+{
+	int err;
+
+	l4_save_ipcregs();
+
+	write_mr(L4SYS_ARG0, sender);
+	write_mr(L4SYS_ARG1, fd);
+
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_CLOSE)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	l4_restore_ipcregs();
+
+	return err;
+}
+
 /* Writes updated file stats back to vfs. (e.g. new file size) */
 int vfs_update_file_stats(struct vm_file *f)
 {
@@ -255,7 +280,8 @@ int vfs_update_file_stats(struct vm_file *f)
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
+		printf("%s: Pager to VFS write error: %d.\n",
+		       __FUNCTION__, err);
 		return err;
 	}
 
@@ -285,6 +311,7 @@ int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 	return 0;
 }
 
+/* Flush all dirty file pages and update file stats */
 int flush_file_pages(struct vm_file *f)
 {
 	write_file_pages(f, 0, __pfn(page_align_up(f->length)));
@@ -294,36 +321,65 @@ int flush_file_pages(struct vm_file *f)
 	return 0;
 }
 
-int sys_close(l4id_t sender, int fd)
+/* Given a task and fd syncs all IO on it */
+int fsync_common(l4id_t sender, int fd)
 {
-	struct tcb *task;
 	struct vm_file *f;
-	int retval, err;
+	struct tcb *task;
+	int err;
 
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
 	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
-		retval = -EBADF;
-		goto out;
-	}
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile)
+		return -EBADF;
 
 	/* Finish I/O on file */
 	f = task->fd[fd].vmfile;
-	if ((err = flush_file_pages(f)) < 0) {
-		retval = err;
-		goto out;
-	}
+	if ((err = flush_file_pages(f)) < 0)
+		return err;
 
-out:
-	l4_ipc_return(retval);
 	return 0;
 }
 
-int sys_fsync(int fd)
+/* Closes the file descriptor and notifies vfs */
+int fd_close(l4id_t sender, int fd)
 {
+	struct tcb *task;
+	int err;
+
+	/* Get the task */
+	BUG_ON(!(task = find_task(sender)));
+
+	if ((err = vfs_close(task->tid, fd)) < 0)
+		return err;
+
+	task->fd[fd].vnum = 0;
+	task->fd[fd].cursor = 0;
+	task->fd[fd].vmfile = 0;
+
 	return 0;
+}
+
+int sys_close(l4id_t sender, int fd)
+{
+	int err;
+
+	/* Sync the file and update stats */
+	if ((err = fsync_common(sender, fd)) < 0) {
+		l4_ipc_return(err);
+		return 0;
+	}
+	
+	/* Close the file descriptor. */
+	return	fd_close(sender, fd);
+}
+
+int sys_fsync(l4id_t sender, int fd)
+{
+	/* Sync the file and update stats */
+	return fsync_common(sender, fd);
 }
 
 /* FIXME: Add error handling to this */

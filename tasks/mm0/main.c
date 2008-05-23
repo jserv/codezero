@@ -97,6 +97,14 @@ void handle_requests(void)
 		sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 
+	case L4_IPC_TAG_CLOSE:
+		sys_close(sender, (int)mr[0]);
+		break;
+	
+	case L4_IPC_TAG_FSYNC:
+		sys_fsync(sender, (int)mr[0]);
+		break;
+
 	case L4_IPC_TAG_LSEEK:
 		sys_lseek(sender, (int)mr[0], (off_t)mr[1], (int)mr[2]);
 		break;

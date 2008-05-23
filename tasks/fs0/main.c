@@ -92,6 +92,9 @@ void handle_fs_requests(void)
 		pager_sys_write(sender, (unsigned long)mr[0], (unsigned long)mr[1],
 			        (unsigned long)mr[2], (void *)mr[3]);
 		break;
+	case L4_IPC_TAG_PAGER_CLOSE:
+		pager_sys_close(sender, (l4id_t)mr[0], (int)mr[1]);
+		break;
 	case L4_IPC_TAG_PAGER_UPDATE_STATS:
 		pager_update_stats(sender, (unsigned long)mr[0],
 				   (unsigned long)mr[1]);

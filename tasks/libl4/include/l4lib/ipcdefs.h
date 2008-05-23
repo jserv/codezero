@@ -45,13 +45,15 @@
 #define L4_IPC_TAG_FORK			22
 #define L4_IPC_TAG_STAT			23
 #define L4_IPC_TAG_FSTAT		24
+#define L4_IPC_TAG_FSYNC		25	/* Pager notifies vfs of file close */
 
 
 /* Tags for ipc between fs0 and mm0 */
-#define L4_IPC_TAG_TASKDATA		25
-#define L4_IPC_TAG_PAGER_OPEN		26	/* vfs sends the pager open file data. */
-#define L4_IPC_TAG_PAGER_READ		27	/* Pager reads file contents from vfs */
-#define L4_IPC_TAG_PAGER_WRITE		28	/* Pager writes file contents to vfs */
-#define L4_IPC_TAG_PAGER_UPDATE_STATS	29	/* Pager updates file stats in vfs */
+#define L4_IPC_TAG_TASKDATA		40
+#define L4_IPC_TAG_PAGER_OPEN		41	/* vfs sends the pager open file data. */
+#define L4_IPC_TAG_PAGER_READ		42	/* Pager reads file contents from vfs */
+#define L4_IPC_TAG_PAGER_WRITE		43	/* Pager writes file contents to vfs */
+#define L4_IPC_TAG_PAGER_CLOSE		44	/* Pager notifies vfs of file close */
+#define L4_IPC_TAG_PAGER_UPDATE_STATS	45	/* Pager updates file stats in vfs */
 
 #endif /* __IPCDEFS_H__ */

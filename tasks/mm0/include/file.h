@@ -17,6 +17,8 @@ int vfs_write(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 int sys_read(l4id_t sender, int fd, void *buf, int count);
 int sys_write(l4id_t sender, int fd, void *buf, int count);
 int sys_lseek(l4id_t sender, int fd, off_t offset, int whence);
+int sys_close(l4id_t sender, int fd);
+int sys_fsync(l4id_t sender, int fd);
 
 struct vfs_file_data {
 	unsigned long vnum;
