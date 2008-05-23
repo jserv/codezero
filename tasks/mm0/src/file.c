@@ -146,7 +146,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 
 /*
  * Inserts the page to vmfile's list in order of page frame offset.
- * We use an ordered list instead of a radix or btree for now.
+ * We use an ordered list instead of a better data structure for now.
  */
 int insert_page_olist(struct page *this, struct vm_object *vmo)
 {
@@ -321,7 +321,7 @@ int flush_file_pages(struct vm_file *f)
 	return 0;
 }
 
-/* Given a task and fd syncs all IO on it */
+/* Given a task and fd, syncs all IO on it */
 int fsync_common(l4id_t sender, int fd)
 {
 	struct vm_file *f;
@@ -352,6 +352,8 @@ int fd_close(l4id_t sender, int fd)
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
+	printf("%s: Closing fd: %d on task %d\n", __FUNCTION__,
+	       fd, task->tid);
 	if ((err = vfs_close(task->tid, fd)) < 0)
 		return err;
 
@@ -364,16 +366,21 @@ int fd_close(l4id_t sender, int fd)
 
 int sys_close(l4id_t sender, int fd)
 {
-	int err;
+	int retval;
 
 	/* Sync the file and update stats */
-	if ((err = fsync_common(sender, fd)) < 0) {
-		l4_ipc_return(err);
+	if ((retval = fsync_common(sender, fd)) < 0) {
+		l4_ipc_return(retval);
 		return 0;
 	}
 	
 	/* Close the file descriptor. */
-	return	fd_close(sender, fd);
+	retval = fd_close(sender, fd);
+	printf("%s: Closed fd %d. Returning %d\n",
+	       __TASKNAME__, fd, retval);
+	l4_ipc_return(retval);
+
+	return 0;
 }
 
 int sys_fsync(l4id_t sender, int fd)

@@ -34,7 +34,7 @@
 #define VMA_ANONYMOUS			(1 << 5)
 /* Private copy of a file */
 #define VMA_PRIVATE			(1 << 6)
-/* Copy-on-write semantics */
+/* For wired pages */
 #define VMA_FIXED			(1 << 7)
 /* Set when the page is dirty in cache but not written to disk */
 #define VM_DIRTY			(1 << 8)

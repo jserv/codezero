@@ -28,7 +28,18 @@ void main(void)
 	wait_pager(0);
 
 	dirtest();
-	fileio();
+	printf("File IO test 1:\n");
+	if (fileio() == 0)
+		printf("-- PASSED --\n");
+	else
+		printf("-- FAILED --\n");
+
+	printf("File IO test 2:\n");
+	if (fileio2() == 0)
+		printf("-- PASSED --\n");
+	else
+		printf("-- FAILED --\n");
+
 	while (1)
 		wait_pager(0);
 #if 0

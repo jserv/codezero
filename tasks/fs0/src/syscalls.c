@@ -93,7 +93,8 @@ struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
 	return newnode;
 }
 
-/* Pager notifies vfs about a closed file descriptor.
+/*
+ * Pager notifies vfs about a closed file descriptor.
  *
  * FIXME: fsync + close could be done under a single "close" ipc
  * from pager. Currently there are 2 ipcs: 1 fsync + 1 fd close. 
@@ -103,9 +104,10 @@ int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
 	struct tcb *task;
 	int err;
 
-	BUG_ON(!(task = find_task(sender)));
+	BUG_ON(!(task = find_task(closer)));
 
-	if ((err = id_del(task->fdpool, task->fd[fd])) < 0) {
+	printf("Deleting fd: %d\n", fd);
+	if ((err = id_del(task->fdpool, fd)) < 0) {
 		printf("%s: Error releasing fd identifier.\n",
 		       __FUNCTION__);
 		l4_ipc_return(err);
