@@ -11,7 +11,7 @@ find ./ -name '*.lds' >> tagfilelist
 
 # Use file list to include in tags.
 ctags --languages=C,C++,Asm --recurse -Ltagfilelist
-exuberant-ctags --languages=C,C++,Asm --recurse -Ltagfilelist
+# exuberant-ctags --languages=C,C++,Asm --recurse -Ltagfilelist
 
 cscope -q -k -R -i tagfilelist
 # Remove file list.
