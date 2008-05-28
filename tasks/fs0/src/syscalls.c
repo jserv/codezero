@@ -30,6 +30,8 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 {
 	int err;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, sender);
@@ -104,6 +106,8 @@ int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
 	struct tcb *task;
 	int err;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	BUG_ON(!(task = find_task(closer)));
 
 	printf("Deleting fd: %d\n", fd);
@@ -132,6 +136,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	int fd;
 	int retval, err;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
@@ -337,6 +342,7 @@ int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	struct vnode *v;
 	int err, retval = 0;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
 		goto out;
@@ -370,6 +376,7 @@ int pager_update_stats(l4id_t sender, unsigned long vnum,
 	struct vnode *v;
 	int retval = 0;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
 		goto out;
@@ -402,6 +409,7 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	struct vnode *v;
 	int err, retval = 0;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
 		goto out;
@@ -419,6 +427,9 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		goto out;
 	}
 
+	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%x, %d pages, buf at 0x%x\n",
+		__TASKNAME__, __FUNCTION__, vnum, f_offset, npages, pagebuf);
+
 	/*
 	 * If the file is extended, write silently extends it.
 	 * But we expect an explicit pager_update_stats from the
@@ -430,7 +441,9 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	}
 
 out:
+	printf("%s/%s: Returning ipc result.\n", __TASKNAME__, __FUNCTION__);
 	l4_ipc_return(retval);
+	printf("%s/%s: Done.\n", __TASKNAME__, __FUNCTION__);
 	return 0;
 }
 
@@ -482,6 +495,7 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	struct dentry *d;
 	struct tcb *t;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
 

@@ -21,7 +21,7 @@ int fileio2(void)
 		perror("OPEN");
 		return -1;
 	}
-	printf("Created newfile.txt\n");
+	printf("Created newfile2.txt\n");
 
 	printf("%s: write.\n", __TASKNAME__);
 	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {

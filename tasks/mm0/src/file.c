@@ -55,6 +55,8 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 {
 	int err;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, vnum);
@@ -89,6 +91,8 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 {
 	struct vm_file *vmfile;
 	struct tcb *t;
+
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	/* Check argument validity */
 	if (sender != VFS_TID) {
@@ -214,6 +218,7 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 {
 	int err;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, vnum);
@@ -241,6 +246,7 @@ int vfs_close(l4id_t sender, int fd)
 {
 	int err;
 
+	printf("%s/%s Sending to %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, sender);
@@ -250,6 +256,7 @@ int vfs_close(l4id_t sender, int fd)
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
+	printf("%s/%s Received from %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
@@ -267,6 +274,7 @@ int vfs_update_file_stats(struct vm_file *f)
 {
 	int err;
 
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, vm_file_to_vnum(f));
@@ -373,7 +381,7 @@ int sys_close(l4id_t sender, int fd)
 		l4_ipc_return(retval);
 		return 0;
 	}
-	
+
 	/* Close the file descriptor. */
 	retval = fd_close(sender, fd);
 	printf("%s: Closed fd %d. Returning %d\n",
@@ -454,6 +462,7 @@ copy:
 	copy_offset = (unsigned long)buf;
 	page_copy(head, task_virt_to_page(task, copy_offset),
 		  cursor_offset, copy_offset & PAGE_MASK, copysize);
+	head->flags |= VM_DIRTY;
 	left -= copysize;
 	last_pgoff = head->offset;
 
@@ -473,6 +482,7 @@ copy:
 
 		page_copy(this, task_virt_to_page(task, copy_offset),
 			  0, 0, copysize);
+		this->flags |= VM_DIRTY;
 		left -= copysize;
 		last_pgoff = this->offset;
 	}

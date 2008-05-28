@@ -84,8 +84,14 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	if (!(page->flags & VM_DIRTY))
 		return 0;
 
+	paddr = (void *)page_to_phys(page);
+	vaddr = phys_to_virt(paddr);
+
 	/* Map the page to vfs task */
 	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
+
+	printf("%s/%s: Writing to vnode %d, at pgoff 0x%x, %d pages, buf at 0x%x\n",
+		__TASKNAME__, __FUNCTION__, vm_file_to_vnum(f), page_offset, 1, vaddr);
 
 	/* Syscall to vfs to write page back to file. */
 	if ((err = vfs_write(vm_file_to_vnum(f), page_offset, 1, vaddr)) < 0)

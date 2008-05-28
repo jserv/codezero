@@ -1,6 +1,6 @@
 cd build
 #arm-none-eabi-insight &
-/opt/bin/qemu-system-arm -s -kernel final.axf -nographic -m 128 -M versatilepb &
+/opt/qemu/bin/qemu-system-arm -s -kernel final.axf -nographic -m 128 -M versatilepb &
 arm-none-linux-gnueabi-insight ; pkill qemu-system-arm
 #arm-none-eabi-gdb ; pkill qemu-system-arm
 cd ..
