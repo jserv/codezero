@@ -246,7 +246,7 @@ int vfs_close(l4id_t sender, int fd)
 {
 	int err;
 
-	printf("%s/%s Sending to %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
+	// printf("%s/%s Sending to %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, sender);
@@ -256,7 +256,7 @@ int vfs_close(l4id_t sender, int fd)
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
-	printf("%s/%s Received from %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
+	// printf("%s/%s Received from %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
@@ -360,8 +360,8 @@ int fd_close(l4id_t sender, int fd)
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
-	printf("%s: Closing fd: %d on task %d\n", __FUNCTION__,
-	       fd, task->tid);
+	// printf("%s: Closing fd: %d on task %d\n", __FUNCTION__,
+	//       fd, task->tid);
 	if ((err = vfs_close(task->tid, fd)) < 0)
 		return err;
 

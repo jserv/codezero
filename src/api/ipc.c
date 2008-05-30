@@ -85,8 +85,8 @@ int ipc_send(l4id_t recv_tid)
 
 				/* Do the work */
 				ipc_msg_copy(sleeper, current);
-				printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
-				       current->tid, sleeper->tid);
+				//printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
+				//       current->tid, sleeper->tid);
 
 				/* Wake it up, we can yield here. */
 				sched_resume_task(sleeper);
@@ -100,7 +100,7 @@ int ipc_send(l4id_t recv_tid)
 	list_add_tail(&wq.task_list, &wqhs->task_list);
 	sched_notify_sleep(current);
 	need_resched = 1;
-	printk("%s: (%d) waiting for (%d)\n", __FUNCTION__, current->tid, recv_tid);
+	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__, current->tid, recv_tid);
 	spin_unlock(&wqhr->slock);
 	spin_unlock(&wqhs->slock);
 	return 0;
@@ -133,8 +133,8 @@ int ipc_recv(l4id_t senderid)
 
 				/* Do the work */
 				ipc_msg_copy(current, sleeper);
-				printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
-				       current->tid, sleeper->tid);
+				// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
+				//       current->tid, sleeper->tid);
 
 				/* Wake it up */
 				sched_resume_task(sleeper);
@@ -149,7 +149,7 @@ int ipc_recv(l4id_t senderid)
 	list_add_tail(&wq.task_list, &wqhr->task_list);
 	sched_notify_sleep(current);
 	need_resched = 1;
-	printk("%s: (%d) waiting for (%d) \n", __FUNCTION__, current->tid, current->senderid);
+	// printk("%s: (%d) waiting for (%d) \n", __FUNCTION__, current->tid, current->senderid);
 	spin_unlock(&wqhr->slock);
 	spin_unlock(&wqhs->slock);
 	return 0;

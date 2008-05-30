@@ -442,7 +442,7 @@ int start_boot_tasks(struct initdata *initdata)
 			break;
 	} while (1);
 
-	/* MM0 needs partial initialisation, since its already running. */
+	/* MM0 needs partial initialisation since it's already running. */
 	printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
 	ids.tid = PAGER_TID;
 	ids.spid = PAGER_TID;

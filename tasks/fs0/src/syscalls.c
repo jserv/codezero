@@ -30,7 +30,7 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 {
 	int err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	//	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	l4_save_ipcregs();
 
@@ -106,11 +106,10 @@ int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
 	struct tcb *task;
 	int err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	BUG_ON(!(task = find_task(closer)));
 
-	printf("Deleting fd: %d\n", fd);
 	if ((err = id_del(task->fdpool, fd)) < 0) {
 		printf("%s: Error releasing fd identifier.\n",
 		       __FUNCTION__);
@@ -136,7 +135,8 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	int fd;
 	int retval, err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	/* Get the task */
 	BUG_ON(!(task = find_task(sender)));
 
@@ -342,7 +342,8 @@ int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	struct vnode *v;
 	int err, retval = 0;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
 		goto out;
@@ -376,7 +377,8 @@ int pager_update_stats(l4id_t sender, unsigned long vnum,
 	struct vnode *v;
 	int retval = 0;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
 		goto out;
@@ -409,7 +411,8 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	struct vnode *v;
 	int err, retval = 0;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	if (sender != PAGER_TID) {
 		retval = -EINVAL;
 		goto out;
@@ -441,9 +444,9 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	}
 
 out:
-	printf("%s/%s: Returning ipc result.\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s: Returning ipc result.\n", __TASKNAME__, __FUNCTION__);
 	l4_ipc_return(retval);
-	printf("%s/%s: Done.\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s: Done.\n", __TASKNAME__, __FUNCTION__);
 	return 0;
 }
 
