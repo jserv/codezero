@@ -10,7 +10,8 @@
 #include <l4lib/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <tests.h>
-
+#include <unistd.h>
+#include <sys/types.h>
 
 void wait_pager(l4id_t partner)
 {
@@ -23,23 +24,32 @@ void wait_pager(l4id_t partner)
 
 void main(void)
 {
+	pid_t pid;
+
 	printf("\n%s: Started with tid %d.\n", __TASKNAME__, self_tid());
 	/* Sync with pager */
 	wait_pager(0);
 
 	dirtest();
-	printf("File IO test 1:\n");
-	if (fileio() == 0)
-		printf("-- PASSED --\n");
-	else
-		printf("-- FAILED --\n");
 
-	printf("File IO test 2:\n");
-	if (fileio2() == 0)
-		printf("-- PASSED --\n");
-	else
-		printf("-- FAILED --\n");
+	printf("Forking...\n");
 
+	if ((pid = fork()) < 0)
+		printf("Error forking...\n");
+
+	if (pid == 0) {
+		printf("File IO test 1, done by child:\n");
+		if (fileio() == 0)
+			printf("-- PASSED --\n");
+		else
+			printf("-- FAILED --\n");
+	} else {
+		printf("File IO test 2, done by parent, with child pid %d:\n", pid);
+		if (fileio2() == 0)
+			printf("-- PASSED --\n");
+		else
+			printf("-- FAILED --\n");
+	}
 	while (1)
 		wait_pager(0);
 #if 0

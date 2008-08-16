@@ -62,6 +62,14 @@ int thread_start(struct task_ids *ids)
 /*
  * Creates a thread, with a new thread id, and depending on whether the space
  * id exists, either adds it to an existing space or creates a new space.
+ *
+ * NOTE: Add: Depending on whether the thread id exists, it creates a new space
+ * copying the space of that thread id.
+ *
+ * For example:
+ *      thread id = inval, space id = inval, -> new thread, new space.
+ *      thread id = x, space id = inval, -> new thread, new space, copying space of x
+ *      thread id = inval, space id = x, -> new thread, use space x.
  */
 int thread_create(struct task_ids *ids)
 {

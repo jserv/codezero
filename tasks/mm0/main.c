@@ -100,7 +100,7 @@ void handle_requests(void)
 	case L4_IPC_TAG_CLOSE:
 		sys_close(sender, (int)mr[0]);
 		break;
-	
+
 	case L4_IPC_TAG_FSYNC:
 		sys_fsync(sender, (int)mr[0]);
 		break;
@@ -118,6 +118,10 @@ void handle_requests(void)
 		struct sys_mmap_args *args = (struct sys_mmap_args *)&mr[0];
 		sys_mmap(sender, args->start, args->length, args->prot,
 			 args->flags, args->fd, __pfn(args->offset));
+		break;
+	}
+	case L4_IPC_TAG_MMAP: {
+		sys_fork(sender);
 		break;
 	}
 	case L4_IPC_TAG_BRK: {

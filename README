@@ -44,10 +44,11 @@ In terms of other features, the microkernel is preemptive, and smp-ready.
 Currently only synchronous communication is implemented, but this will change in
 the near future.
 
-MM0 is the system task that implements memory management. It contains memory and
-page allocators. It implements demand paging by managing page faults, physical
-pages and their file/task associations. It provides the default paging mechanism
-on Codezero.
+There are two system tasks built upon the base microkernel that manage memory
+and file-based I/O, called MM0 and FS0. MM0 is the system task that implements
+memory management. It contains memory and page allocators. It implements demand
+paging by managing page faults, physical pages and their file/task associations.
+It provides the default paging mechanism on Codezero.
 
 FS0 is the system task that implements a simple, modern virtual filesystem layer.
 It is designed to serve file requests from MM0. Since it abstracts the low-level
@@ -118,19 +119,30 @@ more closely. Many embedded software projects still use older or closed
 development methods and the right open source methodology would prove favorable
 in the fast-paced nature of embedded software development.
 
-Finally, POSIX compliance is only a step, or a temporary aim for the Codezero
+Finally, POSIX compliance is only a step, or a partial aim for the Codezero
 microkernel. It is not limited to the goal of just complying with POSIX, which
-has been done many times by other operating systems. There are new ideas in
-literature that would improve systems software but aren't implemented either
-because they have no existing users or may break compatibility (e.g. some are
-presented in Plan 9). For example file abstractions could be used more
-liberally to cover data exchange and control of devices, services and network
-communication. Existing kernels already have established methods of doing such
-operations and they would oppose major design overhauls, which limits their
-innovation capability for this kind of experimentation. As well as practising
-realistic development strategies such as POSIX compliance, Codezero project aims
-to keep up with the latest OS literature and provide the opportunity to
-incorporate the latest ideas in OS technology.
+has been done many times by other operating systems. The idea is to implement
+a generic software environment where multiple system services can reside in
+the same run-time, but on the other hand, provide natively implemented resource
+management services to be used as the default solution. In other words, the
+project will provide the mechanism to accomodate multiple operating systems,
+and it will also supply its own set of system services with a POSIX-like API.
+By providing a variety of system-level software options, the applications
+will be able to choose among different speed, safety, determinism policies at
+the same run-time. This is expected to prove useful in embedded software
+problems.
+
+Furthermore there are new ideas in literature that would improve systems
+software but aren't implemented either because they have no existing users or
+may break compatibility (e.g. some are presented in Plan 9). For example file
+abstractions could be used more liberally to cover data exchange and control of
+devices, services and network communication. Existing kernels already have
+established methods of doing such operations and they would oppose major design
+overhauls, which limits their innovation capability for this kind of
+experimentation. As well as practising realistic development strategies such as
+native POSIX support, Codezero project aims to keep up with the latest OS
+literature and provide the opportunity to incorporate the latest ideas in OS
+technology.
 
 
 Can you summarise all this? Why should I use Codezero, again?
@@ -138,13 +150,14 @@ Can you summarise all this? Why should I use Codezero, again?
 Codezero is an operating system that targets embedded systems. It supports the
 most fundamental posix calls and it implements modern features such as
 demand-paging and virtual filesystem layer. Different from most other posix-like
-systems, it is based on a microkernel design. It has a cleanly separated set of
-services, it is small and well-focused. Its design is carefully thought out, so
-it's not just a mock-up implementation of the existing POSIX API. Its source
-code is also freely available (See LICENSE heading). For these reasons it is a
-good candidate as systems software to be used on embedded platforms. Currently
-it has little or no users, therefore compared to systems with a saturated user
-base it is possible to tailor it rapidly towards the needs of any users who want
-to be the first to incorporate it for their needs.
+systems, it is based on a microkernel design. This makes it possible to use it
+also as a base for implementing or running other operating systems. It has a
+cleanly separated set of system services, it is small and well-focused. Its
+design is carefully thought out, so it's not simply a mock-up implementation of
+the existing POSIX API. Its source code is also freely available (See LICENSE
+heading). For these reasons it is a good candidate as systems software to be
+used on embedded platforms. Currently it has little or no users, therefore
+compared to systems with a saturated user base project developers are available
+to tailor it rapidly towards the needs of any interested users.
 
 

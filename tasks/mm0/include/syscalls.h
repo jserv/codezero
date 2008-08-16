@@ -43,5 +43,7 @@ struct sys_shmget_args {
 
 int sys_shmget(key_t key, int size, int shmflg);
 
+int sys_fork(void);
+
 #endif /* __MM0_SYSARGS_H__ */
 
