@@ -346,8 +346,7 @@ int sys_munmap(l4id_t sender, void *vaddr, unsigned long size)
 }
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
-			unsigned int flags,  unsigned long file_offset,
-			struct vm_file *mapfile)
+			unsigned int flags, unsigned long file_offset)
 {
 	struct vm_area *vma;
 
@@ -526,8 +525,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	}
 
 	/* For valid regions that aren't allocated by us, create the vma. */
-	if (!(new = vma_new(__pfn(map_address), npages, flags, file_offset,
-			    mapfile)))
+	if (!(new = vma_new(__pfn(map_address), npages, flags, file_offset)))
 		return -ENOMEM;
 
 	/* Attach the file as the first vm object of this vma */

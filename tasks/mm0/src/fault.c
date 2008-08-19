@@ -19,6 +19,12 @@
 #include <shm.h>
 #include <file.h>
 
+/* Given a page and the vma it is in, returns that page's virtual address */
+unsigned long vma_page_to_virtual(struct vm_area *vma, struct page *p)
+{
+	return __pfn_to_addr(vma->pfn_start + p->offset);
+}
+
 unsigned long fault_to_file_offset(struct fault_data *fault)
 {
 	/* Fault's offset in its vma */
@@ -53,7 +59,7 @@ struct vm_obj_link *vma_next_link(struct list_head *link,
 		return list_entry(link->next, struct vm_obj_link, list);
 }
 
-/* Unlinks obj_link from its vma and deletes it but keeps the object. */
+/* Unlinks orig_link from its vma and deletes it but keeps the object. */
 int vma_drop_link(struct vm_obj_link *shadower_link,
 		  struct vm_obj_link *orig_link)
 {
@@ -215,6 +221,7 @@ struct vm_obj_link *vma_create_shadow(void)
 	struct vm_object *vmo;
 	struct vm_obj_link *vmo_link;
 
+	/* FIXME: Why not use vm_objlink_create() ??? */
 	if (!(vmo_link = kzalloc(sizeof(*vmo_link))))
 		return 0;
 
@@ -503,6 +510,60 @@ out_success:
 	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
 		page_align(fault->address), fault->task->tid);
 	vm_object_print(page->owner);
+
+	return 0;
+}
+
+/*
+ * Sets all r/w shadow objects as read-only for the process
+ * so that as expected after a fork() operation, writes to those
+ * objects cause copy-on-write incidents.
+ */
+int vm_freeze_shadows(struct tcb *task)
+{
+	unsigned long virtual;
+	struct vm_area *vma;
+	struct vm_obj_link *vmo_link;
+	struct vm_object *vmo;
+	struct page *p;
+
+	list_for_each_entry(vma, &task->vm_area_list, list) {
+
+		/* Shared vmas don't have shadows */
+		if (vma->flags & VMA_SHARED)
+			continue;
+
+		/* Get the first object */
+		while ((vmo_link = vma_next_link(&vma->vm_obj_list,
+					 	 &vma->vm_obj_list))) {
+			vmo = vmo_link->obj;
+
+			/* Is this a writeable shadow? */
+			if ((vmo->flags & VM_OBJ_SHADOW) &&
+			    (vmo->flags & VM_WRITE)) {
+
+				/* Make the object read only */
+				vmo->flags &= ~VM_WRITE;
+				vmo->flags |= VM_READ;
+
+				/*
+				 * Make all pages on it read-only
+				 * in the page tables.
+				 */
+				list_for_each_entry(p, &vmo->page_cache, list) {
+
+					/* Find virtual address of each page */
+					virtual = vma_page_to_virtual(vma, p);
+
+					/* Map the page as read-only */
+					l4_map((void *)page_to_phys(p),
+					       (void *)virtual,
+					       MAP_USR_RO_FLAGS, task->tid);
+				}
+				break;
+			}
+		}
+	}
 
 	return 0;
 }

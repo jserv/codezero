@@ -122,7 +122,7 @@ struct vm_pager {
 struct vm_object {
 	int npages;		    /* Number of pages in memory */
 	int refcnt;		    /* Number of shadows (or vmas) that refer */
-	struct list_head shadowers; /* List of vm objects that shadow this one */
+	struct list_head shadowers; /* List of links to the vm object that shadows this one */
 	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int flags;	    /* Defines the type and flags of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
@@ -142,7 +142,13 @@ struct vm_file {
 /* To create per-vma vm_object lists */
 struct vm_obj_link {
 	struct list_head list;
-	struct list_head shref;	/* Ref to shadowers by original objects */
+
+	/*
+	 * Ref to shadowers by original objects. This could be in the shadow
+	 * object itself, but then we would not be able to reach its link
+	 * when trying to free it.
+	 */
+	struct list_head shref;
 	struct vm_object *obj;
 };
 
@@ -217,6 +223,9 @@ struct page *page_init(struct page *page);
 struct page *task_virt_to_page(struct tcb *t, unsigned long virtual);
 int validate_task_range(struct tcb *t, unsigned long start,
 			unsigned long end, unsigned int vmflags);
+
+/* Changes all shadows and their ptes to read-only */
+int vm_freeze_shadows(struct tcb *task);
 
 /* Main page fault entry point */
 int page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);

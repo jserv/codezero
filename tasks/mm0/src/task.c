@@ -76,13 +76,13 @@ struct tcb *tcb_alloc_init(void)
 }
 
 
-struct tcb *task_create(struct task_ids *ids)
+struct tcb *task_create(struct task_ids *ids, unsigned int flags)
 {
 	struct tcb *task;
 	int err;
 
 	/* Create the thread structures and address space */
-	if ((err = l4_thread_control(THREAD_CREATE, ids)) < 0) {
+	if ((err = l4_thread_control(THREAD_CREATE | flags, ids)) < 0) {
 		printf("l4_thread_control failed with %d.\n", err);
 		return PTR_ERR(err);
 	}
@@ -262,7 +262,7 @@ int task_exec(struct vm_file *f, unsigned long task_region_start,
 	struct tcb *task;
 	int err;
 
-	if (IS_ERR(task = task_create(ids)))
+	if (IS_ERR(task = task_create(ids, THREAD_CREATE_NEWSPC)))
 		return (int)task;
 
 	if ((err = task_setup_regions(f, task, task_region_start,

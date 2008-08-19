@@ -359,6 +359,42 @@ void remove_mapping(unsigned long vaddr)
 	remove_mapping_pgd(vaddr, current->pgd);
 }
 
+/*
+ * Allocates and copies all levels of page tables from one task to another.
+ * Useful when forking.
+ */
+pgd_table_t *copy_page_tables(pgd_table_t *from)
+{
+	struct pmd_table_t *pmd, *orig;
+	struct pgd_table_t *pgd;
+
+	/* Allocate and copy pgd */
+	pgd = alloc_pgd();
+	memcpy(pgd, from, sizeof(struct pgd_table_t));
+
+	/* Allocate and copy all valid pmds */
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
+		/* Detect a pmd entry in original pgd? */
+		if ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
+			/* Allocate new pmd */
+			pmd = alloc_pmd();
+
+			/* Find original pmd */
+			orig = (pmd_table_t *)
+				phys_to_virt((pgd->entry[i] &
+				PGD_COARSE_ALIGN_MASK));
+
+			/* Copy original to new */
+			memcpy(pmd, orig, sizeof(pmd_table_t));
+
+			/* Replace original pmd entry in pgd with new */
+			pgd->entry[i] = (pgd_t)virt_to_phys(pmd);
+			pgd->entry[i] |= PGD_TYPE_COARSE;
+		}
+	}
+	BUG();
+	return pgd;
+}
 
 extern pmd_table_t *pmd_array;
 

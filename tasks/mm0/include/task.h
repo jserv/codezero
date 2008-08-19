@@ -87,6 +87,7 @@ struct tcb *find_task(int tid);
 struct initdata;
 void init_pm(struct initdata *initdata);
 
+struct tcb *task_create(struct task_ids *ids, unsigned int flags);
 int send_task_data(l4id_t requester);
 
 #endif /* __TASK_H__ */

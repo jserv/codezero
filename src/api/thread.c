@@ -10,6 +10,7 @@
 #include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
 #include <l4/generic/pgalloc.h>
+#include INC_ARCH(mm.h)
 
 int sys_thread_switch(struct syscall_args *regs)
 {
@@ -59,51 +60,47 @@ int thread_start(struct task_ids *ids)
 	return -EINVAL;
 }
 
+
 /*
- * Creates a thread, with a new thread id, and depending on whether the space
- * id exists, either adds it to an existing space or creates a new space.
- *
- * NOTE: Add: Depending on whether the thread id exists, it creates a new space
- * copying the space of that thread id.
- *
- * For example:
- *      thread id = inval, space id = inval, -> new thread, new space.
- *      thread id = x, space id = inval, -> new thread, new space, copying space of x
- *      thread id = inval, space id = x, -> new thread, use space x.
+ * Creates a thread, with a new thread id, and depending on the flags,
+ * either creates a new space, uses the same space as another thread,
+ * or creates a new space copying the space of another thread. These
+ * are respectively used when creating a brand new task, creating a
+ * new thread in an existing address space, or forking a task.
  */
-int thread_create(struct task_ids *ids)
+int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *task, *new = (struct ktcb *)zalloc_page();
+	flags &= THREAD_FLAGS_MASK;
 
-	/* Visit all tasks to see if space ids match. */
-	list_for_each_entry(task, &global_task_list, task_list) {
-		/* Space ids match, can use existing space */
-		if (task->spid == ids->spid) {
-			BUG(); /* This is untested yet. */
-			goto spc_found;
-		}
-	}
+	if (flags == THREAD_CREATE_NEWSPC) {
+		/* Allocate new pgd and copy all kernel areas */
+		new->pgd = alloc_pgd();
+		copy_pgd_kern_all(new->pgd);
 
-	/* No existing space with such id. Creating a new address space */
-	new->pgd = alloc_pgd();
-
-	/* Copies all bits that are fixed for all tasks. */
-	copy_pgd_kern_all(new->pgd);
-
-	/* Get new space id */
-	if (ids->spid == TASK_ID_INVALID)
-		ids->spid = id_new(space_id_pool);
-	else
+		/* New space id, or requested id if available */
 		if ((ids->spid = id_get(space_id_pool, ids->spid)) < 0)
 			ids->spid = id_new(space_id_pool);
-
-spc_found:
-	/* Get a new thread id */
-	if (ids->tid == TASK_ID_INVALID)
+	} else {
+		/* Existing space will be used, find it from all tasks */
+		list_for_each_entry(task, &global_task_list, task_list) {
+			/* Space ids match, can use existing space */
+			if (task->spid == ids->spid) {
+				if (flags == THREAD_CREATE_SAMESPC)
+					new->pgd = task->pgd;
+				else
+					new->pgd = copy_page_tables(task->pgd);
+				goto out;
+			}
+		}
+		printk("Could not find given space, is ",
+		       "SAMESPC/COPYSPC the right flag?\n");
+		BUG();
+	}
+out:
+	/* New thread id, or requested id if available */
+	if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
 		ids->tid = id_new(thread_id_pool);
-	else
-		if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
-			ids->tid = id_new(thread_id_pool);
 
 	/* Set all ids */
 	set_task_ids(new, ids);
@@ -128,14 +125,14 @@ spc_found:
  */
 int sys_thread_control(struct syscall_args *regs)
 {
-	u32 *reg = (u32 *)regs;
-	unsigned int action = reg[0];
-	struct task_ids *ids = (struct task_ids *)reg[1];
 	int ret = 0;
+	u32 *reg = (u32 *)regs;
+	unsigned int flags = reg[0];
+	struct task_ids *ids = (struct task_ids *)reg[1];
 
-	switch (action) {
+	switch (flags & THREAD_ACTION_MASK) {
 	case THREAD_CREATE:
-		ret = thread_create(ids);
+		ret = thread_create(ids, flags);
 		break;
 	case THREAD_RUN:
 		ret = thread_start(ids);

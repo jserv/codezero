@@ -92,10 +92,6 @@ There are many open source POSIX operating systems with advanced features such
 as BSD versions and Linux. However, neither of these were originally designed
 for embedded systems. Multiple problems arise due to this fact.
 
-These systems are well established. They target a broad range of platforms and
-uses, but consequently their user base has saturated, and embedded platforms
-don't get enough emphasis.
-
 Unix itself and all the tools built upon weren't meant for using on small
 devices. Accordingly, these operating systems contain a lot of historical code.
 Their code base is so big, that it gets more and more difficult to understand
@@ -110,7 +106,13 @@ address space. This is an important issue on embedded systems since their
 operation is more sensitive to disruptions. Being a microkernel design, Codezero
 aims to defeat this problem and increase dependability.
 
-Other than these modern kernels, there are existing operating systems targeting
+From a support perspective, most unix operating systems like BSD and linux have
+a highly saturated user base. The developers focus on these existing users and
+often the systems they support are servers and not embedded computers. Codezero
+will focus completely on embedded systems, aiming to meet the support need for
+this type of systems.
+
+Other than modern unix kernels, there are existing operating systems targeting
 embedded devices. Most of them are proprietary, with their own users. Some of
 them are structurally too simplistic, and lack modern features such as paging.
 There ones that are well established, but Codezero will contrast them by
@@ -123,14 +125,13 @@ Finally, POSIX compliance is only a step, or a partial aim for the Codezero
 microkernel. It is not limited to the goal of just complying with POSIX, which
 has been done many times by other operating systems. The idea is to implement
 a generic software environment where multiple system services can reside in
-the same run-time, but on the other hand, provide natively implemented resource
-management services to be used as the default solution. In other words, the
-project will provide the mechanism to accomodate multiple operating systems,
-and it will also supply its own set of system services with a POSIX-like API.
-By providing a variety of system-level software options, the applications
-will be able to choose among different speed, safety, determinism policies at
-the same run-time. This is expected to prove useful in embedded software
-problems.
+the same run-time, but on the other hand, natively implemented system services
+will be supplied as the default solution. In other words, the project will
+provide the mechanism to accomodate multiple operating systems, and it will also
+supply its own set of system services with a POSIX-like API. By providing a
+variety of system software options, the applications will be able to choose
+among different speed, safety, determinism policies at the same run-time. This
+is expected to prove useful in the embedded software domain.
 
 Furthermore there are new ideas in literature that would improve systems
 software but aren't implemented either because they have no existing users or
@@ -148,7 +149,7 @@ technology.
 Can you summarise all this? Why should I use Codezero, again?
 
 Codezero is an operating system that targets embedded systems. It supports the
-most fundamental posix calls and it implements modern features such as
+most fundamental POSIX calls and it implements modern features such as
 demand-paging and virtual filesystem layer. Different from most other posix-like
 systems, it is based on a microkernel design. This makes it possible to use it
 also as a base for implementing or running other operating systems. It has a

@@ -136,6 +136,7 @@ typedef struct fault_kdata {
 void add_section_mapping_init(unsigned int paddr, unsigned int vaddr,
 			      unsigned int size, unsigned int flags);
 
+pgd_table_t *copy_page_tables(pgd_table_t *from);
 void remap_as_pages(void *vstart, void *vend);
 
 void relocate_page_tables(void);
