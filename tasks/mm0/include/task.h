@@ -82,6 +82,17 @@ struct tcb {
 	struct file_descriptor fd[TASK_FILES_MAX];
 };
 
+/* Structures to use when sending new task information to vfs */
+struct task_data {
+	unsigned long tid;
+	unsigned long utcb_address;
+};
+
+struct task_data_head {
+	unsigned long total;
+	struct task_data tdata[];
+};
+
 struct tcb *find_task(int tid);
 
 struct initdata;

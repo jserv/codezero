@@ -99,6 +99,10 @@ void handle_fs_requests(void)
 		pager_update_stats(sender, (unsigned long)mr[0],
 				   (unsigned long)mr[1]);
 		break;
+	case L4_IPC_TAG_NOTIFY_FORK:
+		pager_notify_fork(sender, (l4id_t)mr[0], (l4id_t)mr[1],
+				  (unsigned long)mr[2]);
+		break;
 
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "

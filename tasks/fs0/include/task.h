@@ -24,6 +24,17 @@ struct tcb {
 	struct vnode *rootdir;
 };
 
+/* Structures used when receiving new task info from pager */
+struct task_data {
+	unsigned long tid;
+	unsigned long utcb_address;
+};
+
+struct task_data_head {
+	unsigned long total;
+	struct task_data tdata[];
+};
+
 static inline int task_is_utcb_mapped(struct tcb *t)
 {
 	return t->utcb_mapped;

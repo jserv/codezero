@@ -128,10 +128,6 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		/* Allocate new pgd and copy all kernel areas */
 		new->pgd = alloc_pgd();
 		copy_pgd_kern_all(new->pgd);
-
-		/* New space id, or requested id if available */
-		if ((ids->spid = id_get(space_id_pool, ids->spid)) < 0)
-			ids->spid = id_new(space_id_pool);
 	} else {
 		/* Existing space will be used, find it from all tasks */
 		list_for_each_entry(task, &global_task_list, task_list) {
@@ -149,9 +145,21 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		BUG();
 	}
 out:
-	/* New thread id, or requested id if available */
+	/* Allocate requested id if it's available, else a new one */
 	if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
 		ids->tid = id_new(thread_id_pool);
+
+	/* If thread space is new or copied, it gets a new space id */
+	if (flags == THREAD_CREATE_NEWSPC ||
+	    flags == THREAD_CREATE_COPYSPC) {
+		/*
+		 * Allocate requested id if
+		 * it's available, else a new one
+		 */
+		if ((ids->spid = id_get(space_id_pool,
+					ids->spid)) < 0)
+			ids->spid = id_new(space_id_pool);
+	}
 
 	/* Set all ids */
 	set_task_ids(new, ids);

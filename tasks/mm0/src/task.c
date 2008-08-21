@@ -481,16 +481,6 @@ void init_pm(struct initdata *initdata)
 	start_boot_tasks(initdata);
 }
 
-struct task_data {
-	unsigned long tid;
-	unsigned long utcb_address;
-};
-
-struct task_data_head {
-	unsigned long total;
-	struct task_data tdata[];
-};
-
 /*
  * During its initialisation FS0 wants to learn how many boot tasks
  * are running, and their tids, which includes itself. This function

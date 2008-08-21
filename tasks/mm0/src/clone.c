@@ -72,7 +72,6 @@ int copy_tcb(struct tcb *to, struct tcb *from)
 	to->map_start = from->map_start;
 	to->map_end = from->map_end;
 
-
 	/* Copy all vm areas */
 	copy_vmas(to, from);
 
@@ -81,24 +80,48 @@ int copy_tcb(struct tcb *to, struct tcb *from)
 	       TASK_FILES_MAX * sizeof(struct file_descriptor));
 }
 
+/*
+ * Sends vfs task information about forked child, and its utcb
+ */
+void vfs_notify_fork(struct tcb *child, struct tcb *parent)
+{
+	int err;
+	struct task_data_head *tdata_head;
+	struct tcb *vfs;
+
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
+	l4_save_ipcregs();
+
+	/* Write parent and child information */
+	write_mr(L4SYS_ARG0, parent->tid);
+	write_mr(L4SYS_ARG1, child->tid);
+	write_mr(L4SYS_ARG2, child->utcb);
+
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
+			       L4_IPC_TAG_NOTIFY_FORK)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Pager from VFS read error: %d.\n",
+		       __FUNCTION__, err);
+		return err;
+	}
+	l4_restore_ipcregs();
+
+	return err;
+}
+
 int do_fork(struct tcb *parent)
 {
-	struct task_ids ids = { .tid = TASK_ID_INVALID, .spid = parent->spid };
 	struct tcb *child;
-
-	/*
-	 * Allocate and copy parent pgd + all pmds to child.
-	 *
-	 * When a write fault occurs on any of the frozen shadows,
-	 * fault handler creates a new shadow on top, if it hasn't,
-	 * and then starts adding writeable pages to the new shadow.
-	 * Every forked task will fault on every page of the frozen shadow,
-	 * until all pages have been made copy-on-write'ed, in which case
-	 * the underlying frozen shadow is collapsed.
-	 *
-	 * Every forked task must have its own copy of pgd + pmds because
-	 * every one of them will have to fault on frozen shadows individually.
-	 */
+	struct task_ids ids = {
+		.tid = TASK_ID_INVALID,
+		.spid = parent->spid,
+	};
 
 	/* Make all shadows in this task read-only */
 	vm_freeze_shadows(parent);
@@ -115,18 +138,22 @@ int do_fork(struct tcb *parent)
 	/* Create new utcb for child since it can't use its parent's */
 	child->utcb = utcb_vaddr_new();
 
-	/* Create the utcb shared memory segment available for child to shmat() */
-	if (IS_ERR(shm = shm_new((key_t)child->utcb, __pfn(DEFAULT_UTCB_SIZE)))) {
+	/*
+	 * Create the utcb shared memory segment
+	 * available for child to shmat()
+	 */
+	if (IS_ERR(shm = shm_new((key_t)child->utcb,
+				 __pfn(DEFAULT_UTCB_SIZE)))) {
 		l4_ipc_return((int)shm);
 		return 0;
 	}
 	/* FIXME: We should munmap() parent's utcb page from child */
 
 	/* Notify fs0 about forked process */
-	vfs_send_fork(parent, child);
+	vfs_notify_fork(child, parent);
 
-	/* Start forked child. FIXME: Return ipc to child as well ??? */
-	l4_thread_control(THREAD_START, child);
+	/* Start forked child. */
+	l4_thread_control(THREAD_RUN, ids);
 
 	/* Return back to parent */
 	l4_ipc_return(0);

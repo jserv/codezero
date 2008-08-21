@@ -72,15 +72,44 @@ int receive_pager_taskdata_orig(l4id_t *tdata)
 	return 0;
 }
 
-struct task_data {
-	unsigned long tid;
-	unsigned long utcb_address;
-};
+/*
+ * Receives ipc from pager about a new fork event and
+ * the information on the resulting child task.
+ */
+int pager_notify_fork(l4id_t sender, l4id_t parid,
+		      l4id_t chid, unsigned long utcb_address)
+{
+	struct tcb *child, *parent;
+	int err;
 
-struct task_data_head {
-	unsigned long total;
-	struct task_data tdata[];
-};
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	BUG_ON(!(parent = find_task(parid)));
+
+	if (IS_ERR(child = create_tcb())) {
+		l4_ipc_return((int)child);
+		return 0;
+	}
+
+	/* Initialise fields sent by pager */
+	child->tid = chid;
+	child->utcb_address = utcb_address;
+
+	/*
+	 * Initialise vfs specific fields.
+	 * FIXME: Or copy from parent???
+	 */
+	child->rootdir = vfs_root.pivot;
+	child->curdir = vfs_root.pivot;
+
+	/* Copy file descriptors from parent */
+	id_pool_copy(child->fdpool, parent->fdpool, TASK_FILES_MAX);
+	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
+
+	l4_ipc_return(0);
+
+	return 0;
+}
+
 
 /* Read task information into the utcb page, since it won't fit into mrs. */
 struct task_data_head *receive_pager_taskdata(void)

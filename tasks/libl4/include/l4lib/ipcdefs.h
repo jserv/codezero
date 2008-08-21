@@ -55,5 +55,6 @@
 #define L4_IPC_TAG_PAGER_WRITE		43	/* Pager writes file contents to vfs */
 #define L4_IPC_TAG_PAGER_CLOSE		44	/* Pager notifies vfs of file close */
 #define L4_IPC_TAG_PAGER_UPDATE_STATS	45	/* Pager updates file stats in vfs */
+#define L4_IPC_TAG_NOTIFY_FORK		46	/* Pager notifies vfs of process fork */
 
 #endif /* __IPCDEFS_H__ */
