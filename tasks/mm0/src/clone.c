@@ -156,7 +156,7 @@ int do_fork(struct tcb *parent)
 	l4_thread_control(THREAD_RUN, ids);
 
 	/* Return back to parent */
-	l4_ipc_return(0);
+	l4_ipc_return(child->tid);
 
 	return 0;
 }
