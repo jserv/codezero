@@ -7,4 +7,6 @@
 #include <l4lib/types.h>
 #include <l4lib/arch/utcb.h>
 
+int utcb_init(void);
+
 #endif /* __UTCB_H__ */

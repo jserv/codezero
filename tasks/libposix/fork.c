@@ -39,8 +39,11 @@ int fork(void)
 		errno = -ret;
 		return -1;
 	}
-	/* else return value */
-	return ret;
 
+	/* If we're a child, we need to initialise the utcb page */
+	if (ret == 0)
+		utcb_init();
+
+	return ret;
 }
 

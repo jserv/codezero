@@ -75,7 +75,8 @@ static void *l4_utcb_page(void)
 
 /*
  * Initialises a non-pager task's shared memory utcb page
- * using posix semantics.
+ * using posix semantics. Used during task initialisation
+ * and by child tasks after a fork.
  */
 int utcb_init(void)
 {
