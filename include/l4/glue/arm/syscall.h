@@ -18,7 +18,12 @@
 
 extern unsigned int __syscall_page_start;
 
-typedef struct syscall_args {
+/*
+ * This structure is saved on the kernel stack
+ * just after entering a system call exception.
+ */
+typedef struct syscall_context {
+	u32 spsr
 	u32 r0;
 	u32 r1;
 	u32 r2;
@@ -28,7 +33,9 @@ typedef struct syscall_args {
 	u32 r6;		/* MR3 */
 	u32 r7;		/* MR4 */
 	u32 r8;		/* MR5 */
-} syscall_args_t;
+	u32 sp_usr;
+	u32 lr_usr;
+} __attribute__((__packed__)) syscall_context_t;
 
 typedef struct msg_regs {
 	u32 mr0;

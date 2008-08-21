@@ -12,7 +12,7 @@
 #include <l4/generic/pgalloc.h>
 #include INC_ARCH(mm.h)
 
-int sys_thread_switch(struct syscall_args *regs)
+int sys_thread_switch(syscall_context_t *regs)
 {
 	sched_yield();
 	return 0;
@@ -60,10 +60,56 @@ int thread_start(struct task_ids *ids)
 	return -EINVAL;
 }
 
-int setup_new_ktcb(struct ktcb *new, struct ktcb *orig)
+/*
+ * Copies the pre-syscall context of original thread into the kernel
+ * stack of new thread. Modifies new thread's context registers so that
+ * when it schedules it executes as if it is returning from a syscall,
+ * i.e. the syscall return path where the previous context copied to its
+ * stack is restored. It also modifies r0 to ensure POSIX child return
+ * semantics.
+ */
+int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 {
-	/* Setup new thread stack */
-	new->context.sp =
+	/*
+	 * Pre-syscall context is saved on the kernel stack upon
+	 * a system call exception. We need the location where it
+	 * is saved relative to the start of ktcb.
+	 */
+	void *syscall_context_offset = (void *)orig->syscall_regs -
+				       (void *)orig;
+
+	/*
+	 * Copy the saved context from original thread's
+	 * stack to new thread stack.
+	 */
+	memcpy((void *)new + syscall_context_offset,
+	       (void *)orig + syscall_context_offset,
+	       sizeof(syscall_context_t));
+
+	/*
+	 * Modify the return register value with 0 to ensure new thread
+	 * returns with that value. This is a POSIX requirement and enforces
+	 * policy on the microkernel, but it is currently the best solution.
+	 */
+	new->syscall_regs->r0 = 0;
+
+	/*
+	 * Set up the stack pointer and program counter so that next time
+	 * the new thread schedules, it executes the end part of the system
+	 * call exception where the previous context is restored.
+	 */
+	new->context.sp = (unsigned long)((void *)new +
+					  syscall_context_offset);
+	new->context.pc = (unsigned long)return_from_syscall;
+
+	/* Copy other relevant fields from original ktcb */
+	new->pagerid = orig->pagerid;
+
+	/* Distribute original thread's ticks into two threads */
+	new->ticks_left = orig->ticks_left / 2;
+	orig->ticks_left /= 2;
+
+	return 0;
 }
 
 /*
@@ -117,9 +163,13 @@ out:
 	waitqueue_head_init(&new->wqh_send);
 	waitqueue_head_init(&new->wqh_recv);
 
-	/* When space is copied kernel-side tcb and stack are also copied */
+	/*
+	 * When space is copied this restores the new thread's
+	 * system call return environment so that it can safely
+	 * return as a copy of its original thread.
+	 */
 	if (flags == THREAD_CREATE_COPYSPC)
-		setup_new_ktcb(new, task);
+		arch_setup_new_thread(new, task);
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);
@@ -132,7 +182,7 @@ out:
  * space for a thread that doesn't already have one, or destroys it if the last
  * thread that uses it is destroyed.
  */
-int sys_thread_control(struct syscall_args *regs)
+int sys_thread_control(syscall_context_t *regs)
 {
 	int ret = 0;
 	u32 *reg = (u32 *)regs;

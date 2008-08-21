@@ -58,7 +58,7 @@ void syscall_init()
 }
 
 /* Checks a syscall is legitimate and dispatches to appropriate handler. */
-int syscall(struct syscall_args *regs, unsigned long swi_addr)
+int syscall(syscall_context_t *regs, unsigned long swi_addr)
 {
 	/* Check if genuine system call, coming from the syscall page */
 	if ((swi_addr & ARM_SYSCALL_PAGE) == ARM_SYSCALL_PAGE) {

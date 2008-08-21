@@ -144,11 +144,14 @@ BEGIN_PROC(arm_swi_exception)
 	mrs	r0, spsr_fc	@ psr also need saving in case this context is interrupted.
 	stmfd	sp!, {r0}
 	enable_irqs r0
-	add	r0, sp, #4	@ Pass sp address + 4 as a pointer to saved regs.
-	ktcb_ref_saved_regs r0, r1, r2 @ Save regs pointer in ktcb
+	mov	r0, sp		@ Current SP has pointer to all saved context.
+	ktcb_ref_saved_regs r0, r1, r2 @ Save syscall context pointer in ktcb
 	mov	r1, lr		@ Pass swi instruction address in LR as arg1
 	mov 	lr, pc
 	ldr 	pc, =syscall
+
+.global return_from_syscall;    @ Newly created threads use this path to return,
+return_from_syscall:		@ if they duplicated another thread's address space.
 	disable_irqs r1		@ Not disabling irqs at this point causes the SP_USR and spsr
 				@ to get corrupt causing havoc.
 	ldmfd	sp!, {r1}

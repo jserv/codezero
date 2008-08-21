@@ -17,7 +17,7 @@
 #include INC_API(syscall.h)
 #include INC_ARCH(exception.h)
 
-int sys_exchange_registers(struct syscall_args *regs)
+int sys_exchange_registers(syscall_context_t *regs)
 {
 	struct ktcb *task;
 	unsigned int pc = regs->r0;
@@ -43,7 +43,7 @@ found:
 	return 0;
 }
 
-int sys_schedule(struct syscall_args *regs)
+int sys_schedule(syscall_context_t *regs)
 {
 	printk("(SVC) %s called. Tid (%d)\n", __FUNCTION__, current->tid);
 	return 0;
@@ -54,7 +54,7 @@ int sys_space_control(struct syscall_args *regs)
 	return -ENOSYS;
 }
 
-int sys_getid(struct syscall_args *regs)
+int sys_getid(syscall_context_t *regs)
 {
 	struct task_ids *ids = (struct task_ids *)regs->r0;
 	struct ktcb *this = current;
@@ -83,7 +83,7 @@ int validate_granted_pages(unsigned long pfn, int npages)
  * this memory is used for thread creation and memory mapping, (e.g. new
  * page tables, page middle directories, per-task kernel stack etc.)
  */
-int sys_kmem_control(struct syscall_args *regs)
+int sys_kmem_control(syscall_context_t *regs)
 {
 	unsigned long pfn = (unsigned long)regs->r0;
 	int npages = (int)regs->r1;

@@ -57,8 +57,11 @@ struct ktcb {
 	/* User context */
 	task_context_t context;
 
-	/* Reference to syscall saved context */
-	syscall_args_t *syscall_regs;
+	/*
+	 * Reference to the context on stack
+	 * saved at the beginning of a syscall trap.
+	 */
+	syscall_context_t *syscall_regs;
 
 	/* Runqueue related */
 	struct list_head rq_list;
