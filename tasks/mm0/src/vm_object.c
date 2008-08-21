@@ -62,6 +62,8 @@ LIST_HEAD(vm_object_list);
 struct vm_object *vm_object_init(struct vm_object *obj)
 {
 	INIT_LIST_HEAD(&obj->list);
+	INIT_LIST_HEAD(&obj->shref);
+	INIT_LIST_HEAD(&obj->shadowers);
 	INIT_LIST_HEAD(&obj->page_cache);
 
 	return obj;

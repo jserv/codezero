@@ -7,42 +7,52 @@
 #include <vm_area.h>
 #include <task.h>
 
+
+/*
+ * Copy all vmas from the given task and populate each with
+ * links to every object that the original vma is linked to.
+ * Note, that we don't copy vm objects but just the links to
+ * them, because vm objects are not per-process data.
+ */
 int copy_vmas(struct tcb *to, struct tcb *from)
 {
-	struct vm_area *vma, new;
+	struct vm_area *vma, new_vma;
 	struct vm_obj_link *vmo_link, *new_link;
 
 	list_for_each_entry(vma, from->vm_area_list, list) {
 
 		/* Create a new vma */
-		new = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
-			      vma->flags, vma->file_offset);
+		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
+				  vma->flags, vma->file_offset);
 
-		/*
-		 * Populate it with links to every object that the original
-		 * vma is linked to. Note, that we don't copy vm objects but
-		 * just the links to them, because vm objects are not
-		 * per-process data.
-		 */
+		/* Get the first object on the vma */
+		BUG_ON(list_empty(&vma->vm_obj_list));
+		vmo_link = list_entry(vma->vm_obj_list.next,
+				      struct vm_obj_link, list);
+		do {
+			/* Create a new link */
+			new_link = vm_objlink_create();
 
-		/* Get the first object, either original file or a shadow */
-		if (!(vmo_link = vma_next_link(&vma->vm_obj_list, &vma->vm_obj_list))) {
-			printf("%s:%s: No vm object in vma!\n",
-			       __TASKNAME__, __FUNCTION__);
-			BUG();
-		}
-		/* Create a new link */
-		new_link = vm_objlink_create();
-		
-		/* Copy all fields from original link.
-		 * E.g. if ori
+			/* Copy object field from original link. */
+			new_link->obj = vmo_link->obj;
 
+			/* Add the new link to vma in object order */
+			list_add_tail(&new_link->list, &new_vma->vm_obj_list);
+
+		/* Continue traversing links, doing the same copying */
+		} while((vmo_link = vma_next_link(&vmo_link->list,
+						  &vma->vm_obj_list)));
+
+		/* All link copying is finished, now add the new vma to task */
+		list_add_tail(&vma_new->list, &to->vm_area_list);
 	}
+
+	return 0;
 }
 
 int copy_tcb(struct tcb *to, struct tcb *from)
 {
-	/* Copy program segments, file descriptors, vm areas */
+	/* Copy program segment boundary information */
 	to->start = from->start;
 	to->end = from->end;
 	to->text_start = from->text_start;
@@ -62,8 +72,6 @@ int copy_tcb(struct tcb *to, struct tcb *from)
 	to->map_start = from->map_start;
 	to->map_end = from->map_end;
 
-	/* UTCB ??? */
-	BUG();
 
 	/* Copy all vm areas */
 	copy_vmas(to, from);
@@ -75,8 +83,8 @@ int copy_tcb(struct tcb *to, struct tcb *from)
 
 int do_fork(struct tcb *parent)
 {
+	struct task_ids ids = { .tid = TASK_ID_INVALID, .spid = parent->spid };
 	struct tcb *child;
-	struct task_ids ids = { .tid = TASK_ID_INVALID, .spid = TASK_ID_INVALID };
 
 	/*
 	 * Allocate and copy parent pgd + all pmds to child.
@@ -95,20 +103,30 @@ int do_fork(struct tcb *parent)
 	/* Make all shadows in this task read-only */
 	vm_freeze_shadows(parent);
 
-	/* Create a new L4 thread with parent's page tables copied */
-	ids.spid = parent->spid;
+	/*
+	 * Create a new L4 thread with parent's page tables
+	 * kernel stack and kernel-side tcb copied
+	 */
 	child = task_create(&ids, THREAD_CREATE_COPYSPACE);
 
 	/* Copy parent tcb to child */
 	copy_tcb(child, parent);
 
-	/* FIXME: Need to copy parent register values to child ??? */
+	/* Create new utcb for child since it can't use its parent's */
+	child->utcb = utcb_vaddr_new();
+
+	/* Create the utcb shared memory segment available for child to shmat() */
+	if (IS_ERR(shm = shm_new((key_t)child->utcb, __pfn(DEFAULT_UTCB_SIZE)))) {
+		l4_ipc_return((int)shm);
+		return 0;
+	}
+	/* FIXME: We should munmap() parent's utcb page from child */
 
 	/* Notify fs0 about forked process */
 	vfs_send_fork(parent, child);
 
-	/* Start forked child */
-	l4_thread_start(child);
+	/* Start forked child. FIXME: Return ipc to child as well ??? */
+	l4_thread_control(THREAD_START, child);
 
 	/* Return back to parent */
 	l4_ipc_return(0);

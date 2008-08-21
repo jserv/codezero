@@ -60,6 +60,11 @@ int thread_start(struct task_ids *ids)
 	return -EINVAL;
 }
 
+int setup_new_ktcb(struct ktcb *new, struct ktcb *orig)
+{
+	/* Setup new thread stack */
+	new->context.sp =
+}
 
 /*
  * Creates a thread, with a new thread id, and depending on the flags,
@@ -111,6 +116,10 @@ out:
 	/* Initialise ipc waitqueues */
 	waitqueue_head_init(&new->wqh_send);
 	waitqueue_head_init(&new->wqh_recv);
+
+	/* When space is copied kernel-side tcb and stack are also copied */
+	if (flags == THREAD_CREATE_COPYSPC)
+		setup_new_ktcb(new, task);
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);
