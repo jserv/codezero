@@ -543,7 +543,7 @@ int vm_freeze_shadows(struct tcb *task)
 
 					/* Map the page as read-only */
 					l4_map((void *)page_to_phys(p),
-					       (void *)virtual,
+					       (void *)virtual, 1,
 					       MAP_USR_RO_FLAGS, task->tid);
 				}
 				break;

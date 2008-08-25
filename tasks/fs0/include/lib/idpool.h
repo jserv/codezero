@@ -2,6 +2,9 @@
 #define __MM0_IDPOOL_H__
 
 #include <lib/bit.h>
+#include <l4/macros.h>
+#include INC_GLUE(memory.h)
+#include <string.h>
 
 struct id_pool {
 	int nwords;
@@ -9,7 +12,7 @@ struct id_pool {
 };
 
 /* Copy one id pool to another by calculating its size */
-static inline void id_pool_copy(struct idpool *to, struct idpool *from, int totalbits)
+static inline void id_pool_copy(struct id_pool *to, struct id_pool *from, int totalbits)
 {
 	int nwords = BITWISE_GETWORD(totalbits);
 

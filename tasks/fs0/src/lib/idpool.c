@@ -10,12 +10,6 @@
 #include INC_GLUE(memory.h)
 #include <stdio.h>
 
-static inline void id_pool_copy(struct idpool *to, struct idpool *from, int totalbits)
-{
-	int nwords = BITWISE_GETWORD(totalbits);
-
-	memcpy(to, from, nwords * SZ_WORD + sizeof(struct id_pool));
-}
 struct id_pool *id_pool_new_init(int totalbits)
 {
 	int nwords = BITWISE_GETWORD(totalbits);

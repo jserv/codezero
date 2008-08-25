@@ -57,7 +57,7 @@ int __sys_kread(int rd, void *dest)
  * support file positions, any such features aren't supported since this is call
  * is discarded after startup.
  */
-int sys_kread(struct syscall_args *a)
+int sys_kread(struct syscall_context *a)
 {
 	unsigned int *arg = KTCB_REF_ARG0(current);
 	void *addr = (void *)arg[1];	/* Buffer address */

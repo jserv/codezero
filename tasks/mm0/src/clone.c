@@ -6,7 +6,12 @@
 #include <syscalls.h>
 #include <vm_area.h>
 #include <task.h>
-
+#include <mmap.h>
+#include <l4lib/arch/syslib.h>
+#include <l4lib/ipcdefs.h>
+#include <l4/api/thread.h>
+#include <utcb.h>
+#include <shm.h>
 
 /*
  * Copy all vmas from the given task and populate each with
@@ -16,10 +21,10 @@
  */
 int copy_vmas(struct tcb *to, struct tcb *from)
 {
-	struct vm_area *vma, new_vma;
+	struct vm_area *vma, *new_vma;
 	struct vm_obj_link *vmo_link, *new_link;
 
-	list_for_each_entry(vma, from->vm_area_list, list) {
+	list_for_each_entry(vma, &from->vm_area_list, list) {
 
 		/* Create a new vma */
 		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
@@ -44,7 +49,7 @@ int copy_vmas(struct tcb *to, struct tcb *from)
 						  &vma->vm_obj_list)));
 
 		/* All link copying is finished, now add the new vma to task */
-		list_add_tail(&vma_new->list, &to->vm_area_list);
+		list_add_tail(&new_vma->list, &to->vm_area_list);
 	}
 
 	return 0;
@@ -78,16 +83,16 @@ int copy_tcb(struct tcb *to, struct tcb *from)
 	/* Copy all file descriptors */
 	memcpy(to->fd, from->fd,
 	       TASK_FILES_MAX * sizeof(struct file_descriptor));
+
+	return 0;
 }
 
 /*
  * Sends vfs task information about forked child, and its utcb
  */
-void vfs_notify_fork(struct tcb *child, struct tcb *parent)
+int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 {
 	int err;
-	struct task_data_head *tdata_head;
-	struct tcb *vfs;
 
 	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
@@ -96,7 +101,7 @@ void vfs_notify_fork(struct tcb *child, struct tcb *parent)
 	/* Write parent and child information */
 	write_mr(L4SYS_ARG0, parent->tid);
 	write_mr(L4SYS_ARG1, child->tid);
-	write_mr(L4SYS_ARG2, child->utcb);
+	write_mr(L4SYS_ARG2, (unsigned int)child->utcb);
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
 			       L4_IPC_TAG_NOTIFY_FORK)) < 0) {
@@ -118,6 +123,7 @@ void vfs_notify_fork(struct tcb *child, struct tcb *parent)
 int do_fork(struct tcb *parent)
 {
 	struct tcb *child;
+	struct vm_file *utcb_shm;
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
 		.spid = parent->spid,
@@ -130,7 +136,7 @@ int do_fork(struct tcb *parent)
 	 * Create a new L4 thread with parent's page tables
 	 * kernel stack and kernel-side tcb copied
 	 */
-	child = task_create(&ids, THREAD_CREATE_COPYSPACE);
+	child = task_create(&ids, THREAD_CREATE_COPYSPC);
 
 	/* Copy parent tcb to child */
 	copy_tcb(child, parent);
@@ -142,9 +148,9 @@ int do_fork(struct tcb *parent)
 	 * Create the utcb shared memory segment
 	 * available for child to shmat()
 	 */
-	if (IS_ERR(shm = shm_new((key_t)child->utcb,
-				 __pfn(DEFAULT_UTCB_SIZE)))) {
-		l4_ipc_return((int)shm);
+	if (IS_ERR(utcb_shm = shm_new((key_t)child->utcb,
+				      __pfn(DEFAULT_UTCB_SIZE)))) {
+		l4_ipc_return((int)utcb_shm);
 		return 0;
 	}
 	/* FIXME: We should munmap() parent's utcb page from child */
@@ -153,7 +159,7 @@ int do_fork(struct tcb *parent)
 	vfs_notify_fork(child, parent);
 
 	/* Start forked child. */
-	l4_thread_control(THREAD_RUN, ids);
+	l4_thread_control(THREAD_RUN, &ids);
 
 	/* Return back to parent */
 	l4_ipc_return(child->tid);
@@ -161,3 +167,11 @@ int do_fork(struct tcb *parent)
 	return 0;
 }
 
+int sys_fork(l4id_t sender)
+{
+	struct tcb *parent;
+
+	BUG_ON(!(parent = find_task(sender)));
+
+	return do_fork(parent);
+}

@@ -49,7 +49,7 @@ int sys_schedule(syscall_context_t *regs)
 	return 0;
 }
 
-int sys_space_control(struct syscall_args *regs)
+int sys_space_control(syscall_context_t *regs)
 {
 	return -ENOSYS;
 }

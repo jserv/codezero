@@ -365,12 +365,12 @@ void remove_mapping(unsigned long vaddr)
  */
 pgd_table_t *copy_page_tables(pgd_table_t *from)
 {
-	struct pmd_table_t *pmd, *orig;
-	struct pgd_table_t *pgd;
+	pmd_table_t *pmd, *orig;
+	pgd_table_t *pgd;
 
 	/* Allocate and copy pgd */
 	pgd = alloc_pgd();
-	memcpy(pgd, from, sizeof(struct pgd_table_t));
+	memcpy(pgd, from, sizeof(pgd_table_t));
 
 	/* Allocate and copy all valid pmds */
 	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {

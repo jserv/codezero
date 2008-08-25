@@ -120,7 +120,7 @@ void handle_requests(void)
 			 args->flags, args->fd, __pfn(args->offset));
 		break;
 	}
-	case L4_IPC_TAG_MMAP: {
+	case L4_IPC_TAG_FORK: {
 		sys_fork(sender);
 		break;
 	}

@@ -26,18 +26,18 @@
 #define syscalls_end_offset			sys_time_offset
 #define SYSCALLS_TOTAL				((syscalls_end_offset >> 2) + 1)
 
-int sys_ipc(struct syscall_args *);
-int sys_thread_switch(struct syscall_args *);
-int sys_thread_control(struct syscall_args *);
-int sys_exchange_registers(struct syscall_args *);
-int sys_schedule(struct syscall_args *);
-int sys_unmap(struct syscall_args *);
-int sys_space_control(struct syscall_args *);
-int sys_ipc_control(struct syscall_args *);
-int sys_map(struct syscall_args *);
-int sys_getid(struct syscall_args *);
-int sys_kread(struct syscall_args *);
-int sys_kmem_control(struct syscall_args *);
-int sys_time(struct syscall_args *);
+int sys_ipc(struct syscall_context *);
+int sys_thread_switch(struct syscall_context *);
+int sys_thread_control(struct syscall_context *);
+int sys_exchange_registers(struct syscall_context *);
+int sys_schedule(struct syscall_context *);
+int sys_unmap(struct syscall_context *);
+int sys_space_control(struct syscall_context *);
+int sys_ipc_control(struct syscall_context *);
+int sys_map(struct syscall_context *);
+int sys_getid(struct syscall_context *);
+int sys_kread(struct syscall_context *);
+int sys_kmem_control(struct syscall_context *);
+int sys_time(struct syscall_context *);
 
 #endif /* __SYSCALL_H__ */

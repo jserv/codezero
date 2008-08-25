@@ -72,6 +72,22 @@ int receive_pager_taskdata_orig(l4id_t *tdata)
 	return 0;
 }
 
+/* Allocate a task struct and initialise it */
+struct tcb *create_tcb(void)
+{
+	struct tcb *t;
+
+	if (!(t = kmalloc(sizeof(*t))))
+		return PTR_ERR(-ENOMEM);
+
+	t->fdpool = id_pool_new_init(TASK_FILES_MAX);
+	INIT_LIST_HEAD(&t->list);
+	list_add_tail(&t->list, &tcb_head.list);
+	tcb_head.total++;
+
+	return t;
+}
+
 /*
  * Receives ipc from pager about a new fork event and
  * the information on the resulting child task.
@@ -80,7 +96,6 @@ int pager_notify_fork(l4id_t sender, l4id_t parid,
 		      l4id_t chid, unsigned long utcb_address)
 {
 	struct tcb *child, *parent;
-	int err;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	BUG_ON(!(parent = find_task(parid)));
@@ -134,22 +149,6 @@ struct task_data_head *receive_pager_taskdata(void)
 	//      ((struct task_data_head *)utcb_page)->total);
 
 	return (struct task_data_head *)utcb_page;
-}
-
-/* Allocate a task struct and initialise it */
-struct tcb *create_tcb(void)
-{
-	struct tcb *t;
-
-	if (!(t = kmalloc(sizeof(*t))))
-		return PTR_ERR(-ENOMEM);
-
-	t->fdpool = id_pool_new_init(TASK_FILES_MAX);
-	INIT_LIST_HEAD(&t->list);
-	list_add_tail(&t->list, &tcb_head.list);
-	tcb_head.total++;
-
-	return t;
 }
 
 /* Attaches to task's utcb. FIXME: Add SHM_RDONLY and test it. */

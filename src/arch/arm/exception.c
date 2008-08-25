@@ -46,17 +46,16 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 
 	/*
 	 * System calls save arguments (and message registers) on the kernel
-	 * stack. They are then referenced from the caller's ktcb. Here, the
-	 * same ktcb reference is set to the fault data so it gives the effect
-	 * as if the ipc to the pager has the fault data in the message
-	 * registers saved on the kernel stack during an ipc syscall. Also this
-	 * way fault does not need to modify the actual utcb MRs in userspace.
+	 * stack. They are then referenced from the caller's ktcb. Here, we
+	 * forge a fault structure as if an ipc syscall has occured. Then
+	 * the reference to the fault structure is set in the ktcb such that
+	 * it lies on the mr0 offset when referred as the syscall context.
 	 */
 
 	/* Assign fault such that it overlaps as the MR0 reference in ktcb. */
-	current->syscall_regs = (syscall_args_t *)
+	current->syscall_regs = (syscall_context_t *)
 				((unsigned long)&mr[0] -
-				 offsetof(syscall_args_t, r3));
+				 offsetof(syscall_context_t, r3));
 
 	/* Send ipc to the task's pager */
 	ipc_sendrecv(current->pagerid, current->pagerid);

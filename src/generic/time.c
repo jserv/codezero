@@ -65,7 +65,7 @@ void update_system_time(void)
 }
 
 /* Read system time */
-int sys_time(struct syscall_args *args)
+int sys_time(syscall_context_t *args)
 {
        	struct timeval *tv = (struct timeval *)args->r0;
 	int set = (int)args->r1;

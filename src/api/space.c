@@ -15,7 +15,7 @@
  * well. struct list_head new_mappings;
  */
 
-int sys_map(struct syscall_args *regs)
+int sys_map(syscall_context_t *regs)
 {
 	unsigned long phys = regs->r0;
 	unsigned long virt = regs->r1;
@@ -41,7 +41,7 @@ found:
 }
 
 
-int sys_unmap(struct syscall_args *regs)
+int sys_unmap(syscall_context_t *regs)
 {
 	unsigned long virt = regs->r0;
 	unsigned long npages = regs->r1;

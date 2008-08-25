@@ -20,6 +20,9 @@
 #define MAP_SHARED	0x01
 #define MAP_PRIVATE	0x02
 
+struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
+			unsigned int flags, unsigned long file_offset);
+
 int do_munmap(void *vaddr, unsigned long size, struct tcb *task);
 
 int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,

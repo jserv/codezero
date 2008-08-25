@@ -10,7 +10,8 @@
 #include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
 #include <l4/generic/pgalloc.h>
-#include INC_ARCH(mm.h)
+#include INC_ARCH(asm.h)
+#include INC_SUBARCH(mm.h)
 
 int sys_thread_switch(syscall_context_t *regs)
 {
@@ -60,6 +61,8 @@ int thread_start(struct task_ids *ids)
 	return -EINVAL;
 }
 
+extern unsigned int return_from_syscall;
+
 /*
  * Copies the pre-syscall context of original thread into the kernel
  * stack of new thread. Modifies new thread's context registers so that
@@ -75,15 +78,15 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	 * a system call exception. We need the location where it
 	 * is saved relative to the start of ktcb.
 	 */
-	void *syscall_context_offset = (void *)orig->syscall_regs -
-				       (void *)orig;
+	unsigned long syscall_context_offset =
+		((unsigned long)(orig->syscall_regs) - (unsigned long)orig);
 
 	/*
 	 * Copy the saved context from original thread's
 	 * stack to new thread stack.
 	 */
-	memcpy((void *)new + syscall_context_offset,
-	       (void *)orig + syscall_context_offset,
+	memcpy((void *)((unsigned long)new + syscall_context_offset),
+	       (void *)((unsigned long)orig + syscall_context_offset),
 	       sizeof(syscall_context_t));
 
 	/*
@@ -98,8 +101,7 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	 * the new thread schedules, it executes the end part of the system
 	 * call exception where the previous context is restored.
 	 */
-	new->context.sp = (unsigned long)((void *)new +
-					  syscall_context_offset);
+	new->context.sp = (unsigned long)new + syscall_context_offset;
 	new->context.pc = (unsigned long)return_from_syscall;
 
 	/* Copy other relevant fields from original ktcb */
@@ -140,7 +142,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 				goto out;
 			}
 		}
-		printk("Could not find given space, is ",
+		printk("Could not find given space, is "
 		       "SAMESPC/COPYSPC the right flag?\n");
 		BUG();
 	}

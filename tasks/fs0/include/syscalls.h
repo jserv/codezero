@@ -22,4 +22,8 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 int pager_sys_close(l4id_t sender, l4id_t closer, int fd);
 int pager_update_stats(l4id_t sender, unsigned long vnum,
 		       unsigned long newsize);
+
+int pager_notify_fork(l4id_t sender, l4id_t parid,
+		      l4id_t chid, unsigned long utcb_address);
+
 #endif /* __FS0_SYSCALLS_H__ */

@@ -10,6 +10,7 @@
 #define __MM0_SYSARGS_H__
 
 #include <sys/types.h>
+#include <l4lib/types.h>
 
 /* For reading argument data from a system call */
 struct sys_mmap_args {
@@ -43,7 +44,7 @@ struct sys_shmget_args {
 
 int sys_shmget(key_t key, int size, int shmflg);
 
-int sys_fork(void);
+int sys_fork(l4id_t parent);
 
 #endif /* __MM0_SYSARGS_H__ */
 

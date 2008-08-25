@@ -23,7 +23,7 @@ extern unsigned int __syscall_page_start;
  * just after entering a system call exception.
  */
 typedef struct syscall_context {
-	u32 spsr
+	u32 spsr;
 	u32 r0;
 	u32 r1;
 	u32 r2;
@@ -55,10 +55,10 @@ typedef struct msg_regs {
 
 /* Represents each syscall. We get argument registers
  * from stack for now. This is slower but the simplest. */
-typedef int (*syscall_fn_t)(struct syscall_args *regs);
+typedef int (*syscall_fn_t)(struct syscall_context *regs);
 
 /* Entry point for syscall dispatching. Called from asm */
-int syscall(struct syscall_args *regs, unsigned long);
+int syscall(struct syscall_context *regs, unsigned long);
 
 /* Syscall-related initialiser called during system init. */
 void syscall_init(void);
