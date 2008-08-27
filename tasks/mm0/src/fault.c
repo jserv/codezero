@@ -503,7 +503,7 @@ out_success:
 /*
  * Sets all r/w shadow objects as read-only for the process
  * so that as expected after a fork() operation, writes to those
- * objects cause copy-on-write incidents.
+ * objects cause copy-on-write events.
  */
 int vm_freeze_shadows(struct tcb *task)
 {
@@ -520,34 +520,39 @@ int vm_freeze_shadows(struct tcb *task)
 			continue;
 
 		/* Get the first object */
-		while ((vmo_link = vma_next_link(&vma->vm_obj_list,
-					 	 &vma->vm_obj_list))) {
-			vmo = vmo_link->obj;
+		BUG_ON(list_empty(&vma->vm_obj_list));
+		vmo_link = list_entry(vma->vm_obj_list.next,
+				      struct vm_obj_link, list);
+		vmo = vmo_link->obj;
 
-			/* Is this a writeable shadow? */
-			if ((vmo->flags & VM_OBJ_SHADOW) &&
-			    (vmo->flags & VM_WRITE)) {
+		/* 
+		 * Is this a writeable shadow?
+		 *
+		 * The only R/W shadow in a vma object chain
+		 * can be the first one, so we don't check further
+		 * objects if first one is not what we want. 
+		 */
+		if (!((vmo->flags & VM_OBJ_SHADOW) &&
+		      (vmo->flags & VM_WRITE)))
+			continue;
 
-				/* Make the object read only */
-				vmo->flags &= ~VM_WRITE;
-				vmo->flags |= VM_READ;
+		/* Make the object read only */
+		vmo->flags &= ~VM_WRITE;
+		vmo->flags |= VM_READ;
 
-				/*
-				 * Make all pages on it read-only
-				 * in the page tables.
-				 */
-				list_for_each_entry(p, &vmo->page_cache, list) {
+		/*
+		 * Make all pages on it read-only
+		 * in the page tables.
+		 */
+		list_for_each_entry(p, &vmo->page_cache, list) {
 
-					/* Find virtual address of each page */
-					virtual = vma_page_to_virtual(vma, p);
+			/* Find virtual address of each page */
+			virtual = vma_page_to_virtual(vma, p);
 
-					/* Map the page as read-only */
-					l4_map((void *)page_to_phys(p),
-					       (void *)virtual, 1,
-					       MAP_USR_RO_FLAGS, task->tid);
-				}
-				break;
-			}
+			/* Map the page as read-only */
+			l4_map((void *)page_to_phys(p),
+			       (void *)virtual, 1,
+			       MAP_USR_RO_FLAGS, task->tid);
 		}
 	}
 
