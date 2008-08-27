@@ -94,6 +94,7 @@ struct task_data_head {
 };
 
 struct tcb *find_task(int tid);
+void task_add_global(struct tcb *t);
 
 struct initdata;
 void init_pm(struct initdata *initdata);

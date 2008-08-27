@@ -6,6 +6,7 @@
 #include <l4/generic/scheduler.h>
 #include INC_API(syscall.h)
 #include <l4/api/thread.h>
+#include <l4/api/syscall.h>
 #include <l4/api/errno.h>
 #include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
@@ -61,6 +62,7 @@ int thread_start(struct task_ids *ids)
 	return -EINVAL;
 }
 
+
 extern unsigned int return_from_syscall;
 
 /*
@@ -107,12 +109,14 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	new->syscall_regs->r0 = 0;
 
 	/*
-	 * Set up the stack pointer and program counter so that next time
-	 * the new thread schedules, it executes the end part of the system
-	 * call exception where the previous context is restored.
+	 * Set up the stack pointer, saved program status register and program
+	 * counter so that next time the new thread schedules, it executes the
+	 * end part of the system call exception where the previous context is
+	 * restored.
 	 */
-	new->context.sp = (unsigned long)new + syscall_context_offset;
-	new->context.pc = (unsigned long)return_from_syscall;
+	new->context.sp = (unsigned long)new->syscall_regs;
+	new->context.pc = (unsigned long)&return_from_syscall;
+	new->context.spsr = (unsigned long)orig->context.spsr; 
 
 	/* Copy other relevant fields from original ktcb */
 	new->pagerid = orig->pagerid;

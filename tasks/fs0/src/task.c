@@ -121,6 +121,7 @@ int pager_notify_fork(l4id_t sender, l4id_t parid,
 	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
 
 	l4_ipc_return(0);
+	printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
 
 	return 0;
 }

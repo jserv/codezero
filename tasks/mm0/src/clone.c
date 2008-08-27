@@ -158,6 +158,10 @@ int do_fork(struct tcb *parent)
 	/* Notify fs0 about forked process */
 	vfs_notify_fork(child, parent);
 
+	/* Add child to global task list */
+	task_add_global(child);
+
+	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
 	/* Start forked child. */
 	l4_thread_control(THREAD_RUN, &ids);
 

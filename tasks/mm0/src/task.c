@@ -43,6 +43,12 @@ void print_tasks(void)
 	}
 }
 
+void task_add_global(struct tcb *task)
+{
+	list_add_tail(&task->list, &tcb_head.list);
+	tcb_head.total++;
+}
+
 struct tcb *find_task(int tid)
 {
 	struct tcb *t;
@@ -276,8 +282,7 @@ int task_exec(struct vm_file *f, unsigned long task_region_start,
 		return err;
 
 	/* Add the task to the global task list */
-	list_add_tail(&task->list, &tcb_head.list);
-	tcb_head.total++;
+	task_add_global(task);
 
 	/* Add the file to global vm lists */
 	list_del_init(&f->list);

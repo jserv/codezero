@@ -26,6 +26,8 @@
 #define syscalls_end_offset			sys_time_offset
 #define SYSCALLS_TOTAL				((syscalls_end_offset >> 2) + 1)
 
+void print_syscall_context(struct ktcb *t);
+
 int sys_ipc(struct syscall_context *);
 int sys_thread_switch(struct syscall_context *);
 int sys_thread_control(struct syscall_context *);

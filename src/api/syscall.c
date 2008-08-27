@@ -17,6 +17,16 @@
 #include INC_API(syscall.h)
 #include INC_ARCH(exception.h)
 
+void print_syscall_context(struct ktcb *t)
+{
+	syscall_context_t *r = t->syscall_regs;
+
+	printk("Thread id: %d registers: 0x%x, 0x%x, 0x%x, 0x%x, "
+	       "0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n",
+	       t->tid, r->spsr, r->r0, r->r1, r->r2, r->r3, r->r4,
+	       r->r5, r->r6, r->r7, r->r8, r->sp_usr, r->lr_usr);
+}
+
 int sys_exchange_registers(syscall_context_t *regs)
 {
 	struct ktcb *task;
