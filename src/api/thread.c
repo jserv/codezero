@@ -195,9 +195,8 @@ out:
 int sys_thread_control(syscall_context_t *regs)
 {
 	int ret = 0;
-	u32 *reg = (u32 *)regs;
-	unsigned int flags = reg[0];
-	struct task_ids *ids = (struct task_ids *)reg[1];
+	unsigned int flags = regs->r0;
+	struct task_ids *ids = (struct task_ids *)regs->r1;
 
 	switch (flags & THREAD_ACTION_MASK) {
 	case THREAD_CREATE:

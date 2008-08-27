@@ -154,11 +154,10 @@ demand-paging and virtual filesystem layer. Different from most other posix-like
 systems, it is based on a microkernel design. This makes it possible to use it
 also as a base for implementing or running other operating systems. It has a
 cleanly separated set of system services, it is small and well-focused. Its
-design is carefully thought out, so it's not simply a mock-up implementation of
-the existing POSIX API. Its source code is also freely available (See LICENSE
-heading). For these reasons it is a good candidate as systems software to be
-used on embedded platforms. Currently it has little or no users, therefore
-compared to systems with a saturated user base project developers are available
-to tailor it rapidly towards the needs of any interested users.
+design is carefully thought out, so it's not simply a quick and dirty
+implementation of the POSIX API. Its source code is also freely available (See
+LICENSE heading for details). For these reasons it is a good candidate to be
+used as systems software on embedded platforms. Currently it has little or no
+users, therefore it can be easily adopted for any first users' needs.
 
 
