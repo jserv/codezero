@@ -90,9 +90,19 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	       sizeof(syscall_context_t));
 
 	/*
+	 * Set new thread's syscall_regs offset since its
+	 * normally set during syscall entry
+	 */
+	new->syscall_regs = (syscall_context_t *)
+				((unsigned long)new + syscall_context_offset);
+
+	/*
 	 * Modify the return register value with 0 to ensure new thread
 	 * returns with that value. This is a POSIX requirement and enforces
 	 * policy on the microkernel, but it is currently the best solution.
+	 *
+	 * A cleaner but slower way would be the pager setting child registers
+	 * via exchanges_registers() and start the child thread afterwards.
 	 */
 	new->syscall_regs->r0 = 0;
 

@@ -392,7 +392,7 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 			pgd->entry[i] |= PGD_TYPE_COARSE;
 		}
 	}
-	BUG();
+
 	return pgd;
 }
 
