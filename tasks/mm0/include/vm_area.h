@@ -121,9 +121,11 @@ struct vm_pager {
  */
 struct vm_object {
 	int npages;		    /* Number of pages in memory */
-	int refcnt;		    /* Number of shadows (or vmas) that refer */
+	int nlinks;		    /* Number of mapper links that refer */
+	int shadows;		    /* Number of shadows that refer */
 	struct list_head shref;	    /* Shadow reference from original object */
-	struct list_head shadowers; /* List of vm objects that shadows this one */
+	struct list_head shdw_list; /* List of vm objects that shadows this one */
+	struct list_head link_list; /* List of links that refer to this object */
 	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int flags;	    /* Defines the type and flags of the object */
 	struct list_head list;	    /* List of all vm objects in memory */
@@ -133,6 +135,7 @@ struct vm_object {
 
 /* In memory representation of either a vfs file, a device. */
 struct vm_file {
+	int openers;
 	unsigned long length;
 	unsigned int type;
 	struct list_head list;
@@ -143,8 +146,27 @@ struct vm_file {
 /* To create per-vma vm_object lists */
 struct vm_obj_link {
 	struct list_head list;
+	struct list_head linkref;
 	struct vm_object *obj;
 };
+
+static inline void vm_link_object(struct vm_obj_link *link, struct vm_object *obj)
+{
+	link->obj = obj;
+	list_add(&link->linkref, &obj->link_list);
+	obj->nlinks++;
+}
+
+static inline struct vm_object *vm_unlink_object(struct vm_obj_link *link)
+{
+	/* Delete link from object's link list */
+	list_del(&link->linkref);
+
+	/* Reduce object's mapper link count */
+	link->obj->nlinks--;
+
+	return link->obj;
+}
 
 #define vm_object_to_file(obj) container_of(obj, struct vm_file, vm_obj)
 

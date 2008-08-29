@@ -38,8 +38,8 @@ int copy_vmas(struct tcb *to, struct tcb *from)
 			/* Create a new link */
 			new_link = vm_objlink_create();
 
-			/* Copy object field from original link. */
-			new_link->obj = vmo_link->obj;
+			/* Link object with new link */
+			vm_link_object(new_link, vmo_link->obj);
 
 			/* Add the new link to vma in object order */
 			list_add_tail(&new_link->list, &new_vma->vm_obj_list);

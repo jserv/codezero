@@ -81,7 +81,7 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 	 */
 
 	/* First user? */
-	if (!shm_file->vm_obj.refcnt)
+	if (!shm_file->vm_obj.nlinks)
 		if (mmap_address_validate(task, (unsigned long)shm_addr,
 					  vmflags))
 			shm->shm_addr = shm_addr;

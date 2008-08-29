@@ -533,8 +533,11 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		kfree(new);
 		return -ENOMEM;
 	}
-	vmo_link->obj = &mapfile->vm_obj;
-	mapfile->vm_obj.refcnt++;
+
+	/* Attach link to object */
+	vm_link_object(vmo_link, &mapfile->vm_obj);
+
+	/* ADd link to vma list */
 	list_add_tail(&vmo_link->list, &new->vm_obj_list);
 
 	/*
@@ -556,8 +559,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 			kfree(vmo_link);
 			return -ENOMEM;
 		}
-		vmo_link2->obj = &dzero->vm_obj;
-		dzero->vm_obj.refcnt++;
+		vm_link_object(vmo_link2, &dzero->vm_obj);
 		list_add_tail(&vmo_link2->list, &new->vm_obj_list);
 	}
 

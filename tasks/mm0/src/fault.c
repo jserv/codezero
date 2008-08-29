@@ -60,29 +60,22 @@ struct vm_obj_link *vma_next_link(struct list_head *link,
 }
 
 /* Unlinks orig_link from its vma and deletes it but keeps the object. */
-int vma_drop_link(struct vm_obj_link *shadower_link,
-		  struct vm_obj_link *orig_link)
+struct vm_object *vma_drop_link(struct vm_obj_link *shadower_link,
+		  		struct vm_obj_link *orig_link)
 {
+	struct vm_object *dropped = orig_link->obj;
+
 	/* Remove object link from vma's list */
 	list_del(&orig_link->list);
 
-	/* Reduce object's ref count */
-	orig_link->obj->refcnt--;
+	/* Unlink the link from object */
+	vm_unlink_object(orig_link);
 
 	/*
-	 * Refcount could go as low as 1 but not zero because shortly
-	 * after it goes down to one, it is removed from the link
-	 * chain so it can never exist with a refcount less than 1
-	 * in the chain.
+	 * Reduce object's shadow count since its not shadowed
+	 * by this shadower anymore.
 	 */
-	if (orig_link->obj->refcnt < 1) {
-		printf("%s: Shadower:\n", __FUNCTION__);
-		vm_object_print(shadower_link->obj);
-
-		printf("%s: Original:\n", __FUNCTION__);
-		vm_object_print(orig_link->obj);
-		BUG();
-	}
+	dropped->shadows--;
 
 	/*
 	 * Remove the shadower from original's shadower list.
@@ -94,7 +87,7 @@ int vma_drop_link(struct vm_obj_link *shadower_link,
 	/* Delete the original link */
 	kfree(orig_link);
 
-	return 0;
+	return dropped;
 }
 
 /*
@@ -135,18 +128,19 @@ int vm_object_is_subset(struct vm_object *copier,
  *         Front     Redundant Next
  *         Shadow    Shadow    Object (E.g. shadow or file)
  */
-int vma_merge_link(struct vm_obj_link *redundant_shlink)
+int vma_merge_object(struct vm_object *redundant)
 {
 	/* The redundant shadow object */
-	struct vm_object *redundant = redundant_shlink->obj;
 	struct vm_object *front; /* Shadow in front of redundant */
+	struct vm_obj_link *last_link;
 	struct page *p1, *p2;
 
-	/* Check refcount is really 1 */
-	BUG_ON(redundant->refcnt != 1);
+	/* Check link and shadow count is really 1 */
+	BUG_ON(redundant->nlinks != 1);
+	BUG_ON(redundant->shadows != 1);
 
 	/* Get the last shadower object in front */
-	front = list_entry(redundant->shadowers.next,
+	front = list_entry(redundant->shdw_list.next,
 			   struct vm_object, shref);
 
 	/* Move all non-intersecting pages to front shadow. */
@@ -168,20 +162,26 @@ int vma_merge_link(struct vm_obj_link *redundant_shlink)
 	list_del_init(&front->shref);
 
 	/* Check that there really was one shadower of redundant left */
-	BUG_ON(!list_empty(&redundant->shadowers));
+	BUG_ON(!list_empty(&redundant->shdw_list));
 
 	/* Redundant won't be a shadow of its next object */
 	list_del(&redundant->shref);
 
 	/* Front is now a shadow of redundant's next object */
-	list_add(&front->shref, &redundant->orig_obj->shadowers);
+	list_add(&front->shref, &redundant->orig_obj->shdw_list);
 	front->orig_obj = redundant->orig_obj;
+
+	/* Find, unlink and delete the last link for the object */
+	last_link = list_entry(redundant->link_list.next,
+			       struct vm_obj_link, linkref);
+	vm_unlink_object(last_link);
+	kfree(last_link);
+
+	/* Redundant shadow has no shadows anymore */
+	redundant->shadows--;
 
 	/* Delete the redundant shadow along with all its pages. */
 	vm_object_delete(redundant);
-
-	/* Delete the last link for the object */
-	kfree(redundant_shlink);
 
 	return 0;
 }
@@ -193,6 +193,7 @@ struct vm_obj_link *vm_objlink_create(void)
 	if (!(vmo_link = kzalloc(sizeof(*vmo_link))))
 		return PTR_ERR(-ENOMEM);
 	INIT_LIST_HEAD(&vmo_link->list);
+	INIT_LIST_HEAD(&vmo_link->linkref);
 
 	return vmo_link;
 }
@@ -214,7 +215,8 @@ struct vm_obj_link *vma_create_shadow(void)
 		return 0;
 	}
 	vmo->flags = VM_OBJ_SHADOW;
-	vmo_link->obj = vmo;
+
+	vm_link_object(vmo_link, vmo);
 
 	return vmo_link;
 }
@@ -244,6 +246,61 @@ struct page *copy_to_new_page(struct page *orig)
 	return new;
 }
 
+/*
+ * Drops a link to an object if possible, and if it has dropped it,
+ * decides and takes action on the dropped object, depending on
+ * how many links and shadows it has left, and the type of the object.
+ */
+int vma_drop_merge_delete(struct vm_obj_link *shadow_link,
+			  struct vm_obj_link *orig_link)
+{
+	/* Can we can drop one link? */
+	if (vm_object_is_subset(shadow_link->obj, orig_link->obj)) {
+		struct vm_object *dropped;
+
+		printf("VM OBJECT is a subset of its shadow.\nShadow:\n");
+		vm_object_print(shadow_link->obj);
+		printf("Original:\n");
+		vm_object_print(orig_link->obj);
+
+		/* We can drop the link to original object */
+		dropped = vma_drop_link(shadow_link, orig_link);
+		printf("Dropped link to object:\n");
+		vm_object_print(dropped);
+		orig_link = 0;
+
+		/*
+		 * Now decide on what to do with the dropped object:
+		 * merge, delete, or do nothing.
+		 */
+
+		/* If it's not a shadow, we're not to touch it */
+		if (!(dropped->flags & VM_OBJ_SHADOW))
+			return 0;
+
+		/* If the object has no links left, we can delete it */
+		if (dropped->nlinks == 0) {
+			BUG_ON(dropped->shadows != 0);
+			printf("Deleting object:\n");
+			vm_object_print(dropped);
+			vm_object_delete(dropped);
+		}
+
+		/*
+		 * Only one link and one shadow left.
+		 * Merge it with its only shadow
+		 */
+		if (dropped->nlinks == 1 &&
+		    dropped->shadows == 1) {
+			printf("Merging object:\n");
+			vm_object_print(dropped);
+			vma_merge_object(dropped);
+		}
+	}
+
+	return 0;
+}
+
 /* TODO:
  * - Why not allocate a swap descriptor in vma_create_shadow() rather than
  *   a bare vm_object? It will be needed.
@@ -259,8 +316,8 @@ struct page *copy_to_new_page(struct page *orig)
  */
 struct page *copy_on_write(struct fault_data *fault)
 {
-	struct vm_obj_link *vmo_link, *shadow_link, *copier_link;
-	struct vm_object *vmo, *shadow;
+	struct vm_obj_link *vmo_link, *shadow_link;
+	struct vm_object *shadow;
 	struct page *page, *new_page;
 	struct vm_area *vma = fault->vma;
 	unsigned long file_offset = fault_to_file_offset(fault);
@@ -287,10 +344,10 @@ struct page *copy_on_write(struct fault_data *fault)
 
 		/* Initialise the shadow */
 		shadow = shadow_link->obj;
-		shadow->refcnt = 1;
 		shadow->orig_obj = vmo_link->obj;
 		shadow->flags = VM_OBJ_SHADOW | VM_WRITE;
 		shadow->pager = &swap_pager;
+		vmo_link->obj->shadows++;
 
 		/*
 		 * Add the shadow in front of the original:
@@ -303,18 +360,16 @@ struct page *copy_on_write(struct fault_data *fault)
 		list_add(&shadow_link->list, &vma->vm_obj_list);
 
 		/* Add object to original's shadower list */
-		list_add(&shadow->shref, &shadow->orig_obj->shadowers);
+		list_add(&shadow->shref, &shadow->orig_obj->shdw_list);
 
 		/* Add to global object list */
 		list_add(&shadow->list, &vm_object_list);
 
-		/* Shadow is the copier object */
-		copier_link = shadow_link;
 	} else {
 		dprintf("No new shadows. Going to add to "
 			"topmost r/w shadow object\n");
 		/* No new shadows, the topmost r/w vmo is the copier object */
-		copier_link = vmo_link;
+		shadow_link = vmo_link;
 
 		/*
 		 * We start page search on read-only objects. If the first
@@ -347,7 +402,7 @@ struct page *copy_on_write(struct fault_data *fault)
 	/* Update page details */
 	spin_lock(&new_page->lock);
 	new_page->refcnt = 0;
-	new_page->owner = copier_link->obj;
+	new_page->owner = shadow_link->obj;
 	new_page->offset = file_offset;
 	new_page->virtual = 0;
 	BUG_ON(!list_empty(&new_page->list));
@@ -362,39 +417,20 @@ struct page *copy_on_write(struct fault_data *fault)
 
 		/*
 		 * Finished handling the actual fault, now check for possible
-		 * shadow collapses. Does the copier completely shadow the one
+		 * shadow collapses. Does the shadow completely shadow the one
 		 * underlying it?
 		 */
-		if (!(vmo_link = vma_next_link(&copier_link->list,
+		if (!(vmo_link = vma_next_link(&shadow_link->list,
 					       &vma->vm_obj_list))) {
 			/* Copier must have an object under it */
 			printf("Copier must have had an object under it!\n");
 			BUG();
 		}
-
-		/* Compare whether page caches overlap */
-		if (vm_object_is_subset(copier_link->obj, vmo_link->obj)) {
-			/*
-			 * They do overlap, so keep reference to object but
-			 * drop and delete the vma link.
-			 */
-			vmo = vmo_link->obj;
-			vma_drop_link(copier_link, vmo_link);
-			vmo_link = 0;
-
-			/*
-			 * vm object reference down to one
-			 * and object is mergeable?
-			 */
-			if ((vmo->refcnt == 1) &&
-			    (vmo->flags != VM_OBJ_FILE))
-				vma_merge_link(vmo_link);
-		}
+		vma_drop_merge_delete(shadow_link, vmo_link);
 	}
 
 	return new_page;
 }
-
 
 /*
  * Handles the page fault, all entries here are assumed *legal*
@@ -525,12 +561,12 @@ int vm_freeze_shadows(struct tcb *task)
 				      struct vm_obj_link, list);
 		vmo = vmo_link->obj;
 
-		/* 
+		/*
 		 * Is this a writeable shadow?
 		 *
 		 * The only R/W shadow in a vma object chain
 		 * can be the first one, so we don't check further
-		 * objects if first one is not what we want. 
+		 * objects if first one is not what we want.
 		 */
 		if (!((vmo->flags & VM_OBJ_SHADOW) &&
 		      (vmo->flags & VM_WRITE)))

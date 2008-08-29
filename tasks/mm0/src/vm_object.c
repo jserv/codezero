@@ -27,9 +27,9 @@ void vm_object_print(struct vm_object *vmo)
 {
 	struct vm_file *f;
 
-	printf("Object type: %s %s. Refs: %d. Pages in cache: %d.\n",
+	printf("Object type: %s %s. links: %d, shadows: %d, Pages in cache: %d.\n",
 	       vmo->flags & VM_WRITE ? "writeable" : "read-only",
-	       vmo->flags & VM_OBJ_FILE ? "file" : "shadow", vmo->refcnt,
+	       vmo->flags & VM_OBJ_FILE ? "file" : "shadow", vmo->nlinks, vmo->shadows,
 	       vmo->npages);
 	if (vmo->flags & VM_OBJ_FILE) {
 		f = vm_object_to_file(vmo);
@@ -63,8 +63,9 @@ struct vm_object *vm_object_init(struct vm_object *obj)
 {
 	INIT_LIST_HEAD(&obj->list);
 	INIT_LIST_HEAD(&obj->shref);
-	INIT_LIST_HEAD(&obj->shadowers);
+	INIT_LIST_HEAD(&obj->shdw_list);
 	INIT_LIST_HEAD(&obj->page_cache);
+	INIT_LIST_HEAD(&obj->link_list);
 
 	return obj;
 }
@@ -123,8 +124,10 @@ int vm_object_delete(struct vm_object *vmo)
 	list_del(&vmo->list);
 
 	/* Check any references */
-	BUG_ON(vmo->refcnt);
-	BUG_ON(!list_empty(&vmo->shadowers));
+	BUG_ON(vmo->nlinks);
+	BUG_ON(vmo->shadows);
+	BUG_ON(!list_empty(&vmo->shdw_list));
+	BUG_ON(!list_empty(&vmo->link_list));
 	BUG_ON(!list_empty(&vmo->page_cache));
 
 	/* Obtain and free via the base object */

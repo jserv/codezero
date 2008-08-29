@@ -121,7 +121,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 		    vm_file_to_vnum(vmfile) == vnum) {
 			/* Add a reference to it from the task */
 			t->fd[fd].vmfile = vmfile;
-			vmfile->vm_obj.refcnt++;
+			vmfile->openers++;
 			l4_ipc_return(0);
 			return 0;
 		}
@@ -138,7 +138,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	vmfile->length = length;
 	vmfile->vm_obj.pager = &file_pager;
 	t->fd[fd].vmfile = vmfile;
-	vmfile->vm_obj.refcnt++;
+	vmfile->openers++;
 
 	/* Add to global list */
 	list_add(&vmfile->vm_obj.list, &vm_file_list);
@@ -364,6 +364,9 @@ int fd_close(l4id_t sender, int fd)
 	//       fd, task->tid);
 	if ((err = vfs_close(task->tid, fd)) < 0)
 		return err;
+
+	/* Reduce file's opener count */
+	task->fd[fd].vmfile->openers--;
 
 	task->fd[fd].vnum = 0;
 	task->fd[fd].cursor = 0;
