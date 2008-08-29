@@ -353,7 +353,7 @@ struct page *copy_on_write(struct fault_data *fault)
 		vmo_link->obj->shadows++;
 
 		dprintf("%s: Created a shadow:\n", __TASKNAME__);
-		vm_object_object(shadow);
+		vm_object_print(shadow);
 		dprintf("%s: Original object:\n", __TASKNAME__);
 		vm_object_print(shadow->orig_obj);
 
