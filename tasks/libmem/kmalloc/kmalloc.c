@@ -105,13 +105,84 @@ void kmalloc_init()
 	/* NOTE: If needed, initialise mutex here */
 }
 
+static struct km_area *
+find_free_km_area(int size, struct list_head *km_areas)
+{
+	struct km_area *new;
+	struct km_area *area;
+	const unsigned long max = SZ_WORD - 1;
+	int used= 0, unused = 0;
+
+	/* The minimum size needed if the area will be divided into two */
+	int dividable = size + sizeof(struct km_area) + max;
+
+	list_for_each_entry (area, km_areas, list) {
+	  	/* Is this a free region that fits? */
+		if ((area->size) >= dividable && !area->used) {
+			unsigned long addr, aligned;
+
+			/*
+			 * Cut the free area from the end, as much as
+			 * we want to use
+			 */
+			area->size -= size + sizeof(struct km_area);
+
+			addr = (area->vaddr + area->size);
+			aligned = align(addr, SZ_WORD);	/* Align by rewinding */
+			used = addr - aligned;	/* We rewinded this much bytes */
+			unused = max - used;
+
+			/*
+			 * Reduce the extra bit that's rewinded for alignment
+			 * to original subpage
+			 */
+			area->size -= used;
+
+			/*
+			 * Allocate the new link structure at the end
+			 * of the free area shortened previously.
+			 */
+			new = (struct km_area *)aligned;
+
+			/*
+			 * Actual allocated memory starts after subpage
+			 * descriptor
+			 */
+			new->vaddr = (unsigned long)new
+				     + sizeof(struct km_area);
+			new->size = size + sizeof(struct km_area)
+				    + used;
+			new->used = 1;
+
+			/* Divides other allocated page(s) */
+			new->pg_alloc_pages = 0;
+
+			/* Add used region to the page area list */
+			INIT_LIST_HEAD(&new->list);
+			list_add(&new->list, &area->list);
+			return new;
+
+		} else if (area->size < dividable &&
+			   area->size >= size && !area->used) {
+			/*
+			 * Area not at dividable size but can satisfy request,
+			 * so it's simply returned.
+			 */
+			area->used = 1;
+			return area;
+		}
+	}
+	/* Traversed all areas and can't satisfy request. */
+	return 0;
+}
+
 /*
  * Given a free list, finds a free region of requested size plus one subpage
  * area descriptor. Allocates and initialises the new descriptor, adds it to
  * the list and returns it.
  */
-static struct km_area *
-find_free_km_area(int size, struct list_head *km_areas)
+struct km_area *
+find_free_km_area_orig(int size, struct list_head *km_areas)
 {
 	struct km_area *new;
 	struct km_area *area;
@@ -339,7 +410,7 @@ found:
 	if (area->list.next != areas) {
 		next = list_entry(area->list.next, struct km_area, list);
 		if (!next->used)
-			if ((merged = km_merge_free_areas(prev, area)))
+			if ((merged = km_merge_free_areas(area, next)))
 				area = merged;
 	}
 
