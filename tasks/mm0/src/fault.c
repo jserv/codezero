@@ -74,6 +74,10 @@ struct vm_object *vma_drop_link(struct vm_obj_link *shadower_link,
 	/*
 	 * Reduce object's shadow count since its not shadowed
 	 * by this shadower anymore.
+	 *
+	 * FIXME: Is every object drop because of shadows???
+	 * What about exiting tasks?
+	 *
 	 */
 	dropped->shadows--;
 
@@ -258,14 +262,14 @@ int vma_drop_merge_delete(struct vm_obj_link *shadow_link,
 	if (vm_object_is_subset(shadow_link->obj, orig_link->obj)) {
 		struct vm_object *dropped;
 
-		printf("VM OBJECT is a subset of its shadow.\nShadow:\n");
+		dprintf("VM OBJECT is a subset of its shadow.\nShadow:\n");
 		vm_object_print(shadow_link->obj);
-		printf("Original:\n");
+		dprintf("Original:\n");
 		vm_object_print(orig_link->obj);
 
 		/* We can drop the link to original object */
 		dropped = vma_drop_link(shadow_link, orig_link);
-		printf("Dropped link to object:\n");
+		dprintf("Dropped link to object:\n");
 		vm_object_print(dropped);
 		orig_link = 0;
 
@@ -281,7 +285,7 @@ int vma_drop_merge_delete(struct vm_obj_link *shadow_link,
 		/* If the object has no links left, we can delete it */
 		if (dropped->nlinks == 0) {
 			BUG_ON(dropped->shadows != 0);
-			printf("Deleting object:\n");
+			dprintf("Deleting object:\n");
 			vm_object_print(dropped);
 			vm_object_delete(dropped);
 		}
@@ -292,7 +296,7 @@ int vma_drop_merge_delete(struct vm_obj_link *shadow_link,
 		 */
 		if (dropped->nlinks == 1 &&
 		    dropped->shadows == 1) {
-			printf("Merging object:\n");
+			dprintf("Merging object:\n");
 			vm_object_print(dropped);
 			vma_merge_object(dropped);
 		}
@@ -340,7 +344,6 @@ struct page *copy_on_write(struct fault_data *fault)
 	if (!(vmo_link->obj->flags & VM_WRITE)) {
 		if (!(shadow_link = vma_create_shadow()))
 			return PTR_ERR(-ENOMEM);
-		dprintf("%s: Created a shadow.\n", __TASKNAME__);
 
 		/* Initialise the shadow */
 		shadow = shadow_link->obj;
@@ -348,6 +351,11 @@ struct page *copy_on_write(struct fault_data *fault)
 		shadow->flags = VM_OBJ_SHADOW | VM_WRITE;
 		shadow->pager = &swap_pager;
 		vmo_link->obj->shadows++;
+
+		dprintf("%s: Created a shadow:\n", __TASKNAME__);
+		vm_object_object(shadow);
+		dprintf("%s: Original object:\n", __TASKNAME__);
+		vm_object_print(shadow->orig_obj);
 
 		/*
 		 * Add the shadow in front of the original:
