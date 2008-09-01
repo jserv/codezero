@@ -23,12 +23,10 @@ the Linux Kernel.
 
 Why the name Codezero?
 
-The project focuses on simplicity, elegance, cleanliness, which are important
-assets in software engineering. The philosophy is to implement a structurally
-complete system with most modern OS features while retaining simplicity in the
-implementation as much as possible. This objective also fits well with embedded
-platforms, which usually have rigorous memory and performance requirements. Also
-the project is written from scratch, so the name emphasises that.
+The project focuses on simplicity, elegance and cleanliness. The philosophy is
+to implement structurally advanced software while retaining simplicity in the
+implementation. Also the project is written from scratch, so the name emphasises
+that.
 
 
 Design & Features:
@@ -57,13 +55,13 @@ used under FS0.
 
 MM0 and FS0 both reside in the userspace, and they are not mandatory services.
 For example the virtual and physical memory resources can be partitioned by
-Codezero among pagers, and a third-party pager can override Codezero's MM0
-pager on the same run-time, and implement an independent paging behaviour
-for its own memory partition. This feature provides the option of having an
-adjustable mixture of generalisation and specialisation of system services at
-the same run-time, by using a combination of Codezero's abstract posix-like
-page/file management services and an application-specific pager that depends on
-its own paging abilities. For example a critical task could both use mm0/fs0's
+Codezero among pagers, and a third-party pager can override Codezero's pager on
+the same run-time, and implement an independent paging behaviour for its own
+memory partition. This feature provides the option of having an adjustable
+mixture of generalisation and specialisation of system services at the same
+run-time, by using a combination of Codezero's abstract posix-like page/file
+management services and an application-specific pager that depends on its own
+paging abilities. For example a critical task could both use mm0/fs0's
 posix-like files benefiting from the abstraction and simplification that it
 brings, but at the same time rely on its own page-fault handling for its
 critical data so that even though it handles its memory in a specialised way,
@@ -95,10 +93,11 @@ for embedded systems. Multiple problems arise due to this fact.
 Unix itself and all the tools built upon weren't meant for using on small
 devices. Accordingly, these operating systems contain a lot of historical code.
 Their code base is so big, that it gets more and more difficult to understand
-how their internals work. On these systems usually much of the code is
-irrelevant to a new problem, and embedded systems tend to raise new problems
-often. Codezero is written from scratch to solely target embedded systems and
-as such the source code is %100 relevant. It is small and free from legacy code.
+how their internals work. On these systems usually much of the existing code
+base is irrelevant to newly developed software, and embedded systems need new
+software often. Codezero is written from scratch to solely target embedded
+systems and as such the source code is %100 relevant. It is small and free from
+legacy code.
 
 From a design perspective, these kernels have a monolithic design, and as such
 they may have issues with dependability due to much of the code sharing the same
@@ -116,10 +115,10 @@ Other than modern unix kernels, there are existing operating systems targeting
 embedded devices. Most of them are proprietary, with their own users. Some of
 them are structurally too simplistic, and lack modern features such as paging.
 There ones that are well established, but Codezero will contrast them by
-providing an alternative that will follow the open source development principles
-more closely. Many embedded software projects still use older or closed
-development methods and the right open source methodology would prove favorable
-in the fast-paced nature of embedded software development.
+being a more open-source friendly alternative. Many embedded software projects
+still use older or closed development methods and the right open source
+methodology would prove favorable in the fast-paced nature of embedded software
+development.
 
 Finally, POSIX compliance is only a step, or a partial aim for the Codezero
 microkernel. It is not limited to the goal of just complying with POSIX, which
