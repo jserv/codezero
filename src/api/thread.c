@@ -139,7 +139,6 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *task, *new = (struct ktcb *)zalloc_page();
 	flags &= THREAD_FLAGS_MASK;
-	int ret = 0;
 
 	if (flags == THREAD_CREATE_NEWSPC) {
 		/* Allocate new pgd and copy all kernel areas */
@@ -193,15 +192,13 @@ out:
 	 * system call return environment so that it can safely
 	 * return as a copy of its original thread.
 	 */
-	if (flags == THREAD_CREATE_COPYSPC) {
+	if (flags == THREAD_CREATE_COPYSPC)
 		arch_setup_new_thread(new, task);
-		ret = new->tid;
-	}
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);
 
-	return ret;
+	return 0;
 }
 
 /*
