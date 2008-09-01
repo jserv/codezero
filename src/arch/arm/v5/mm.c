@@ -360,6 +360,23 @@ void remove_mapping(unsigned long vaddr)
 }
 
 /*
+ * Tell if a pgd index is a common kernel index. This is used to distinguish
+ * common kernel entries in a pgd, when copying page tables.
+ */
+int is_kern_pgdi(int i)
+{
+	if ((i >= PGD_INDEX(KERNEL_AREA_START) && i < PGD_INDEX(KERNEL_AREA_END)) ||
+	    (i >= PGD_INDEX(IO_AREA_START) && i < PGD_INDEX(IO_AREA_END)) ||
+	    (i == PGD_INDEX(USER_KIP_PAGE)) ||
+	    (i == PGD_INDEX(ARM_HIGH_VECTOR)) ||
+	    (i == PGD_INDEX(ARM_SYSCALL_VECTOR)) ||
+	    (i == PGD_INDEX(USERSPACE_UART_BASE)))
+		return 1;
+	else
+		return 0;
+}
+
+/*
  * Allocates and copies all levels of page tables from one task to another.
  * Useful when forking.
  */
@@ -368,14 +385,15 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 	pmd_table_t *pmd, *orig;
 	pgd_table_t *pgd;
 
-	/* Allocate and copy pgd */
+	/* Allocate and copy pgd. This includes all kernel entries */
 	pgd = alloc_pgd();
 	memcpy(pgd, from, sizeof(pgd_table_t));
 
-	/* Allocate and copy all valid pmds */
+	/* Allocate and copy all pmds that will be exclusive to new task. */
 	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
-		/* Detect a pmd entry in original pgd? */
-		if ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
+		/* Detect a pmd entry that is not a kernel pmd? */
+		if (!is_kern_pgdi(i) &&
+		    ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE)) {
 			/* Allocate new pmd */
 			pmd = alloc_pmd();
 
