@@ -122,9 +122,18 @@ END_PROC(arm_undef_exception)
  */
 BEGIN_PROC(arm_swi_exception)
 	sub	lr, lr, #4	@ Get address of swi instruction user executed.
-	stmfd	sp, {r0-r8,sp,lr}^ @ Push arguments, LR_USR and SP_USR to stack.
+	stmfd	sp, {r0-r12,sp,lr}^ @ Push arguments, LR_USR and SP_USR to stack.
 	nop
-	@ NOTE: SP_USR MUST be pushed here, otherwise a kernel preemption could
+
+	@ Future optimisation 1:
+	@ For all syscalls we need not push any more than r8 but we push up to
+	@ r12 because upon a fork, a child's easiest way to restore user
+	@ registers is to pop it from stack during return_from_syscall. In future
+	@ fork function could return back to here, save all context into child
+	@ from actual registers instead of reading from stack, and then return.
+
+	@ Future optimisation 2:
+	@ SP_USR MUST be pushed here, otherwise a kernel preemption could
 	@ cause user mode of another process to overwrite SP_USR. The reason we
 	@ save it here is because the preemption path does not currently save it
 	@ if it is a kernel preemption. User SP can also be used here, as the
@@ -140,7 +149,7 @@ BEGIN_PROC(arm_swi_exception)
 	 * LR_svc).
 	 */
 
-	sub	sp, sp, #44	@ stmfd on user registers can't writeback the SP. We do it manually.
+	sub	sp, sp, #60	@ stmfd on user registers can't writeback the SP. We do it manually.
 	mrs	r0, spsr_fc	@ psr also need saving in case this context is interrupted.
 	stmfd	sp!, {r0}
 	enable_irqs r0
@@ -158,7 +167,7 @@ return_from_syscall:		@ if they duplicated another thread's address space.
 	msr	spsr, r1
 	add	sp, sp, #4	@ Skip, r0's location, since r0 already has returned result.
 				@ Note we're obliged to preserve at least r3-r8 because they're MRs.
-	ldmfd	sp!, {r1-r8}	@ Restore r1-r8 pushed to stack earlier. r0 already has return result.
+	ldmfd	sp!, {r1-r12}	@ Restore r1-r8 pushed to stack earlier. r0 already has return result.
 	ldmfd	sp, {sp}^	@ Restore user stack pointer, which might have been corrupt on preemption
 	nop
 	add	sp, sp, #4	@ Update sp.

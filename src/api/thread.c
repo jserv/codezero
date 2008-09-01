@@ -106,17 +106,17 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	 * A cleaner but slower way would be the pager setting child registers
 	 * via exchanges_registers() and start the child thread afterwards.
 	 */
-	new->syscall_regs->r0 = 0;
+	KTCB_REF_MR0(new)[MR_RETURN] = 0;
 
 	/*
-	 * Set up the stack pointer, saved program status register and program
-	 * counter so that next time the new thread schedules, it executes the
-	 * end part of the system call exception where the previous context is
-	 * restored.
+	 * Set up the stack pointer, saved program status register and the
+	 * program counter so that next time the new thread schedules, it
+	 * executes the end part of the system call exception where the
+	 * previous context is restored.
 	 */
 	new->context.sp = (unsigned long)new->syscall_regs;
 	new->context.pc = (unsigned long)&return_from_syscall;
-	new->context.spsr = (unsigned long)orig->context.spsr; 
+	new->context.spsr = (unsigned long)orig->context.spsr;
 
 	/* Copy other relevant fields from original ktcb */
 	new->pagerid = orig->pagerid;
@@ -139,6 +139,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *task, *new = (struct ktcb *)zalloc_page();
 	flags &= THREAD_FLAGS_MASK;
+	int ret = 0;
 
 	if (flags == THREAD_CREATE_NEWSPC) {
 		/* Allocate new pgd and copy all kernel areas */
@@ -192,13 +193,15 @@ out:
 	 * system call return environment so that it can safely
 	 * return as a copy of its original thread.
 	 */
-	if (flags == THREAD_CREATE_COPYSPC)
+	if (flags == THREAD_CREATE_COPYSPC) {
 		arch_setup_new_thread(new, task);
+		ret = new->tid;
+	}
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);
 
-	return 0;
+	return ret;
 }
 
 /*

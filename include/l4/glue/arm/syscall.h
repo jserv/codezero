@@ -33,6 +33,10 @@ typedef struct syscall_context {
 	u32 r6;		/* MR3 */
 	u32 r7;		/* MR4 */
 	u32 r8;		/* MR5 */
+	u32 r9;
+	u32 r10;
+	u32 r11;
+	u32 r12;
 	u32 sp_usr;
 	u32 lr_usr;
 } __attribute__((__packed__)) syscall_context_t;
