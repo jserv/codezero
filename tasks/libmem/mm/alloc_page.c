@@ -19,6 +19,7 @@
 struct page_allocator allocator;
 
 static struct mem_cache *new_dcache();
+static int find_and_free_page_area(void *addr, struct page_allocator *p);
 
 /*
  * Allocate a new page area from @area_sources_start. If no areas left,
@@ -63,25 +64,46 @@ get_free_page_area(int quantity, struct page_allocator *p,
 	if (quantity <= 0)
 		return 0;
 
+	/*
+	 * First, allocate a new area, which may involve recursion.
+	 * If we call this while we touch the global area list, we will
+	 * corrupt it so we call it first.
+	 */
+	if (!(new = new_page_area(p, cache_list)))
+		return 0; /* No more pages */
+
 	list_for_each_entry(area, &p->page_area_list, list) {
-		/* Free but needs dividing */
+
+		/* Check for exact size match */
+		if (area->numpages == quantity && !area->used) {
+			/* Mark it as used */
+			area->used = 1;
+
+		 	/*
+			 * We don't need the area we allocated
+			 * earlier, just free it.
+			 */
+			BUG_ON(find_and_free_page_area(
+				(void *)__pfn_to_addr(new->pfn), p) < 0);
+			return area;
+		}
+
 		if (area->numpages > quantity && !area->used) {
 			area->numpages -= quantity;
-			if (!(new = new_page_area(p, cache_list)))
-				return 0; /* No more pages */
 			new->pfn = area->pfn + area->numpages;
 			new->numpages = quantity;
 			new->used = 1;
 			INIT_LIST_HEAD(&new->list);
 			list_add(&new->list, &area->list);
 			return new;
-		/* Free and exact size match, no need to divide. */
-		} else if (area->numpages == quantity && !area->used) {
-			area->used = 1;
-			return area;
 		}
 	}
-	/* No more pages */
+
+ 	/*
+	 * No more pages. We could not use the area
+	 * we allocated earlier, just free it.
+	 */
+	find_and_free_page_area((void *)__pfn_to_addr(new->pfn), p);
 	return 0;
 }
 

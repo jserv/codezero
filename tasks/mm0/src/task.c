@@ -259,6 +259,28 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 }
 
 /*
+ * Prefaults all mapped regions of a task. The reason we have this is
+ * some servers are in the page fault handling path (e.g. fs0), and we
+ * don't want them to fault and cause deadlocks and circular deps.
+ *
+ * Normally fs0 faults dont cause dependencies because its faults
+ * are handled by the boot pager, which is part of mm0. BUT: It may
+ * cause deadlocks because fs0 may fault while serving a request
+ * from mm0.(Which is expected to also handle the fault).
+ */
+int task_prefault_regions(struct tcb *task, struct vm_file *f)
+{
+	struct vm_area *vma;
+
+	list_for_each_entry(vma, &task->vm_area_list, list) {
+		for (int pfn = vma->pfn_start; pfn < vma->pfn_end; pfn++)
+			BUG_ON(prefault_page(task, __pfn_to_addr(pfn),
+					     VM_READ | VM_WRITE) < 0);
+	}
+	return 0;
+}
+
+/*
  * Main entry point for the creation, initialisation and
  * execution of a new task.
  */
@@ -277,6 +299,10 @@ int task_exec(struct vm_file *f, unsigned long task_region_start,
 
 	if ((err = task_mmap_regions(task, f)) < 0)
 		return err;
+
+	if (ids->tid == VFS_TID)
+		if ((err = task_prefault_regions(task, f)) < 0)
+			return err;
 
 	if ((err =  task_setup_registers(task, 0, 0, 0)) < 0)
 		return err;

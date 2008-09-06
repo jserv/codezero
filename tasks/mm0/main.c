@@ -148,10 +148,52 @@ void handle_requests(void)
 	}
 }
 
+#if 0
+int self_spawn(void)
+{
+	struct task_ids ids;
+	struct tcb *self, *self_child;
+
+	BUG_ON(!(self = find_task(self_tid())));
+
+	ids.tid = THREAD_ID_INVALID;
+	ids.spid = self->spid;
+
+	/* Create a new L4 thread in current thread's address space. */
+	self_child = task_create(&ids, THREAD_CREATE_SAMESPC);
+
+	/* Copy self tcb to child. TODO: ??? Not sure about this */
+	copy_tcb(self_child, self);
+
+	/*
+	 * Create a new utcb. Every pager thread will
+	 * need its own utcb to answer calls.
+	 */
+	self_child->utcb = utcb_vaddr_new();
+
+	/* TODO: Create a new utcb shm for own thread ??? Does it need to shmat??? */
+
+	/* TODO: Notify vfs ??? */
+
+	/* TODO: Modify registers ???, it depends on what state is copied in C0 */
+
+	task_add_global(self_child);
+
+	l4_thread_control(THREAD_RUN, &ids);
+}
+#endif
+
+
 void main(void)
 {
 	/* Initialise the memory, server tasks, mmap and start them. */
 	initialise();
+
+/*
+	if (self_spawn())
+		while (1)
+			;
+*/
 
 	while (1) {
 		handle_requests();

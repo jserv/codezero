@@ -96,30 +96,43 @@ struct vm_object *vma_drop_link(struct vm_obj_link *shadower_link,
 
 /*
  * Checks if page cache pages of lesser is a subset of those of copier.
+ *
+ * FIXME:
  * Note this just checks the page cache, so if any objects have pages
- * swapped to disk, this function does not rule.
+ * swapped to disk, this function won't work, which is a logic error.
+ * This should really count the swapped ones as well.
  */
-int vm_object_is_subset(struct vm_object *copier,
-			struct vm_object *lesser)
+int vm_object_is_subset(struct vm_object *shadow,
+			struct vm_object *original)
 {
 	struct page *pc, *pl;
 
 	/* Copier must have equal or more pages to overlap lesser */
-	if (copier->npages < lesser->npages)
+	if (shadow->npages < original->npages)
 		return 0;
 
 	/*
 	 * Do a page by page comparison. Every lesser page
 	 * must be in copier for overlap.
 	 */
-	list_for_each_entry(pl, &lesser->page_cache, list)
-		if (!(pc = find_page(copier, pl->offset)))
+	list_for_each_entry(pl, &original->page_cache, list)
+		if (!(pc = find_page(shadow, pl->offset)))
 			return 0;
 	/*
 	 * For all pages of lesser vmo, there seems to be a page
 	 * in the copier vmo. So lesser is a subset of copier
 	 */
 	return 1;
+}
+
+static inline int vm_object_is_droppable(struct vm_object *shadow,
+					 struct vm_object *original)
+{
+	if (vm_object_is_subset(shadow, original)
+	    && (original->flags & VM_OBJ_SHADOW))
+		return 1;
+	else
+		return 0;
 }
 
 /*
@@ -231,8 +244,7 @@ struct page *copy_to_new_page(struct page *orig)
 	void *new_vaddr, *vaddr, *paddr;
 	struct page *new;
 
-	if (!(paddr = alloc_page(1)))
-		return 0;
+	BUG_ON(!(paddr = alloc_page(1)));
 
 	new = phys_to_page(paddr);
 
@@ -258,8 +270,8 @@ struct page *copy_to_new_page(struct page *orig)
 int vma_drop_merge_delete(struct vm_obj_link *shadow_link,
 			  struct vm_obj_link *orig_link)
 {
-	/* Can we can drop one link? */
-	if (vm_object_is_subset(shadow_link->obj, orig_link->obj)) {
+	/* Can we drop one link? */
+	if (vm_object_is_droppable(shadow_link->obj, orig_link->obj)) {
 		struct vm_object *dropped;
 
 		dprintf("VM OBJECT is a subset of its shadow.\nShadow:\n");

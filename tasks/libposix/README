@@ -3,18 +3,17 @@ libposix
 
 Copyright (C) 2007 Bahadir Balban
 
-Despite the name, this is a library that supports only a tiny portion of posix functions.
-
-Currently supported functions are:
+Despite the name, this is a library that supports only a small portion of posix functions.
 
 
-Functions to be supported in the near future are:
+Highest priority POSIX functions are:
 
 shmat
 shmget
 shmdt
 mmap
 munmap
+sbrk
 read
 readdir
 write
@@ -27,12 +26,50 @@ mknod
 link
 unlink
 fork
+clone
 execve
 getpid
 wait
 kill
+getenv
+setenv
 
-Others:
+
+Currently supported functions are:
+
+shmat
+shmget
+shmdt
+mmap
+read
+readdir
+write
+lseek
+open
+close
+creat
+mkdir
+mknod
+fork
+
+
+Functions to be supported in the near future are:
+
+munmap
+link
+unlink
+getpid
+execve
+clone
+wait
+kill
+exit
+sbrk
+getenv
+setenv
+
+
+Other calls:
 pipe
 mount
 unmount
