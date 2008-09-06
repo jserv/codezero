@@ -18,77 +18,44 @@
 
 struct page_allocator allocator;
 
-static struct mem_cache *new_dcache();
-static int find_and_free_page_area(void *addr, struct page_allocator *p);
-
 /*
- * Allocate a new page area from @area_sources_start. If no areas left,
- * allocate a new cache first, allocate page area from the new cache.
+ * Allocate a new page area from the page area cache
  */
-static struct page_area *new_page_area(struct page_allocator *p,
-				       struct list_head *ccache)
+static struct page_area *new_page_area(struct page_allocator *p)
 {
 	struct mem_cache *cache;
 	struct page_area *new_area;
-	struct list_head *cache_list;
 
-	if (ccache)
-		cache_list = ccache;
-	else
-		cache_list = &p->dcache_list;
-
-	list_for_each_entry(cache, cache_list, list)
+	list_for_each_entry(cache, &p->pga_cache_list, list) {
 		if ((new_area = mem_cache_alloc(cache)) != 0) {
 			new_area->cache = cache;
+			p->pga_free--;
 			return new_area;
 		}
-
-	/* Must not reach here if a ccache is already used. */
-	BUG_ON(ccache);
-
-	if ((cache = new_dcache(p)) == 0)
-		return 0; /* Denotes out of memory */
-
-	new_area = mem_cache_alloc(cache);
-	new_area->cache = cache;
-	return new_area;
+	}
+	return 0;
 }
 
 /* Given the page @quantity, finds a free region, divides and returns new area. */
 static struct page_area *
-get_free_page_area(int quantity, struct page_allocator *p,
-		   struct list_head *cache_list)
+get_free_page_area(int quantity, struct page_allocator *p)
 {
 	struct page_area *new, *area;
 
 	if (quantity <= 0)
 		return 0;
 
-	/*
-	 * First, allocate a new area, which may involve recursion.
-	 * If we call this while we touch the global area list, we will
-	 * corrupt it so we call it first.
-	 */
-	if (!(new = new_page_area(p, cache_list)))
-		return 0; /* No more pages */
-
 	list_for_each_entry(area, &p->page_area_list, list) {
 
 		/* Check for exact size match */
 		if (area->numpages == quantity && !area->used) {
-			/* Mark it as used */
 			area->used = 1;
-
-		 	/*
-			 * We don't need the area we allocated
-			 * earlier, just free it.
-			 */
-			BUG_ON(find_and_free_page_area(
-				(void *)__pfn_to_addr(new->pfn), p) < 0);
 			return area;
 		}
 
+		/* Divide a bigger area */
 		if (area->numpages > quantity && !area->used) {
+			new = new_page_area(p);
 			area->numpages -= quantity;
 			new->pfn = area->pfn + area->numpages;
 			new->numpages = quantity;
@@ -99,92 +66,10 @@ get_free_page_area(int quantity, struct page_allocator *p,
 		}
 	}
 
- 	/*
-	 * No more pages. We could not use the area
-	 * we allocated earlier, just free it.
-	 */
-	find_and_free_page_area((void *)__pfn_to_addr(new->pfn), p);
+	/* No more pages */
 	return 0;
 }
 
-void *alloc_page(int quantity)
-{
-	struct page_area *p = get_free_page_area(quantity, &allocator, 0);
-
-	if (p)
-		return (void *)__pfn_to_addr(p->pfn);
-	else
-		return 0;
-}
-
-/*
- * Helper to allocate a page using an internal page area cache. Returns
- * a virtual address because these allocations are always internally referenced.
- */
-void *alloc_page_using_cache(struct page_allocator *a, struct list_head *c)
-{
-	struct page_area *p = get_free_page_area(1, a, c);
-
-	if (p)
-		return l4_map_helper((void *)__pfn_to_addr(p->pfn), 1);
-	else
-		return 0;
-
-}
-
-/*
- * There's still free memory, but allocator ran out of page areas stored in
- * dcaches. In this case, the ccache supplies a new page area, which is used to
- * describe a page that stores a new dcache. If ccache is also out of page areas
- * it adds the spare cache to ccache_list, uses that for the current allocation,
- * and allocates a new spare cache for future use
- */
-static struct mem_cache *new_dcache(struct page_allocator *p)
-{
-	void *dpage;	/* Page that keeps data cache */
-	void *spage;	/* Page that keeps spare cache */
-
-	if((dpage = alloc_page_using_cache(p, &p->ccache_list)))
-		return mem_cache_init(dpage, PAGE_SIZE,
-				      sizeof(struct page_area), 0);
-
-	/* If ccache is also full, add the spare page_area cache to ccache */
-	list_add(&p->spare->list, &p->ccache_list);
-
-	/* This must not fail now, and satisfy at least two page requests. */
-	BUG_ON(mem_cache_total_empty(p->spare) < 2);
-	BUG_ON(!(dpage = alloc_page_using_cache(p, &p->ccache_list)));
-	BUG_ON(!(spage = alloc_page_using_cache(p, &p->ccache_list)));
-
-	/* Initialise the new spare and return the new dcache. */
-	p->spare = mem_cache_init(spage, PAGE_SIZE, sizeof(struct page_area),0);
-	return mem_cache_init(dpage, PAGE_SIZE, sizeof(struct page_area), 0);
-}
-
-/*
- * Only to be used at initialisation. Allocates memory caches that contain
- * page_area elements by incrementing the free physical memory mark by
- * PAGE_SIZE.
- */
-static struct mem_cache *new_allocator_startup_cache(unsigned long *start)
-{
-	struct page_area *area;
-	struct mem_cache *cache;
-
-	cache = mem_cache_init(l4_map_helper((void *)*start, 1), PAGE_SIZE,
-			       sizeof(struct page_area), 0);
-	area = mem_cache_alloc(cache);
-
-	/* Initialising the dummy just for illustration */
-	area->pfn = __pfn(*start);
-	area->numpages = 1;
-	area->cache = cache;
-	INIT_LIST_HEAD(&area->list);
-
-	/* FIXME: Should I add this to the page area list? */
-	*start += PAGE_SIZE;
-	return cache;
-}
 
 /*
  * All physical memory is tracked by a simple linked list implementation. A
@@ -199,39 +84,112 @@ static struct mem_cache *new_allocator_startup_cache(unsigned long *start)
  * Also other memory regions like IO are not tracked by alloc_page() but by
  * other means.
  */
+
 void init_page_allocator(unsigned long start, unsigned long end)
 {
-	struct page_area *freemem;
-	struct mem_cache *dcache, *ccache;
+	/* Initialise a page area cache in the first page */
+	struct page_area *freemem, *area;
+	struct mem_cache *cache;
 
-	INIT_LIST_HEAD(&allocator.dcache_list);
-	INIT_LIST_HEAD(&allocator.ccache_list);
 	INIT_LIST_HEAD(&allocator.page_area_list);
+	INIT_LIST_HEAD(&allocator.pga_cache_list);
 
-	/* Primary cache list that stores page areas of regular data. */
-	dcache = new_allocator_startup_cache(&start);
-	list_add(&dcache->list, &allocator.dcache_list);
+	/* Initialise the first page area cache */
+	cache = mem_cache_init(l4_map_helper((void *)start, 1), PAGE_SIZE,
+			       sizeof(struct page_area), 0);
+	list_add(&cache->list, &allocator.pga_cache_list);
 
-	/* The secondary cache list that stores page areas of caches */
-	ccache = new_allocator_startup_cache(&start);
-	list_add(&ccache->list, &allocator.ccache_list);
+	/* Initialise the first area that describes the page just allocated */
+	area = mem_cache_alloc(cache);
+	INIT_LIST_HEAD(&area->list);
+	area->pfn = __pfn(start);
+	area->used = 1;
+	area->numpages = 1;
+	area->cache = cache;
+	list_add(&area->list, &allocator.page_area_list);
+
+	/* Update freemem start address */
+	start += PAGE_SIZE;
 
 	/* Initialise first area that describes all of free physical memory */
-	freemem = mem_cache_alloc(dcache);
+	freemem = mem_cache_alloc(cache);
 	INIT_LIST_HEAD(&freemem->list);
 	freemem->pfn = __pfn(start);
 	freemem->numpages = __pfn(end) - freemem->pfn;
-	freemem->cache = dcache;
+	freemem->cache = cache;
 	freemem->used = 0;
 
 	/* Add it as the first unused page area */
 	list_add(&freemem->list, &allocator.page_area_list);
 
-	/* Allocate and add the spare page area cache */
-	allocator.spare = mem_cache_init(l4_map_helper(alloc_page(1), 1),
-					 PAGE_SIZE, sizeof(struct page_area),
-					 0);
+	/* Initialise free page area counter */
+	allocator.pga_free = mem_cache_total_empty(cache);
 }
+
+/*
+ * Check if we're about to run out of free page area structures.
+ * If so, allocate a new cache of page areas.
+ */
+int check_page_areas(struct page_allocator *p)
+{
+	struct page_area *new;
+	struct mem_cache *newcache;
+	void *newpage;
+
+	/* If only one free area left */
+	if (p->pga_free == 1) {
+
+		/* Use that area to allocate a new page */
+		if (!(new = get_free_page_area(1, p)))
+			return -1;	/* Out of memory */
+
+		/* Free page areas must now be reduced to 0 */
+		BUG_ON(p->pga_free != 0);
+
+		/* Map the new page into virtual memory */
+		newpage = l4_map_helper((void *)__pfn_to_addr(new->pfn), 1);
+
+		/* Initialise it as a new source of page area structures */
+		newcache = mem_cache_init(newpage, PAGE_SIZE,
+					  sizeof(struct page_area), 0);
+
+		/*
+		 * Update the free page area counter
+		 * NOTE: need to lock the allocator here
+		 */
+		p->pga_free += mem_cache_total_empty(newcache);
+
+		/*
+		 * Add the new cache to available
+		 * list of free page area caches
+		 */
+		list_add(&newcache->list, &p->pga_cache_list);
+		/* Unlock here */
+	}
+	return 0;
+}
+
+void *alloc_page(int quantity)
+{
+	struct page_area *new;
+
+	/*
+	 * First make sure we have enough page
+	 * area structures in the cache
+	 */
+	if (check_page_areas(&allocator) < 0)
+		return 0; /* Out of memory */
+
+	/*
+	 * Now allocate the actual pages, using the available
+	 * page area structures to describe the allocation
+	 */
+	new = get_free_page_area(quantity, &allocator);
+
+	/* Return physical address */
+	return (void *)__pfn_to_addr(new->pfn);
+}
+
 
 /* Merges two page areas, frees area cache if empty, returns the merged area. */
 struct page_area *merge_free_areas(struct page_area *before,
@@ -249,8 +207,10 @@ struct page_area *merge_free_areas(struct page_area *before,
 	mem_cache_free(c, after);
 
 	/* Recursively free the cache page */
-	if (mem_cache_is_empty(c))
+	if (mem_cache_is_empty(c)) {
+		list_del(&c->list);
 		BUG_ON(free_page(l4_unmap_helper(c, 1)) < 0)
+	}
 	return before;
 }
 
@@ -259,7 +219,7 @@ static int find_and_free_page_area(void *addr, struct page_allocator *p)
 	struct page_area *area, *prev, *next;
 
 	/* First find the page area to be freed. */
-	list_for_each_entry(area, &p->dcache_list, list)
+	list_for_each_entry(area, &p->page_area_list, list)
 		if (__pfn_to_addr(area->pfn) == (unsigned long)addr &&
 		    area->used) {	/* Found it */
 			area->used = 0;
@@ -269,12 +229,12 @@ static int find_and_free_page_area(void *addr, struct page_allocator *p)
 
 found:
 	/* Now merge with adjacent areas, if possible */
-	if (area->list.prev != &p->dcache_list) {
+	if (area->list.prev != &p->page_area_list) {
 		prev = list_entry(area->list.prev, struct page_area, list);
 		if (!prev->used)
 			area = merge_free_areas(prev, area);
 	}
-	if (area->list.next != &p->dcache_list) {
+	if (area->list.next != &p->page_area_list) {
 		next = list_entry(area->list.next, struct page_area, list);
 		if (!next->used)
 			area = merge_free_areas(area, next);

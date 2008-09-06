@@ -15,14 +15,9 @@ struct page_area {
 };
 
 struct page_allocator {
-	/* Keep track of page area lists and allocated caches for page areas. */
 	struct list_head page_area_list;
-	/* Caches of page areas that refer to any kind of data */
-	struct list_head dcache_list;
-	/* Caches of page areas that refer to cache pages */
-	struct list_head ccache_list;
-	/* A spare cache to aid when both caches are full */
-	struct mem_cache *spare;
+	struct list_head pga_cache_list;
+	int pga_free;
 };
 
 /* Initialises the page allocator */
