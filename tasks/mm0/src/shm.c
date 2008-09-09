@@ -220,7 +220,7 @@ struct vm_file *shm_new(key_t key, unsigned long npages)
  * Fast internal path to do shmget/shmat() together for mm0's
  * convenience. Works for existing areas.
  */
-void *shmat_shmget_internal(key_t key, void *shmaddr)
+void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
 {
 	struct vm_file *shm_file;
 	struct shm_descriptor *shm_desc;
@@ -230,7 +230,7 @@ void *shmat_shmget_internal(key_t key, void *shmaddr)
 		/* Found the key, shmat that area */
 		if (shm_desc->key == key)
 			return do_shmat(shm_file, shmaddr,
-					0, find_task(self_tid()));
+					0, task);
 	}
 
 	return PTR_ERR(-EEXIST);

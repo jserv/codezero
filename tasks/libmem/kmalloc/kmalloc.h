@@ -23,9 +23,9 @@ extern struct list_head km_area_start;
 void kmalloc_init(void);
 
 /* Kmalloc allocation functions */
-void *kmalloc(int size);
-void *kzalloc(int size);
-int kfree(void *vaddr);
+void *kmalloc(int size) __attribute__((weak));
+void *kzalloc(int size) __attribute__((weak));
+int kfree(void *vaddr) __attribute__((weak));
 
 #endif /* __KMALLOC_H__ */
 

@@ -30,7 +30,7 @@ int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size
 {
 	int err;
 
-	//	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	l4_save_ipcregs();
 

@@ -101,5 +101,6 @@ void init_pm(struct initdata *initdata);
 
 struct tcb *task_create(struct task_ids *ids, unsigned int flags);
 int send_task_data(l4id_t requester);
+void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
 
 #endif /* __TASK_H__ */

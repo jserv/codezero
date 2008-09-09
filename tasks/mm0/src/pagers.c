@@ -52,8 +52,11 @@ int default_release_pages(struct vm_object *vm_obj)
 		/* Return page back to allocator */
 		free_page((void *)page_to_phys(p));
 
-		/* Free the page structure */
-		kfree(p);
+		/*
+		 * Reset the page structure.
+		 * No freeing for page_array pages
+		 */
+		memset(p, 0, sizeof(*p));
 
 		/* Reduce object page count */
 		BUG_ON(--vm_obj->npages < 0);

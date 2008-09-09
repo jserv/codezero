@@ -43,7 +43,7 @@ struct shm_descriptor {
 /* Initialises shared memory bookkeeping structures */
 void shm_init();
 
-void *shmat_shmget_internal(key_t key, void *shmaddr);
+void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr);
 struct vm_file *shm_new(key_t key, unsigned long npages);
 
 #endif /* __SHM_H__ */

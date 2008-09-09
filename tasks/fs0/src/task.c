@@ -89,6 +89,38 @@ struct tcb *create_tcb(void)
 }
 
 /*
+ * Attaches to task's utcb. FIXME: Add SHM_RDONLY and test it.
+ * FIXME: This calls the pager and is a potential for deadlock
+ */
+int task_utcb_attach(struct tcb *t)
+{
+	int shmid;
+	void *shmaddr;
+
+	/* Use it as a key to create a shared memory region */
+	if ((shmid = shmget((key_t)t->utcb_address, PAGE_SIZE, 0)) == -1)
+		goto out_err;
+
+	/* Attach to the region */
+	if ((int)(shmaddr = shmat(shmid, (void *)t->utcb_address, 0)) == -1)
+		goto out_err;
+
+	/* Ensure address is right */
+	if ((unsigned long)shmaddr != t->utcb_address)
+		return -EINVAL;
+
+	// printf("%s: Mapped utcb of task %d @ 0x%x\n",
+	//       __TASKNAME__, t->tid, shmaddr);
+
+	return 0;
+
+out_err:
+	printf("%s: Mapping utcb of task %d failed with err: %d.\n",
+	       __TASKNAME__, t->tid, errno);
+	return -EINVAL;
+}
+
+/*
  * Receives ipc from pager about a new fork event and
  * the information on the resulting child task.
  */
@@ -121,6 +153,7 @@ int pager_notify_fork(l4id_t sender, l4id_t parid,
 	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
 
 	l4_ipc_return(0);
+
 	printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
 
 	return 0;
@@ -150,35 +183,6 @@ struct task_data_head *receive_pager_taskdata(void)
 	//      ((struct task_data_head *)utcb_page)->total);
 
 	return (struct task_data_head *)utcb_page;
-}
-
-/* Attaches to task's utcb. FIXME: Add SHM_RDONLY and test it. */
-int task_utcb_attach(struct tcb *t)
-{
-	int shmid;
-	void *shmaddr;
-
-	/* Use it as a key to create a shared memory region */
-	if ((shmid = shmget((key_t)t->utcb_address, PAGE_SIZE, 0)) == -1)
-		goto out_err;
-
-	/* Attach to the region */
-	if ((int)(shmaddr = shmat(shmid, (void *)t->utcb_address, 0)) == -1)
-		goto out_err;
-
-	/* Ensure address is right */
-	if ((unsigned long)shmaddr != t->utcb_address)
-		return -EINVAL;
-
-	// printf("%s: Mapped utcb of task %d @ 0x%x\n",
-	//       __TASKNAME__, t->tid, shmaddr);
-
-	return 0;
-
-out_err:
-	printf("%s: Mapping utcb of task %d failed with err: %d.\n",
-	       __TASKNAME__, t->tid, errno);
-	return -EINVAL;
 }
 
 

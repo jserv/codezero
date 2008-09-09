@@ -120,6 +120,7 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 	return err;
 }
 
+
 int do_fork(struct tcb *parent)
 {
 	struct tcb *child;
@@ -155,7 +156,13 @@ int do_fork(struct tcb *parent)
 	}
 	/* FIXME: We should munmap() parent's utcb page from child */
 
-	/* Notify fs0 about forked process */
+	/*
+	 * Map and prefault child utcb to vfs so that vfs need not
+	 * call us with such requests
+	 */
+	task_map_prefault_utcb(find_task(VFS_TID), child);
+
+	/* We can now notify vfs about forked process */
 	vfs_notify_fork(child, parent);
 
 	/* Add child to global task list */
