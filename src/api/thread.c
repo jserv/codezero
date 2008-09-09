@@ -175,6 +175,12 @@ out:
 		if ((ids->spid = id_get(space_id_pool,
 					ids->spid)) < 0)
 			ids->spid = id_new(space_id_pool);
+
+		/* It also gets a thread group id */
+		if ((ids->tgid = id_get(tgroup_id_pool,
+					ids->tgid)) < 0)
+			ids->tgid = id_new(tgroup_id_pool);
+
 	}
 
 	/* Set all ids */

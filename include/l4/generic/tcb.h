@@ -51,6 +51,7 @@ typedef struct arm_context {
 struct task_ids {
 	l4id_t tid;
 	l4id_t spid;
+	l4id_t tgid;
 };
 
 struct ktcb {
@@ -70,6 +71,7 @@ struct ktcb {
 	/* Thread information */
 	l4id_t tid;		/* Global thread id */
 	l4id_t spid;		/* Global space id */
+	l4id_t tgid;		/* Global thread group id */
 
 	/* Flags to hint scheduler on future task state */
 	unsigned int schedfl;
@@ -140,14 +142,17 @@ static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 {
 	task->tid = ids->tid;
 	task->spid = ids->spid;
+	task->tgid = ids->tgid;
 }
 
 #define THREAD_IDS_MAX		1024
 #define SPACE_IDS_MAX		1024
+#define TGROUP_IDS_MAX		1024
 
 
 extern struct id_pool *thread_id_pool;
 extern struct id_pool *space_id_pool;
+extern struct id_pool *tgroup_id_pool;
 
 #endif /* __TCB_H__ */
 

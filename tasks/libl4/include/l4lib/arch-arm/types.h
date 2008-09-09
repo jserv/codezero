@@ -5,6 +5,7 @@
 struct task_ids {
 	int tid;
 	int spid;
+	int tgid;
 };
 
 #include <l4/arch/arm/types.h>

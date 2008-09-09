@@ -71,6 +71,8 @@ int sys_getid(syscall_context_t *regs)
 
 	ids->tid = this->tid;
 	ids->spid = this->spid;
+	ids->tgid = this->tgid;
+
 	return 0;
 }
 
