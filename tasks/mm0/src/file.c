@@ -111,8 +111,8 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	}
 
 	/* Assign vnum to given fd on the task */
-	t->fd[fd].vnum = vnum;
-	t->fd[fd].cursor = 0;
+	t->files->fd[fd].vnum = vnum;
+	t->files->fd[fd].cursor = 0;
 
 	/* Check if that vm_file is already in the list */
 	list_for_each_entry(vmfile, &vm_file_list, list) {
@@ -120,7 +120,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 		if ((vmfile->type & VM_FILE_VFS) &&
 		    vm_file_to_vnum(vmfile) == vnum) {
 			/* Add a reference to it from the task */
-			t->fd[fd].vmfile = vmfile;
+			t->files->fd[fd].vmfile = vmfile;
 			vmfile->openers++;
 			l4_ipc_return(0);
 			return 0;
@@ -137,7 +137,7 @@ int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
 	vm_file_to_vnum(vmfile) = vnum;
 	vmfile->length = length;
 	vmfile->vm_obj.pager = &file_pager;
-	t->fd[fd].vmfile = vmfile;
+	t->files->fd[fd].vmfile = vmfile;
 	vmfile->openers++;
 
 	/* Add to global list */
@@ -340,11 +340,11 @@ int fsync_common(l4id_t sender, int fd)
 	BUG_ON(!(task = find_task(sender)));
 
 	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile)
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile)
 		return -EBADF;
 
 	/* Finish I/O on file */
-	f = task->fd[fd].vmfile;
+	f = task->files->fd[fd].vmfile;
 	if ((err = flush_file_pages(f)) < 0)
 		return err;
 
@@ -366,11 +366,11 @@ int fd_close(l4id_t sender, int fd)
 		return err;
 
 	/* Reduce file's opener count */
-	task->fd[fd].vmfile->openers--;
+	task->files->fd[fd].vmfile->openers--;
 
-	task->fd[fd].vnum = 0;
-	task->fd[fd].cursor = 0;
-	task->fd[fd].vmfile = 0;
+	task->files->fd[fd].vnum = 0;
+	task->files->fd[fd].cursor = 0;
+	task->files->fd[fd].vmfile = 0;
 
 	return 0;
 }
@@ -567,7 +567,7 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	BUG_ON(!(task = find_task(sender)));
 
 	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile) {
 		retval = -EBADF;
 		goto out;
 	}
@@ -589,8 +589,8 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 		goto out;
 	}
 
-	vmfile = task->fd[fd].vmfile;
-	cursor = task->fd[fd].cursor;
+	vmfile = task->files->fd[fd].vmfile;
+	cursor = task->files->fd[fd].cursor;
 
 	/* If cursor is beyond file end, simply return 0 */
 	if (cursor >= vmfile->length) {
@@ -627,7 +627,7 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	}
 
 	/* Update cursor on success */
-	task->fd[fd].cursor += count;
+	task->files->fd[fd].cursor += count;
 	retval = count;
 
 out:
@@ -655,7 +655,7 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	BUG_ON(!(task = find_task(sender)));
 
 	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile) {
 		retval = -EBADF;
 		goto out;
 	}
@@ -677,8 +677,8 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 		goto out;
 	}
 
-	vmfile = task->fd[fd].vmfile;
-	cursor = task->fd[fd].cursor;
+	vmfile = task->files->fd[fd].vmfile;
+	cursor = task->files->fd[fd].cursor;
 
 	/* See what pages user wants to write */
 	pfn_wstart = __pfn(cursor);
@@ -751,10 +751,10 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	 * of this change when the file is flushed (e.g. via fflush()
 	 * or close())
 	 */
-	if (task->fd[fd].cursor + count > vmfile->length)
-		vmfile->length = task->fd[fd].cursor + count;
+	if (task->files->fd[fd].cursor + count > vmfile->length)
+		vmfile->length = task->files->fd[fd].cursor + count;
 
-	task->fd[fd].cursor += count;
+	task->files->fd[fd].cursor += count;
 	retval = count;
 
 out:
@@ -772,7 +772,7 @@ int sys_lseek(l4id_t sender, int fd, off_t offset, int whence)
 	BUG_ON(!(task = find_task(sender)));
 
 	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->fd[fd].vmfile) {
+	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile) {
 		retval = -EBADF;
 		goto out;
 	}
@@ -785,23 +785,23 @@ int sys_lseek(l4id_t sender, int fd, off_t offset, int whence)
 
 	switch (whence) {
 	case SEEK_SET:
-		retval = task->fd[fd].cursor = offset;
+		retval = task->files->fd[fd].cursor = offset;
 		break;
 	case SEEK_CUR:
-		cursor = (unsigned long long)task->fd[fd].cursor;
+		cursor = (unsigned long long)task->files->fd[fd].cursor;
 		if (cursor + offset > 0xFFFFFFFF)
 			retval = -EINVAL;
 		else
-			retval = task->fd[fd].cursor += offset;
+			retval = task->files->fd[fd].cursor += offset;
 		break;
 	case SEEK_END:
-		cursor = (unsigned long long)task->fd[fd].cursor;
-		total = (unsigned long long)task->fd[fd].vmfile->length;
+		cursor = (unsigned long long)task->files->fd[fd].cursor;
+		total = (unsigned long long)task->files->fd[fd].vmfile->length;
 		if (cursor + total > 0xFFFFFFFF)
 			retval = -EINVAL;
 		else {
-			retval = task->fd[fd].cursor =
-				task->fd[fd].vmfile->length + offset;
+			retval = task->files->fd[fd].cursor =
+				task->files->fd[fd].vmfile->length + offset;
 		}
 	default:
 		retval = -EINVAL;

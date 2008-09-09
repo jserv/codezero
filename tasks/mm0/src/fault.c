@@ -569,7 +569,7 @@ int vm_freeze_shadows(struct tcb *task)
 	struct vm_object *vmo;
 	struct page *p;
 
-	list_for_each_entry(vma, &task->vm_area_list, list) {
+	list_for_each_entry(vma, &task->vm_area_head->list, list) {
 
 		/* Shared vmas don't have shadows */
 		if (vma->flags & VMA_SHARED)
@@ -699,7 +699,7 @@ int page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 
 	/* Get vma info */
 	if (!(fault.vma = find_vma(fault.address,
-				   &fault.task->vm_area_list)))
+				   &fault.task->vm_area_head->list)))
 		printf("Hmm. No vma for faulty region. "
 		       "Bad things will happen.\n");
 
@@ -726,7 +726,7 @@ int validate_task_range(struct tcb *t, unsigned long start,
 
 	/* Find the vma that maps that virtual address */
 	for (unsigned long vaddr = start; vaddr < end; vaddr += PAGE_SIZE) {
-		if (!(vma = find_vma(vaddr, &t->vm_area_list))) {
+		if (!(vma = find_vma(vaddr, &t->vm_area_head->list))) {
 			printf("%s: No VMA found for 0x%x on task: %d\n",
 			       __FUNCTION__, vaddr, t->tid);
 			return -EINVAL;
@@ -752,7 +752,7 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 	struct page *page;
 
 	/* First find the vma that maps that virtual address */
-	if (!(vma = find_vma(virtual, &t->vm_area_list))) {
+	if (!(vma = find_vma(virtual, &t->vm_area_head->list))) {
 		printf("%s: No VMA found for 0x%x on task: %d\n",
 		       __FUNCTION__, virtual, t->tid);
 		return PTR_ERR(-EINVAL);
@@ -813,7 +813,7 @@ int prefault_page(struct tcb *task, unsigned long address,
 
 	/* Find the vma */
 	if (!(fault.vma = find_vma(fault.address,
-				   &fault.task->vm_area_list))) {
+				   &fault.task->vm_area_head->list))) {
 		err = -EINVAL;
 		dprintf("%s: Invalid: No vma for given address. %d\n",
 			__FUNCTION__, err);

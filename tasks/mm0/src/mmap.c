@@ -292,7 +292,7 @@ int do_munmap(void *vaddr, unsigned long npages, struct tcb *task)
 	int err;
 
 	/* Check if any such vma exists */
-	if (!(vma = find_vma((unsigned long)vaddr, &task->vm_area_list)))
+	if (!(vma = find_vma((unsigned long)vaddr, &task->vm_area_head.list)))
 		return -EINVAL;
 
 	/*
@@ -392,11 +392,11 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 		return 0;
 
 	/* If no vmas, first map slot is available. */
-	if (list_empty(&task->vm_area_list))
+	if (list_empty(&task->vm_area_head->list))
 		return task->start;
 
 	/* First vma to check our range against */
-	vma = list_entry(task->vm_area_list.next, struct vm_area, list);
+	vma = list_entry(task->vm_area_head->list.next, struct vm_area, list);
 
 	/* Start searching from task's end of data to start of stack */
 	while (pfn_end <= __pfn(task->end)) {
@@ -412,7 +412,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 			 * Decision point, no more vmas left to check.
 			 * Are we out of task map area?
 			 */
-			if (vma->list.next == &task->vm_area_list) {
+			if (vma->list.next == &task->vm_area_head->list) {
 				if (pfn_end > __pfn(task->end))
 					break; /* Yes, fail */
 				else	/* No, success */
@@ -519,7 +519,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		 * To be fixed soon. We need to handle intersection,
 		 * splitting, shrink/grow etc.
 		 */
-		list_for_each_entry(mapped, &task->vm_area_list, list)
+		list_for_each_entry(mapped, &task->vm_area_head->list, list)
 			BUG_ON(vma_intersect(map_pfn, map_pfn + npages,
 					     mapped));
 	}
@@ -537,7 +537,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	/* Attach link to object */
 	vm_link_object(vmo_link, &mapfile->vm_obj);
 
-	/* ADd link to vma list */
+	/* Add link to vma list */
 	list_add_tail(&vmo_link->list, &new->vm_obj_list);
 
 	/*
@@ -566,7 +566,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	/* Finished initialising the vma, add it to task */
 	dprintf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
 		map_address, map_address + npages * PAGE_SIZE);
-	list_add(&new->list, &task->vm_area_list);
+	task_add_vma(task, new);
 
 	return 0;
 }
@@ -607,7 +607,7 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 		file = 0;
 		vmflags |= VMA_ANONYMOUS;
 	} else {
-		file = task->fd[fd].vmfile;
+		file = task->files->fd[fd].vmfile;
 	}
 
 	if (flags & MAP_FIXED)

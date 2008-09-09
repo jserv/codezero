@@ -24,7 +24,7 @@ int copy_vmas(struct tcb *to, struct tcb *from)
 	struct vm_area *vma, *new_vma;
 	struct vm_obj_link *vmo_link, *new_link;
 
-	list_for_each_entry(vma, &from->vm_area_list, list) {
+	list_for_each_entry(vma, &from->vm_area_head->list, list) {
 
 		/* Create a new vma */
 		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
@@ -49,13 +49,13 @@ int copy_vmas(struct tcb *to, struct tcb *from)
 						  &vma->vm_obj_list)));
 
 		/* All link copying is finished, now add the new vma to task */
-		list_add_tail(&new_vma->list, &to->vm_area_list);
+		task_add_vma(to, new_vma);
 	}
 
 	return 0;
 }
 
-int copy_tcb(struct tcb *to, struct tcb *from)
+int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 {
 	/* Copy program segment boundary information */
 	to->start = from->start;
@@ -77,12 +77,23 @@ int copy_tcb(struct tcb *to, struct tcb *from)
 	to->map_start = from->map_start;
 	to->map_end = from->map_end;
 
-	/* Copy all vm areas */
-	copy_vmas(to, from);
+	/* Sharing the list of vmas */
+	if (flags & TCB_SHARED_VM) {
+		to->vm_area_head = from->vm_area_head;
+		to->vm_area_head->tcb_refs++;
+	} else {
+	       	/* Copy all vm areas */
+		copy_vmas(to, from);
+	}
 
 	/* Copy all file descriptors */
-	memcpy(to->fd, from->fd,
-	       TASK_FILES_MAX * sizeof(struct file_descriptor));
+	if (flags & TCB_SHARED_FILES) {
+		to->files = from->files;
+		to->files->tcb_refs++;
+	} else {
+	       	/* Copy all file descriptors */
+		memcpy(to->files, from->files, sizeof(*to->files));
+	}
 
 	return 0;
 }
@@ -137,10 +148,11 @@ int do_fork(struct tcb *parent)
 	 * Create a new L4 thread with parent's page tables
 	 * kernel stack and kernel-side tcb copied
 	 */
-	child = task_create(&ids, THREAD_CREATE_COPYSPC);
+	child = task_create(&ids, THREAD_CREATE_COPYSPC,
+			    TCB_NO_SHARING);
 
 	/* Copy parent tcb to child */
-	copy_tcb(child, parent);
+	copy_tcb(child, parent, TCB_NO_SHARING);
 
 	/* Create new utcb for child since it can't use its parent's */
 	child->utcb = utcb_vaddr_new();

@@ -11,6 +11,7 @@
 #include <l4lib/kip.h>
 #include <l4lib/utcb.h>
 #include <l4lib/ipcdefs.h>
+#include <l4lib/types.h>
 #include <l4/api/thread.h>
 #include <l4/api/space.h>
 #include <l4/api/ipc.h>
@@ -148,7 +149,6 @@ void handle_requests(void)
 	}
 }
 
-#if 0
 int self_spawn(void)
 {
 	struct task_ids ids;
@@ -156,14 +156,16 @@ int self_spawn(void)
 
 	BUG_ON(!(self = find_task(self_tid())));
 
-	ids.tid = THREAD_ID_INVALID;
+	ids.tid = TASK_ID_INVALID;
 	ids.spid = self->spid;
+	ids.tgid = self->tgid;
 
 	/* Create a new L4 thread in current thread's address space. */
-	self_child = task_create(&ids, THREAD_CREATE_SAMESPC);
+	self_child = task_create(&ids, THREAD_CREATE_SAMESPC,
+				 TCB_SHARED_VM | TCB_SHARED_FILES);
 
 	/* Copy self tcb to child. TODO: ??? Not sure about this */
-	copy_tcb(self_child, self);
+	copy_tcb(self_child, self, TCB_SHARED_VM | TCB_SHARED_FILES);
 
 	/*
 	 * Create a new utcb. Every pager thread will
@@ -171,7 +173,13 @@ int self_spawn(void)
 	 */
 	self_child->utcb = utcb_vaddr_new();
 
-	/* TODO: Create a new utcb shm for own thread ??? Does it need to shmat??? */
+	/* Map utcb to child */
+	task_map_prefault_utcb(self_child, self_child);
+
+	/*
+	 * TODO: Set up a child stack by mmapping an anonymous
+	 * region of mmap's choice. TODO: Time to add MAP_GROWSDOWN ???
+	 */
 
 	/* TODO: Notify vfs ??? */
 
@@ -180,8 +188,9 @@ int self_spawn(void)
 	task_add_global(self_child);
 
 	l4_thread_control(THREAD_RUN, &ids);
+
+	return 0;
 }
-#endif
 
 
 void main(void)

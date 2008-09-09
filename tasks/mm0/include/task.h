@@ -25,6 +25,12 @@
 #define DEFAULT_UTCB_SIZE		PAGE_SIZE
 
 
+enum tcb_create_flags {
+	TCB_NO_SHARING = 0,
+	TCB_SHARED_VM = 1,
+	TCB_SHARED_FILES = 2,
+};
+
 struct vm_file;
 
 struct file_descriptor {
@@ -32,6 +38,17 @@ struct file_descriptor {
 	unsigned long cursor;
 	struct vm_file *vmfile;
 };
+
+struct task_fd_head {
+	struct file_descriptor fd[TASK_FILES_MAX];
+	int tcb_refs;
+};
+
+struct task_vma_head {
+	struct list_head list;
+	int tcb_refs;
+};
+
 
 /* Stores all task information that can be kept in userspace. */
 struct tcb {
@@ -44,6 +61,7 @@ struct tcb {
 	/* Task ids */
 	int tid;
 	int spid;
+	int tgid;
 
 	/* Related task ids */
 	unsigned int pagerid;	/* Task's pager */
@@ -76,10 +94,10 @@ struct tcb {
 	void *utcb;
 
 	/* Virtual memory areas */
-	struct list_head vm_area_list;
+	struct task_vma_head *vm_area_head;
 
 	/* File descriptors for this task */
-	struct file_descriptor fd[TASK_FILES_MAX];
+	struct task_fd_head *files;
 };
 
 /* Structures to use when sending new task information to vfs */
@@ -99,8 +117,11 @@ void task_add_global(struct tcb *t);
 struct initdata;
 void init_pm(struct initdata *initdata);
 
-struct tcb *task_create(struct task_ids *ids, unsigned int flags);
+struct tcb *task_create(struct task_ids *ids,
+			unsigned int ctrl_flags,
+			unsigned int alloc_flags);
 int send_task_data(l4id_t requester);
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
+int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags);
 
 #endif /* __TASK_H__ */
