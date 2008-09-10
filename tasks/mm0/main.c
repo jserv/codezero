@@ -161,7 +161,7 @@ int self_spawn(void)
 	ids.tgid = self->tgid;
 
 	/* Create a new L4 thread in current thread's address space. */
-	self_child = task_create(&ids, THREAD_CREATE_SAMESPC,
+	self_child = task_create(self, &ids, THREAD_CREATE_SAMESPC,
 				 TCB_SHARED_VM | TCB_SHARED_FILES);
 
 	/* Copy self tcb to child. TODO: ??? Not sure about this */

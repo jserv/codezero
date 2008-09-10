@@ -25,14 +25,14 @@
 #include <utcb.h>
 #include <task.h>
 #include <shm.h>
-
-/* A separate list than the generic file list that keeps just the boot files */
-LIST_HEAD(boot_file_list);
+#include <mmap.h>
 
 struct tcb_head {
 	struct list_head list;
 	int total;			/* Total threads */
-} tcb_head;
+} tcb_head = {
+	.list = { &tcb_head.list, &tcb_head.list },
+};
 
 void print_tasks(void)
 {
@@ -61,15 +61,6 @@ struct tcb *find_task(int tid)
 		}
 	}
 	return 0;
-}
-
-/* Allocate structures that could be shared upon a clone() */
-void tcb_alloc_shared(struct tcb *task)
-{
-	BUG_ON(!(task->vm_area_head = kmalloc(sizeof(*task->vm_area_head))));
-	BUG_ON(!(task->files = kmalloc(sizeof(*task->files))));
-	task->files->tcb_refs = 1;
-	task->vm_area_head->tcb_refs = 1;
 }
 
 struct tcb *tcb_alloc_init(unsigned int flags)
@@ -113,9 +104,93 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 }
 
 
-struct tcb *task_create(struct task_ids *ids,
-			unsigned int ctrl_flags,
-			unsigned int alloc_flags)
+/*
+ * Copy all vmas from the given task and populate each with
+ * links to every object that the original vma is linked to.
+ * Note, that we don't copy vm objects but just the links to
+ * them, because vm objects are not per-process data.
+ */
+int copy_vmas(struct tcb *to, struct tcb *from)
+{
+	struct vm_area *vma, *new_vma;
+	struct vm_obj_link *vmo_link, *new_link;
+
+	list_for_each_entry(vma, &from->vm_area_head->list, list) {
+
+		/* Create a new vma */
+		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
+				  vma->flags, vma->file_offset);
+
+		/* Get the first object on the vma */
+		BUG_ON(list_empty(&vma->vm_obj_list));
+		vmo_link = list_entry(vma->vm_obj_list.next,
+				      struct vm_obj_link, list);
+		do {
+			/* Create a new link */
+			new_link = vm_objlink_create();
+
+			/* Link object with new link */
+			vm_link_object(new_link, vmo_link->obj);
+
+			/* Add the new link to vma in object order */
+			list_add_tail(&new_link->list, &new_vma->vm_obj_list);
+
+		/* Continue traversing links, doing the same copying */
+		} while((vmo_link = vma_next_link(&vmo_link->list,
+						  &vma->vm_obj_list)));
+
+		/* All link copying is finished, now add the new vma to task */
+		task_add_vma(to, new_vma);
+	}
+
+	return 0;
+}
+
+int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
+{
+	/* Copy program segment boundary information */
+	to->start = from->start;
+	to->end = from->end;
+	to->text_start = from->text_start;
+	to->text_end = from->text_end;
+	to->data_start = from->data_start;
+	to->data_end = from->data_end;
+	to->bss_start = from->bss_start;
+	to->bss_end = from->bss_end;
+	to->stack_start = from->stack_start;
+	to->stack_end = from->stack_end;
+	to->heap_start = from->heap_start;
+	to->heap_end = from->heap_end;
+	to->env_start = from->env_start;
+	to->env_end = from->env_end;
+	to->args_start = from->args_start;
+	to->args_end = from->args_end;
+	to->map_start = from->map_start;
+	to->map_end = from->map_end;
+
+	/* Sharing the list of vmas */
+	if (flags & TCB_SHARED_VM) {
+		to->vm_area_head = from->vm_area_head;
+		to->vm_area_head->tcb_refs++;
+	} else {
+	       	/* Copy all vm areas */
+		copy_vmas(to, from);
+	}
+
+	/* Copy all file descriptors */
+	if (flags & TCB_SHARED_FILES) {
+		to->files = from->files;
+		to->files->tcb_refs++;
+	} else {
+	       	/* Copy all file descriptors */
+		memcpy(to->files, from->files, sizeof(*to->files));
+	}
+
+	return 0;
+}
+
+struct tcb *task_create(struct tcb *orig, struct task_ids *ids,
+			unsigned int ctrl_flags, unsigned int share_flags)
 {
 	struct tcb *task;
 	int err;
@@ -127,12 +202,21 @@ struct tcb *task_create(struct task_ids *ids,
 	}
 
 	/* Create a task and use given space and thread ids. */
-	if (IS_ERR(task = tcb_alloc_init(alloc_flags)))
+	if (IS_ERR(task = tcb_alloc_init(share_flags)))
 		return PTR_ERR(task);
 
+	/* Set task's ids */
 	task->tid = ids->tid;
 	task->spid = ids->spid;
 	task->tgid = ids->tgid;
+
+	/*
+	 * If an original task has been specified, that means either
+	 * we are forking, or we are cloning the original tcb fully
+	 * or partially. Therefore we copy tcbs depending on share flags.
+	 */
+	if (orig)
+		copy_tcb(task, orig, share_flags);
 
 	return task;
 }
@@ -252,48 +336,6 @@ int task_start(struct tcb *task, struct task_ids *ids)
 }
 
 /*
- * A specialised function for setting up the task environment of mm0.
- * Essentially all the memory regions are set up but a new task isn't
- * created, registers aren't assigned, and thread not started, since
- * these are all already done by the kernel. But we do need a memory
- * environment for mm0, hence this function.
- */
-int mm0_task_init(struct vm_file *f, unsigned long task_start,
-		  unsigned long task_end, struct task_ids *ids)
-{
-	int err;
-	struct tcb *task;
-
-	/*
-	 * The thread itself is already known by the kernel, so we just
-	 * allocate a local task structure.
-	 */
-	BUG_ON(IS_ERR(task = tcb_alloc_init(TCB_NO_SHARING)));
-
-	task->tid = ids->tid;
-	task->spid = ids->spid;
-	task->tgid = ids->tgid;
-
-	if ((err = task_setup_regions(f, task, task_start, task_end)) < 0)
-		return err;
-
-	if ((err =  task_mmap_regions(task, f)) < 0)
-		return err;
-
-	/* Add the task to the global task list */
-	list_add_tail(&task->list, &tcb_head.list);
-	tcb_head.total++;
-
-	/* Add the file to global vm lists */
-	list_del_init(&f->list);
-	list_del_init(&f->vm_obj.list);
-	list_add(&f->list, &vm_file_list);
-	list_add(&f->vm_obj.list, &vm_object_list);
-
-	return 0;
-}
-
-/*
  * Prefaults all mapped regions of a task. The reason we have this is
  * some servers are in the page fault handling path (e.g. fs0), and we
  * don't want them to fault and cause deadlocks and circular deps.
@@ -325,7 +367,7 @@ int task_exec(struct vm_file *f, unsigned long task_region_start,
 	struct tcb *task;
 	int err;
 
-	if (IS_ERR(task = task_create(ids, THREAD_CREATE_NEWSPC,
+	if (IS_ERR(task = task_create(0, ids, THREAD_CREATE_NEWSPC,
 				      TCB_NO_SHARING)))
 		return (int)task;
 
@@ -358,100 +400,13 @@ int task_exec(struct vm_file *f, unsigned long task_region_start,
 	return 0;
 }
 
-struct vm_file *initdata_next_bootfile(struct initdata *initdata)
-{
-	struct vm_file *file, *n;
-	list_for_each_entry_safe(file, n, &initdata->boot_file_list,
-				 list) {
-		list_del_init(&file->list);
-		return file;
-	}
-	return 0;
-}
-
-/*
- * Reads boot files from init data, determines their task ids if they
- * match with particular servers, and starts the tasks.
- */
-int start_boot_tasks(struct initdata *initdata)
-{
-	struct vm_file *file = 0, *fs0 = 0, *mm0 = 0, *n;
-	struct svc_image *img;
-	struct task_ids ids;
-	struct list_head files;
-	int total = 0;
-
-	INIT_LIST_HEAD(&tcb_head.list);
-	INIT_LIST_HEAD(&files);
-
-	/* Separate out special server tasks and regular files */
-	do {
-		file = initdata_next_bootfile(initdata);
-
-		if (file) {
-			BUG_ON(file->type != VM_FILE_BOOTFILE);
-			img = file->priv_data;
-			if (!strcmp(img->name, __PAGERNAME__))
-				mm0 = file;
-			else if (!strcmp(img->name, __VFSNAME__))
-				fs0 = file;
-			else
-				list_add(&file->list, &files);
-		} else
-			break;
-	} while (1);
-
-	/* MM0 needs partial initialisation since it's already running. */
-	printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
-	ids.tid = PAGER_TID;
-	ids.spid = PAGER_TID;
-	ids.tgid = PAGER_TID;
-
-	if (mm0_task_init(mm0, INITTASK_AREA_START, INITTASK_AREA_END, &ids) < 0)
-		BUG();
-	total++;
-
-	/* Initialise vfs with its predefined id */
-	ids.tid = VFS_TID;
-	ids.spid = VFS_TID;
-	ids.tgid = VFS_TID;
-
-	printf("%s: Initialising fs0\n",__TASKNAME__);
-	if (task_exec(fs0, USER_AREA_START, USER_AREA_END, &ids) < 0)
-		BUG();
-	total++;
-
-	/* Initialise other tasks */
-	list_for_each_entry_safe(file, n, &files, list) {
-		printf("%s: Initialising new boot task.\n", __TASKNAME__);
-		ids.tid = TASK_ID_INVALID;
-		ids.spid = TASK_ID_INVALID;
-		ids.tgid = TASK_ID_INVALID;
-		if (task_exec(file, USER_AREA_START, USER_AREA_END, &ids) < 0)
-			BUG();
-		total++;
-	}
-
-	if (!total) {
-		printf("%s: Could not start any tasks.\n", __TASKNAME__);
-		BUG();
-	}
-
-	return 0;
-}
-
-void init_pm(struct initdata *initdata)
-{
-	start_boot_tasks(initdata);
-}
-
 /* Maps and prefaults the utcb of a task into another task */
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner)
 {
 	BUG_ON(!owner->utcb);
 
 	/*
-	 * First internally map the tcb as a shm area. We use
+	 * First internally map the utcb as a shm area. We use
 	 * such posix semantics on purpose to have a unified
 	 * way of doing similar operations.
 	 */

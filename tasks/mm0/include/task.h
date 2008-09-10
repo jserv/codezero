@@ -113,15 +113,21 @@ struct task_data_head {
 
 struct tcb *find_task(int tid);
 void task_add_global(struct tcb *t);
-
-struct initdata;
-void init_pm(struct initdata *initdata);
-
-struct tcb *task_create(struct task_ids *ids,
-			unsigned int ctrl_flags,
-			unsigned int alloc_flags);
 int send_task_data(l4id_t requester);
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
+int task_mmap_regions(struct tcb *task, struct vm_file *file);
+int task_setup_regions(struct vm_file *file, struct tcb *task,
+		       unsigned long task_start, unsigned long task_end);
+int task_setup_registers(struct tcb *task, unsigned int pc,
+			 unsigned int sp, l4id_t pager);
+struct tcb *tcb_alloc_init(unsigned int flags);
+int task_exec(struct vm_file *f, unsigned long task_region_start,
+	      unsigned long task_region_end, struct task_ids *ids);
+int task_start(struct tcb *task, struct task_ids *ids);
 int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags);
+struct tcb *task_create(struct tcb *orig,
+			struct task_ids *ids,
+			unsigned int ctrl_flags,
+			unsigned int alloc_flags);
 
 #endif /* __TASK_H__ */

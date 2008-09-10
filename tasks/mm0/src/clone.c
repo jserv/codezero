@@ -14,91 +14,6 @@
 #include <shm.h>
 
 /*
- * Copy all vmas from the given task and populate each with
- * links to every object that the original vma is linked to.
- * Note, that we don't copy vm objects but just the links to
- * them, because vm objects are not per-process data.
- */
-int copy_vmas(struct tcb *to, struct tcb *from)
-{
-	struct vm_area *vma, *new_vma;
-	struct vm_obj_link *vmo_link, *new_link;
-
-	list_for_each_entry(vma, &from->vm_area_head->list, list) {
-
-		/* Create a new vma */
-		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
-				  vma->flags, vma->file_offset);
-
-		/* Get the first object on the vma */
-		BUG_ON(list_empty(&vma->vm_obj_list));
-		vmo_link = list_entry(vma->vm_obj_list.next,
-				      struct vm_obj_link, list);
-		do {
-			/* Create a new link */
-			new_link = vm_objlink_create();
-
-			/* Link object with new link */
-			vm_link_object(new_link, vmo_link->obj);
-
-			/* Add the new link to vma in object order */
-			list_add_tail(&new_link->list, &new_vma->vm_obj_list);
-
-		/* Continue traversing links, doing the same copying */
-		} while((vmo_link = vma_next_link(&vmo_link->list,
-						  &vma->vm_obj_list)));
-
-		/* All link copying is finished, now add the new vma to task */
-		task_add_vma(to, new_vma);
-	}
-
-	return 0;
-}
-
-int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
-{
-	/* Copy program segment boundary information */
-	to->start = from->start;
-	to->end = from->end;
-	to->text_start = from->text_start;
-	to->text_end = from->text_end;
-	to->data_start = from->data_start;
-	to->data_end = from->data_end;
-	to->bss_start = from->bss_start;
-	to->bss_end = from->bss_end;
-	to->stack_start = from->stack_start;
-	to->stack_end = from->stack_end;
-	to->heap_start = from->heap_start;
-	to->heap_end = from->heap_end;
-	to->env_start = from->env_start;
-	to->env_end = from->env_end;
-	to->args_start = from->args_start;
-	to->args_end = from->args_end;
-	to->map_start = from->map_start;
-	to->map_end = from->map_end;
-
-	/* Sharing the list of vmas */
-	if (flags & TCB_SHARED_VM) {
-		to->vm_area_head = from->vm_area_head;
-		to->vm_area_head->tcb_refs++;
-	} else {
-	       	/* Copy all vm areas */
-		copy_vmas(to, from);
-	}
-
-	/* Copy all file descriptors */
-	if (flags & TCB_SHARED_FILES) {
-		to->files = from->files;
-		to->files->tcb_refs++;
-	} else {
-	       	/* Copy all file descriptors */
-		memcpy(to->files, from->files, sizeof(*to->files));
-	}
-
-	return 0;
-}
-
-/*
  * Sends vfs task information about forked child, and its utcb
  */
 int vfs_notify_fork(struct tcb *child, struct tcb *parent)
@@ -148,11 +63,8 @@ int do_fork(struct tcb *parent)
 	 * Create a new L4 thread with parent's page tables
 	 * kernel stack and kernel-side tcb copied
 	 */
-	child = task_create(&ids, THREAD_CREATE_COPYSPC,
+	child = task_create(parent, &ids, THREAD_CREATE_COPYSPC,
 			    TCB_NO_SHARING);
-
-	/* Copy parent tcb to child */
-	copy_tcb(child, parent, TCB_NO_SHARING);
 
 	/* Create new utcb for child since it can't use its parent's */
 	child->utcb = utcb_vaddr_new();
@@ -170,7 +82,7 @@ int do_fork(struct tcb *parent)
 
 	/*
 	 * Map and prefault child utcb to vfs so that vfs need not
-	 * call us with such requests
+	 * call us to map it.
 	 */
 	task_map_prefault_utcb(find_task(VFS_TID), child);
 
