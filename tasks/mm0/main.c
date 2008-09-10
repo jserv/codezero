@@ -20,6 +20,7 @@
 #include <file.h>
 #include <shm.h>
 #include <utcb.h>
+#include <mmap.h>
 
 void handle_requests(void)
 {
@@ -153,6 +154,7 @@ int self_spawn(void)
 {
 	struct task_ids ids;
 	struct tcb *self, *self_child;
+	// void *stack;
 
 	BUG_ON(!(self = find_task(self_tid())));
 
@@ -163,9 +165,6 @@ int self_spawn(void)
 	/* Create a new L4 thread in current thread's address space. */
 	self_child = task_create(self, &ids, THREAD_CREATE_SAMESPC,
 				 TCB_SHARED_VM | TCB_SHARED_FILES);
-
-	/* Copy self tcb to child. TODO: ??? Not sure about this */
-	copy_tcb(self_child, self, TCB_SHARED_VM | TCB_SHARED_FILES);
 
 	/*
 	 * Create a new utcb. Every pager thread will
@@ -180,6 +179,9 @@ int self_spawn(void)
 	 * TODO: Set up a child stack by mmapping an anonymous
 	 * region of mmap's choice. TODO: Time to add MAP_GROWSDOWN ???
 	 */
+	if (do_mmap(0, 0, self, 0,
+		    VM_READ | VM_WRITE | VMA_ANONYMOUS | VMA_PRIVATE, 1) < 0)
+		BUG();
 
 	/* TODO: Notify vfs ??? */
 

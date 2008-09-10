@@ -19,6 +19,7 @@
 #define MAP_FIXED	0x10
 #define MAP_SHARED	0x01
 #define MAP_PRIVATE	0x02
+#define MAP_GROWSDOWN	0x00100
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			unsigned int flags, unsigned long file_offset);

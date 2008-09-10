@@ -11,7 +11,7 @@
 #include <mmap.h>
 #include <memory.h>
 #include <l4lib/arch/syscalls.h>
-
+#include <l4lib/arch/syslib.h>
 
 #if 0
 /* TODO: This is to be implemented when fs0 is ready. */
@@ -568,7 +568,14 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		map_address, map_address + npages * PAGE_SIZE);
 	task_add_vma(task, new);
 
-	return 0;
+	/*
+	 * If area is going to be used going downwards, (i.e. as a stack)
+	 * we return the *end* of the area as the start address.
+	 */
+	if (flags & VMA_GROWSDOWN)
+		map_address += npages;
+
+	return map_address;
 }
 
 /* mmap system call implementation */
@@ -580,7 +587,6 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	struct vm_file *file = 0;
 	unsigned int vmflags = 0;
 	struct tcb *task;
-	int err;
 
 	BUG_ON(!(task = find_task(sender)));
 
@@ -619,6 +625,9 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	else	/* This also means COW, if writeable and anonymous */
 		vmflags |= VMA_SHARED;
 
+	if (flags & MAP_GROWSDOWN)
+		vmflags |= VMA_GROWSDOWN;
+
 	if (prot & PROT_READ)
 		vmflags |= VM_READ;
 	if (prot & PROT_WRITE)
@@ -626,10 +635,9 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	if (prot & PROT_EXEC)
 		vmflags |= VM_EXEC;
 
-	if ((err =  do_mmap(file, __pfn_to_addr(pfn), task,
-			    base, vmflags, npages)) < 0)
-		return err;
+	base = do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
 
+	l4_ipc_return(base);
 	return 0;
 }
 

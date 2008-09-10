@@ -36,8 +36,11 @@
 #define VMA_PRIVATE			(1 << 6)
 /* For wired pages */
 #define VMA_FIXED			(1 << 7)
+/* For stack, where mmap returns end address */
+#define VMA_GROWSDOWN			(1 << 8)
+
 /* Set when the page is dirty in cache but not written to disk */
-#define VM_DIRTY			(1 << 8)
+#define VM_DIRTY			(1 << 9)
 
 /* Defines the type of file. A device file? Regular file? One used at boot? */
 enum VM_FILE_TYPE {
