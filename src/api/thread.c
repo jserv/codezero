@@ -128,6 +128,47 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	return 0;
 }
 
+int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
+			 struct tcb *new, struct tcb *orig)
+{
+	/* For tid, allocate requested id if it's available, else a new one */
+	if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
+		ids->tid = id_new(thread_id_pool);
+
+	/*
+	 * If thread space is new or copied,
+	 * allocate a new space id and tgid
+	 */
+	if (flags == THREAD_CREATE_NEWSPC ||
+	    flags == THREAD_CREATE_COPYSPC) {
+		/*
+		 * Allocate requested id if
+		 * it's available, else a new one
+		 */
+		if ((ids->spid = id_get(space_id_pool,
+					ids->spid)) < 0)
+			ids->spid = id_new(space_id_pool);
+
+		/* It also gets a thread group id */
+		if ((ids->tgid = id_get(tgroup_id_pool,
+					ids->tgid)) < 0)
+			ids->tgid = id_new(tgroup_id_pool);
+	}
+
+	/* If thread space is the same, tgid is either new or existing one */
+	if (flags == THREAD_CREATE_SAMESPC) {
+		/* Check if same tgid is expected */
+		if (ids->tgid != task->tgid) {
+			if ((ids->tgid = id_get(tgroup_id_pool,
+					ids->tgid)) < 0)
+				ids->tgid = id_new(tgroup_id_pool);
+		}
+	}
+
+	/* Set all ids */
+	set_task_ids(new, ids);
+}
+
 /*
  * Creates a thread, with a new thread id, and depending on the flags,
  * either creates a new space, uses the same space as another thread,
@@ -137,7 +178,7 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
  */
 int thread_create(struct task_ids *ids, unsigned int flags)
 {
-	struct ktcb *task, *new = (struct ktcb *)zalloc_page();
+	struct ktcb *task = 0, *new = (struct ktcb *)zalloc_page();
 	flags &= THREAD_FLAGS_MASK;
 
 	if (flags == THREAD_CREATE_NEWSPC) {
@@ -161,30 +202,8 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		BUG();
 	}
 out:
-	/* Allocate requested id if it's available, else a new one */
-	if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
-		ids->tid = id_new(thread_id_pool);
-
-	/* If thread space is new or copied, it gets a new space id */
-	if (flags == THREAD_CREATE_NEWSPC ||
-	    flags == THREAD_CREATE_COPYSPC) {
-		/*
-		 * Allocate requested id if
-		 * it's available, else a new one
-		 */
-		if ((ids->spid = id_get(space_id_pool,
-					ids->spid)) < 0)
-			ids->spid = id_new(space_id_pool);
-
-		/* It also gets a thread group id */
-		if ((ids->tgid = id_get(tgroup_id_pool,
-					ids->tgid)) < 0)
-			ids->tgid = id_new(tgroup_id_pool);
-
-	}
-
-	/* Set all ids */
-	set_task_ids(new, ids);
+	/* Set up new thread's tid, spid, tgid according to flags */
+	thread_setup_new_ids(ids, flags, new, task);
 
 	/* Set task state. */
 	new->state = TASK_INACTIVE;
@@ -198,7 +217,8 @@ out:
 	 * system call return environment so that it can safely
 	 * return as a copy of its original thread.
 	 */
-	if (flags == THREAD_CREATE_COPYSPC)
+	if (flags == THREAD_CREATE_COPYSPC ||
+	    flags == THREAD_CREATE_SAMESPC)
 		arch_setup_new_thread(new, task);
 
 	/* Add task to global hlist of tasks */
@@ -231,6 +251,7 @@ int sys_thread_control(syscall_context_t *regs)
 	case THREAD_RESUME:
 		ret = thread_resume(ids);
 		break;
+	/* TODO: THREAD_DESTROY! */
 	default:
 		ret = -EINVAL;
 	}

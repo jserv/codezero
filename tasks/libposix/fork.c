@@ -47,3 +47,39 @@ int fork(void)
 	return ret;
 }
 
+extern int arch_clone(int, int);
+
+int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
+{
+	/* Set up the child stack */
+	unsigned int *stack = child_stack;
+	int ret;
+
+	/* First word of new stack is arg */
+	stack[-1] = (unsigned long)arg;
+
+	/* Second word of new stack is function address */
+	stack[-2] = (unsigned long)fn;
+
+	/* Write the tag */
+	l4_set_tag(L4_IPC_TAG_CLONE);
+
+	/* Write the args as in usual ipc */
+	write_mr(L4SYS_ARG0, flags);
+	write_mr(L4SYS_ARG1, (unsigned long)child_stack);
+
+	/* Perform an ipc but with different return logic. See implementation. */
+	if ((ret = arch_clone(PAGER_TID, PAGER_TID)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
+		return ret;
+	}
+
+	if ((ret = l4_get_retval()) < 0) {
+		printf("%s: CLONE Error: %d.\n", __FUNCTION__, ret);
+		return ret;
+	}
+	return ret;
+}
+
+
+

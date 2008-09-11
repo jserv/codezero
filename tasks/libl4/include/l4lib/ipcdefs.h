@@ -46,6 +46,7 @@
 #define L4_IPC_TAG_STAT			23
 #define L4_IPC_TAG_FSTAT		24
 #define L4_IPC_TAG_FSYNC		25	/* Pager notifies vfs of file close */
+#define L4_IPC_TAG_CLONE		26	/* Pager notifies vfs of file close */
 
 
 /* Tags for ipc between fs0 and mm0 */

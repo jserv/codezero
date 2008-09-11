@@ -40,6 +40,48 @@ BEGIN_PROC(l4_kread)
 END_PROC(l4_kread)
 
 /*
+ * For clone() we need special assembler handling
+ * Same signature as ipc(): @r0 = to, @r1 = from
+ *
+ * NOTE: MR_RETURN register is hardcoded here.
+ * It must be updated if MR_RETURN offset is changed!
+ */
+BEGIN_PROC(clone_asm)
+	stmfd	sp!, {r4-r8,lr}		@ Save context.
+	utcb_address r12		@ Get utcb address.
+	ldmia	r12!, {r3-r8}		@ Load 6 Message registers from utcb. MR0-MR5
+	ldr	r12, =__l4_ipc
+	mov	lr, pc
+	ldr	pc, [r12]		@ Perform the ipc()
+
+	/*
+	 * At this moment:
+	 * - MR_RETURN tells us whether we are parent or child (or have failed).
+	 * - Child has new SP set, with |func_ptr|arg1|{End of stack}SP<-| on stack.
+	 * - Child needs exit logic when its function is finished.
+	 */
+	cmp	r0, #0			@ Check ipc success
+	blt	ipc_failed
+	cmp	r2, #0			@ Check ipc return register MR_RETURN.
+	blt	clone_failed		@ Ipc was ok but clone() failed.
+	bgt	parent_return		@ It has child pid, goto parent return.
+child:
+	ldr	r0, [sp, #-4]!		@ Load child's first argument.
+	mov	lr, pc			@ Save return address
+	ldr	pc, [sp, #-4]!		@ Load function pointer from stack
+child_exit:
+	b	child_exit		@ We infinitely loop for now.
+
+	@ Return with normal ipc return sequence
+parent_return:
+clone_failed:
+ipc_failed:
+	utcb_address r12		@ Get utcb
+	stmia	r12, {r3-r8}		@ Store mrs.
+	ldmfd	sp!, {r4-r8,pc}		@ Return restoring pc and context.
+END_PROC(clone_asm)
+
+/*
  * Inter-process communication. Loads message registers as arguments before the call,
  * and stores them as results after the call. @r0 = to, @r1 = from.
  */

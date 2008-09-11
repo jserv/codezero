@@ -150,11 +150,16 @@ void handle_requests(void)
 	}
 }
 
+#if 0
+/*
+ * Executes the given function in a new thread in the current
+ * address space but on a brand new stack.
+ */
 int self_spawn(void)
 {
 	struct task_ids ids;
 	struct tcb *self, *self_child;
-	// void *stack;
+	unsigned long stack, stack_size;
 
 	BUG_ON(!(self = find_task(self_tid())));
 
@@ -166,6 +171,10 @@ int self_spawn(void)
 	self_child = task_create(self, &ids, THREAD_CREATE_SAMESPC,
 				 TCB_SHARED_VM | TCB_SHARED_FILES);
 
+	if (IS_ERR(self_child = tcb_alloc_init(TCB_SHARED_VM
+					       | TCB_SHARED_FILES)))
+		BUG();
+
 	/*
 	 * Create a new utcb. Every pager thread will
 	 * need its own utcb to answer calls.
@@ -176,24 +185,44 @@ int self_spawn(void)
 	task_map_prefault_utcb(self_child, self_child);
 
 	/*
-	 * TODO: Set up a child stack by mmapping an anonymous
-	 * region of mmap's choice. TODO: Time to add MAP_GROWSDOWN ???
+	 * Set up a child stack by mmapping an anonymous region.
 	 */
-	if (do_mmap(0, 0, self, 0,
-		    VM_READ | VM_WRITE | VMA_ANONYMOUS | VMA_PRIVATE, 1) < 0)
+	stack_size = self->stack_end - self->stack_start;
+	if (IS_ERR(stack = do_mmap(0, 0, self, 0,
+				   VM_READ | VM_WRITE | VMA_ANONYMOUS
+				   | VMA_PRIVATE | VMA_GROWSDOWN,
+				   __pfn(stack_size)))) {
+		printf("%s: Error spawning %s, Error code: %d\n",
+		       __FUNCTION__, __TASKNAME__, (int)stack);
 		BUG();
+	}
 
-	/* TODO: Notify vfs ??? */
+	/* Modify stack marker of child tcb */
+	self_child->stack_end = stack;
+	self_child->stack_start = stack - stack_size;
+
+	/* Prefault child stack */
+	for (int i = 0; i < __pfn(stack_size); i++)
+		prefault_page(self_child,
+			      self_child->stack_start + __pfn_to_addr(i),
+		      	      VM_READ | VM_WRITE);
+
+	/* Copy current stack to child */
+	memcpy((void *)self_child->stack_start,
+	       (void *)self->stack_start, stack_size);
 
 	/* TODO: Modify registers ???, it depends on what state is copied in C0 */
 
+	/* TODO: Notify vfs ??? */
+
 	task_add_global(self_child);
 
+	if (l4_thread_control(THREAD_CREATE | THREAD_CREATE_SAMESPC, ids)
 	l4_thread_control(THREAD_RUN, &ids);
 
 	return 0;
 }
-
+#endif
 
 void main(void)
 {
