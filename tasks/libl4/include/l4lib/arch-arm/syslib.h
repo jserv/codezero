@@ -40,9 +40,10 @@ static inline l4id_t l4_get_sender(void)
 
 /*
  * When doing an ipc the sender never has to be explicitly set in
- * the utcb via this function since it is passed in the argument
- * registers. This is only used for restoring the sender on the
- * utcb in order to complete an earlier ipc.
+ * the utcb via this function since this information is found out
+ * by the microkernel by checking the system caller's id. This is
+ * only used for restoring the sender on the utcb in order to
+ * complete an earlier ipc.
  */
 static inline void l4_set_sender(l4id_t sender)
 {

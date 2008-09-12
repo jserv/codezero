@@ -47,7 +47,7 @@ int fork(void)
 	return ret;
 }
 
-extern int arch_clone(int, int);
+extern int arch_clone(l4id_t to, l4id_t from);
 
 int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
 {

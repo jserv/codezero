@@ -54,6 +54,7 @@ int do_fork(struct tcb *parent)
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
 		.spid = parent->spid,
+		.tgid = TASK_ID_INVALID		/* FIXME: !!! FIX THIS */
 	};
 
 	/* Make all shadows in this task read-only */
@@ -81,7 +82,7 @@ int do_fork(struct tcb *parent)
 		l4_ipc_return((int)utcb_shm);
 		return 0;
 	}
-	/* FIXME: We should munmap() parent's utcb page from child */
+	/* FIXME: Should we munmap() parent's utcb page from child? */
 
 	/*
 	 * Map and prefault child utcb to vfs so that vfs need not

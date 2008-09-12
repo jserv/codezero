@@ -104,7 +104,7 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 	 * policy on the microkernel, but it is currently the best solution.
 	 *
 	 * A cleaner but slower way would be the pager setting child registers
-	 * via exchanges_registers() and start the child thread afterwards.
+	 * via exchange_registers() and start the child thread afterwards.
 	 */
 	KTCB_REF_MR0(new)[MR_RETURN] = 0;
 
@@ -129,7 +129,7 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
 }
 
 int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
-			 struct tcb *new, struct tcb *orig)
+			 struct ktcb *new, struct ktcb *orig)
 {
 	/* For tid, allocate requested id if it's available, else a new one */
 	if ((ids->tid = id_get(thread_id_pool, ids->tid)) < 0)
@@ -158,7 +158,7 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	/* If thread space is the same, tgid is either new or existing one */
 	if (flags == THREAD_CREATE_SAMESPC) {
 		/* Check if same tgid is expected */
-		if (ids->tgid != task->tgid) {
+		if (ids->tgid != orig->tgid) {
 			if ((ids->tgid = id_get(tgroup_id_pool,
 					ids->tgid)) < 0)
 				ids->tgid = id_new(tgroup_id_pool);
@@ -167,6 +167,8 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 
 	/* Set all ids */
 	set_task_ids(new, ids);
+
+	return 0;
 }
 
 /*
