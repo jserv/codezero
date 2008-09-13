@@ -75,6 +75,17 @@ static inline void irq_local_disable()
 /* This is filled on entry to irq handler, only if a process was interrupted.*/
 extern unsigned int preempted_psr;
 
+#include <l4/generic/tcb.h>
+static inline int task_in_kernel(struct tcb *t)
+{
+	return ((t->context.spsr & ARM_MODE_MASK) == ARM_MODE_SVC) ? 1 : 0;
+}
+
+static inline int task_in_user(struct tcb *t)
+{
+	return !task_in_kernel(t);
+}
+
 static inline int in_kernel()
 {
 	return (((preempted_psr & ARM_MODE_MASK) == ARM_MODE_SVC)) ? 1 : 0;

@@ -226,7 +226,7 @@ void sched_notify_resume(struct ktcb *task)
 /* NOTE: Might as well just set need_resched instead of full yield.
  * This would work on irq context as well. */
 /* Same as resume, but also yields. */
-void sched_resume_task(struct ktcb *task)
+int sched_resume_task(struct ktcb *task)
 {
 	sched_notify_resume(task);
 	sched_yield();

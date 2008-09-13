@@ -68,4 +68,7 @@
 #define KERN_ADDR(x)		((x >= KERNEL_AREA_START) && (x < KERNEL_AREA_END))
 #define USER_ADDR(x)		((x >= USER_AREA_START) && (x < USER_AREA_END))
 
+#define PRIVILEGED_ADDR(x)	(KERN_ADDR(x) || (x >= ARM_HIGH_VECTOR) || \
+				 (x >= IO_AREA_START && x < IO_AREA_END))
+
 #endif /* __MEMLAYOUT_H__ */

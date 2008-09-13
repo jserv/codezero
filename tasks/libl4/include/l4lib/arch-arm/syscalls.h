@@ -59,10 +59,10 @@ typedef int (*__l4_ipc_control_t)(unsigned int action, l4id_t blocked_sender,
 extern __l4_ipc_control_t __l4_ipc_control;
 int l4_ipc_control(unsigned int, l4id_t blocked_sender, u32 blocked_tag);
 
-typedef int (*__l4_exchange_registers_t)(unsigned int pc, unsigned int sp,
+typedef int (*__l4_exchange_registers_t)(void *exregs_struct,
 					 l4id_t pager, l4id_t tid);
 extern __l4_exchange_registers_t __l4_exchange_registers;
-int l4_exchange_registers(unsigned int pc, unsigned int sp, int pager, l4id_t tid);
+int l4_exchange_registers(void *exregs_struct, l4id_t pager, l4id_t tid);
 
 typedef int (*__l4_kmem_control_t)(unsigned long pfn, int npages, int grant);
 extern __l4_kmem_control_t __l4_kmem_control;

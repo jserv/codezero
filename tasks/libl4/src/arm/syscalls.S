@@ -186,7 +186,7 @@ END_PROC(l4_space_control)
 
 /*
  * Sets registers of a thread and its pager.
- * @r0 = pc to set, @r1 = sp to set  @r2 = pager id, @r3 = tid of thread.
+ * @r0 = ptr to exchange_registers structure, @r1 = pager id, @r2 = tid of thread.
  */
 BEGIN_PROC(l4_exchange_registers)
 	stmfd	sp!, {lr}

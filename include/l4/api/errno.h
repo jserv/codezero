@@ -144,6 +144,9 @@
 #define	EOWNERDEAD	130	/* Owner died */
 #define	ENOTRECOVERABLE	131	/* State not recoverable */
 
+/* Codezero specific error codes */
+#define EACTIVE		132	/* Task active */
+
 #ifdef __KERNEL__
 
 /* Should never be seen by user programs */

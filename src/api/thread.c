@@ -4,12 +4,12 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <l4/generic/scheduler.h>
-#include INC_API(syscall.h)
 #include <l4/api/thread.h>
 #include <l4/api/syscall.h>
 #include <l4/api/errno.h>
 #include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
+#include <l4/lib/mutex.h>
 #include <l4/generic/pgalloc.h>
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
@@ -24,42 +24,58 @@ int thread_suspend(struct task_ids *ids)
 {
 	struct ktcb *task;
 
-	if ((task = find_task(ids->tid))) {
-		sched_suspend_task(task);
-		return 0;
-	}
+	if (!(task = find_task(ids->tid)))
+		return -ESRCH;
 
-	printk("%s: Error: Could not find any thread with id %d to start.\n",
-	       __FUNCTION__, ids->tid);
-	return -EINVAL;
+	/*
+	 * The thread_control_lock is protecting from
+	 * indirect modification of thread context, this
+	 * does not cause any such operation so we don't
+	 * need to acquire that lock here.
+	 */
+	sched_suspend_task(task);
+
+	return 0;
 }
 
 int thread_resume(struct task_ids *ids)
 {
 	struct ktcb *task;
 
-	if ((task = find_task(ids->tid))) {
-		sched_resume_task(task);
-		return 0;
-	}
+	if (!(task = find_task(ids->tid)))
+		return -ESRCH;
 
-	printk("%s: Error: Could not find any thread with id %d to start.\n",
-	       __FUNCTION__, ids->tid);
-	return -EINVAL;
+	if (!mutex_trylock(&task->thread_control_lock))
+		return -EAGAIN;
+
+	/* Notify scheduler of task resume */
+	sched_notify_resume(task);
+
+	/* Release lock and return */
+	mutex_unlock(&task->thread_control_lock);
+	return 0;
 }
 
 int thread_start(struct task_ids *ids)
 {
 	struct ktcb *task;
 
-	if ((task = find_task(ids->tid))) {
-		sched_start_task(task);
-		return 0;
-	}
-	printk("%s: Error: Could not find any thread with id %d to start.\n",
-	       __FUNCTION__, ids->tid);
-	BUG();
-	return -EINVAL;
+	if (!(task = find_task(ids->tid)))
+       		return -ESRCH;
+
+	if (!mutex_trylock(&task->thread_control_lock))
+		return -EAGAIN;
+
+	/* Clear creation flags if thread is new */
+	if (task->flags & THREAD_CREATE_FLAGS)
+		task->flags &= ~THREAD_CREATE_FLAGS;
+
+	/* Notify scheduler of task resume */
+	sched_notify_resume(task);
+
+	/* Release lock and return */
+	mutex_unlock(&task->thread_control_lock);
+	return 0;
 }
 
 
@@ -139,8 +155,8 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	 * If thread space is new or copied,
 	 * allocate a new space id and tgid
 	 */
-	if (flags == THREAD_CREATE_NEWSPC ||
-	    flags == THREAD_CREATE_COPYSPC) {
+	if (flags == THREAD_NEW_SPACE ||
+	    flags == THREAD_COPY_SPACE) {
 		/*
 		 * Allocate requested id if
 		 * it's available, else a new one
@@ -156,7 +172,7 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	}
 
 	/* If thread space is the same, tgid is either new or existing one */
-	if (flags == THREAD_CREATE_SAMESPC) {
+	if (flags == THREAD_SAME_SPACE) {
 		/* Check if same tgid is expected */
 		if (ids->tgid != orig->tgid) {
 			if ((ids->tgid = id_get(tgroup_id_pool,
@@ -181,9 +197,9 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *task = 0, *new = (struct ktcb *)zalloc_page();
-	flags &= THREAD_FLAGS_MASK;
+	flags &= THREAD_CREATE_MASK;
 
-	if (flags == THREAD_CREATE_NEWSPC) {
+	if (flags == THREAD_NEW_SPACE) {
 		/* Allocate new pgd and copy all kernel areas */
 		new->pgd = alloc_pgd();
 		copy_pgd_kern_all(new->pgd);
@@ -192,7 +208,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		list_for_each_entry(task, &global_task_list, task_list) {
 			/* Space ids match, can use existing space */
 			if (task->spid == ids->spid) {
-				if (flags == THREAD_CREATE_SAMESPC)
+				if (flags == THREAD_SAME_SPACE)
 					new->pgd = task->pgd;
 				else
 					new->pgd = copy_page_tables(task->pgd);
@@ -207,8 +223,8 @@ out:
 	/* Set up new thread's tid, spid, tgid according to flags */
 	thread_setup_new_ids(ids, flags, new, task);
 
-	/* Set task state. */
-	new->state = TASK_INACTIVE;
+	/* Initialise task's scheduling state and parameters. */
+	sched_init_task(new);
 
 	/* Initialise ipc waitqueues */
 	waitqueue_head_init(&new->wqh_send);
@@ -219,9 +235,15 @@ out:
 	 * system call return environment so that it can safely
 	 * return as a copy of its original thread.
 	 */
-	if (flags == THREAD_CREATE_COPYSPC ||
-	    flags == THREAD_CREATE_SAMESPC)
+	if (flags == THREAD_COPY_SPACE ||
+	    flags == THREAD_SAME_SPACE)
 		arch_setup_new_thread(new, task);
+
+	/*
+	 * Set thread's creation flags. They will clear
+	 * when the thread is run for the first time
+	 */
+	new->flags = THREAD_CREATE_MASK & flags;
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);
@@ -253,7 +275,7 @@ int sys_thread_control(syscall_context_t *regs)
 	case THREAD_RESUME:
 		ret = thread_resume(ids);
 		break;
-	/* TODO: THREAD_DESTROY! */
+	/* TODO: Add THREAD_DESTROY! */
 	default:
 		ret = -EINVAL;
 	}

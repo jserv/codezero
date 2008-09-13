@@ -64,7 +64,7 @@ int do_fork(struct tcb *parent)
 	 * Create a new L4 thread with parent's page tables
 	 * kernel stack and kernel-side tcb copied
 	 */
-	if (IS_ERR(child = task_create(parent, &ids, THREAD_CREATE_COPYSPC,
+	if (IS_ERR(child = task_create(parent, &ids, THREAD_COPY_SPACE,
 			    	       TCB_NO_SHARING))) {
 		l4_ipc_return((int)child);
 		return 0;
@@ -121,7 +121,6 @@ int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
 	struct task_ids ids;
 	struct vm_file *utcb_shm;
 	struct tcb *parent, *child;
-	unsigned long stack, stack_size;
 
 	BUG_ON(!(parent = find_task(sender)));
 
@@ -129,7 +128,7 @@ int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
 	ids.spid = parent->spid;
 	ids.tgid = parent->tgid;
 
-	if (IS_ERR(child = task_create(parent, &ids, THREAD_CREATE_SAMESPC,
+	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE,
 			    	       TCB_SHARED_VM | TCB_SHARED_FILES))) {
 		l4_ipc_return((int)child);
 		return 0;

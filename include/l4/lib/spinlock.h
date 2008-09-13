@@ -20,7 +20,7 @@ static inline void spin_lock_init(struct spinlock *s)
  */
 static inline void spin_lock(struct spinlock *s)
 {
-	preempt_disable();
+	preempt_disable();	/* This must disable local preempt */
 #if defined(CONFIG_SMP)
 	__spin_lock(&s->lock);
 #endif

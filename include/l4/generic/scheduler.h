@@ -34,10 +34,6 @@ static inline struct ktcb *current_task(void)
 #define SCHED_FL_MASK			(SCHED_FL_SLEEP | SCHED_FL_RESUME \
 					 | SCHED_FL_SUSPEND)
 
-#define __IPC_FL_WAIT			4
-#define IPC_FL_WAIT			(1 << __IPC_FL_WAIT)
-#define IPC_FL_MASK			IPC_FL_WAIT
-
 void sched_runqueue_init(void);
 void sched_start_task(struct ktcb *task);
 void sched_resume_task(struct ktcb *task);

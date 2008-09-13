@@ -93,6 +93,18 @@ void sem_down(struct mutex *mutex)
 	}
 }
 
+/* Non-blocking attempt to lock mutex */
+int mutex_trylock(struct mutex *mutex)
+{
+	int success;
+
+	spin_lock(&mutex->slock);
+	success = __mutex_lock(&mutex->lock);
+	spin_unlock(&mutex->slock);
+
+	return success;
+}
+
 void mutex_lock(struct mutex *mutex)
 {
 	/* NOTE:

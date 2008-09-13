@@ -2,11 +2,12 @@
  * ARM-specific system call details.
  *
  * Copyright (C) 2007 Bahadir Balban
- *
  */
 
 #ifndef __ARM_GLUE_SYSCALL_H__
 #define __ARM_GLUE_SYSCALL_H__
+
+#include <l4/types.h>
 
 /* Only specific call is the trap that gives back the kip address
  * from which other system calls can be discovered. */
@@ -52,7 +53,8 @@ typedef struct msg_regs {
 
 /* NOTE:
  * These references are valid only when they have been explicitly set
- * by a kernel entry point, e.g. a system call, a data abort handler.
+ * by a kernel entry point, e.g. a system call, a data abort handler
+ * that imitates a page fault ipc etc.
  */
 #define KTCB_REF_ARG0(ktcb)	(&(ktcb)->syscall_regs->r0)
 #define KTCB_REF_MR0(ktcb)	(&(ktcb)->syscall_regs->r3)

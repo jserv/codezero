@@ -26,6 +26,7 @@
 #include <task.h>
 #include <shm.h>
 #include <mmap.h>
+#include <exregs.h>
 
 struct tcb_head {
 	struct list_head list;
@@ -303,6 +304,7 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager)
 {
 	int err;
+	struct exregs_data regs;
 
 	/* Set up task's registers to default. */
 	if (!sp)
@@ -313,7 +315,9 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 		pager = self_tid();
 
 	/* Set up the task's thread details, (pc, sp, pager etc.) */
-	if ((err = l4_exchange_registers(pc, sp, pager, task->tid) < 0)) {
+	exregs_set_stack(&regs, sp);
+	exregs_set_pc(&regs, pc);
+	if ((err = l4_exchange_registers(&regs, pager, task->tid) < 0)) {
 		printf("l4_exchange_registers failed with %d.\n", err);
 		return err;
 	}
@@ -367,7 +371,7 @@ int task_exec(struct vm_file *f, unsigned long task_region_start,
 	struct tcb *task;
 	int err;
 
-	if (IS_ERR(task = task_create(0, ids, THREAD_CREATE_NEWSPC,
+	if (IS_ERR(task = task_create(0, ids, THREAD_NEW_SPACE,
 				      TCB_NO_SHARING)))
 		return (int)task;
 

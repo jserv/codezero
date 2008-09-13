@@ -75,6 +75,9 @@
 #define printk			printf
 #endif
 
+/* Converts an int-sized field offset in a struct into a bit offset in a word */
+#define FIELD_TO_BIT(type, field)	(1 << (offsetof(type, field) >> 2))
+
 /* Functions who may either return a pointer or an error code can use these: */
 #define PTR_ERR(x)		((void *)(x))
 /* checks up to -1000, the rest might be valid pointers!!! E.g. 0xE0000000 */
