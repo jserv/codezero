@@ -155,7 +155,7 @@ static inline void sched_rq_remove_task(struct ktcb *task)
 	task->rq = 0;
 }
 
-static inline void sched_init_task(struct ktcb *task)
+void sched_init_task(struct ktcb *task)
 {
 	INIT_LIST_HEAD(&task->rq_list);
 	task->ticks_left = TASK_TIMESLICE_DEFAULT;
@@ -226,7 +226,7 @@ void sched_notify_resume(struct ktcb *task)
 /* NOTE: Might as well just set need_resched instead of full yield.
  * This would work on irq context as well. */
 /* Same as resume, but also yields. */
-int sched_resume_task(struct ktcb *task)
+void sched_resume_task(struct ktcb *task)
 {
 	sched_notify_resume(task);
 	sched_yield();

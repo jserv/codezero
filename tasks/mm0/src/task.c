@@ -225,36 +225,40 @@ struct tcb *task_create(struct tcb *orig, struct task_ids *ids,
 
 int task_mmap_regions(struct tcb *task, struct vm_file *file)
 {
-	int err;
+	void *mapped;
 	struct vm_file *shm;
 
 	/*
 	 * mmap each task's physical image to task's address space.
 	 * TODO: Map data and text separately when available from bootdesc.
 	 */
-	if ((err = do_mmap(file, 0, task, task->text_start,
-			   VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
-			   __pfn(page_align_up(task->text_end) -
-			   task->text_start))) < 0) {
-		printf("do_mmap: failed with %d.\n", err);
-		return err;
+	if (IS_ERR(mapped = do_mmap(file, 0, task, task->text_start,
+				    VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
+				    __pfn(page_align_up(task->text_end) -
+				    task->text_start)))) {
+		printf("do_mmap: failed with %d.\n", (int)mapped);
+		return (int)mapped;
 	}
 
 	/* mmap each task's environment as anonymous memory. */
-	if ((err = do_mmap(0, 0, task, task->env_start,
-			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
-			   __pfn(task->env_end - task->env_start))) < 0) {
+	if (IS_ERR(mapped = do_mmap(0, 0, task, task->env_start,
+				    VM_READ | VM_WRITE |
+				    VMA_PRIVATE | VMA_ANONYMOUS,
+				    __pfn(task->env_end - task->env_start)))) {
 		printf("do_mmap: Mapping environment failed with %d.\n",
-		       err);
-		return err;
+		       (int)mapped);
+		return (int)mapped;
 	}
 
 	/* mmap each task's stack as anonymous memory. */
-	if ((err = do_mmap(0, 0, task, task->stack_start,
-			   VM_READ | VM_WRITE | VMA_PRIVATE | VMA_ANONYMOUS,
-			   __pfn(task->stack_end - task->stack_start))) < 0) {
-		printf("do_mmap: Mapping stack failed with %d.\n", err);
-		return err;
+	if (IS_ERR(mapped = do_mmap(0, 0, task, task->stack_start,
+				    VM_READ | VM_WRITE |
+				    VMA_PRIVATE | VMA_ANONYMOUS,
+				    __pfn(task->stack_end -
+					  task->stack_start)))) {
+		printf("do_mmap: Mapping stack failed with %d.\n",
+		       (int)mapped);
+		return (int)mapped;
 	}
 
 	/* Task's utcb */
@@ -304,7 +308,7 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager)
 {
 	int err;
-	struct exregs_data regs;
+	struct exregs_data exregs;
 
 	/* Set up task's registers to default. */
 	if (!sp)
@@ -315,9 +319,11 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 		pager = self_tid();
 
 	/* Set up the task's thread details, (pc, sp, pager etc.) */
-	exregs_set_stack(&regs, sp);
-	exregs_set_pc(&regs, pc);
-	if ((err = l4_exchange_registers(&regs, pager, task->tid) < 0)) {
+	exregs_set_stack(&exregs, sp);
+	exregs_set_pc(&exregs, pc);
+	exregs_set_pager(&exregs, pager);
+
+	if ((err = l4_exchange_registers(&exregs, task->tid) < 0)) {
 		printf("l4_exchange_registers failed with %d.\n", err);
 		return err;
 	}

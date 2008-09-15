@@ -45,8 +45,11 @@ END_PROC(l4_kread)
  *
  * NOTE: MR_RETURN register is hardcoded here.
  * It must be updated if MR_RETURN offset is changed!
+ *
+ * NOTE: Note that this also breaks l4 system call interface,
+ * this should be moved elsewhere and modified using existing l4 mechanisms.
  */
-BEGIN_PROC(clone_asm)
+BEGIN_PROC(arch_clone)
 	stmfd	sp!, {r4-r8,lr}		@ Save context.
 	utcb_address r12		@ Get utcb address.
 	ldmia	r12!, {r3-r8}		@ Load 6 Message registers from utcb. MR0-MR5
@@ -79,7 +82,7 @@ ipc_failed:
 	utcb_address r12		@ Get utcb
 	stmia	r12, {r3-r8}		@ Store mrs.
 	ldmfd	sp!, {r4-r8,pc}		@ Return restoring pc and context.
-END_PROC(clone_asm)
+END_PROC(arch_clone)
 
 /*
  * Inter-process communication. Loads message registers as arguments before the call,
@@ -186,7 +189,7 @@ END_PROC(l4_space_control)
 
 /*
  * Sets registers of a thread and its pager.
- * @r0 = ptr to exchange_registers structure, @r1 = pager id, @r2 = tid of thread.
+ * @r0 = ptr to exregs_data structure, @r1 = tid of thread.
  */
 BEGIN_PROC(l4_exchange_registers)
 	stmfd	sp!, {lr}

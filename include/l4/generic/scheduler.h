@@ -35,6 +35,7 @@ static inline struct ktcb *current_task(void)
 					 | SCHED_FL_SUSPEND)
 
 void sched_runqueue_init(void);
+void sched_init_task(struct ktcb *task);
 void sched_start_task(struct ktcb *task);
 void sched_resume_task(struct ktcb *task);
 void sched_suspend_task(struct ktcb *task);

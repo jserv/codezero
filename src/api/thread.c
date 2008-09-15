@@ -66,10 +66,6 @@ int thread_start(struct task_ids *ids)
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
 
-	/* Clear creation flags if thread is new */
-	if (task->flags & THREAD_CREATE_FLAGS)
-		task->flags &= ~THREAD_CREATE_FLAGS;
-
 	/* Notify scheduler of task resume */
 	sched_notify_resume(task);
 
@@ -78,6 +74,50 @@ int thread_start(struct task_ids *ids)
 	return 0;
 }
 
+int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig, unsigned int flags)
+{
+	/* New threads just need their mode set up */
+	if (flags == THREAD_NEW_SPACE) {
+		BUG_ON(orig);
+		new->context.spsr = ARM_MODE_USR;
+		return 0;
+	}
+
+	/*
+	 * For duplicated threads pre-syscall context is saved on
+	 * the kernel stack. We copy this context of original
+	 * into the duplicate thread's current context structure
+	 *
+	 * We don't lock for context modification because the
+	 * thread is not known to the system yet.
+	 */
+	new->context.spsr = orig->syscall_regs->spsr; /* User mode */
+	new->context.r0 = orig->syscall_regs->r0;
+	new->context.r1 = orig->syscall_regs->r1;
+	new->context.r2 = orig->syscall_regs->r2;
+	new->context.r3 = orig->syscall_regs->r3;
+	new->context.r4 = orig->syscall_regs->r4;
+	new->context.r5 = orig->syscall_regs->r5;
+	new->context.r6 = orig->syscall_regs->r6;
+	new->context.r7 = orig->syscall_regs->r7;
+	new->context.r8 = orig->syscall_regs->r8;
+	new->context.r9 = orig->syscall_regs->r9;
+	new->context.r10 = orig->syscall_regs->r10;
+	new->context.r11 = orig->syscall_regs->r11;
+	new->context.r12 = orig->syscall_regs->r12;
+	new->context.sp = orig->syscall_regs->sp_usr;
+	/* Skip lr_svc since it's not going to be used */
+	new->context.pc = orig->syscall_regs->lr_usr;
+
+	/* Copy other relevant fields from original ktcb */
+	new->pagerid = orig->pagerid;
+
+	/* Distribute original thread's ticks into two threads */
+	new->ticks_left = orig->ticks_left / 2;
+	orig->ticks_left /= 2;
+
+	return 0;
+}
 
 extern unsigned int return_from_syscall;
 
@@ -89,7 +129,7 @@ extern unsigned int return_from_syscall;
  * stack is restored. It also modifies r0 to ensure POSIX child return
  * semantics.
  */
-int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig)
+int arch_setup_new_thread_orig(struct ktcb *new, struct ktcb *orig)
 {
 	/*
 	 * Pre-syscall context is saved on the kernel stack upon
@@ -230,20 +270,7 @@ out:
 	waitqueue_head_init(&new->wqh_send);
 	waitqueue_head_init(&new->wqh_recv);
 
-	/*
-	 * When space is copied this restores the new thread's
-	 * system call return environment so that it can safely
-	 * return as a copy of its original thread.
-	 */
-	if (flags == THREAD_COPY_SPACE ||
-	    flags == THREAD_SAME_SPACE)
-		arch_setup_new_thread(new, task);
-
-	/*
-	 * Set thread's creation flags. They will clear
-	 * when the thread is run for the first time
-	 */
-	new->flags = THREAD_CREATE_MASK & flags;
+	arch_setup_new_thread(new, task, flags);
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);

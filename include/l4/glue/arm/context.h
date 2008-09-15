@@ -5,10 +5,10 @@
 
 /*
  * This describes the register context of each task. Simply set
- * them as regular structure fields, and they'll be copied onto
- * real registers upon a context switch to that task. Normally
- * exchange_registers() system call is designed for this, whose
- * input structure is defined further below.
+ * them and they'll be copied onto real registers upon a context
+ * switch to that task. exchange_registers() system call is
+ * designed for this, whose input structure is defined further
+ * below.
  */
 typedef struct arm_context {
 	u32 spsr;	/* 0x0 */

@@ -380,6 +380,9 @@ int vma_intersect(unsigned long pfn_start, unsigned long pfn_end,
 }
 
 /*
+ * FIXME: PASS THIS A VM_SHARED FLAG SO THAT IT CAN SEARCH FOR AN EMPTY
+ * SEGMENT FOR SHM, instead of shmat() searching for one.
+ *
  * Search an empty space in the task's mmapable address region.
  */
 unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
@@ -470,9 +473,9 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
  * The actual paging in/out of the file from/into memory pages is handled by
  * the file's pager upon page faults.
  */
-int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
-	    struct tcb *task, unsigned long map_address, unsigned int flags,
-	    unsigned int npages)
+void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
+	      struct tcb *task, unsigned long map_address, unsigned int flags,
+	      unsigned int npages)
 {
 	unsigned long map_pfn = __pfn(map_address);
 	struct vm_area *new, *mapped;
@@ -485,7 +488,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 			BUG_ON(!(mapfile = get_devzero()));
 			file_offset = 0;
 	       } else
-			BUG();
+		       return PTR_ERR(-EINVAL);
 	}
 
 	/* Get total file pages, check if mapping is within file size */
@@ -494,25 +497,24 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		printf("%s: Trying to map %d pages from page %d, "
 		       "but file length is %d\n", __FUNCTION__,
 		       npages, file_offset, file_npages);
-		return -EINVAL;
+		return PTR_ERR(-EINVAL);
 	}
 
 	/* Check invalid page size */
 	if (npages == 0) {
 		printf("Trying to map %d pages.\n", npages);
-		return -EINVAL;
+		return PTR_ERR(-EINVAL);
 	}
 	if (npages > __pfn(task->stack_start - task->data_end)) {
 		printf("Trying to map too many pages: %d\n", npages);
-		return -ENOMEM;
+		return PTR_ERR(-ENOMEM);
 	}
 
 	/* Check invalid map address */
 	if (!mmap_address_validate(task, map_address, flags)) {
 		/* Get new map address for region of this size */
-		map_address = find_unmapped_area(npages, task);
-		if ((int)map_address < 0)
-			return (int)map_address;
+		if(!(map_address = find_unmapped_area(npages, task)))
+			return PTR_ERR(-ENOMEM);
 	} else {
 		/*
 		 * FIXME: Currently we don't allow overlapping vmas.
@@ -526,12 +528,12 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 
 	/* For valid regions that aren't allocated by us, create the vma. */
 	if (!(new = vma_new(__pfn(map_address), npages, flags, file_offset)))
-		return -ENOMEM;
+		return PTR_ERR(-ENOMEM);
 
 	/* Attach the file as the first vm object of this vma */
 	if (!(vmo_link = vm_objlink_create())) {
 		kfree(new);
-		return -ENOMEM;
+		return PTR_ERR(-ENOMEM);
 	}
 
 	/* Attach link to object */
@@ -557,7 +559,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		if (!(vmo_link2 = vm_objlink_create())) {
 			kfree(new);
 			kfree(vmo_link);
-			return -ENOMEM;
+			return PTR_ERR(-ENOMEM);
 		}
 		vm_link_object(vmo_link2, &dzero->vm_obj);
 		list_add_tail(&vmo_link2->list, &new->vm_obj_list);
@@ -565,7 +567,7 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 
 	/* Finished initialising the vma, add it to task */
 	dprintf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
-		map_address, map_address + npages * PAGE_SIZE);
+		map_address, map_address + __pfn_to_addr(npages));
 	task_add_vma(task, new);
 
 	/*
@@ -573,9 +575,9 @@ int do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	 * we return the *end* of the area as the start address.
 	 */
 	if (flags & VMA_GROWSDOWN)
-		map_address += npages;
+		map_address += __pfn_to_addr(npages);
 
-	return map_address;
+	return (void *)map_address;
 }
 
 /* mmap system call implementation */
@@ -635,9 +637,9 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	if (prot & PROT_EXEC)
 		vmflags |= VM_EXEC;
 
-	base = do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
+	start = do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
 
-	l4_ipc_return(base);
+	l4_ipc_return((int)start);
 	return 0;
 }
 

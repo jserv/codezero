@@ -56,7 +56,7 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 {
 	struct shm_descriptor *shm = shm_file_to_desc(shm_file);
 	unsigned int vmflags;
-	int err;
+	void *mapped;
 
 	if (!task) {
 		printf("%s:%s: Cannot find caller task with tid %d\n",
@@ -85,7 +85,7 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 		if (mmap_address_validate(task, (unsigned long)shm_addr,
 					  vmflags))
 			shm->shm_addr = shm_addr;
-		else
+		else	/* FIXME: Do this in do_mmap/find_unmapped_area !!! */
 			shm->shm_addr = address_new(&shm_vaddr_pool,
 						    shm->npages);
 	else /* Address must be already assigned */
@@ -95,9 +95,11 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 	 * mmap the area to the process as shared. Page fault handler would
 	 * handle allocating and paging-in the shared pages.
 	 */
-	if ((err = do_mmap(shm_file, 0, task, (unsigned long)shm->shm_addr,
-			   vmflags, shm->npages)) < 0) {
-		printf("do_mmap: Mapping shm area failed with %d.\n", err);
+	if (IS_ERR(mapped = do_mmap(shm_file, 0, task,
+				    (unsigned long)shm->shm_addr,
+				    vmflags, shm->npages))) {
+		printf("do_mmap: Mapping shm area failed with %d.\n",
+		       (int)mapped);
 		BUG();
 	}
 

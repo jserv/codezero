@@ -102,12 +102,6 @@ static inline int add_task_global(struct ktcb *new)
 	return 0;
 }
 
-
-static inline void set_task_flags(struct ktcb *task, unsigned int fl)
-{
-	task->flags |= fl;
-}
-
 /*
  * Each task is allocated a unique global id. A thread group can only belong to
  * a single leader, and every thread can only belong to a single thread group.

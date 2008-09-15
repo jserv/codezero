@@ -21,7 +21,4 @@ void init_mm_descriptors(struct page_bitmap *page_map,
 			 struct bootdesc *bootdesc, struct membank *membank);
 void init_physmem(struct initdata *initdata, struct membank *membank);
 
-int do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
-	    unsigned long map_address, unsigned int flags, unsigned int pages);
-
 #endif /* __MEMORY_H__ */

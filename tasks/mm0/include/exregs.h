@@ -6,6 +6,7 @@
 void exregs_set_stack(struct exregs_data *s, unsigned long sp);
 void exregs_set_mr_return(struct exregs_data *s, unsigned long retreg);
 void exregs_set_pc(struct exregs_data *s, unsigned long pc);
+void exregs_set_pager(struct exregs_data *s, l4id_t pagerid);
 
 /*
 exregs_set_stack(unsigned long sp)
