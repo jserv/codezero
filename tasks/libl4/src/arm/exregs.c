@@ -21,8 +21,7 @@ void exregs_set_mr(struct exregs_data *s, int offset, unsigned long val)
 	mr[offset] = val;
 
 	/* Set valid bit for mr register */
-	s->valid_vect |= offsetof(exregs_context_t, r3) +
-			 (offset * sizeof(int));
+	s->valid_vect |= FIELD_TO_BIT(exregs_context_t, r3) << offset;
 }
 
 void exregs_set_pager(struct exregs_data *s, l4id_t pagerid)
@@ -34,12 +33,12 @@ void exregs_set_pager(struct exregs_data *s, l4id_t pagerid)
 void exregs_set_stack(struct exregs_data *s, unsigned long sp)
 {
 	s->context.sp = sp;
-	s->valid_vect |= 1 << (offsetof(exregs_context_t, sp) >> 2);
+	s->valid_vect |= FIELD_TO_BIT(exregs_context_t, sp);
 }
 
 void exregs_set_pc(struct exregs_data *s, unsigned long pc)
 {
 	s->context.pc = pc;
-	s->valid_vect |= 1 << (offsetof(exregs_context_t, pc) >> 2);
+	s->valid_vect |= FIELD_TO_BIT(exregs_context_t, pc);
 }
 
