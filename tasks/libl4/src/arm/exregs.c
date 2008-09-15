@@ -12,7 +12,7 @@
 void exregs_set_mr(struct exregs_data *s, int offset, unsigned long val)
 {
 	/* Get MR0 */
-	u32 *mr = &s->context.r3;
+	u32 *mr = &s->context.MR0_REGISTER;
 
 	/* Sanity check */
 	BUG_ON(offset > MR_TOTAL || offset < 0);
@@ -21,7 +21,7 @@ void exregs_set_mr(struct exregs_data *s, int offset, unsigned long val)
 	mr[offset] = val;
 
 	/* Set valid bit for mr register */
-	s->valid_vect |= FIELD_TO_BIT(exregs_context_t, r3) << offset;
+	s->valid_vect |= FIELD_TO_BIT(exregs_context_t, MR0_REGISTER) << offset;
 }
 
 void exregs_set_pager(struct exregs_data *s, l4id_t pagerid)

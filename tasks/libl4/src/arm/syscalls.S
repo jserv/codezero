@@ -6,6 +6,8 @@
 #include <l4lib/arch/asm.h>
 #include <l4lib/arch/utcb.h>
 #include <l4/generic/space.h>
+#include <l4/macros.h>
+#include INC_GLUE(message.h)
 
 	.macro	utcb_address	rx
 		ldr	\rx, =utcb
@@ -43,10 +45,7 @@ END_PROC(l4_kread)
  * For clone() we need special assembler handling
  * Same signature as ipc(): @r0 = to, @r1 = from
  *
- * NOTE: MR_RETURN register is hardcoded here.
- * It must be updated if MR_RETURN offset is changed!
- *
- * NOTE: Note that this also breaks l4 system call interface,
+ * NOTE: Note that this breaks l4 system call interface,
  * this should be moved elsewhere and modified using existing l4 mechanisms.
  */
 BEGIN_PROC(arch_clone)
@@ -65,7 +64,7 @@ BEGIN_PROC(arch_clone)
 	 */
 	cmp	r0, #0			@ Check ipc success
 	blt	ipc_failed
-	cmp	r3, #0			@ Check ipc return register MR_RETURN.
+	cmp	MR_RETURN_REGISTER, #0	@ Check ipc return register MR_RETURN.
 	blt	clone_failed		@ Ipc was ok but clone() failed.
 	bgt	parent_return		@ It has child pid, goto parent return.
 child:

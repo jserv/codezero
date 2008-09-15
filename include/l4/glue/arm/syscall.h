@@ -8,6 +8,7 @@
 #define __ARM_GLUE_SYSCALL_H__
 
 #include <l4/types.h>
+#include INC_GLUE(message.h)
 
 /* Only specific call is the trap that gives back the kip address
  * from which other system calls can be discovered. */
@@ -57,7 +58,7 @@ typedef struct msg_regs {
  * that imitates a page fault ipc etc.
  */
 #define KTCB_REF_ARG0(ktcb)	(&(ktcb)->syscall_regs->r0)
-#define KTCB_REF_MR0(ktcb)	(&(ktcb)->syscall_regs->r3)
+#define KTCB_REF_MR0(ktcb)	(&(ktcb)->syscall_regs->MR0_REGISTER)
 
 /* Represents each syscall. We get argument registers
  * from stack for now. This is slower but the simplest. */
