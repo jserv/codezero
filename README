@@ -47,10 +47,10 @@ memory management. It contains memory and page allocators. It implements demand
 paging by managing page faults, physical pages and their file/task associations.
 It provides the default paging mechanism on Codezero.
 
-FS0 is the system task that implements a simple, modern virtual filesystem layer.
-It is designed to serve file requests from MM0. Since it abstracts the low-level
-filesystem details, it is a relatively easy job to port a new filesystem to be
-used under FS0.
+FS0 is the system task that implements a simple, modern virtual filesystem
+layer. It is designed to serve file requests from MM0. Since it abstracts the
+low-level filesystem details, it is a relatively easy job to port a new
+filesystem to be used under FS0.
 
 MM0 and FS0 both reside in the userspace, and they are not mandatory services.
 For example the virtual and physical memory resources can be partitioned by
