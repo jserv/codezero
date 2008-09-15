@@ -65,7 +65,7 @@ BEGIN_PROC(arch_clone)
 	 */
 	cmp	r0, #0			@ Check ipc success
 	blt	ipc_failed
-	cmp	r2, #0			@ Check ipc return register MR_RETURN.
+	cmp	r3, #0			@ Check ipc return register MR_RETURN.
 	blt	clone_failed		@ Ipc was ok but clone() failed.
 	bgt	parent_return		@ It has child pid, goto parent return.
 child:

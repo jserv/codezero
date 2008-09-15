@@ -41,37 +41,37 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
 	 */
 
 	/* Check register valid bit and copy registers */
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r0))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r0))
 		context->r0 = exregs->context.r0;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r1))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r1))
 		context->r1 = exregs->context.r1;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r2))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r2))
 		context->r2 = exregs->context.r2;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r3))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r3))
 		context->r3 = exregs->context.r3;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r4))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r4))
 		context->r4 = exregs->context.r4;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r5))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r5))
 		context->r5 = exregs->context.r5;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r6))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r6))
 		context->r6 = exregs->context.r6;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r7))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r7))
 		context->r7 = exregs->context.r7;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r8))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r8))
 		context->r8 = exregs->context.r8;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r9))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r9))
 		context->r9 = exregs->context.r9;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r10))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r10))
 		context->r10 = exregs->context.r10;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r11))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r11))
 		context->r11 = exregs->context.r11;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, r12))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r12))
 		context->r12 = exregs->context.r12;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, sp))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, sp))
 		context->sp = exregs->context.sp;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, lr))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, lr))
 		context->lr = exregs->context.lr;
-	if (exregs->valid_vect & FIELD_TO_BIT(task_context_t, pc))
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, pc))
 		context->pc = exregs->context.pc;
 
 	/* Set thread's pager if one is supplied */

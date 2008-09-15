@@ -9,6 +9,7 @@
 #include <mmap.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
+#include <l4lib/exregs.h>
 #include <l4/api/thread.h>
 #include <utcb.h>
 #include <shm.h>
@@ -49,7 +50,9 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 
 int do_fork(struct tcb *parent)
 {
+	int err;
 	struct tcb *child;
+	struct exregs_data exregs;
 	struct vm_file *utcb_shm;
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
@@ -69,6 +72,12 @@ int do_fork(struct tcb *parent)
 		l4_ipc_return((int)child);
 		return 0;
 	}
+
+	/* Set child's fork return value to 0 */
+	memset(&exregs, 0, sizeof(exregs));
+	exregs_set_mr(&exregs, MR_RETURN, 0);
+	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
+		BUG();
 
 	/* Create new utcb for child since it can't use its parent's */
 	child->utcb = utcb_vaddr_new();

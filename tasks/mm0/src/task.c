@@ -15,6 +15,7 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/arch/utcb.h>
 #include <l4lib/ipcdefs.h>
+#include <l4lib/exregs.h>
 #include <lib/addr.h>
 #include <kmalloc/kmalloc.h>
 #include <init.h>
@@ -26,7 +27,6 @@
 #include <task.h>
 #include <shm.h>
 #include <mmap.h>
-#include <exregs.h>
 
 struct tcb_head {
 	struct list_head list;
