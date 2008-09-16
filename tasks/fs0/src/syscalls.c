@@ -18,39 +18,50 @@
 #include <alloca.h>
 #include <path.h>
 
+#define NILFD			-1
+
 /*
- * This notifies mm0 that this is the fd that refers to this vnode number
- * from now on. Note this is a one-way call.
+ * This informs mm0 about an opened file descriptors.
  *
  * MM0 *also* keeps track of fd's because mm0 is a better candidate
  * for handling syscalls that access file content (i.e. read/write) since
- * it maintains the page cache.
+ * it maintains the page cache. MM0 is not notified about opened files
+ * but is rather informed when it asks to be. This avoids deadlocks by
+ * keeping the request flow in one way.
  */
-int pager_sys_open(l4id_t sender, int fd, unsigned long vnum, unsigned long size)
+
+int pager_sys_open(l4id_t sender, l4id_t opener, int fd)
 {
-	int err;
+	struct tcb *task;
+	struct vnode *v;
 
 	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	l4_save_ipcregs();
-
-	write_mr(L4SYS_ARG0, sender);
-	write_mr(L4SYS_ARG1, fd);
-	write_mr(L4SYS_ARG2, vnum);
-	write_mr(L4SYS_ARG3, size);
-
-	/* Tell pager about open request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_PAGER_OPEN)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+	/* Check if such task exists */
+	if (!(task = find_task(opener))) {
+		l4_ipc_return(-ESRCH);
+		return 0;
 	}
 
-	/* Check if syscall itself was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager open Error: %d.\n", __FUNCTION__, fd);
-		return err;
+	/* Check if that fd has been opened */
+	if (task->fd[fd] == NILFD) {
+		l4_ipc_return(-EBADF);
+		return 0;
 	}
-	l4_restore_ipcregs();
+
+	/* Search the vnode by that vnum */
+	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
+					 task->fd[fd]))) {
+		l4_ipc_return((int)v);
+		return 0;
+	}
+
+	/* Write file information */
+	write_mr(L4SYS_ARG0, v->vnum);
+	write_mr(L4SYS_ARG1, v->size);
+
+	/* Return ipc with success code */
+	l4_ipc_return(0);
 
 	return 0;
 }
@@ -99,7 +110,7 @@ struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
  * Pager notifies vfs about a closed file descriptor.
  *
  * FIXME: fsync + close could be done under a single "close" ipc
- * from pager. Currently there are 2 ipcs: 1 fsync + 1 fd close. 
+ * from pager. Currently there are 2 ipcs: 1 fsync + 1 fd close.
  */
 int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
 {
@@ -116,7 +127,7 @@ int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
 		l4_ipc_return(err);
 		return 0;
 	}
-	task->fd[fd] = -1;
+	task->fd[fd] = NILFD;
 
 	l4_ipc_return(0);
 	return 0;
@@ -133,7 +144,7 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 	struct vnode *v;
 	struct tcb *task;
 	int fd;
-	int retval, err;
+	int retval;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
@@ -170,12 +181,6 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 
 	/* Assign the new fd with the vnode's number */
 	task->fd[fd] = v->vnum;
-
-	/* Tell the pager about opened vnode information */
-	if ((err = pager_sys_open(sender, fd, v->vnum, v->size)) < 0) {
-		retval = err;
-		goto out;
-	}
 
 out:
 	pathdata_destroy(pdata);

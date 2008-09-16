@@ -7,11 +7,12 @@
 #include <kmalloc/kmalloc.h>
 #include INC_API(errno.h)
 #include <posix/sys/types.h>
-#include <task.h>
-#include <mmap.h>
-#include <memory.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <task.h>
+#include <mmap.h>
+#include <file.h>
+#include <memory.h>
 
 #if 0
 /* TODO: This is to be implemented when fs0 is ready. */
@@ -589,11 +590,16 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	struct vm_file *file = 0;
 	unsigned int vmflags = 0;
 	struct tcb *task;
+	int err;
 
-	BUG_ON(!(task = find_task(sender)));
+	if (!(task = find_task(sender)))
+		return -ESRCH;
 
-	if ((fd < 0 && !(flags & MAP_ANONYMOUS)) || fd > TASK_FILES_MAX)
-		return -EINVAL;
+	/* Check fd validity */
+	if (!(flags & MAP_ANONYMOUS))
+		if (!task->files->fd[fd].vmfile)
+			if ((err = file_open(task, fd)) < 0)
+				return err;
 
 	if (base < task->start || base >= task->end)
 		return -EINVAL;

@@ -88,6 +88,9 @@ void handle_fs_requests(void)
 		pager_sys_read(sender, (unsigned long)mr[0], (unsigned long)mr[1],
 			       (unsigned long)mr[2], (void *)mr[3]);
 		break;
+	case L4_IPC_TAG_PAGER_OPEN:
+		pager_sys_open(sender, (l4id_t)mr[0], (int)mr[1]);
+		break;
 	case L4_IPC_TAG_PAGER_WRITE:
 		pager_sys_write(sender, (unsigned long)mr[0], (unsigned long)mr[1],
 			        (unsigned long)mr[2], (void *)mr[3]);

@@ -82,71 +82,106 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 
 
 /*
- * When a new file is opened by the vfs this receives the information
- * about that file so that it can serve that file's content (via
- * read/write/mmap) later to that task.
+ * When a task does a read/write/mmap request on a file, if
+ * the file descriptor is unknown to the pager, this call
+ * asks vfs if that file has been opened, and any other
+ * relevant information.
  */
-int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
-			 unsigned long vnum, unsigned long length)
+int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
 {
-	struct vm_file *vmfile;
-	struct tcb *t;
+	int err;
 
 	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	/* Check argument validity */
-	if (sender != VFS_TID) {
-		l4_ipc_return(-EPERM);
-		return 0;
+	l4_save_ipcregs();
+
+	write_mr(L4SYS_ARG0, opener);
+	write_mr(L4SYS_ARG1, fd);
+
+	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_OPEN)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
 	}
 
-	if (!(t = find_task(opener))) {
-		l4_ipc_return(-EINVAL);
-		return 0;
+	/* Check if syscall was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: VFS open error: %d.\n",
+		       __FUNCTION__, err);
+		return err;
 	}
 
-	if (fd < 0 || fd > TASK_FILES_MAX) {
-		l4_ipc_return(-EINVAL);
-		return 0;
-	}
+	/* Read file information */
+	*vnum = read_mr(L4SYS_ARG0);
+	*length = read_mr(L4SYS_ARG1);
+
+	l4_restore_ipcregs();
+
+	return err;
+}
+
+/* Initialise a new file and the descriptor for it from given file data */
+int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
+{
+	struct vm_file *vmfile;
+
+	/* fd slot must be empty */
+	BUG_ON(task->files->fd[fd].vnum != 0);
+	BUG_ON(task->files->fd[fd].cursor != 0);
 
 	/* Assign vnum to given fd on the task */
-	t->files->fd[fd].vnum = vnum;
-	t->files->fd[fd].cursor = 0;
+	task->files->fd[fd].vnum = vnum;
+	task->files->fd[fd].cursor = 0;
 
 	/* Check if that vm_file is already in the list */
 	list_for_each_entry(vmfile, &vm_file_list, list) {
-		/* Check it is a vfs file and if so vnums match. */
+
+		/* Check whether it is a vfs file and if so vnums match. */
 		if ((vmfile->type & VM_FILE_VFS) &&
 		    vm_file_to_vnum(vmfile) == vnum) {
+
 			/* Add a reference to it from the task */
-			t->files->fd[fd].vmfile = vmfile;
+			task->files->fd[fd].vmfile = vmfile;
 			vmfile->openers++;
-			l4_ipc_return(0);
 			return 0;
 		}
 	}
 
 	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vfs_file_create())) {
-		l4_ipc_return((int)vmfile);
-		return 0;
-	}
+	if (IS_ERR(vmfile = vfs_file_create()))
+		return (int)vmfile;
 
 	/* Initialise and add a reference to it from the task */
 	vm_file_to_vnum(vmfile) = vnum;
 	vmfile->length = length;
 	vmfile->vm_obj.pager = &file_pager;
-	t->files->fd[fd].vmfile = vmfile;
+	task->files->fd[fd].vmfile = vmfile;
 	vmfile->openers++;
 
 	/* Add to global list */
 	list_add(&vmfile->vm_obj.list, &vm_file_list);
 
-	l4_ipc_return(0);
 	return 0;
 }
 
+int file_open(struct tcb *opener, int fd)
+{
+	int err;
+	unsigned long vnum;
+	unsigned long length;
+
+	if (fd < 0 || fd > TASK_FILES_MAX)
+		return -EINVAL;
+
+	/* Ask vfs if such a file has been recently opened */
+	if ((err = vfs_open(opener->tid, fd, &vnum, &length)) < 0)
+		return err;
+
+	/* Initialise local structures with received file data */
+	if ((err = do_open(opener, fd, vnum, length)) < 0)
+		return err;
+
+	return 0;
+}
 
 /*
  * Inserts the page to vmfile's list in order of page frame offset.
@@ -330,21 +365,18 @@ int flush_file_pages(struct vm_file *f)
 }
 
 /* Given a task and fd, syncs all IO on it */
-int fsync_common(l4id_t sender, int fd)
+int fsync_common(struct tcb *task, int fd)
 {
 	struct vm_file *f;
-	struct tcb *task;
 	int err;
 
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
-
 	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile)
-		return -EBADF;
+	if (!task->files->fd[fd].vmfile)
+		if ((err = file_open(task, fd)) < 0)
+			return err;
 
 	/* Finish I/O on file */
-	f = task->files->fd[fd].vmfile;
+	BUG_ON(!(f = task->files->fd[fd].vmfile));
 	if ((err = flush_file_pages(f)) < 0)
 		return err;
 
@@ -352,13 +384,9 @@ int fsync_common(l4id_t sender, int fd)
 }
 
 /* Closes the file descriptor and notifies vfs */
-int fd_close(l4id_t sender, int fd)
+int do_close(struct tcb *task, int fd)
 {
-	struct tcb *task;
 	int err;
-
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
 
 	// printf("%s: Closing fd: %d on task %d\n", __FUNCTION__,
 	//       fd, task->tid);
@@ -378,15 +406,21 @@ int fd_close(l4id_t sender, int fd)
 int sys_close(l4id_t sender, int fd)
 {
 	int retval;
+	struct tcb *task;
+
+	if (!(task = find_task(sender))) {
+		l4_ipc_return(-ESRCH);
+		return 0;
+	}
 
 	/* Sync the file and update stats */
-	if ((retval = fsync_common(sender, fd)) < 0) {
+	if ((retval = fsync_common(task, fd)) < 0) {
 		l4_ipc_return(retval);
 		return 0;
 	}
 
 	/* Close the file descriptor. */
-	retval = fd_close(sender, fd);
+	retval = do_close(task, fd);
 	printf("%s: Closed fd %d. Returning %d\n",
 	       __TASKNAME__, fd, retval);
 	l4_ipc_return(retval);
@@ -396,8 +430,20 @@ int sys_close(l4id_t sender, int fd)
 
 int sys_fsync(l4id_t sender, int fd)
 {
+	struct tcb *task;
+	int ret;
+
+	if (!(task = find_task(sender))) {
+		ret = -ESRCH;
+		goto out;
+	}
+
 	/* Sync the file and update stats */
-	return fsync_common(sender, fd);
+	ret = fsync_common(task, fd);
+
+out:
+	l4_ipc_return(ret);
+	return 0;
 }
 
 /* FIXME: Add error handling to this */
@@ -561,40 +607,41 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 	unsigned long pfn_start, pfn_end;
 	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
-	int err, retval = 0;
 	struct tcb *task;
+	int ret = 0;
 
-	BUG_ON(!(task = find_task(sender)));
-
-	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile) {
-		retval = -EBADF;
+	if (!(task = find_task(sender))) {
+		ret = -ESRCH;
 		goto out;
 	}
 
+	/* Check fd validity */
+	if (!task->files->fd[fd].vmfile)
+		if ((ret = file_open(task, fd)) < 0)
+			goto out;
+
+
 	/* Check count validity */
 	if (count < 0) {
-		retval = -EINVAL;
+		ret = -EINVAL;
 		goto out;
 	} else if (!count) {
-		retval = 0;
+		ret = 0;
 		goto out;
 	}
 
 	/* Check user buffer validity. */
-	if ((err = validate_task_range(task, (unsigned long)buf,
+	if ((ret = validate_task_range(task, (unsigned long)buf,
 				       (unsigned long)(buf + count),
-				       VM_READ)) < 0) {
-		retval = err;
+				       VM_READ)) < 0)
 		goto out;
-	}
 
 	vmfile = task->files->fd[fd].vmfile;
 	cursor = task->files->fd[fd].cursor;
 
 	/* If cursor is beyond file end, simply return 0 */
 	if (cursor >= vmfile->length) {
-		retval = 0;
+		ret = 0;
 		goto out;
 	}
 
@@ -611,29 +658,26 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
 		count = vmfile->length - cursor;
 
 	/* Read the page range into the cache from file */
-	if ((err = read_file_pages(vmfile, pfn_start, pfn_end)) < 0) {
-		retval = err;
+	if ((ret = read_file_pages(vmfile, pfn_start, pfn_end)) < 0)
 		goto out;
-	}
 
 	/* The offset of cursor on first page */
 	byte_offset = PAGE_MASK & cursor;
 
 	/* Read it into the user buffer from the cache */
 	if ((count = read_cache_pages(vmfile, task, buf, pfn_start, pfn_end,
-				    byte_offset, count)) < 0) {
-		retval = count;
+				      byte_offset, count)) < 0) {
+		ret = count;
 		goto out;
 	}
 
 	/* Update cursor on success */
 	task->files->fd[fd].cursor += count;
-	retval = count;
+	ret = count;
 
 out:
-	l4_ipc_return(retval);
+	l4_ipc_return(ret);
 	return 0;
-
 }
 
 /* FIXME:
@@ -649,33 +693,33 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	unsigned long pfn_nstart, pfn_nend;	/* New pages start/end */
 	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
-	int err = 0, retval = 0;
 	struct tcb *task;
+	int ret = 0;
 
-	BUG_ON(!(task = find_task(sender)));
-
-	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile) {
-		retval = -EBADF;
+	if (!(task = find_task(sender))) {
+		ret = -ESRCH;
 		goto out;
 	}
 
+	/* Check fd validity */
+	if (!task->files->fd[fd].vmfile)
+		if ((ret = file_open(task, fd)) < 0)
+			goto out;
+
 	/* Check count validity */
 	if (count < 0) {
-		retval = -EINVAL;
+		ret = -EINVAL;
 		goto out;
 	} else if (!count) {
-		retval = 0;
+		ret = 0;
 		goto out;
 	}
 
 	/* Check user buffer validity. */
-	if ((err = validate_task_range(task, (unsigned long)buf,
+	if ((ret = validate_task_range(task, (unsigned long)buf,
 				       (unsigned long)(buf + count),
-				       VM_WRITE | VM_READ)) < 0) {
-		retval = err;
+				       VM_WRITE | VM_READ)) < 0)
 		goto out;
-	}
 
 	vmfile = task->files->fd[fd].vmfile;
 	cursor = task->files->fd[fd].cursor;
@@ -724,27 +768,21 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 	/*
 	 * Read in the portion that's already part of the file.
 	 */
-	if ((err = read_file_pages(vmfile, pfn_fstart, pfn_fend)) < 0) {
-		retval = err;
+	if ((ret = read_file_pages(vmfile, pfn_fstart, pfn_fend)) < 0)
 		goto out;
-	}
 
 	/* Create new pages for the part that's new in the file */
-	if ((err = new_file_pages(vmfile, pfn_nstart, pfn_nend)) < 0) {
-		retval = err;
+	if ((ret = new_file_pages(vmfile, pfn_nstart, pfn_nend)) < 0)
 		goto out;
-	}
 
 	/*
 	 * At this point be it new or existing file pages, all pages
 	 * to be written are expected to be in the page cache. Write.
 	 */
 	byte_offset = PAGE_MASK & cursor;
-	if ((err = write_cache_pages(vmfile, task, buf, pfn_wstart,
-				     pfn_wend, byte_offset, count)) < 0) {
-		retval = err;
+	if ((ret = write_cache_pages(vmfile, task, buf, pfn_wstart,
+				     pfn_wend, byte_offset, count)) < 0)
 		goto out;
-	}
 
 	/*
 	 * Update the file size, and cursor. vfs will be notified
@@ -755,10 +793,10 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 		vmfile->length = task->files->fd[fd].cursor + count;
 
 	task->files->fd[fd].cursor += count;
-	retval = count;
+	ret = count;
 
 out:
-	l4_ipc_return(retval);
+	l4_ipc_return(ret);
 	return 0;
 }
 
@@ -769,13 +807,15 @@ int sys_lseek(l4id_t sender, int fd, off_t offset, int whence)
 	int retval = 0;
 	unsigned long long total, cursor;
 
-	BUG_ON(!(task = find_task(sender)));
-
-	/* Check fd validity */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vmfile) {
-		retval = -EBADF;
+	if (!(task = find_task(sender))) {
+		retval = -ESRCH;
 		goto out;
 	}
+
+	/* Check fd validity */
+	if (!task->files->fd[fd].vmfile)
+		if ((retval = file_open(task, fd)) < 0)
+			goto out;
 
 	/* Offset validity */
 	if (offset < 0) {

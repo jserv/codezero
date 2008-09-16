@@ -13,6 +13,8 @@ int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode);
 int sys_chdir(l4id_t sender, const char *pathname);
 
 /* Calls from pager that completes a posix call */
+
+int pager_sys_open(l4id_t sender, l4id_t opener, int fd);
 int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 		   unsigned long npages, void *pagebuf);
 
