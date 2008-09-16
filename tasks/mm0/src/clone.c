@@ -10,6 +10,7 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
+#include <l4/api/errno.h>
 #include <l4/api/thread.h>
 #include <utcb.h>
 #include <shm.h>
@@ -68,10 +69,8 @@ int do_fork(struct tcb *parent)
 	 * kernel stack and kernel-side tcb copied
 	 */
 	if (IS_ERR(child = task_create(parent, &ids, THREAD_COPY_SPACE,
-			    	       TCB_NO_SHARING))) {
-		l4_ipc_return((int)child);
-		return 0;
-	}
+			    	       TCB_NO_SHARING)))
+		return (int)child;
 
 	/* Set child's fork return value to 0 */
 	memset(&exregs, 0, sizeof(exregs));
@@ -87,10 +86,9 @@ int do_fork(struct tcb *parent)
 	 * available for child to shmat()
 	 */
 	if (IS_ERR(utcb_shm = shm_new((key_t)child->utcb,
-				      __pfn(DEFAULT_UTCB_SIZE)))) {
-		l4_ipc_return((int)utcb_shm);
-		return 0;
-	}
+				      __pfn(DEFAULT_UTCB_SIZE))))
+		return (int)utcb_shm;
+
 	/* FIXME: Should we munmap() parent's utcb page from child? */
 
 	/*
@@ -105,25 +103,23 @@ int do_fork(struct tcb *parent)
 	/* Add child to global task list */
 	task_add_global(child);
 
-	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
 	/* Start forked child. */
+	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
 	l4_thread_control(THREAD_RUN, &ids);
 
-	/* Return back to parent */
-	l4_ipc_return(child->tid);
-
-	return 0;
+	/* Return child tid to parent */
+	return child->tid;
 }
 
 int sys_fork(l4id_t sender)
 {
 	struct tcb *parent;
 
-	BUG_ON(!(parent = find_task(sender)));
+	if (!(parent = find_task(sender)))
+		return -ESRCH;
 
 	return do_fork(parent);
 }
-
 
 int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
 {
@@ -138,10 +134,8 @@ int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
 	ids.tgid = parent->tgid;
 
 	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE,
-			    	       TCB_SHARED_VM | TCB_SHARED_FILES))) {
-		l4_ipc_return((int)child);
-		return 0;
-	}
+			    	       TCB_SHARED_VM | TCB_SHARED_FILES)))
+		return (int)child;
 
 	/* Allocate a unique utcb address for child */
 	child->utcb = utcb_vaddr_new();
@@ -151,10 +145,8 @@ int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
 	 * available for child to shmat()
 	 */
 	if (IS_ERR(utcb_shm = shm_new((key_t)child->utcb,
-				      __pfn(DEFAULT_UTCB_SIZE)))) {
-		l4_ipc_return((int)utcb_shm);
-		return 0;
-	}
+				      __pfn(DEFAULT_UTCB_SIZE))))
+		return (int)utcb_shm;
 
 	/* Map and prefault child's utcb to vfs task */
 	task_map_prefault_utcb(find_task(VFS_TID), child);
@@ -169,14 +161,12 @@ int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
 	/* Add child to global task list */
 	task_add_global(child);
 
-	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
 	/* Start forked child. */
+	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
 	l4_thread_control(THREAD_RUN, &ids);
 
-	/* Return back to parent */
-	l4_ipc_return(child->tid);
-
-	return 0;
+	/* Return child tid to parent */
+	return child->tid;
 }
 
 

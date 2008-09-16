@@ -582,8 +582,8 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 }
 
 /* mmap system call implementation */
-int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
-	     int flags, int fd, unsigned long pfn)
+void *sys_mmap(l4id_t sender, void *start, size_t length, int prot,
+	       int flags, int fd, unsigned long pfn)
 {
 	unsigned long npages = __pfn(page_align_up(length));
 	unsigned long base = (unsigned long)start;
@@ -593,21 +593,21 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	int err;
 
 	if (!(task = find_task(sender)))
-		return -ESRCH;
+		return PTR_ERR(-ESRCH);
 
 	/* Check fd validity */
 	if (!(flags & MAP_ANONYMOUS))
 		if (!task->files->fd[fd].vmfile)
 			if ((err = file_open(task, fd)) < 0)
-				return err;
+				return PTR_ERR(err);
 
 	if (base < task->start || base >= task->end)
-		return -EINVAL;
+		return PTR_ERR(-EINVAL);
 
 	/* Exclude task's stack, text and data from mmappable area in task's space */
 	if (base < task->map_start || base >= task->map_end || !base) {
 		if (flags & MAP_FIXED)	/* Its fixed, we cannot satisfy it */
-			return -EINVAL;
+			return PTR_ERR(-EINVAL);
 		else
 			start = 0;
 	}
@@ -643,10 +643,7 @@ int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 	if (prot & PROT_EXEC)
 		vmflags |= VM_EXEC;
 
-	start = do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
-
-	l4_ipc_return((int)start);
-	return 0;
+	return do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
 }
 
 /* Sets the end of data segment for sender */

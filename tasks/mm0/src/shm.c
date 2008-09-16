@@ -106,35 +106,31 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 	return shm->shm_addr;
 }
 
-int sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
+/* TODO: Do we need this?
+ * MM0 never needs a task's utcb page. vfs needs it.
+ * UTCBs get special treatment here. If the task
+ * is attaching to its utcb, mm0 prefaults it so
+ * that it can access it later on whether or not
+ * the task makes a syscall to mm0 without first
+ * faulting the utcb.
+ */
+/*
+	if ((unsigned long)shmaddr == task->utcb_address)
+		utcb_prefault(task, VM_READ | VM_WRITE);
+*/
+
+void *sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct vm_file *shm_file, *n;
 	struct tcb *task = find_task(requester);
 
 	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
-		if (shm_file_to_desc(shm_file)->shmid == shmid) {
-			shmaddr = do_shmat(shm_file, shmaddr,
-					   shmflg, task);
-
-			/*
-			 * UTCBs get special treatment here. If the task
-			 * is attaching to its utcb, mm0 prefaults it so
-			 * that it can access it later on whether or not
-			 * the task makes a syscall to mm0 without first
-			 * faulting the utcb.
-			 */
-			/*
-			if ((unsigned long)shmaddr == task->utcb_address)
-				utcb_prefault(task, VM_READ | VM_WRITE);
-			*/
-
-			l4_ipc_return((int)shmaddr);
-			return 0;
-		}
+		if (shm_file_to_desc(shm_file)->shmid == shmid)
+			return do_shmat(shm_file, shmaddr,
+					shmflg, task);
 	}
 
-	l4_ipc_return(-EINVAL);
-	return 0;
+	return PTR_ERR(-EINVAL);
 }
 
 int do_shmdt(struct vm_file *shm, l4id_t tid)
@@ -164,16 +160,14 @@ int sys_shmdt(l4id_t requester, const void *shmaddr)
 
 	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
 		if (shm_file_to_desc(shm_file)->shm_addr == shmaddr) {
-			if ((err = do_shmdt(shm_file, requester) < 0)) {
-				l4_ipc_return(err);
-				return 0;
-			} else
+			if ((err = do_shmdt(shm_file, requester) < 0))
+				return err;
+			else
 				break;
 		}
 	}
 
-	l4_ipc_return(-EINVAL);
-	return 0;
+	return -EINVAL;
 }
 
 
@@ -248,10 +242,8 @@ int sys_shmget(key_t key, int size, int shmflg)
 	struct vm_file *shm;
 
 	/* First check argument validity */
-	if (npages > SHM_SHMMAX || npages < SHM_SHMMIN) {
-		l4_ipc_return(-EINVAL);
-		return 0;
-	}
+	if (npages > SHM_SHMMAX || npages < SHM_SHMMIN)
+		return -EINVAL;
 
 	/*
 	 * IPC_PRIVATE means create a no-key shm area, i.e. private to this
@@ -260,10 +252,9 @@ int sys_shmget(key_t key, int size, int shmflg)
 	if (key == IPC_PRIVATE) {
 		key = -1;		/* Our meaning of no key */
 		if (!(shm = shm_new(key, npages)))
-			l4_ipc_return(-ENOSPC);
+			return -ENOSPC;
 		else
-			l4_ipc_return(shm_file_to_desc(shm)->shmid);
-		return 0;
+			return shm_file_to_desc(shm)->shmid;
 	}
 
 	list_for_each_entry(shm, &shm_file_list, list) {
@@ -275,26 +266,23 @@ int sys_shmget(key_t key, int size, int shmflg)
 			 * on an existing key should fail.
 			 */
 			if ((shmflg & IPC_CREAT) && (shmflg & IPC_EXCL))
-				l4_ipc_return(-EEXIST);
+				return -EEXIST;
 			else
 				/* Found it but do we have a size problem? */
 				if (shm_desc->npages < npages)
-					l4_ipc_return(-EINVAL);
+					return -EINVAL;
 				else /* Return shmid of the existing key */
-					l4_ipc_return(shm_desc->shmid);
-			return 0;
+					return shm_desc->shmid;
 		}
 	}
 
 	/* Key doesn't exist and create is set, so we create */
 	if (shmflg & IPC_CREAT)
 		if (!(shm = shm_new(key, npages)))
-			l4_ipc_return(-ENOSPC);
+			return -ENOSPC;
 		else
-			l4_ipc_return(shm_file_to_desc(shm)->shmid);
+			return shm_file_to_desc(shm)->shmid;
 	else	/* Key doesn't exist, yet create isn't set, its an -ENOENT */
-		l4_ipc_return(-ENOENT);
-
-	return 0;
+		return -ENOENT;
 }
 

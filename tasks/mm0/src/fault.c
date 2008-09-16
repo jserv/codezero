@@ -711,8 +711,7 @@ int page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
 	 * FIXME: We could kill the thread if there was an error???
 	 * Perhaps via a kill message to kernel?
 	 */
-	l4_ipc_return(err);
-	return 0;
+	return err;
 }
 
 /* Checks if an address range is a validly mapped area for a task */

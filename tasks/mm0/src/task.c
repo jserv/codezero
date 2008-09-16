@@ -438,7 +438,7 @@ void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner)
  */
 int send_task_data(l4id_t requester)
 {
-	int li = 0, err;
+	int li = 0;
 	struct tcb *t, *vfs, *self;
 	struct task_data_head *tdata_head;
 
@@ -472,12 +472,6 @@ int send_task_data(l4id_t requester)
 		tdata_head->tdata[li].tid = t->tid;
 		tdata_head->tdata[li].utcb_address = (unsigned long)t->utcb;
 		li++;
-	}
-
-	/* Reply */
-	if ((err = l4_ipc_return(0)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		BUG();
 	}
 
 	return 0;

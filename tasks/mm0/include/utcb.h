@@ -8,7 +8,7 @@ int utcb_pool_init(void);
 
 
 /* IPC to send utcb address information to tasks */
-int task_send_utcb_address(l4id_t sender, l4id_t taskid);
+void *task_send_utcb_address(l4id_t sender, l4id_t taskid);
 
 /* Prefault an *mmaped* utcb */
 int utcb_prefault(struct tcb *task, unsigned int vmflags);

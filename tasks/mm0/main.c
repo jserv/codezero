@@ -28,12 +28,12 @@ void handle_requests(void)
 	u32 mr[MR_UNUSED_TOTAL];
 	l4id_t sender;
 	u32 tag;
-	int err;
+	int ret;
 
 	// printf("%s: Initiating ipc.\n", __TASKNAME__);
-	if ((err = l4_receive(L4_ANYTHREAD)) < 0) {
+	if ((ret = l4_receive(L4_ANYTHREAD)) < 0) {
 		printf("%s: %s: IPC Error: %d. Quitting...\n", __TASKNAME__,
-		       __FUNCTION__, err);
+		       __FUNCTION__, ret);
 		BUG();
 	}
 
@@ -47,85 +47,82 @@ void handle_requests(void)
 
 	switch(tag) {
 	case L4_IPC_TAG_WAIT:
-	 	/*
-		 * A thread that wants to sync with us would have
-		 * started here.
-		 */
 		// printf("%s: Synced with waiting thread.\n", __TASKNAME__);
-		break;
+		/* This has no receive phase */
+		return;
 
 	case L4_IPC_TAG_PFAULT:
 		/* Handle page fault. */
-		page_fault_handler(sender, (fault_kdata_t *)&mr[0]);
+		ret = page_fault_handler(sender, (fault_kdata_t *)&mr[0]);
 		break;
 
 	case L4_IPC_TAG_TASKDATA:
 		/* Send runnable task information to fs0 */
-		send_task_data(sender);
+		ret = send_task_data(sender);
 		break;
 
 	case L4_IPC_TAG_SHMGET: {
 		struct sys_shmget_args *args = (struct sys_shmget_args *)&mr[0];
-		sys_shmget(args->key, args->size, args->shmflg);
+		ret = sys_shmget(args->key, args->size, args->shmflg);
 		break;
 	}
 
 	case L4_IPC_TAG_SHMAT: {
 		struct sys_shmat_args *args = (struct sys_shmat_args *)&mr[0];
-		sys_shmat(sender, args->shmid, args->shmaddr, args->shmflg);
+		ret = (int)sys_shmat(sender, args->shmid, args->shmaddr, args->shmflg);
 		break;
 	}
 
 	case L4_IPC_TAG_SHMDT:
-		sys_shmdt(sender, (void *)mr[0]);
+		ret = sys_shmdt(sender, (void *)mr[0]);
 		break;
 
 	case L4_IPC_TAG_UTCB:
-		task_send_utcb_address(sender, (l4id_t)mr[0]);
+		ret = (int)task_send_utcb_address(sender, (l4id_t)mr[0]);
 		break;
 
 	case L4_IPC_TAG_READ:
-		sys_read(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+		ret = sys_read(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 
 	case L4_IPC_TAG_WRITE:
-		sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+		ret = sys_write(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 
 	case L4_IPC_TAG_CLOSE:
-		sys_close(sender, (int)mr[0]);
+		ret = sys_close(sender, (int)mr[0]);
 		break;
 
 	case L4_IPC_TAG_FSYNC:
-		sys_fsync(sender, (int)mr[0]);
+		ret = sys_fsync(sender, (int)mr[0]);
 		break;
 
 	case L4_IPC_TAG_LSEEK:
-		sys_lseek(sender, (int)mr[0], (off_t)mr[1], (int)mr[2]);
+		ret = sys_lseek(sender, (int)mr[0], (off_t)mr[1], (int)mr[2]);
 		break;
 
 	case L4_IPC_TAG_MMAP2: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)mr[0];
-		sys_mmap(sender, args->start, args->length, args->prot,
+		ret = (int)sys_mmap(sender, args->start, args->length, args->prot,
 			 args->flags, args->fd, args->offset);
 	}
 	case L4_IPC_TAG_MMAP: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)&mr[0];
-		sys_mmap(sender, args->start, args->length, args->prot,
+		ret = (int)sys_mmap(sender, args->start, args->length, args->prot,
 			 args->flags, args->fd, __pfn(args->offset));
 		break;
 	}
 	case L4_IPC_TAG_FORK: {
-		sys_fork(sender);
+		ret = sys_fork(sender);
 		break;
 	}
 	case L4_IPC_TAG_BRK: {
-//		sys_brk(sender, (void *)mr[0]);
+//		ret = sys_brk(sender, (void *)mr[0]);
 //		break;
 	}
 
 	case L4_IPC_TAG_MUNMAP: {
-		sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);
+		ret = sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);
 		break;
 	}
 	case L4_IPC_TAG_MSYNC: {
@@ -140,6 +137,12 @@ void handle_requests(void)
 		       __TASKNAME__, tag, sender, read_mr(0),
 		       read_mr(1), read_mr(2), read_mr(3), read_mr(4),
 		       read_mr(5));
+	}
+
+	/* Reply */
+	if ((ret = l4_ipc_return(ret)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
+		BUG();
 	}
 }
 

@@ -39,7 +39,7 @@ void *utcb_vaddr_new(void)
  * for its own. The requester then uses this address as a shm key and
  * maps its own utcb via shmget/shmat.
  */
-int task_send_utcb_address(l4id_t sender, l4id_t taskid)
+void *task_send_utcb_address(l4id_t sender, l4id_t taskid)
 {
 	struct tcb *task = find_task(taskid);
 
@@ -53,7 +53,7 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 		BUG_ON(!task->utcb);
 
 		/* Return it to requester */
-		return l4_ipc_return((int)task->utcb);
+		return task->utcb;
 
 	/* A task is asking for someone else's utcb */
 	} else {
@@ -64,7 +64,7 @@ int task_send_utcb_address(l4id_t sender, l4id_t taskid)
 			 * none allocated so far, requester gets 0. We don't
 			 * allocate one here.
 			 */
-			return l4_ipc_return((int)task->utcb);
+			return task->utcb;
 		}
 	}
 	return 0;

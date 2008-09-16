@@ -22,8 +22,8 @@ struct sys_mmap_args {
 	off_t offset;
 };
 
-int sys_mmap(l4id_t sender, void *start, size_t length, int prot,
-	     int flags, int fd, off_t offset);
+void *sys_mmap(l4id_t sender, void *start, size_t length, int prot,
+	       int flags, int fd, off_t offset);
 
 int sys_munmap(l4id_t sender, void *vaddr, unsigned long size);
 
