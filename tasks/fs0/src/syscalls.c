@@ -35,7 +35,7 @@ int pager_sys_open(l4id_t sender, l4id_t opener, int fd)
 	struct tcb *task;
 	struct vnode *v;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	/* Check if such task exists */
 	if (!(task = find_task(opener))) {
@@ -503,7 +503,8 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	struct dentry *d;
 	struct tcb *t;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
 	/* Get the task */
 	BUG_ON(!(t = find_task(sender)));
 

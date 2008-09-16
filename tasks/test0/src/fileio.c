@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <tests.h>
+#include <l4lib/arch/syslib.h>
 
 int fileio2(void)
 {
@@ -14,6 +15,7 @@ int fileio2(void)
 	int err;
 	char buf[128];
 	off_t offset;
+	int tid = self_tid();
 
 	char *str = "I WROTE TO THIS FILE\n";
 
@@ -21,41 +23,42 @@ int fileio2(void)
 		perror("OPEN");
 		return -1;
 	}
-	printf("Created newfile2.txt\n");
+	printf("%d: Created newfile2.txt\n", tid);
 
-	printf("%s: write.\n", __TASKNAME__);
+	printf("%d: write.\n", tid);
 	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {
 		perror("WRITE");
 		return -1;
 	}
-	printf("%s: close.\n", __TASKNAME__);
+	printf("%d: close.\n", tid);
 	if ((err = close(fd)) < 0) {
 		printf("Close failed.\n");
 		perror("CLOSE");
 		return -1;
 	}
-	printf("%s: re-open.\n", __TASKNAME__);
+	printf("%d: re-open.\n", tid);
 	if ((fd = open("/home/bahadir/newfile2.txt", O_RDWR, S_IRWXU)) < 0) {
 		perror("OPEN");
 		return -1;
 	}
 
-	printf("%s: lseek.\n", __TASKNAME__);
+	printf("%d: lseek.\n", tid);
 	if ((int)(offset = lseek(fd, 0, SEEK_SET)) < 0) {
 		perror("LSEEK");
 		return -1;
 	}
-	printf("%s: read.\n", __TASKNAME__);
+	printf("%d: read.\n", tid);
 	if ((int)(cnt = read(fd, buf, strlen(str))) < 0) {
 		perror("READ");
 		return -1;
 	}
 
-	printf("Read: %d bytes from file.\n", cnt);
+	printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
-		printf("Read string: %s\n", buf);
+		printf("%d: Read string: %s\n", tid, buf);
 	}
 
+	printf("%d: close.\n", tid);
 	if ((err = close(fd)) < 0) {
 		perror("CLOSE");
 		return -1;
@@ -71,6 +74,7 @@ int fileio(void)
 	int err;
 	char buf[128];
 	off_t offset;
+	int tid = self_tid();
 
 	char *str = "I WROTE TO THIS FILE\n";
 
@@ -78,30 +82,31 @@ int fileio(void)
 		perror("OPEN");
 		return -1;
 	}
-	printf("Created newfile.txt\n");
+	printf("%d: Created newfile.txt\n", tid);
 
-	printf("%s: write.\n", __TASKNAME__);
+	printf("%d: write.\n", tid);
 	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {
 		perror("WRITE");
 		return -1;
 	}
 
-	printf("%s: lseek.\n", __TASKNAME__);
+	printf("%d: lseek.\n", tid);
 	if ((int)(offset = lseek(fd, 0, SEEK_SET)) < 0) {
 		perror("LSEEK");
 		return -1;
 	}
-	printf("%s: read.\n", __TASKNAME__);
+	printf("%d: read.\n", tid);
 	if ((int)(cnt = read(fd, buf, strlen(str))) < 0) {
 		perror("READ");
 		return -1;
 	}
 
-	printf("Read: %d bytes from file.\n", cnt);
+	printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
-		printf("Read string: %s\n", buf);
+		printf("%d: Read string: %s\n", tid, buf);
 	}
 
+	printf("%d: close.\n", tid);
 	if ((err = close(fd)) < 0) {
 		perror("CLOSE");
 		return -1;

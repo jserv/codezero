@@ -134,7 +134,7 @@ struct pathdata *pathdata_parse(const char *pathname,
 		/* Next component */
 		str = splitpath(&pathbuf, VFS_CHAR_SEP);
 	}
-	pathdata_print(pdata);
+	// pathdata_print(pdata);
 
 	return pdata;
 }

@@ -55,7 +55,7 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 {
 	int err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	l4_save_ipcregs();
 
@@ -91,7 +91,7 @@ int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
 {
 	int err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	l4_save_ipcregs();
 
@@ -253,7 +253,7 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 {
 	int err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, vnum);
@@ -309,7 +309,7 @@ int vfs_update_file_stats(struct vm_file *f)
 {
 	int err;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	l4_save_ipcregs();
 
 	write_mr(L4SYS_ARG0, vm_file_to_vnum(f));
