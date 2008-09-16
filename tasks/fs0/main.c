@@ -16,6 +16,7 @@
 #include <syscalls.h>
 #include <task.h>
 #include <posix/sys/time.h>
+#include <l4/api/errno.h>
 
 /*
  * TODO:
@@ -48,19 +49,25 @@ void wait_pager(l4id_t partner)
 void handle_fs_requests(void)
 {
 	u32 mr[MR_UNUSED_TOTAL];
-	l4id_t sender;
-	int err;
+	l4id_t senderid;
+	struct tcb *sender;
+	int ret;
 	u32 tag;
 
-	if ((err = l4_receive(L4_ANYTHREAD)) < 0) {
+	if ((ret = l4_receive(L4_ANYTHREAD)) < 0) {
 		printf("%s: %s: IPC Error: %d. Quitting...\n", __TASKNAME__,
-		       __FUNCTION__, err);
+		       __FUNCTION__, ret);
 		BUG();
 	}
 
 	/* Read conventional ipc data */
 	tag = l4_get_tag();
-	sender = l4_get_sender();
+	senderid = l4_get_sender();
+
+	if (!(sender = find_task(senderid))) {
+		l4_ipc_return(-ESRCH);
+		return;
+	}
 
 	/* Read mrs not used by syslib */
 	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
@@ -71,46 +78,52 @@ void handle_fs_requests(void)
 	switch(tag) {
 	case L4_IPC_TAG_WAIT:
 		printf("%s: Synced with waiting thread.\n", __TASKNAME__);
-		break;
+		return; /* No reply for this tag */
 	case L4_IPC_TAG_OPEN:
-		sys_open(sender, (void *)mr[0], (int)mr[1], (unsigned int)mr[2]);
+		ret = sys_open(sender, (void *)mr[0], (int)mr[1], (unsigned int)mr[2]);
 		break;
 	case L4_IPC_TAG_MKDIR:
-		sys_mkdir(sender, (const char *)mr[0], (unsigned int)mr[1]);
+		ret = sys_mkdir(sender, (const char *)mr[0], (unsigned int)mr[1]);
 		break;
 	case L4_IPC_TAG_CHDIR:
-		sys_chdir(sender, (const char *)mr[0]);
+		ret = sys_chdir(sender, (const char *)mr[0]);
 		break;
 	case L4_IPC_TAG_READDIR:
-		sys_readdir(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+		ret = sys_readdir(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 	case L4_IPC_TAG_PAGER_READ:
-		pager_sys_read(sender, (unsigned long)mr[0], (unsigned long)mr[1],
-			       (unsigned long)mr[2], (void *)mr[3]);
+		ret = pager_sys_read(sender, (unsigned long)mr[0], (unsigned long)mr[1],
+				     (unsigned long)mr[2], (void *)mr[3]);
 		break;
 	case L4_IPC_TAG_PAGER_OPEN:
-		pager_sys_open(sender, (l4id_t)mr[0], (int)mr[1]);
+		ret = pager_sys_open(sender, (l4id_t)mr[0], (int)mr[1]);
 		break;
 	case L4_IPC_TAG_PAGER_WRITE:
-		pager_sys_write(sender, (unsigned long)mr[0], (unsigned long)mr[1],
-			        (unsigned long)mr[2], (void *)mr[3]);
+		ret = pager_sys_write(sender, (unsigned long)mr[0], (unsigned long)mr[1],
+				      (unsigned long)mr[2], (void *)mr[3]);
 		break;
 	case L4_IPC_TAG_PAGER_CLOSE:
-		pager_sys_close(sender, (l4id_t)mr[0], (int)mr[1]);
+		ret = pager_sys_close(sender, (l4id_t)mr[0], (int)mr[1]);
 		break;
 	case L4_IPC_TAG_PAGER_UPDATE_STATS:
-		pager_update_stats(sender, (unsigned long)mr[0],
-				   (unsigned long)mr[1]);
+		ret = pager_update_stats(sender, (unsigned long)mr[0],
+					 (unsigned long)mr[1]);
 		break;
 	case L4_IPC_TAG_NOTIFY_FORK:
-		pager_notify_fork(sender, (l4id_t)mr[0], (l4id_t)mr[1],
-				  (unsigned long)mr[2]);
+		ret = pager_notify_fork(sender, (l4id_t)mr[0], (l4id_t)mr[1],
+					(unsigned long)mr[2]);
 		break;
 
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "
 		       "received from tid: %d. Ignoring.\n", __TASKNAME__,
 		       mr[MR_TAG], sender);
+	}
+
+	/* Reply */
+	if ((ret = l4_ipc_return(ret)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
+		BUG();
 	}
 }
 

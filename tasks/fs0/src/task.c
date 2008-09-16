@@ -16,6 +16,7 @@
 #include <sys/shm.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <syscalls.h>
 
 struct tcb_head {
 	struct list_head list;
@@ -124,7 +125,7 @@ out_err:
  * Receives ipc from pager about a new fork event and
  * the information on the resulting child task.
  */
-int pager_notify_fork(l4id_t sender, l4id_t parid,
+int pager_notify_fork(struct tcb *sender, l4id_t parid,
 		      l4id_t chid, unsigned long utcb_address)
 {
 	struct tcb *child, *parent;
@@ -132,10 +133,8 @@ int pager_notify_fork(l4id_t sender, l4id_t parid,
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	BUG_ON(!(parent = find_task(parid)));
 
-	if (IS_ERR(child = create_tcb())) {
-		l4_ipc_return((int)child);
-		return 0;
-	}
+	if (IS_ERR(child = create_tcb()))
+		return (int)child;
 
 	/* Initialise fields sent by pager */
 	child->tid = chid;
@@ -152,10 +151,7 @@ int pager_notify_fork(l4id_t sender, l4id_t parid,
 	id_pool_copy(child->fdpool, parent->fdpool, TASK_FILES_MAX);
 	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
 
-	l4_ipc_return(0);
-
 	printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
-
 	return 0;
 }
 

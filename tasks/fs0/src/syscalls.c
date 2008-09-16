@@ -17,6 +17,7 @@
 #include <vfs.h>
 #include <alloca.h>
 #include <path.h>
+#include <syscalls.h>
 
 #define NILFD			-1
 
@@ -30,38 +31,35 @@
  * keeping the request flow in one way.
  */
 
-int pager_sys_open(l4id_t sender, l4id_t opener, int fd)
+int pager_sys_open(struct tcb *pager, l4id_t opener, int fd)
 {
 	struct tcb *task;
 	struct vnode *v;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	//
+	if (pager->tid != PAGER_TID)
+		return -EINVAL;
 
 	/* Check if such task exists */
-	if (!(task = find_task(opener))) {
-		l4_ipc_return(-ESRCH);
-		return 0;
-	}
+	if (!(task = find_task(opener)))
+		return -ESRCH;
 
 	/* Check if that fd has been opened */
-	if (task->fd[fd] == NILFD) {
-		l4_ipc_return(-EBADF);
-		return 0;
-	}
+	if (task->fd[fd] == NILFD)
+		return -EBADF;
 
 	/* Search the vnode by that vnum */
 	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
-					 task->fd[fd]))) {
-		l4_ipc_return((int)v);
-		return 0;
-	}
+					 task->fd[fd])))
+		return (int)v;
 
-	/* Write file information */
+	/*
+	 * Write file information, they will
+	 * be sent via the return reply.
+	 */
 	write_mr(L4SYS_ARG0, v->vnum);
 	write_mr(L4SYS_ARG1, v->size);
-
-	/* Return ipc with success code */
-	l4_ipc_return(0);
 
 	return 0;
 }
@@ -112,7 +110,7 @@ struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
  * FIXME: fsync + close could be done under a single "close" ipc
  * from pager. Currently there are 2 ipcs: 1 fsync + 1 fd close.
  */
-int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
+int pager_sys_close(struct tcb *sender, l4id_t closer, int fd)
 {
 	struct tcb *task;
 	int err;
@@ -124,12 +122,10 @@ int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
 	if ((err = id_del(task->fdpool, fd)) < 0) {
 		printf("%s: Error releasing fd identifier.\n",
 		       __FUNCTION__);
-		l4_ipc_return(err);
-		return 0;
+		return err;
 	}
 	task->fd[fd] = NILFD;
 
-	l4_ipc_return(0);
 	return 0;
 }
 
@@ -138,26 +134,20 @@ int pager_sys_close(l4id_t sender, l4id_t closer, int fd)
  * - Allocate a copy of path string since lookup destroys it
  * - Check flags and mode.
  */
-int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
+int sys_open(struct tcb *task, const char *pathname, int flags, unsigned int mode)
 {
 	struct pathdata *pdata;
 	struct vnode *v;
-	struct tcb *task;
 	int fd;
 	int retval;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
-
 	/* Parse path data */
 	if (IS_ERR(pdata = pathdata_parse(pathname,
 					  alloca(strlen(pathname) + 1),
-					  task))) {
-		l4_ipc_return((int)pdata);
-		return 0;
-	}
+					  task)))
+		return (int)pdata;
 
 	/* Creating new file */
 	if (flags & O_CREAT) {
@@ -184,77 +174,64 @@ int sys_open(l4id_t sender, const char *pathname, int flags, unsigned int mode)
 
 out:
 	pathdata_destroy(pdata);
-	l4_ipc_return(retval);
-	return 0;
+	return retval;
 }
 
-int sys_mkdir(l4id_t sender, const char *pathname, unsigned int mode)
+int sys_mkdir(struct tcb *task, const char *pathname, unsigned int mode)
 {
-	struct tcb *task;
 	struct pathdata *pdata;
 	struct vnode *v;
-
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
+	int ret = 0;
 
 	/* Parse path data */
 	if (IS_ERR(pdata = pathdata_parse(pathname,
 					  alloca(strlen(pathname) + 1),
-					  task))) {
-		l4_ipc_return((int)pdata);
-		return 0;
-	}
+					  task)))
+		return (int)pdata;
 
 	/* Make sure we create a directory */
 	mode |= S_IFDIR;
 
 	/* Create the directory or fail */
 	if (IS_ERR(v = vfs_create(task, pdata, mode)))
-		l4_ipc_return((int)v);
-	else
-		l4_ipc_return(0);
+		ret = (int)v;
 
 	/* Destroy extracted path data */
 	pathdata_destroy(pdata);
-	return 0;
+	return ret;
 }
 
-int sys_chdir(l4id_t sender, const char *pathname)
+int sys_chdir(struct tcb *task, const char *pathname)
 {
 	struct vnode *v;
-	struct tcb *task;
 	struct pathdata *pdata;
-
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
+	int ret = 0;
 
 	/* Parse path data */
 	if (IS_ERR(pdata = pathdata_parse(pathname,
 					  alloca(strlen(pathname) + 1),
-					  task))) {
-		l4_ipc_return((int)pdata);
-		return 0;
-	}
+					  task)))
+		return (int)pdata;
 
 	/* Get the vnode */
 	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
-		l4_ipc_return((int)v);
-		return 0;
+		ret = (int)v;
+		goto out;
 	}
 
 	/* Ensure it's a directory */
 	if (!vfs_isdir(v)) {
-		l4_ipc_return(-ENOTDIR);
-		return 0;
+		ret = -ENOTDIR;
+		goto out;
 	}
 
 	/* Assign the current directory pointer */
 	task->curdir = v;
 
+out:
 	/* Destroy extracted path data */
 	pathdata_destroy(pdata);
-	l4_ipc_return(0);
-	return 0;
+	return ret;
 }
 
 void fill_kstat(struct vnode *v, struct kstat *ks)
@@ -271,33 +248,24 @@ void fill_kstat(struct vnode *v, struct kstat *ks)
 	ks->ctime = v->ctime;
 }
 
-int sys_fstat(l4id_t sender, int fd, void *statbuf)
+int sys_fstat(struct tcb *task, int fd, void *statbuf)
 {
 	struct vnode *v;
-	struct tcb *task;
 	unsigned long vnum;
-	int retval;
-
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
 
 	/* Get the vnum */
-	if (fd < 0 || fd > TASK_FILES_MAX) {
-		l4_ipc_return(-EINVAL);
-		return 0;
-	}
+	if (fd < 0 || fd > TASK_FILES_MAX || task->fd[fd] == NILFD)
+		return -EBADF;
+
 	vnum = task->fd[fd];
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
-		retval = -EINVAL; /* No such vnode */
-		return 0;
-	}
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL;
 
 	/* Fill in the c0-style stat structure */
 	fill_kstat(v, statbuf);
 
-	l4_ipc_return(0);
 	return 0;
 }
 
@@ -306,34 +274,31 @@ int sys_fstat(l4id_t sender, int fd, void *statbuf)
  * converted to posix style stat structure via the libposix
  * library in userspace.
  */
-int sys_stat(l4id_t sender, const char *pathname, void *statbuf)
+int sys_stat(struct tcb *task, const char *pathname, void *statbuf)
 {
 	struct vnode *v;
-	struct tcb *task;
 	struct pathdata *pdata;
-
-	/* Get the task */
-	BUG_ON(!(task = find_task(sender)));
+	int ret = 0;
 
 	/* Parse path data */
 	if (IS_ERR(pdata = pathdata_parse(pathname,
 					  alloca(strlen(pathname) + 1),
-					  task))) {
-		l4_ipc_return((int)pdata);
-		return 0;
-	}
+					  task)))
+		return (int)pdata;
 
 	/* Get the vnode */
 	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
-		l4_ipc_return((int)v);
-		return 0;
+		ret = (int)v;
+		goto out;
 	}
 
 	/* Fill in the c0-style stat structure */
 	fill_kstat(v, statbuf);
 
-	l4_ipc_return(0);
-	return 0;
+out:
+	/* Destroy extracted path data */
+	pathdata_destroy(pdata);
+	return ret;
 }
 
 /*
@@ -341,65 +306,44 @@ int sys_stat(l4id_t sender, const char *pathname, void *statbuf)
  * That call is in the pager. This merely supplies the pages the pager needs
  * if they're not in the page cache.
  */
-int pager_sys_read(l4id_t sender, unsigned long vnum, unsigned long f_offset,
+int pager_sys_read(struct tcb *pager, unsigned long vnum, unsigned long f_offset,
 		   unsigned long npages, void *pagebuf)
 {
 	struct vnode *v;
-	int err, retval = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	if (sender != PAGER_TID) {
-		retval = -EINVAL;
-		goto out;
-	}
+	if (pager->tid != PAGER_TID)
+		return -EINVAL;
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
-		retval = -EINVAL; /* No such vnode */
-		goto out;
-	}
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL;
 
 	/* Ensure vnode is not a directory */
-	if (vfs_isdir(v)) {
-		retval = -EISDIR;
-		goto out;
-	}
+	if (vfs_isdir(v))
+		return -EISDIR;
 
-	if ((err = v->fops.read(v, f_offset, npages, pagebuf)) < 0) {
-		retval = err;
-		goto out;
-	}
-
-out:
-	l4_ipc_return(retval);
-	return 0;
+	return v->fops.read(v, f_offset, npages, pagebuf);
 }
 
-int pager_update_stats(l4id_t sender, unsigned long vnum,
+int pager_update_stats(struct tcb *pager, unsigned long vnum,
 		       unsigned long newsize)
 {
 	struct vnode *v;
-	int retval = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	if (sender != PAGER_TID) {
-		retval = -EINVAL;
-		goto out;
-	}
+	if (pager->tid != PAGER_TID)
+		return -EINVAL;
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
-		retval = -EINVAL; /* No such vnode */
-		goto out;
-	}
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL;
 
 	v->size = newsize;
 	v->sb->ops->write_vnode(v->sb, v);
 
-out:
-	l4_ipc_return(retval);
 	return 0;
 }
 
@@ -410,30 +354,23 @@ out:
  *
  * The buffer must be contiguous by page, if npages > 1.
  */
-int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
+int pager_sys_write(struct tcb *pager, unsigned long vnum, unsigned long f_offset,
 		    unsigned long npages, void *pagebuf)
 {
 	struct vnode *v;
-	int err, retval = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	if (sender != PAGER_TID) {
-		retval = -EINVAL;
-		goto out;
-	}
+	if (pager->tid != PAGER_TID)
+		return -EINVAL;
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
-		retval = -EINVAL; /* No such vnode */
-		goto out;
-	}
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL;
 
 	/* Ensure vnode is not a directory */
-	if (vfs_isdir(v)) {
-		retval = -EISDIR;
-		goto out;
-	}
+	if (vfs_isdir(v))
+		return -EISDIR;
 
 	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%x, %d pages, buf at 0x%x\n",
 		__TASKNAME__, __FUNCTION__, vnum, f_offset, npages, pagebuf);
@@ -443,16 +380,7 @@ int pager_sys_write(l4id_t sender, unsigned long vnum, unsigned long f_offset,
 	 * But we expect an explicit pager_update_stats from the
 	 * pager to update the new file size on the vnode.
 	 */
-	if ((err = v->fops.write(v, f_offset, npages, pagebuf)) < 0) {
-		retval = err;
-		goto out;
-	}
-
-out:
-	// printf("%s/%s: Returning ipc result.\n", __TASKNAME__, __FUNCTION__);
-	l4_ipc_return(retval);
-	// printf("%s/%s: Done.\n", __TASKNAME__, __FUNCTION__);
-	return 0;
+	return v->fops.write(v, f_offset, npages, pagebuf);
 }
 
 /*
@@ -494,47 +422,35 @@ int fill_dirent(void *buf, unsigned long vnum, int offset, char *name)
  *
  * FIXME: Ensure buf is in shared utcb, and count does not exceed it.
  */
-int sys_readdir(l4id_t sender, int fd, void *buf, int count)
+int sys_readdir(struct tcb *t, int fd, void *buf, int count)
 {
 	int dirent_size = sizeof(struct dirent);
 	int total = 0, nbytes = 0;
 	unsigned long vnum;
 	struct vnode *v;
 	struct dentry *d;
-	struct tcb *t;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	/* Get the task */
-	BUG_ON(!(t = find_task(sender)));
-
 	/* Check address is in task's utcb */
 	if ((unsigned long)buf < t->utcb_address ||
-	    (unsigned long)buf > t->utcb_address + PAGE_SIZE) {
-		l4_ipc_return(-EINVAL);
-		return 0;
-	}
+	    (unsigned long)buf > t->utcb_address + PAGE_SIZE)
+		return -EINVAL;
 
-	if (fd < 0 || fd > TASK_FILES_MAX) {
-	       l4_ipc_return(-EBADF);
-	       return 0;
-	}
+	if (fd < 0 || fd > TASK_FILES_MAX || t->fd[fd] == NILFD)
+		return -EBADF;
 
-	/* Convert fd to vnum. */
-	BUG_ON((vnum = t->fd[fd]) < 0);
+	vnum = t->fd[fd];
 
 	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum))) {
-		l4_ipc_return(-EINVAL);
-		return 0; /* No such vnode */
-	}
+	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
+		return -EINVAL;
+
 	d = list_entry(v->dentries.next, struct dentry, vref);
 
 	/* Ensure vnode is a directory */
-	if (!vfs_isdir(v)) {
-		l4_ipc_return(-ENOTDIR);
-		return 0;
-	}
+	if (!vfs_isdir(v))
+		return -ENOTDIR;
 
 	/* Write pseudo-entries . and .. to user buffer */
 	if (count < dirent_size)
@@ -554,13 +470,9 @@ int sys_readdir(l4id_t sender, int fd, void *buf, int count)
 	count -= dirent_size;
 
 	/* Copy fs-specific dir to buf in struct dirent format */
-	if ((total = v->ops.filldir(buf, v, count)) < 0) {
-		l4_ipc_return(total);
-		return 0;
-	}
-	nbytes += total;
-	l4_ipc_return(nbytes);
+	if ((total = v->ops.filldir(buf, v, count)) < 0)
+		return total;
 
-	return 0;
+	return nbytes + total;
 }
 
