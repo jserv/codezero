@@ -20,7 +20,7 @@
  */
 int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 {
-	int err;
+	int err = 0;
 
 	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
@@ -34,17 +34,18 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
 			       L4_IPC_TAG_NOTIFY_FORK)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
 		printf("%s: Pager from VFS read error: %d.\n",
 		       __FUNCTION__, err);
-		return err;
+		goto out;
 	}
-	l4_restore_ipcregs();
 
+out:
+	l4_restore_ipcregs();
 	return err;
 }
 

@@ -53,7 +53,7 @@ int page_copy(struct page *dst, struct page *src,
 int vfs_read(unsigned long vnum, unsigned long file_offset,
 	     unsigned long npages, void *pagebuf)
 {
-	int err;
+	int err = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
@@ -66,17 +66,18 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_READ)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager from VFS read error: %d.\n",
+		printf("%s: Error: %d.\n",
 		       __FUNCTION__, err);
-		return err;
+		goto out;
 	}
-	l4_restore_ipcregs();
 
+out:
+	l4_restore_ipcregs();
 	return err;
 }
 
@@ -89,7 +90,7 @@ int vfs_read(unsigned long vnum, unsigned long file_offset,
  */
 int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
 {
-	int err;
+	int err = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
@@ -100,22 +101,22 @@ int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_OPEN)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
 		printf("%s: VFS open error: %d.\n",
 		       __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
 	/* Read file information */
 	*vnum = read_mr(L4SYS_ARG0);
 	*length = read_mr(L4SYS_ARG1);
 
+out:
 	l4_restore_ipcregs();
-
 	return err;
 }
 
@@ -251,7 +252,7 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 int vfs_write(unsigned long vnum, unsigned long file_offset,
 	      unsigned long npages, void *pagebuf)
 {
-	int err;
+	int err = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	l4_save_ipcregs();
@@ -263,23 +264,23 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_WRITE)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
 		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
+out:
 	l4_restore_ipcregs();
-
 	return err;
 }
 
 int vfs_close(l4id_t sender, int fd)
 {
-	int err;
+	int err = 0;
 
 	// printf("%s/%s Sending to %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
 	l4_save_ipcregs();
@@ -289,25 +290,25 @@ int vfs_close(l4id_t sender, int fd)
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_PAGER_CLOSE)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 	// printf("%s/%s Received from %d\n", __TASKNAME__, __FUNCTION__, VFS_TID);
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
 		printf("%s: Pager to VFS write error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
+out:
 	l4_restore_ipcregs();
-
 	return err;
 }
 
 /* Writes updated file stats back to vfs. (e.g. new file size) */
 int vfs_update_file_stats(struct vm_file *f)
 {
-	int err;
+	int err = 0;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	l4_save_ipcregs();
@@ -318,20 +319,19 @@ int vfs_update_file_stats(struct vm_file *f)
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
 			       L4_IPC_TAG_PAGER_UPDATE_STATS)) < 0) {
 		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
 	/* Check if syscall was successful */
 	if ((err = l4_get_retval()) < 0) {
 		printf("%s: Pager to VFS write error: %d.\n",
 		       __FUNCTION__, err);
-		return err;
+		goto out;
 	}
 
+out:
 	l4_restore_ipcregs();
-
 	return err;
-
 }
 
 /* Writes pages in cache back to their file */
