@@ -15,6 +15,7 @@
 #include <l4/api/thread.h>
 #include <l4/api/space.h>
 #include <l4/api/ipc.h>
+#include <l4/api/errno.h>
 #include <vm_area.h>
 #include <syscalls.h>
 #include <file.h>
@@ -26,7 +27,8 @@ void handle_requests(void)
 {
 	/* Generic ipc data */
 	u32 mr[MR_UNUSED_TOTAL];
-	l4id_t sender;
+	l4id_t senderid;
+	struct tcb *sender;
 	u32 tag;
 	int ret;
 
@@ -39,7 +41,12 @@ void handle_requests(void)
 
 	/* Syslib conventional ipc data which uses first few mrs. */
 	tag = l4_get_tag();
-	sender = l4_get_sender();
+	senderid = l4_get_sender();
+
+	if (!(sender = find_task(senderid))) {
+		l4_ipc_return(-ESRCH);
+		return;
+	}
 
 	/* Read mrs not used by syslib */
 	for (int i = 0; i < MR_UNUSED_TOTAL; i++)

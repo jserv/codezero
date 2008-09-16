@@ -681,18 +681,14 @@ int do_page_fault(struct fault_data *fault)
 	return __do_page_fault(fault);
 }
 
-int page_fault_handler(l4id_t sender, fault_kdata_t *fkdata)
+int page_fault_handler(struct tcb *sender, fault_kdata_t *fkdata)
 {
 	int err;
 	struct fault_data fault = {
 		/* Fault data from kernel */
 		.kdata = fkdata,
+		.task = sender,
 	};
-
-	BUG_ON(sender == 0);
-
-	/* Get pager specific task info */
-	BUG_ON(!(fault.task = find_task(sender)));
 
 	/* Extract fault reason, fault address etc. in generic format */
 	set_generic_fault_params(&fault);

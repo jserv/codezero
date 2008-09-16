@@ -403,13 +403,9 @@ int do_close(struct tcb *task, int fd)
 	return 0;
 }
 
-int sys_close(l4id_t sender, int fd)
+int sys_close(struct tcb *task, int fd)
 {
 	int ret;
-	struct tcb *task;
-
-	if (!(task = find_task(sender)))
-		return -ESRCH;
 
 	/* Sync the file and update stats */
 	if ((ret = fsync_common(task, fd)) < 0)
@@ -419,13 +415,8 @@ int sys_close(l4id_t sender, int fd)
 	return do_close(task, fd);
 }
 
-int sys_fsync(l4id_t sender, int fd)
+int sys_fsync(struct tcb *task, int fd)
 {
-	struct tcb *task;
-
-	if (!(task = find_task(sender)))
-		return -ESRCH;
-
 	/* Sync the file and update stats */
 	return fsync_common(task, fd);
 }
@@ -586,16 +577,12 @@ copy:
 	return count - left;
 }
 
-int sys_read(l4id_t sender, int fd, void *buf, int count)
+int sys_read(struct tcb *task, int fd, void *buf, int count)
 {
 	unsigned long pfn_start, pfn_end;
 	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
-	struct tcb *task;
 	int ret = 0;
-
-	if (!(task = find_task(sender)))
-		return -ESRCH;
 
 	/* Check fd validity */
 	if (!task->files->fd[fd].vmfile)
@@ -658,18 +645,14 @@ int sys_read(l4id_t sender, int fd, void *buf, int count)
  * We find the page buffer is in, and then copy from the *start* of the page
  * rather than buffer's offset in that page.
  */
-int sys_write(l4id_t sender, int fd, void *buf, int count)
+int sys_write(struct tcb *task, int fd, void *buf, int count)
 {
 	unsigned long pfn_wstart, pfn_wend;	/* Write start/end */
 	unsigned long pfn_fstart, pfn_fend;	/* File start/end */
 	unsigned long pfn_nstart, pfn_nend;	/* New pages start/end */
 	unsigned long cursor, byte_offset;
 	struct vm_file *vmfile;
-	struct tcb *task;
 	int ret = 0;
-
-	if (!(task = find_task(sender)))
-		return -ESRCH;
 
 	/* Check fd validity */
 	if (!task->files->fd[fd].vmfile)
@@ -766,14 +749,10 @@ int sys_write(l4id_t sender, int fd, void *buf, int count)
 }
 
 /* FIXME: Check for invalid cursor values. Check for total, sometimes negative. */
-int sys_lseek(l4id_t sender, int fd, off_t offset, int whence)
+int sys_lseek(struct tcb *task, int fd, off_t offset, int whence)
 {
-	struct tcb *task;
 	int retval = 0;
 	unsigned long long total, cursor;
-
-	if (!(task = find_task(sender)))
-		return -ESRCH;
 
 	/* Check fd validity */
 	if (!task->files->fd[fd].vmfile)

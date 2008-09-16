@@ -252,6 +252,6 @@ static inline void task_add_vma(struct tcb *task, struct vm_area *vma)
 }
 
 /* Main page fault entry point */
-int page_fault_handler(l4id_t tid, fault_kdata_t *fkdata);
+int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);
 
 #endif /* __VM_AREA_H__ */

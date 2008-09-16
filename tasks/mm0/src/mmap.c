@@ -582,18 +582,14 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 }
 
 /* mmap system call implementation */
-void *sys_mmap(l4id_t sender, void *start, size_t length, int prot,
+void *sys_mmap(struct tcb *task, void *start, size_t length, int prot,
 	       int flags, int fd, unsigned long pfn)
 {
 	unsigned long npages = __pfn(page_align_up(length));
 	unsigned long base = (unsigned long)start;
 	struct vm_file *file = 0;
 	unsigned int vmflags = 0;
-	struct tcb *task;
 	int err;
-
-	if (!(task = find_task(sender)))
-		return PTR_ERR(-ESRCH);
 
 	/* Check fd validity */
 	if (!(flags & MAP_ANONYMOUS))
@@ -647,7 +643,7 @@ void *sys_mmap(l4id_t sender, void *start, size_t length, int prot,
 }
 
 /* Sets the end of data segment for sender */
-int sys_brk(l4id_t sender, void *ds_end)
+int sys_brk(struct tcb *sender, void *ds_end)
 {
 	return 0;
 }

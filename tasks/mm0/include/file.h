@@ -9,17 +9,15 @@
 void vmfile_init(void);
 
 struct vm_file *vmfile_alloc_init(void);
-int vfs_receive_sys_open(l4id_t sender, l4id_t opener, int fd,
-			 unsigned long vnum, unsigned long size);
 int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 	     void *pagebuf);
 int vfs_write(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 	     void *pagebuf);
-int sys_read(l4id_t sender, int fd, void *buf, int count);
-int sys_write(l4id_t sender, int fd, void *buf, int count);
-int sys_lseek(l4id_t sender, int fd, off_t offset, int whence);
-int sys_close(l4id_t sender, int fd);
-int sys_fsync(l4id_t sender, int fd);
+int sys_read(struct tcb *sender, int fd, void *buf, int count);
+int sys_write(struct tcb *sender, int fd, void *buf, int count);
+int sys_lseek(struct tcb *sender, int fd, off_t offset, int whence);
+int sys_close(struct tcb *sender, int fd);
+int sys_fsync(struct tcb *sender, int fd);
 int file_open(struct tcb *opener, int fd);
 
 struct vfs_file_data {

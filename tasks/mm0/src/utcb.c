@@ -39,17 +39,13 @@ void *utcb_vaddr_new(void)
  * for its own. The requester then uses this address as a shm key and
  * maps its own utcb via shmget/shmat.
  */
-void *task_send_utcb_address(l4id_t sender, l4id_t taskid)
+void *task_send_utcb_address(struct tcb *sender, l4id_t taskid)
 {
 	struct tcb *task = find_task(taskid);
 
 	/* Is the task asking for its own utcb address */
-	if (sender == taskid) {
-		/*
-		 * It hasn't got one allocated. We allocate one here,
-		 * but only because the requester is requesting for its
-		 * own utcb.
-		 */
+	if (sender->tid == taskid) {
+		/* It hasn't got one allocated. */
 		BUG_ON(!task->utcb);
 
 		/* Return it to requester */
@@ -58,7 +54,7 @@ void *task_send_utcb_address(l4id_t sender, l4id_t taskid)
 	/* A task is asking for someone else's utcb */
 	} else {
 		/* Only vfs is allowed to do so yet, because its a server */
-		if (sender == VFS_TID) {
+		if (sender->tid == VFS_TID) {
 			/*
 			 * Return utcb address to requester. Note if there's
 			 * none allocated so far, requester gets 0. We don't

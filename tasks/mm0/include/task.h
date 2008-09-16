@@ -113,7 +113,7 @@ struct task_data_head {
 
 struct tcb *find_task(int tid);
 void task_add_global(struct tcb *t);
-int send_task_data(l4id_t requester);
+int send_task_data(struct tcb *requester);
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
 int task_mmap_regions(struct tcb *task, struct vm_file *file);
 int task_setup_regions(struct vm_file *file, struct tcb *task,

@@ -119,10 +119,9 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 		utcb_prefault(task, VM_READ | VM_WRITE);
 */
 
-void *sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
+void *sys_shmat(struct tcb *task, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct vm_file *shm_file, *n;
-	struct tcb *task = find_task(requester);
 
 	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
 		if (shm_file_to_desc(shm_file)->shmid == shmid)
@@ -133,34 +132,26 @@ void *sys_shmat(l4id_t requester, l4id_t shmid, void *shmaddr, int shmflg)
 	return PTR_ERR(-EINVAL);
 }
 
-int do_shmdt(struct vm_file *shm, l4id_t tid)
+int do_shmdt(struct tcb *task, struct vm_file *shm)
 {
-	struct tcb *task = find_task(tid);
 	int err;
 
-	if (!task) {
-		printf("%s:%s: Internal error. Cannot find task with tid %d\n",
-		       __TASKNAME__, __FUNCTION__, tid);
-		BUG();
-	}
 	if ((err = do_munmap(shm_file_to_desc(shm)->shm_addr,
-			     shm_file_to_desc(shm)->npages, task)) < 0) {
-		printf("do_munmap: Unmapping shm segment failed with %d.\n",
-		       err);
-		BUG();
-	}
+			     shm_file_to_desc(shm)->npages,
+			     task)) < 0)
+		return err;
 
-	return err;
+	return 0;
 }
 
-int sys_shmdt(l4id_t requester, const void *shmaddr)
+int sys_shmdt(struct tcb *task, const void *shmaddr)
 {
 	struct vm_file *shm_file, *n;
 	int err;
 
 	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
 		if (shm_file_to_desc(shm_file)->shm_addr == shmaddr) {
-			if ((err = do_shmdt(shm_file, requester) < 0))
+			if ((err = do_shmdt(task, shm_file) < 0))
 				return err;
 			else
 				break;

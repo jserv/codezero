@@ -49,7 +49,7 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 }
 
 
-int do_fork(struct tcb *parent)
+int sys_fork(struct tcb *parent)
 {
 	int err;
 	struct tcb *child;
@@ -111,23 +111,11 @@ int do_fork(struct tcb *parent)
 	return child->tid;
 }
 
-int sys_fork(l4id_t sender)
-{
-	struct tcb *parent;
-
-	if (!(parent = find_task(sender)))
-		return -ESRCH;
-
-	return do_fork(parent);
-}
-
-int sys_clone(l4id_t sender, void *child_stack, unsigned int flags)
+int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 {
 	struct task_ids ids;
 	struct vm_file *utcb_shm;
-	struct tcb *parent, *child;
-
-	BUG_ON(!(parent = find_task(sender)));
+	struct tcb *child;
 
 	ids.tid = TASK_ID_INVALID;
 	ids.spid = parent->spid;

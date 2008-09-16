@@ -436,20 +436,19 @@ void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner)
  * are running, and their tids, which includes itself. This function
  * provides that information.
  */
-int send_task_data(l4id_t requester)
+int send_task_data(struct tcb *vfs)
 {
 	int li = 0;
-	struct tcb *t, *vfs, *self;
+	struct tcb *t, *self;
 	struct task_data_head *tdata_head;
 
-	if (requester != VFS_TID) {
+	if (vfs->tid != VFS_TID) {
 		printf("%s: Task data requested by %d, which is not "
-		       "FS0 id %d, ignoring.\n", __TASKNAME__, requester,
+		       "FS0 id %d, ignoring.\n", __TASKNAME__, vfs->tid,
 		       VFS_TID);
 		return 0;
 	}
 
-	BUG_ON(!(vfs = find_task(requester)));
 	BUG_ON(!(self = find_task(self_tid())));
 	BUG_ON(!vfs->utcb);
 
