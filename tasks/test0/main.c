@@ -32,24 +32,24 @@ void main(void)
 
 	dirtest();
 
-//	printf("Forking...\n");
+	printf("Forking...\n");
 
-//	if ((pid = fork()) < 0)
-//		printf("Error forking...\n");
+	if ((pid = fork()) < 0)
+		printf("Error forking...\n");
 
-//	if (pid == 0) {
+	if (pid == 0) {
 		printf("File IO test 1, done by child:\n");
 		if (fileio() == 0)
 			printf("-- PASSED --\n");
 		else
 			printf("-- FAILED --\n");
-//	} else {
+	} else {
 		printf("File IO test 2, done by parent, with child pid %d:\n", pid);
 		if (fileio2() == 0)
 			printf("-- PASSED --\n");
 		else
 			printf("-- FAILED --\n");
-//	}
+	}
 	while (1)
 		wait_pager(0);
 #if 0
