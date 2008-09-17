@@ -56,6 +56,8 @@ int fileio2(void)
 	printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
 		printf("%d: Read string: %s\n", tid, buf);
+		if (strcmp(buf, str))
+			return -1;
 	}
 
 	printf("%d: close.\n", tid);
@@ -104,6 +106,8 @@ int fileio(void)
 	printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
 		printf("%d: Read string: %s\n", tid, buf);
+		if (strcmp(buf, str))
+			return -1;
 	}
 
 	printf("%d: close.\n", tid);
