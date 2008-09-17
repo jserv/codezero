@@ -82,13 +82,14 @@ int memfs_file_read_write(struct vnode *v, unsigned int pfn,
 	if (!wr) {
 		/* Find read boundaries from expected range and file's current range */
 		start = pfn < __pfn(v->size) ? pfn : __pfn(v->size);
-		end = pfn + npages < __pfn(v->size) ? pfn + npages : __pfn(v->size);
+		end = pfn + npages < __pfn(page_align_up(v->size))
+		      ? pfn + npages : __pfn(page_align_up(v->size));
 		count = end - start;
 
 		/* Copy the data from inode blocks into page buffer */
 		for (int x = start, bufpage = 0; x < end; x++, bufpage++)
 			memcpy(((void *)buf) + (bufpage * blocksize),
-			       &i->block[x], blocksize);
+			       i->block[x], blocksize);
 		return (int)(count * blocksize);
 	} else { /* Write-specific operations */
 		/* Is the write beyond current file size? */
