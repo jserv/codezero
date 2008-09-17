@@ -78,9 +78,6 @@ struct kip {
 #define PAGER_TID			0
 #define VFS_TID				1
 #define BLKDEV_TID			2
-#define KERNEL_TID			3
-#define MAX_PREDEFINED_TID		KERNEL_TID
-#define MIN_PREDEFINED_TID		0
 
 #define __PAGERNAME__			"mm0"
 #define __KERNELNAME__			"code0"

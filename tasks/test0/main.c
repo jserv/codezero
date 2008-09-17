@@ -38,13 +38,19 @@ void main(void)
 		printf("Error forking...\n");
 
 	if (pid == 0) {
-		printf("File IO test 1, done by child:\n");
+		printf("Child: file IO test 1.\n");
 		if (fileio() == 0)
 			printf("-- PASSED --\n");
 		else
 			printf("-- FAILED --\n");
+
+		printf("Child: forktest.\n");
+		if (forktest() == 0)
+			printf("-- PASSED -- \n");
+		else
+			printf("-- FAILED -- \n");
 	} else {
-		printf("File IO test 2, done by parent, with child pid %d:\n", pid);
+		printf("Parent: file IO test 2. child pid %d:\n", pid);
 		if (fileio2() == 0)
 			printf("-- PASSED --\n");
 		else

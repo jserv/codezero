@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <string.h>
 #include <tests.h>
-#include <l4lib/arch/syslib.h>
 
 int fileio2(void)
 {
@@ -15,10 +14,10 @@ int fileio2(void)
 	int err;
 	char buf[128];
 	off_t offset;
-	int tid = self_tid();
-
+	int tid = getpid();
 	char *str = "I WROTE TO THIS FILE\n";
 
+	memset(buf, 0, 128);
 	if ((fd = open("/home/bahadir/newfile2.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
 		perror("OPEN");
 		return -1;
@@ -56,8 +55,12 @@ int fileio2(void)
 	printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
 		printf("%d: Read string: %s\n", tid, buf);
-		if (strcmp(buf, str))
+		if (strcmp(buf, str)) {
+			printf("Error: strings not the same:\n");
+			printf("str: %s\n", str);
+			printf("buf: %s\n", buf);
 			return -1;
+		}
 	}
 
 	printf("%d: close.\n", tid);
@@ -76,10 +79,10 @@ int fileio(void)
 	int err;
 	char buf[128];
 	off_t offset;
-	int tid = self_tid();
-
+	int tid = getpid();
 	char *str = "I WROTE TO THIS FILE\n";
 
+	memset(buf, 0, 128);
 	if ((fd = open("/home/bahadir/newfile.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
 		perror("OPEN");
 		return -1;
@@ -106,8 +109,12 @@ int fileio(void)
 	printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
 		printf("%d: Read string: %s\n", tid, buf);
-		if (strcmp(buf, str))
+		if (strcmp(buf, str)) {
+			printf("Strings not the same:\n");
+			printf("Str: %s\n", str);
+			printf("Buf: %s\n", buf);
 			return -1;
+		}
 	}
 
 	printf("%d: close.\n", tid);
@@ -115,7 +122,6 @@ int fileio(void)
 		perror("CLOSE");
 		return -1;
 	}
-
 	return 0;
 }
 

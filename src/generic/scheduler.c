@@ -300,8 +300,6 @@ void scheduler()
 
 	sched_lock();
 	need_resched = 0;
-	BUG_ON(current->tid < MIN_PREDEFINED_TID ||
-	       current->tid > MAX_PREDEFINED_TID);
 	BUG_ON(current->rq != rq_runnable);
 
 	/* Current task */
@@ -309,8 +307,9 @@ void scheduler()
 	sched_next_state(current);
 
 	if (current->state == TASK_RUNNABLE) {
-		current->ticks_left += TASK_TIMESLICE_DEFAULT;
-		BUG_ON(current->ticks_left <= 0);
+		BUG_ON(current->ticks_left < 0);
+		if (current->ticks_left == 0)
+			current->ticks_left = TASK_TIMESLICE_DEFAULT;
 		sched_rq_add_task_behind(current, rq_expired);
 	}
 	sched_rq_swap_expired_runnable();

@@ -33,50 +33,60 @@ void pgalloc_add_new_cache(struct mem_cache *cache, int cidx)
 	list_add(&cache->list, &pgalloc.cache_list[cidx]);
 }
 
-void calc_kmem_usage_per_grant(kmem_usage_per_grant_t *params)
+void print_kmem_grant_params(grant_kmem_usage_t *params)
 {
-	/* Pmds, pgds, pages in numbers, per grant */
-	int pmds_per_task_avg = params->task_size_avg / PMD_MAP_SIZE;
-	int pmds_per_kmem_grant = params->tasks_per_kmem_grant * pmds_per_task_avg;
-	int pgds_per_kmem_grant = params->tasks_per_kmem_grant * 1;
-	int pgs_per_kmem_grant =  params->tasks_per_kmem_grant * 1;
-
-	/* Now everything in Kbs */
-	params->pmd_total = pmds_per_kmem_grant * PMD_SIZE;
-	params->pgd_total = pgds_per_kmem_grant * PGD_SIZE;
-	params->pg_total = pgs_per_kmem_grant * PAGE_SIZE;
-	params->extra = params->grant_size -
-	       		(params->pgd_total + params->pmd_total +
-			 params->pg_total);
+	printk("Possible kmem usage on this memory grant:\n");
+	printk("PGDs: %lu, PMDs: %lu, TCBs: %lu, Extra: %lu bytes.\n",
+	       params->total_pgds, params->total_pmds, params->total_tcbs,
+	       params->extra);
 }
+
+#define TASK_AVERAGE_SIZE		SZ_16MB
+#define TASK_AVERAGE_PMDS		TASK_AVERAGE_SIZE / PMD_MAP_SIZE
+
+void calc_grant_kmem_usage(grant_kmem_usage_t *params, unsigned long total_size)
+{
+	/* Kmem usage per task */
+	unsigned long task_avg_kmem_usage = PGD_SIZE + PMD_SIZE * 16 + PAGE_SIZE;
+	unsigned long total_tasks = total_size / task_avg_kmem_usage;
+	unsigned long extra = total_size - total_tasks * task_avg_kmem_usage;
+
+	params->total_size = total_size;
+	params->total_tasks = total_tasks;
+	params->total_pgds = total_tasks;
+	params->total_pmds = total_tasks * 16;
+	params->total_tcbs = total_tasks;
+	params->extra = extra;
+
+	print_kmem_grant_params(params);
+}
+
 
 int pgalloc_add_new_grant(unsigned long pfn, int npages)
 {
 	unsigned long physical = __pfn_to_addr(pfn);
 	void *virtual = (void *)phys_to_virt(physical);
 	struct mem_cache *pgd_cache, *pmd_cache, *pg_cache;
-	kmem_usage_per_grant_t params;
+	grant_kmem_usage_t params;
 
 	/* First map the whole grant */
 	add_mapping(physical, phys_to_virt(physical), __pfn_to_addr(npages),
 		    MAP_SVC_RW_FLAGS);
 
 	/* Calculate how to divide buffer into different caches */
-	params.task_size_avg = TASK_AVERAGE_SIZE;
-	params.grant_size = npages * PAGE_SIZE;
-
-	/* Calculate pools for how many tasks from this much grant */
-	params.tasks_per_kmem_grant = (__pfn(SZ_1MB) * TASKS_PER_1MB_GRANT) /
-				      __pfn(params.grant_size);
-	calc_kmem_usage_per_grant(&params);
+	calc_grant_kmem_usage(&params, __pfn_to_addr(npages));
 
 	/* Create the caches, least alignment-needing, most, then others. */
-	pmd_cache = mem_cache_init(virtual, params.pmd_total, PMD_SIZE, 1);
-	virtual += params.pmd_total;
-	pgd_cache = mem_cache_init(virtual, params.pgd_total, PGD_SIZE, 1);
-	virtual += params.pgd_total;
-	pg_cache = mem_cache_init(virtual, params.pg_total + params.extra,
-				  PAGE_SIZE, 1);
+	pmd_cache = mem_cache_init(virtual, params.total_pmds * PMD_SIZE,
+				   PMD_SIZE, 1);
+	virtual += params.total_pmds * PMD_SIZE;
+
+	pgd_cache = mem_cache_init(virtual, params.total_pgds * PGD_SIZE,
+				   PGD_SIZE, 1);
+	virtual += params.total_pgds * PGD_SIZE;
+
+	pg_cache = mem_cache_init(virtual, params.total_tcbs * PAGE_SIZE
+				  + params.extra, PAGE_SIZE, 1);
 
 	/* Add the caches */
 	pgalloc_add_new_cache(pgd_cache, PGALLOC_PGD_CACHE);

@@ -25,7 +25,6 @@ void init_page_allocator(unsigned long start, unsigned long end);
 
 /* Page allocation functions */
 void *alloc_page(int quantity);
-void *zalloc_page(int quantity);
 int free_page(void *paddr);
 
 #endif /* __ALLOC_PAGE_H__ */

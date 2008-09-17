@@ -4,6 +4,7 @@
 #define __TASKNAME__			"test0"
 
 int shmtest(void);
+int forktest(void);
 int mmaptest(void);
 int dirtest(void);
 int fileio(void);

@@ -89,15 +89,14 @@ pmd_table_t *alloc_boot_pmd(void);
  * The granted memory is used in an architecture-specific way, e.g. for pgds,
  * pmds, and kernel stack. Therefore this should be defined per-arch.
  */
-typedef struct kmem_usage_per_grant {
-	int grant_size;		/* The size of the grant given by pager */
-	int task_size_avg;	/* Average memory a task occupies */
-	int tasks_per_kmem_grant; /* Num of tasks to allocate for, per grant */
-	int pg_total;		/* Total size of page allocs needed per grant */
-	int pmd_total;		/* Total size of pmd allocs needed per grant */
-	int pgd_total;		/* Total size of pgd allocs needed per grant */
-	int extra;		/* Extra unused space, left per grant */
-} kmem_usage_per_grant_t;
+typedef struct grant_kmem_usage {
+	unsigned long total_size;
+	unsigned long total_tasks;
+	unsigned long total_pgds;
+	unsigned long total_pmds;
+	unsigned long total_tcbs;
+	unsigned long extra;
+} grant_kmem_usage_t;
 
 void paging_init(void);
 void init_pmd_tables(void);

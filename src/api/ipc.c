@@ -242,11 +242,11 @@ int sys_ipc(syscall_context_t *regs)
 	int ret = 0;
 
 	/* Check arguments */
-	if (!((from >= L4_ANYTHREAD) && (from <= MAX_PREDEFINED_TID))) {
+	if (from < L4_ANYTHREAD) {
 		ret = -EINVAL;
 		goto error;
 	}
-	if (!((to >= L4_ANYTHREAD) && (to <= MAX_PREDEFINED_TID))) {
+	if (to < L4_ANYTHREAD) {
 		ret = -EINVAL;
 		goto error;
 	}
