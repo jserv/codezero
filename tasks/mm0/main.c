@@ -53,7 +53,7 @@ void handle_requests(void)
 		mr[i] = read_mr(MR_UNUSED_START + i);
 
 	switch(tag) {
-	case L4_IPC_TAG_WAIT:
+	case L4_IPC_TAG_SYNC:
 		// printf("%s: Synced with waiting thread.\n", __TASKNAME__);
 		/* This has no receive phase */
 		return;

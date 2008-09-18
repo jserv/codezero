@@ -42,7 +42,7 @@
 /* Synchronise with pager via a `wait' tagged ipc with destination as pager */
 void wait_pager(l4id_t partner)
 {
-	l4_send(partner, L4_IPC_TAG_WAIT);
+	l4_send(partner, L4_IPC_TAG_SYNC);
 	printf("%s: Pager synced with us.\n", __TASKNAME__);
 }
 
@@ -76,7 +76,7 @@ void handle_fs_requests(void)
 	/* FIXME: Fix all these syscalls to read any buffer data from the caller task's utcb.
 	 * Make sure to return -EINVAL if data is not valid. */
 	switch(tag) {
-	case L4_IPC_TAG_WAIT:
+	case L4_IPC_TAG_SYNC:
 		printf("%s: Synced with waiting thread.\n", __TASKNAME__);
 		return; /* No reply for this tag */
 	case L4_IPC_TAG_OPEN:

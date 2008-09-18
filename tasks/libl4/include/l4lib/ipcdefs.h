@@ -17,7 +17,7 @@
 /*** IPC Tags used between server tasks ***/
 
 /* For ping ponging */
-#define L4_IPC_TAG_WAIT			3
+#define L4_IPC_TAG_SYNC			3
 
 /* To obtain utcb address */
 #define L4_IPC_TAG_UTCB			4
@@ -45,8 +45,10 @@
 #define L4_IPC_TAG_FORK			22
 #define L4_IPC_TAG_STAT			23
 #define L4_IPC_TAG_FSTAT		24
-#define L4_IPC_TAG_FSYNC		25	/* Pager notifies vfs of file close */
-#define L4_IPC_TAG_CLONE		26	/* Pager notifies vfs of file close */
+#define L4_IPC_TAG_FSYNC		25
+#define L4_IPC_TAG_CLONE		26
+#define L4_IPC_TAG_EXIT			27
+#define L4_IPC_TAG_WAIT			28
 
 
 /* Tags for ipc between fs0 and mm0 */
