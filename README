@@ -6,14 +6,16 @@
 
 What is Codezero?
 
-Codezero is a small microkernel based on the L4 microkernel principles and has
-its own interpretation of the L4 microkernel API. In addition, it has server
-tasks that implement memory management, a virtual filesystem layer, and these
-servers currently support a small but essential subset of the POSIX API.
+Codezero is a new microkernel that has been developeed around the L4 microkernel
+design principles. It implements its own interpretation of the L4 microkernel
+API. In addition, it provides server tasks that implement memory management, a
+virtual filesystem layer, and these servers currently support a small but
+essential subset of the POSIX API.
 
-Codezero project is an effort to implement a modern, open source operating
-system based on the latest technology in microkernel and OS design. It targets
-realtime, high-end embedded systems and has an emphasis on the ARM architecture.
+Codezero project is an effort to develop a modern, open source operating system
+based on the latest technology in microkernel and OS design. It targets tightly
+integrated, high-end embedded systems and it has an emphasis on the ARM
+architecture.
 
 It is quite common to see open source projects developed in a closed-doors
 fashion. Codezero project goes beyond just publishing source code as open source
