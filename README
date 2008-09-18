@@ -124,13 +124,13 @@ Finally, POSIX compliance is only a step, or a partial aim for the Codezero
 microkernel. It is not limited to the goal of just complying with POSIX, which
 has been done many times by other operating systems. The idea is to implement
 a generic software environment where multiple system services can reside in
-the same run-time, but on the other hand, natively implemented system services
-will be supplied as the default solution. In other words, the project will
-provide the mechanism to accomodate multiple operating systems, and it will also
-supply its own set of system services with a POSIX-like API. By providing a
-variety of system software options, the applications will be able to choose
-among different speed, safety, determinism policies at the same run-time. This
-is expected to prove useful in the embedded software domain.
+the same run-time, but on the other hand, native system services will be
+supplied as the default solution. In other words, the project will provide the
+mechanism to accomodate multiple operating systems, and it will also supply its
+own set of system services with a POSIX-like API. By providing a variety of
+system software options, the applications will be able to choose among different
+speed, safety, determinism policies at the same run-time. This is expected to
+prove useful in the embedded software domain.
 
 Furthermore there are new ideas in literature that would improve systems
 software but aren't implemented either because they have no existing users or
