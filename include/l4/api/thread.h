@@ -20,5 +20,6 @@
 #define THREAD_RUN			0x0001
 #define THREAD_SUSPEND			0x0002
 #define THREAD_RESUME			0x0003
+#define THREAD_DESTROY			0x0004
 
 #endif /* __THREAD_H__ */

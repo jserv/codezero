@@ -371,13 +371,19 @@ int fsync_common(struct tcb *task, int fd)
 	int err;
 
 	/* Check fd validity */
+	if (fd < 0 || fd > TASK_FILES_MAX)
+		return -EINVAL;
+
+	/*
+	 * If we don't know about the file, even if it was
+	 * opened by the vfs, it is sure that there's no
+	 * pending IO on it. We simply return.
+	 */
 	if (!task->files->fd[fd].vmfile)
-		if ((err = file_open(task, fd)) < 0)
-			return err;
+		return 0;
 
 	/* Finish I/O on file */
-	BUG_ON(!(f = task->files->fd[fd].vmfile));
-	if ((err = flush_file_pages(f)) < 0)
+	if ((err = flush_file_pages(task->files->fd[fd].vmfile)) < 0)
 		return err;
 
 	return 0;

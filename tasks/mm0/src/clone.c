@@ -105,7 +105,6 @@ int sys_fork(struct tcb *parent)
 	task_add_global(child);
 
 	/* Start forked child. */
-	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
 	l4_thread_control(THREAD_RUN, &ids);
 
 	/* Return child tid to parent */

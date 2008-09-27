@@ -33,6 +33,11 @@ void *utcb_vaddr_new(void)
 	return address_new(&utcb_vaddr_pool, 1);
 }
 
+int utcb_vaddr_del(void *utcb_addr)
+{
+	return address_del(&utcb_vaddr_pool, utcb_addr, 1);
+}
+
 /*
  * Sends utcb address information to requester task, allocates
  * an address if it doesn't exist and the requester is asking

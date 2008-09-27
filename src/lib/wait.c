@@ -37,6 +37,7 @@ do {							\
 	spin_unlock(&wqh->slock);			\
 } while(0);
 
+/* FIXME: Wake up should take the task as an argument, rather than the queue */
 /* Wake up single waiter */
 void wake_up(struct waitqueue_head *wqh)
 {

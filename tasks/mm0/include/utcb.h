@@ -5,6 +5,7 @@
 #include <task.h>
 void *utcb_vaddr_new(void);
 int utcb_pool_init(void);
+int utcb_vaddr_del(void *utcb_addr);
 
 
 /* IPC to send utcb address information to tasks */

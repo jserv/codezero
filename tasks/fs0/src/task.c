@@ -151,7 +151,7 @@ int pager_notify_fork(struct tcb *sender, l4id_t parid,
 	id_pool_copy(child->fdpool, parent->fdpool, TASK_FILES_MAX);
 	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
 
-	printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
 	return 0;
 }
 
