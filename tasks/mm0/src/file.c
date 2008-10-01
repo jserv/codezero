@@ -367,7 +367,6 @@ int flush_file_pages(struct vm_file *f)
 /* Given a task and fd, syncs all IO on it */
 int fsync_common(struct tcb *task, int fd)
 {
-	struct vm_file *f;
 	int err;
 
 	/* Check fd validity */

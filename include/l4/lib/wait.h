@@ -10,23 +10,16 @@ struct waitqueue {
 	struct ktcb *task;
 };
 
-#define DECLARE_WAITQUEUE(wq, tsk)			\
+#define CREATE_WAITQUEUE_ON_STACK(wq, tsk)		\
 struct waitqueue wq = {					\
 	.task_list = { &wq.task_list, &wq.task_list },	\
 	.task = tsk,					\
 };
-//	LIST_HEAD_INIT(task_list),
 
-/*
- * The waitqueue spinlock ensures waiters are added and removed atomically so
- * that wake-ups and sleeps occur in sync. Otherwise, a task could try to wake
- * up a waitqueue **during when a task has decided to sleep but is not in the
- * queue yet. (** Take "during" here as a pseudo-concurrency term on UP)
- */
 struct waitqueue_head {
 	int sleepers;
-	struct spinlock slock;		/* Locks sleeper queue */
-	struct list_head task_list;	/* Sleeper queue head */
+	struct spinlock slock;
+	struct list_head task_list;
 };
 
 static inline void waitqueue_head_init(struct waitqueue_head *head)
@@ -35,11 +28,14 @@ static inline void waitqueue_head_init(struct waitqueue_head *head)
 	INIT_LIST_HEAD(&head->task_list);
 }
 
-/*
- * Used for ipc related waitqueues who have special wait queue manipulation
- * conditions.
- */
-void wake_up(struct waitqueue_head *wqh);
+void task_set_wqh(struct ktcb *task, struct waitqueue_head *wqh,
+		  struct waitqueue *wq);
+
+void task_unset_wqh(struct ktcb *task);
+
+
+void wake_up(struct waitqueue_head *wqh, int sync);
+int wake_up_task(struct ktcb *task, int sync);
 
 #endif /* __LIB_WAIT_H__ */
 

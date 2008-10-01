@@ -10,6 +10,7 @@
 #include <l4/generic/irq.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/time.h>
+#include <l4/generic/preempt.h>
 #include <l4/generic/space.h>
 #include INC_ARCH(exception.h)
 #include <l4/api/syscall.h>
@@ -54,11 +55,16 @@ void update_system_time(void)
 	if (systime.reader)
 		systime.reader = 0;
 
-	/* Increase just like jiffies, but reset every HZ */
+	/* Increase just like jiffies, but reset every second */
 	systime.thz++;
 
-	/* On every HZ increase seconds */
-	if (systime.thz == HZ) {
+	/*
+	 * On every 1 second of timer ticks, increase seconds
+	 *
+	 * TODO: Investigate: how do we make sure timer_irq is
+	 * called SCHED_TICKS times per second?
+	 */
+	if (systime.thz == SCHED_TICKS) {
 		systime.thz = 0;
 		systime.sec++;
 	}
@@ -79,7 +85,7 @@ int sys_time(syscall_context_t *args)
 		while(retries > 0) {
 			systime.reader = 1;
 			tv->tv_sec = systime.sec;
-			tv->tv_usec = 1000000 * systime.thz / HZ;
+			tv->tv_usec = 1000000 * systime.thz / SCHED_TICKS;
 
 			retries--;
 			if (systime.reader)
@@ -108,20 +114,36 @@ void update_process_times(void)
 {
 	struct ktcb *cur = current;
 
-	BUG_ON(cur->ticks_left < 0);
-
 	if (cur->ticks_left == 0) {
-		need_resched = 1;
-		return;
+		/*
+		 * Nested irqs and irqs during non-preemptive
+		 * times could try to deduct ticks below zero.
+		 * We ignore such states and return.
+		 */
+		if (in_nested_irq_context() || !preemptive())
+			return;
+		else /* Otherwise its a bug. */
+			BUG();
 	}
 
+	/*
+	 * These are TASK_RUNNABLE times, i.e. exludes sleeps
+	 * In the future we may use timestamps for accuracy
+	 */
 	if (in_kernel())
 		cur->kernel_time++;
 	else
 		cur->user_time++;
 
 	cur->ticks_left--;
+	cur->sched_granule--;
+
+	/* Task has expired its timeslice */
 	if (!cur->ticks_left)
+		need_resched = 1;
+
+	/* Task has expired its schedule granularity */
+	if (!cur->sched_granule)
 		need_resched = 1;
 }
 

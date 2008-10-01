@@ -1,12 +1,13 @@
 /*
- * A basic scheduler that does the job for now.
+ * A basic priority-based scheduler.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <l4/lib/list.h>
 #include <l4/lib/printk.h>
 #include <l4/lib/string.h>
 #include <l4/lib/mutex.h>
+#include <l4/lib/math.h>
 #include <l4/lib/bit.h>
 #include <l4/lib/spinlock.h>
 #include <l4/generic/scheduler.h>
@@ -21,16 +22,19 @@
 #include INC_PLAT(platform.h)
 #include INC_ARCH(exception.h)
 
-/* A very basic runqueue */
+
+/* A basic runqueue */
 struct runqueue {
-	struct spinlock lock;
-	struct list_head task_list;
-	unsigned int total;
+	struct spinlock lock;		/* Lock */
+	struct list_head task_list;	/* List of tasks in rq */
+	unsigned int total;		/* Total tasks */
+	int recalc_timeslice;		/* Need timeslice redistribution */
 };
 
-static struct runqueue sched_rq[3];
-static struct runqueue *rq_runnable, *rq_expired, *rq_pending;
-
+#define SCHED_RQ_TOTAL					2
+static struct runqueue sched_rq[SCHED_RQ_TOTAL];
+static struct runqueue *rq_runnable, *rq_expired;
+static int prio_total;			/* Total priority of all tasks */
 
 /* This is incremented on each irq or voluntarily by preempt_disable() */
 extern unsigned int current_irq_nest_count;
@@ -52,16 +56,6 @@ void preempt_enable(void)
 {
 	voluntary_preempt--;
 	current_irq_nest_count--;
-
-	/*
-	 * Even if count increases after we check it, it will come back to zero.
-	 * This test really is asking "is this the outmost explicit
-	 * preempt_enable() that will really enable context switching?"
-	 */
-	if (current_irq_nest_count == 0) {
-		/* Then, give scheduler a chance to check need_resched == 1 */
-		schedule();
-	}
 }
 
 /* A positive irq nest count implies current context cannot be preempted. */
@@ -71,9 +65,30 @@ void preempt_disable(void)
 	voluntary_preempt++;
 }
 
-void sched_runqueue_init(void)
+int in_irq_context(void)
 {
-	for (int i = 0; i < 3; i++) {
+	/*
+	 * If there was a real irq, irq nest count must be
+	 * one more than all preempt_disable()'s which are
+	 * counted by voluntary_preempt.
+	 */
+	return (current_irq_nest_count == (voluntary_preempt + 1));
+}
+
+int in_nested_irq_context(void)
+{
+	/* Deducing voluntary preemptions we get real irq nesting */
+	return (current_irq_nest_count - voluntary_preempt) > 1;
+}
+
+int in_task_context(void)
+{
+	return !in_irq_context();
+}
+
+void sched_init_runqueues(void)
+{
+	for (int i = 0; i < SCHED_RQ_TOTAL; i++) {
 		memset(&sched_rq[i], 0, sizeof(struct runqueue));
 		INIT_LIST_HEAD(&sched_rq[i].task_list);
 		spin_lock_init(&sched_rq[i].lock);
@@ -81,203 +96,93 @@ void sched_runqueue_init(void)
 
 	rq_runnable = &sched_rq[0];
 	rq_expired = &sched_rq[1];
-	rq_pending = &sched_rq[2];
+	prio_total = 0;
 }
 
-/* Lock scheduler. Should only be used when scheduling. */
-static inline void sched_lock(void)
-{
-	preempt_disable();
-}
-
-/* Sched unlock */
-static inline void sched_unlock(void)
-{
-	/*
-	 * This is to make sure preempt_enable() does not
-	 * try to schedule since we're already scheduling.
-	 */
-	need_resched = 0;
-	preempt_enable();
-}
-
-/* Swaps runnable and expired queues *if* runnable queue is empty. */
-static void sched_rq_swap_expired_runnable(void)
+/* Swap runnable and expired runqueues. */
+static void sched_rq_swap_runqueues(void)
 {
 	struct runqueue *temp;
 
-	if (list_empty(&rq_runnable->task_list) &&
-	    !list_empty(&rq_expired->task_list)) {
+	BUG_ON(list_empty(&rq_expired->task_list));
+	BUG_ON(rq_expired->total == 0);
 
-		/* Queues are swapped and expired list becomes runnable */
-		temp = rq_runnable;
-		rq_runnable = rq_expired;
-		rq_expired = temp;
-	}
+	/* Queues are swapped and expired list becomes runnable */
+	temp = rq_runnable;
+	rq_runnable = rq_expired;
+	rq_expired = temp;
 }
+
+/* FIXME:
+ * Sleepers should not affect runqueue priority.
+ * Suspended tasks should affect runqueue priority.
+ *
+ * Also make sure that if sleepers get suspended,
+ * they do affect runqueue priority.
+ */
+
+/* Set policy on where to add tasks in the runqueue */
+#define RQ_ADD_BEHIND		0
+#define RQ_ADD_FRONT		1
 
 /* Helper for adding a new task to a runqueue */
 static void sched_rq_add_task(struct ktcb *task, struct runqueue *rq, int front)
 {
-	BUG_ON(task->rq);
-
-	/*
-	 * If the task is sinfully in a runqueue, this may still keep silent
-	 * upon a racing condition, since its rq can't be locked in advance.
-	 */
 	BUG_ON(!list_empty(&task->rq_list));
 
+	spin_lock(&rq->lock);
 	if (front)
 		list_add(&task->rq_list, &rq->task_list);
 	else
 		list_add_tail(&task->rq_list, &rq->task_list);
 	rq->total++;
-	task->rq = rq;
-}
-
-static inline void
-sched_rq_add_task_front(struct ktcb *task, struct runqueue *rq)
-{
-	sched_rq_add_task(task, rq, 1);
-}
-
-static inline void
-sched_rq_add_task_behind(struct ktcb *task, struct runqueue *rq)
-{
-	sched_rq_add_task(task, rq, 0);
+	spin_unlock(&rq->lock);
 }
 
 /* Helper for removing a task from its runqueue. */
-static inline void sched_rq_remove_task(struct ktcb *task)
+static inline void sched_rq_remove_task(struct ktcb *task, struct runqueue *rq)
 {
+	spin_lock(&rq->lock);
 	list_del_init(&task->rq_list);
-	task->rq->total--;
-	task->rq = 0;
+	rq->total--;
+
+	BUG_ON(rq->total < 0);
+	spin_unlock(&rq->lock);
 }
 
-void sched_init_task(struct ktcb *task)
+
+void sched_init_task(struct ktcb *task, int prio)
 {
 	INIT_LIST_HEAD(&task->rq_list);
-	task->ticks_left = TASK_TIMESLICE_DEFAULT;
+	task->priority = prio;
+	task->ticks_left = 0;
 	task->state = TASK_INACTIVE;
 	task->ts_need_resched = 0;
+	task->flags |= TASK_RESUMING;
 }
 
-void sched_tell(struct ktcb *task, unsigned int fl)
+/* Synchronously resumes a task */
+void sched_resume_sync(struct ktcb *task)
 {
-	BUG_ON(!(SCHED_FL_MASK & fl));
-	/* The last flag overrrides all existing flags. */
-	task->schedfl = fl;
-}
+	task->state = TASK_RUNNABLE;
 
-void sched_yield()
-{
-	need_resched = 1;
+	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
 	schedule();
 }
 
 /*
- * Any task that wants the scheduler's attention and not in its any one of
- * its currently runnable realms, would call this. E.g. dormant tasks
- * sleeping tasks, newly created tasks. But not currently runnable tasks.
+ * Asynchronously resumes a task.
+ * The task will run in the future, but at
+ * the scheduler's discretion.
  */
-void sched_add_pending_task(struct ktcb *task)
+void sched_resume_async(struct ktcb *task)
 {
-	BUG_ON(task->rq);
-	spin_lock(&rq_pending->lock);
-	sched_rq_add_task_behind(task, rq_pending);
-	spin_unlock(&rq_pending->lock);
+	task->state = TASK_RUNNABLE;
+
+	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
 }
 
-/* Tells scheduler to remove given runnable task from runqueues */
-void sched_notify_sleep(struct ktcb *task)
-{
-	sched_tell(task, SCHED_FL_SLEEP);
-}
-
-void sched_sleep_task(struct ktcb *task)
-{
-	sched_notify_sleep(task);
-	if (task == current)
-		sched_yield();
-}
-
-/* Tells scheduler to remove given runnable task from runqueues */
-void sched_notify_suspend(struct ktcb *task)
-{
-	sched_tell(task, SCHED_FL_SUSPEND);
-}
-
-void sched_suspend_task(struct ktcb *task)
-{
-	sched_notify_suspend(task);
-	if (task == current)
-		sched_yield();
-}
-
-/* Tells scheduler to add given task into runqueues whenever possible */
-void sched_notify_resume(struct ktcb *task)
-{
-	BUG_ON(current == task);
-	sched_tell(task, SCHED_FL_RESUME);
-	sched_add_pending_task(task);
-}
-
-/* NOTE: Might as well just set need_resched instead of full yield.
- * This would work on irq context as well. */
-/* Same as resume, but also yields. */
-void sched_resume_task(struct ktcb *task)
-{
-	sched_notify_resume(task);
-	sched_yield();
-}
-
-void sched_start_task(struct ktcb *task)
-{
-	sched_init_task(task);
-	sched_resume_task(task);
-}
-
-/*
- * Checks currently pending scheduling flags on the task and does two things:
- * 1) Modify their state.
- * 2) Modify their runqueues.
- *
- * An inactive/sleeping task that is pending-runnable would change state here.
- * A runnable task that is pending-inactive would also change state here.
- * Returns 1 if it has changed anything, e.g. task state, runqueues, and
- * 0 otherwise.
- */
-static int sched_next_state(struct ktcb *task)
-{
-	unsigned int flags = task->schedfl;
-	int ret = 0;
-
-	switch(flags) {
-	case 0:
-		ret = 0;
-		break;
-	case SCHED_FL_SUSPEND:
-		task->state = TASK_INACTIVE;
-		ret = 1;
-		break;
-	case SCHED_FL_RESUME:
-		task->state = TASK_RUNNABLE;
-		ret = 1;
-		break;
-	case SCHED_FL_SLEEP:
-		task->state = TASK_SLEEPING;
-		ret = 1;
-		break;
-	default:
-		BUG();
-	}
-	task->schedfl = 0;
-	return ret;
-}
-
-
-extern void switch_to(struct ktcb *cur, struct ktcb *next);
+extern void arch_switch(struct ktcb *cur, struct ktcb *next);
 
 static inline void context_switch(struct ktcb *next)
 {
@@ -286,84 +191,179 @@ static inline void context_switch(struct ktcb *next)
 	// printk("(%d) to (%d)\n", cur->tid, next->tid);
 
 	/* Flush caches and everything */
-	arm_clean_invalidate_cache();
-	arm_invalidate_tlb();
-	arm_set_ttb(virt_to_phys(next->pgd));
-	arm_invalidate_tlb();
-	switch_to(cur, next);
+	arch_hardware_flush(next->pgd);
+
+	/* Switch context */
+	arch_switch(cur, next);
+
 	// printk("Returning from yield. Tid: (%d)\n", cur->tid);
 }
 
-void scheduler()
+/*
+ * Priority calculation is so simple it is inlined. The task gets
+ * the ratio of its priority to total priority of all runnable tasks.
+ */
+static inline int sched_recalc_ticks(struct ktcb *task, int prio_total)
 {
-	struct ktcb *next = 0, *pending = 0, *n = 0;
+	return task->ticks_assigned =
+		SCHED_TICKS * task->priority / prio_total;
+}
 
-	sched_lock();
+/*
+ * Tasks come here, either by setting need_resched (via next irq),
+ * or by directly calling it (in process context).
+ *
+ * The scheduler is similar to Linux's so called O(1) scheduler,
+ * although a lot simpler. Task priorities determine task timeslices.
+ * Each task gets a ratio of its priority to the total priority of
+ * all runnable tasks. When this total changes, (e.g. threads die or
+ * are created, or a thread's priority is changed) the timeslices are
+ * recalculated on a per-task basis as each thread becomes runnable.
+ * Once all runnable tasks expire, runqueues are swapped. Sleeping
+ * tasks are removed from the runnable queue, and added back later
+ * without affecting the timeslices. Suspended tasks however,
+ * necessitate a timeslice recalculation as they are considered to go
+ * inactive indefinitely or for a very long time. They are put back
+ * to the expired queue if they want to run again.
+ *
+ * A task is rescheduled either when it hits a SCHED_GRANULARITY
+ * boundary, or when its timeslice has expired. SCHED_GRANULARITY
+ * ensures context switches do occur at a maximum boundary even if a
+ * task's timeslice is very long. In the future, real-time tasks will
+ * be added, and they will be able to ignore SCHED_GRANULARITY.
+ *
+ * In the future, the tasks will be sorted by priority in their
+ * runqueue, as well as having an adjusted timeslice.
+ *
+ * Runqueues are swapped at a single second's interval. This implies
+ * the timeslice recalculations would also occur at this interval.
+ */
+void schedule()
+{
+	struct ktcb *next;
+
+	/* Should not schedule with preemption disabled */
+	BUG_ON(voluntary_preempt);
+
+	/* Should not have more ticks than SCHED_TICKS */
+	BUG_ON(current->ticks_left > SCHED_TICKS);
+
+	/* Cannot have any irqs that schedule after this */
+	preempt_disable();
+
+	/* NOTE:
+	 * We could avoid double-scheduling by detecting a task
+	 * that's about to schedule voluntarily and skipping the
+	 * schedule() call in irq mode.
+	 */
+
+	/* Reset schedule flag */
 	need_resched = 0;
-	BUG_ON(current->rq != rq_runnable);
 
-	/* Current task */
-	sched_rq_remove_task(current);
-	sched_next_state(current);
+	/* Remove from runnable queue */
+	sched_rq_remove_task(current, rq_runnable);
 
+	/* Put it into appropriate runqueue */
 	if (current->state == TASK_RUNNABLE) {
-		BUG_ON(current->ticks_left < 0);
-		if (current->ticks_left == 0)
-			current->ticks_left = TASK_TIMESLICE_DEFAULT;
-		sched_rq_add_task_behind(current, rq_expired);
+		if (current->ticks_left)
+			sched_rq_add_task(current, rq_runnable, RQ_ADD_BEHIND);
+		else
+			sched_rq_add_task(current, rq_expired, RQ_ADD_BEHIND);
 	}
-	sched_rq_swap_expired_runnable();
 
-	/* Runnable-pending tasks */
-	spin_lock(&rq_pending->lock);
-	list_for_each_entry_safe(pending, n, &rq_pending->task_list, rq_list) {
-		sched_next_state(pending);
-		sched_rq_remove_task(pending);
-		if (pending->state == TASK_RUNNABLE)
-			sched_rq_add_task_front(pending, rq_runnable);
-	}
-	spin_unlock(&rq_pending->lock);
+	/* Check if there's a pending suspend for thread */
+	if (current->flags & TASK_SUSPENDING) {
+		/*
+		 * The task should have no locks and be in a runnable state.
+		 * (e.g. properly woken up by the suspender)
+		 */
+		if (current->nlocks == 0 && current->state == TASK_RUNNABLE) {
+			/* Suspend it if suitable */
+			current->state = TASK_INACTIVE;
+			current->flags &= ~TASK_SUSPENDING;
 
-	/* Next task */
-retry_next:
-	if (rq_runnable->total > 0) {
-		next = list_entry(rq_runnable->task_list.next, struct ktcb, rq_list);
-		sched_next_state(next);
-		if (next->state != TASK_RUNNABLE) {
-			sched_rq_remove_task(next);
-			sched_rq_swap_expired_runnable();
-			goto retry_next;
+			/*
+			 * The task has been made inactive here.
+			 * A suspended task affects timeslices whereas
+			 * a sleeping task doesn't as it is believed
+			 * sleepers would become runnable soon.
+			 */
+			prio_total -= current->priority;
+			BUG_ON(prio_total <= 0);
+		} else {
+			/*
+			 * Top up task's ticks temporarily, and
+			 * wait for it to release its locks.
+			 */
+			current->state = TASK_RUNNABLE;
+			current->ticks_left = max(current->ticks_left,
+						  SCHED_GRANULARITY);
+			sched_rq_add_task(current, rq_runnable, RQ_ADD_FRONT);
 		}
-	} else {
-		printk("Idle task.\n");
-		while (1);
 	}
 
+	/* Determine the next task to be run */
+	if (rq_runnable->total > 0) {
+		next = list_entry(rq_runnable->task_list.next,
+				  struct ktcb, rq_list);
+	} else {
+		if (rq_expired->total > 0) {
+			sched_rq_swap_runqueues();
+			next = list_entry(rq_runnable->task_list.next,
+					  struct ktcb, rq_list);
+		} else {
+			printk("Idle task.\n");
+			while(1);
+		}
+	}
+
+	/* Zero ticks indicates task hasn't ran since last rq swap */
+	if (next->ticks_left == 0) {
+
+		/* New tasks affect runqueue total priority. */
+		if (next->flags & TASK_RESUMING) {
+			prio_total += next->priority;
+			next->flags &= ~TASK_RESUMING;
+		}
+
+		/*
+		 * Redistribute timeslice. We do this as each task
+		 * becomes runnable rather than all at once. It's also
+		 * done only upon a runqueue swap.
+		 */
+		sched_recalc_ticks(next, prio_total);
+		next->ticks_left = next->ticks_assigned;
+	}
+
+	/* Reinitialise task's schedule granularity boundary */
+	next->sched_granule = SCHED_GRANULARITY;
+
+	/* Finish */
 	disable_irqs();
-	sched_unlock();
+	preempt_enable();
 	context_switch(next);
 }
 
-void schedule(void)
-{
-	/* It's a royal bug to call schedule when preemption is disabled */
-	BUG_ON(voluntary_preempt);
-
-	if (need_resched)
-		scheduler();
-}
-
+/*
+ * Initialise pager as runnable for first-ever scheduling,
+ * and start the scheduler.
+ */
 void scheduler_start()
 {
 	/* Initialise runqueues */
-	sched_runqueue_init();
+	sched_init_runqueues();
 
-	/* Initialse inittask as runnable for first-ever scheduling */
-	sched_init_task(current);
+	/* Initialise scheduler fields of pager */
+	sched_init_task(current, TASK_PRIO_PAGER);
+
+	/* Add task to runqueue first */
+	sched_rq_add_task(current, rq_runnable, RQ_ADD_FRONT);
+
+	/* Give it a kick-start tick and make runnable */
+	current->ticks_left = 1;
 	current->state = TASK_RUNNABLE;
-	sched_rq_add_task_front(current, rq_runnable);
 
-	/* Start the timer */
+	/* Start the timer and switch */
 	timer_start();
 	switch_to_user(current);
 }

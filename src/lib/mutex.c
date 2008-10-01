@@ -6,6 +6,7 @@
 #include <l4/lib/mutex.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/tcb.h>
+#include <l4/api/errno.h>
 
 /*
  * Semaphore usage:
@@ -17,6 +18,8 @@
  * Consumer locks/consumes/unlocks data.
  */
 
+#if 0
+/* Update it */
 /*
  * Semaphore *up* for multiple producers. If any consumer is waiting, wake them
  * up, otherwise, sleep. Effectively producers and consumers use the same
@@ -48,10 +51,10 @@ void sem_up(struct mutex *mutex)
 		INIT_LIST_HEAD(&wq.task_list);
 		list_add_tail(&wq.task_list, &mutex->wq.task_list);
 		mutex->sleepers++;
-		sched_notify_sleep(current);
-		need_resched = 1;
+		current->state = TASK_SLEEPING;
 		printk("(%d) produced, now sleeping...\n", current->tid);
 		spin_unlock(&mutex->slock);
+		schedule();
 	}
 }
 
@@ -86,76 +89,91 @@ void sem_down(struct mutex *mutex)
 		INIT_LIST_HEAD(&wq.task_list);
 		list_add_tail(&wq.task_list, &mutex->wq.task_list);
 		mutex->sleepers++;
-		sched_notify_sleep(current);
-		need_resched = 1;
+		current->state = TASK_SLEEPING;
 		printk("(%d) Waiting to consume, now sleeping...\n", current->tid);
 		spin_unlock(&mutex->slock);
+		schedule();
 	}
 }
+#endif
 
 /* Non-blocking attempt to lock mutex */
 int mutex_trylock(struct mutex *mutex)
 {
 	int success;
 
-	spin_lock(&mutex->slock);
-	success = __mutex_lock(&mutex->lock);
-	spin_unlock(&mutex->slock);
+	spin_lock(&mutex->wqh.slock);
+	if ((success = __mutex_lock(&mutex->lock)))
+		current->nlocks++;
+	spin_unlock(&mutex->wqh.slock);
 
 	return success;
 }
 
-void mutex_lock(struct mutex *mutex)
+int mutex_lock(struct mutex *mutex)
 {
 	/* NOTE:
 	 * Everytime we're woken up we retry acquiring the mutex. It is
 	 * undeterministic as to how many retries will result in success.
+	 * We may need to add priority-based locking.
 	 */
 	for (;;) {
-		spin_lock(&mutex->slock);
+		spin_lock(&mutex->wqh.slock);
 		if (!__mutex_lock(&mutex->lock)) { /* Could not lock, sleep. */
-			DECLARE_WAITQUEUE(wq, current);
-			INIT_LIST_HEAD(&wq.task_list);
-			list_add_tail(&wq.task_list, &mutex->wq.task_list);
-			mutex->sleepers++;
-			sched_notify_sleep(current);
+			CREATE_WAITQUEUE_ON_STACK(wq, current);
+			task_set_wqh(current, &mutex->wqh, &wq);
+			list_add_tail(&wq.task_list, &mutex->wqh.task_list);
+			mutex->wqh.sleepers++;
+			current->state = TASK_SLEEPING;
+			spin_unlock(&mutex->wqh.slock);
 			printk("(%d) sleeping...\n", current->tid);
-			spin_unlock(&mutex->slock);
-		} else
+			schedule();
+
+			/* Did we wake up normally or get interrupted */
+			if (current->flags & TASK_INTERRUPTED) {
+				current->flags &= ~TASK_INTERRUPTED;
+				return -EINTR;
+			}
+		} else {
+			current->nlocks++;
 			break;
+		}
 	}
-	spin_unlock(&mutex->slock);
+	spin_unlock(&mutex->wqh.slock);
+	return 0;
 }
 
 void mutex_unlock(struct mutex *mutex)
 {
-	spin_lock(&mutex->slock);
+	spin_lock(&mutex->wqh.slock);
 	__mutex_unlock(&mutex->lock);
-	BUG_ON(mutex->sleepers < 0);
-	if (mutex->sleepers > 0) {
-		struct waitqueue *wq;
-		struct ktcb *sleeper;
+	current->nlocks--;
+	BUG_ON(current->nlocks < 0);
+	BUG_ON(mutex->wqh.sleepers < 0);
+	if (mutex->wqh.sleepers > 0) {
+		struct waitqueue *wq = list_entry(mutex->wqh.task_list.next,
+						  struct waitqueue,
+						  task_list);
+		struct ktcb *sleeper = wq->task;
 
-		/* Each unlocker wakes one other sleeper in queue. */
-		mutex->sleepers--;
-		BUG_ON(list_empty(&mutex->wq.task_list));
-		list_for_each_entry(wq, &mutex->wq.task_list, task_list) {
-			list_del_init(&wq->task_list);
-			spin_unlock(&mutex->slock);
-			/*
-			 * Here, someone else may get the lock, well before we
-			 * wake up the sleeper that we *hope* would get it. This
-			 * is fine as the sleeper would retry and re-sleep. BUT,
-			 * this may potentially starve the sleeper causing
-			 * non-determinisim.
-			 */
-			sleeper = wq->task;
-			printk("(%d) Waking up (%d)\n", current->tid,
-			       sleeper->tid);
-			sched_resume_task(sleeper);
-			return;	/* Don't iterate, wake only one task. */
-		}
+		task_unset_wqh(sleeper);
+		BUG_ON(list_empty(&mutex->wqh.task_list));
+		list_del_init(&wq->task_list);
+		mutex->wqh.sleepers--;
+		sleeper->state = TASK_RUNNABLE;
+		spin_unlock(&mutex->wqh.slock);
+
+		/*
+		 * TODO:
+		 * Here someone could grab the mutex, this is fine
+		 * but it may potentially starve the sleeper causing
+		 * non-determinism. We may consider priorities here.
+		 */
+		sched_resume_sync(sleeper);
+
+		/* Don't iterate, wake only one task. */
+		return;
 	}
-	spin_unlock(&mutex->slock);
+	spin_unlock(&mutex->wqh.slock);
 }
 

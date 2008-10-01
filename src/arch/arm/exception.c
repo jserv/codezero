@@ -212,18 +212,27 @@ error:
 		;
 }
 
-void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
+void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 {
 	set_abort_type(fsr, ARM_PABT);
 	if (check_aborts(faulted_pc, fsr, far) < 0) {
 		printascii("This abort can't be handled by any pager.\n");
 		goto error;
 	}
+
+	if (KERN_ADDR(lr))
+		goto error;
 	fault_ipc_to_pager(faulted_pc, fsr, far);
 	return;
 
 error:
 	disable_irqs();
+	dprintk("Unhandled prefetch abort @ address: ", faulted_pc);
+	dprintk("FAR:", far);
+	dprintk("FSR:", fsr);
+	dprintk("LR:", lr);
+	printascii("Kernel panic.\n");
+	printascii("Halting system...\n");
 	while (1)
 		;
 }

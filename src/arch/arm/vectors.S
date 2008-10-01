@@ -207,6 +207,12 @@ END_PROC(arm_swi_exception)
 		sub	\sp, \sp, #8	@ Adjust SP, since stack op on banked regs is no writeback.
 		@ stack state: (Low) |->SP_USR|LR_USR|(Original)| (High)
 	.endm
+
+	.macro is_psr_usr rx
+	and	\rx, \rx, #ARM_MODE_MASK
+	cmp	\rx, #ARM_MODE_USR
+	.endm
+
 /*
  * vect_pabt
  *
@@ -264,6 +270,11 @@ read_pabt_state:
 	bne	1f			@ Branch here based on previous irq judgement.
 	enable_irqs r3
 1:
+	/* Now check in what mode abort occured, and return that mode's LR in R4 */
+	ldr	r0, [sp, #28]		@ Load PABT_SPSR
+	is_psr_usr r0			@ Test if PABT_SPSR was user mode.
+	ldrne	r3, [sp, #32]		@ Abort occured in kernel, load LR_SVC
+	ldreq	r3, [sp, #4]		@ Abort occured in user, load LR_USR
 	ldr	r0, [sp, #36]		@ Load LR_PABT saved previously.
 	mov	lr, pc
 	ldr	pc, =prefetch_abort_handler @ Jump to function outside this page.
@@ -448,6 +459,11 @@ preempted_psr:
 current_irq_nest_count:
 .word	0
 
+/*
+ * FIXME: current_irq_nest_count also counts for any preempt_disable() calls.
+ * However this nesting check assumes all nests come from real irqs.
+ * We should make this check just the real ones.
+ */
 #define IRQ_NESTING_MAX			15
 	.macro	inc_irq_cnt_with_overnest_check rx, ry
 	ldr	\rx, =current_irq_nest_count	@ Load the irq nest status word.
@@ -479,10 +495,6 @@ current_irq_nest_count:
 	in_process_context \rx		@ If nest count is 0, a running process is preempted.
 	ldreq	\rx, =preempted_psr
 	streq	\process_psr, [\rx]
-	.endm
-	.macro is_psr_usr rx
-	and	\rx, \rx, #ARM_MODE_MASK
-	cmp	\rx, #ARM_MODE_USR
 	.endm
 
 #define	CONTEXT_PSR		0
@@ -584,7 +596,10 @@ save_usr_context:
 	str	r1, [r0, #CONTEXT_R0]
 	@ stack state: (Low) |..|..|..|..|..|..|..|..|->(Original)| (High)
 prepare_schedule:
+	mov lr, pc
 	ldr pc, =schedule
+1:
+	b	1b	/* To catch if schedule returns in irq mode */
 END_PROC(arm_irq_exception_reentrant_with_schedule)
 
 /*
@@ -612,7 +627,7 @@ END_PROC(arm_irq_exception_reentrant_with_schedule)
  *   Furthermore, irqs are also disabled shortly before calling switch_to() from both contexts.
  *   This happens at points where stack state would be irrecoverable if an irq occured.
  */
-BEGIN_PROC(switch_to)
+BEGIN_PROC(arch_switch)
 	in_process_context r2		@ Note this depends on preempt count being 0.
 	beq	save_process_context	@ Voluntary switch needs explicit saving of current state.
 	dec_irq_nest_cnt r2, r3		@ Soon leaving irq context, so reduce preempt count here.
@@ -639,7 +654,7 @@ load_next_context_usr:
 load_next_context_svc:
 	ldmib	sp, {r0-r15}^		@ Switch to svc context and jump, loading R13 and R14 from stack.
 					@ This is OK since the jump is to current context.
-END_PROC(switch_to)
+END_PROC(arch_switch)
 
 
 /*

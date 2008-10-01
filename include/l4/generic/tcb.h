@@ -16,6 +16,17 @@
 #include INC_GLUE(context.h)
 #include INC_SUBARCH(mm.h)
 
+/*
+ * These are a mixture of flags that indicate the task is
+ * in a transitional state that could include one or more
+ * scheduling states.
+ */
+#define TASK_INTERRUPTED		(1 << 0)
+#define TASK_SUSPENDING			(1 << 1)
+#define TASK_RESUMING			(1 << 2)
+
+
+/* Scheduler states */
 enum task_state {
 	TASK_INACTIVE	= 0,
 	TASK_SLEEPING	= 1,
@@ -41,15 +52,14 @@ struct ktcb {
 
 	/* Runqueue related */
 	struct list_head rq_list;
-	struct runqueue *rq;
 
 	/* Thread information */
 	l4id_t tid;		/* Global thread id */
 	l4id_t spid;		/* Global space id */
 	l4id_t tgid;		/* Global thread group id */
 
-	/* Flags to hint scheduler on future task state */
-	unsigned int schedfl;
+	/* Flags to indicate various task status */
+	unsigned int flags;
 
 	/* Lock for blocking thread state modifications via a syscall */
 	struct mutex thread_control_lock;
@@ -65,7 +75,13 @@ struct ktcb {
 	/* Thread times */
 	u32 kernel_time;	/* Ticks spent in kernel */
 	u32 user_time;		/* Ticks spent in userland */
-	u32 ticks_left;		/* Ticks left for reschedule */
+	u32 ticks_left;		/* Timeslice ticks left for reschedule */
+	u32 ticks_assigned;	/* Ticks assigned to this task on this HZ */
+	u32 sched_granule;	/* Granularity ticks left for reschedule */
+	int priority;		/* Task's fixed, default priority */
+
+	/* Number of locks the task currently has acquired */
+	int nlocks;
 
 	/* Page table information */
 	pgd_table_t *pgd;
@@ -73,8 +89,12 @@ struct ktcb {
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;
 	struct waitqueue_head wqh_send;
+	l4id_t expected_sender;
 
-	l4id_t senderid;	/* Sender checks this for ipc */
+	/* Tells where we are when we sleep */
+	struct spinlock waitlock;
+	struct waitqueue_head *waiting_on;
+	struct waitqueue *wq;
 };
 
 /* Per thread kernel stack unified on a single page. */

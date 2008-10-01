@@ -29,8 +29,8 @@ int forktest(void)
 	}
 
 	/* Print only when failed, otherwise too many pass messages */
-	//	printf("PID: %d, my global: %d\n", myid, global);
-	// printf("-- PASSED --\n");
+	printf("PID: %d, my global: %d\n", myid, global);
+	printf("-- PASSED --\n");
 out:
 	while(1)
 		;

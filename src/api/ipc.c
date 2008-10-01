@@ -41,7 +41,7 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 	memcpy(mr0_dst, mr0_src, MR_TOTAL * sizeof(unsigned int));
 
 	/* Save the sender id in case of ANYTHREAD receiver */
-	if (to->senderid == L4_ANYTHREAD)
+	if (to->expected_sender == L4_ANYTHREAD)
 		mr0_dst[MR_SENDER] = from->tid;
 
 	return 0;
@@ -52,106 +52,134 @@ int sys_ipc_control(syscall_context_t *regs)
 	return -ENOSYS;
 }
 
+/*
+ * Why can we safely copy registers and resume task
+ * after we release the locks? Because even if someone
+ * tried to interrupt and wake up the other party, they
+ * won't be able to, because the task's all hooks to its
+ * waitqueue have been removed at that stage.
+ */
+
+/* Interruptible ipc */
 int ipc_send(l4id_t recv_tid)
 {
 	struct ktcb *receiver = find_task(recv_tid);
 	struct waitqueue_head *wqhs, *wqhr;
 
-	if (!receiver) {
-		printk("%s: tid: %d, no such task.\n", __FUNCTION__,
-		       recv_tid);
-		return -EINVAL;
-	}
 	wqhs = &receiver->wqh_send;
 	wqhr = &receiver->wqh_recv;
 
 	spin_lock(&wqhs->slock);
 	spin_lock(&wqhr->slock);
 
-	/* Is my receiver waiting? */
-	if (wqhr->sleepers > 0) {
-		struct waitqueue *wq, *n;
-		struct ktcb *sleeper;
+	/* Ready to receive and expecting us? */
+	if (receiver->state == TASK_SLEEPING &&
+	    receiver->waiting_on == wqhr &&
+	    (receiver->expected_sender == current->tid ||
+	     receiver->expected_sender == L4_ANYTHREAD)) {
+		struct waitqueue *wq = receiver->wq;
 
-		list_for_each_entry_safe(wq, n, &wqhr->task_list, task_list) {
-			sleeper = wq->task;
-			/* Found the receiver. Does it sleep for this sender? */
-			BUG_ON(sleeper->tid != recv_tid);
-			if ((sleeper->senderid == current->tid) ||
-			    (sleeper->senderid == L4_ANYTHREAD)) {
-				list_del_init(&wq->task_list);
-				spin_unlock(&wqhr->slock);
-				spin_unlock(&wqhs->slock);
+		/* Remove from waitqueue */
+		list_del_init(&wq->task_list);
+		wqhr->sleepers--;
 
-				/* Do the work */
-				ipc_msg_copy(sleeper, current);
-				//printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
-				//       current->tid, sleeper->tid);
+		/* Release locks */
+		spin_unlock(&wqhr->slock);
+		spin_unlock(&wqhs->slock);
 
-				/* Wake it up, we can yield here. */
-				sched_resume_task(sleeper);
-				return 0;
-			}
-		}
+		/* Copy message registers */
+		ipc_msg_copy(receiver, current);
+
+		// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
+		//       current->tid, receiver->tid);
+
+		/* Wake it up, we can yield here. */
+		sched_resume_sync(receiver);
+		return 0;
 	}
-	/* Could not find a receiver that's waiting */
-	DECLARE_WAITQUEUE(wq, current);
+
+	/* The receiver is not ready and/or not expecting us */
+	CREATE_WAITQUEUE_ON_STACK(wq, current);
 	wqhs->sleepers++;
 	list_add_tail(&wq.task_list, &wqhs->task_list);
-	sched_notify_sleep(current);
-	need_resched = 1;
-	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__, current->tid, recv_tid);
+	task_set_wqh(current, wqhs, &wq);
+	current->state = TASK_SLEEPING;
 	spin_unlock(&wqhr->slock);
 	spin_unlock(&wqhs->slock);
+	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__,
+	//       current->tid, recv_tid);
+	schedule();
+
+	/* Did we wake up normally or get interrupted */
+	if (current->flags & TASK_INTERRUPTED) {
+		current->flags &= ~TASK_INTERRUPTED;
+		return -EINTR;
+	}
 	return 0;
 }
 
 int ipc_recv(l4id_t senderid)
 {
-	struct waitqueue_head *wqhs = &current->wqh_send;
-	struct waitqueue_head *wqhr = &current->wqh_recv;
+	struct waitqueue_head *wqhs, *wqhr;
 
-	/* Specify who to receiver from, so senders know. */
-	current->senderid = senderid;
+	wqhs = &current->wqh_send;
+	wqhr = &current->wqh_recv;
+
+	/*
+	 * Indicate who we expect to receive from,
+	 * so senders know.
+	 */
+	current->expected_sender = senderid;
 
 	spin_lock(&wqhs->slock);
 	spin_lock(&wqhr->slock);
 
-	/* Is my sender waiting? */
+	/* Are there senders? */
 	if (wqhs->sleepers > 0) {
 		struct waitqueue *wq, *n;
 		struct ktcb *sleeper;
 
+		BUG_ON(list_empty(&wqhs->task_list));
+
+		/* Look for a sender we want to receive from */
 		list_for_each_entry_safe(wq, n, &wqhs->task_list, task_list) {
 			sleeper = wq->task;
-			/* Found a sender */
-			if ((sleeper->tid == current->senderid) ||
-			    (current->senderid == L4_ANYTHREAD)) {
+
+			/* Found a sender that we wanted to receive from */
+			if ((sleeper->tid == current->expected_sender) ||
+			    (current->expected_sender == L4_ANYTHREAD)) {
 				list_del_init(&wq->task_list);
+				wqhs->sleepers--;
+				task_unset_wqh(sleeper);
 				spin_unlock(&wqhr->slock);
 				spin_unlock(&wqhs->slock);
-
-				/* Do the work */
 				ipc_msg_copy(current, sleeper);
+
 				// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
 				//       current->tid, sleeper->tid);
-
-				/* Wake it up */
-				sched_resume_task(sleeper);
+				sched_resume_sync(sleeper);
 				return 0;
-
 			}
 		}
 	}
-	/* Could not find a sender that's waiting */
-	DECLARE_WAITQUEUE(wq, current);
+
+	/* The sender is not ready */
+	CREATE_WAITQUEUE_ON_STACK(wq, current);
 	wqhr->sleepers++;
 	list_add_tail(&wq.task_list, &wqhr->task_list);
-	sched_notify_sleep(current);
-	need_resched = 1;
-	// printk("%s: (%d) waiting for (%d) \n", __FUNCTION__, current->tid, current->senderid);
+	task_set_wqh(current, wqhr, &wq);
+	current->state = TASK_SLEEPING;
+	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__,
+	//       current->tid, current->expected_sender);
 	spin_unlock(&wqhr->slock);
 	spin_unlock(&wqhs->slock);
+	schedule();
+
+	/* Did we wake up normally or get interrupted */
+	if (current->flags & TASK_INTERRUPTED) {
+		current->flags &= ~TASK_INTERRUPTED;
+		return -EINTR;
+	}
 	return 0;
 }
 

@@ -16,20 +16,18 @@
 
 /* A mutex is a binary semaphore that can sleep. */
 struct mutex {
-	int sleepers;			/* Number of sleepers */
-	struct spinlock slock;		/* Locks sleeper queue */
-	unsigned int lock;		/* The mutex lock itself */
-	struct waitqueue wq;		/* Sleeper queue head */
+	struct waitqueue_head wqh;
+	unsigned int lock;
 };
 
 static inline void mutex_init(struct mutex *mutex)
 {
 	memset(mutex, 0, sizeof(struct mutex));
-	INIT_LIST_HEAD(&mutex->wq.task_list);
+	waitqueue_head_init(&mutex->wqh);
 }
 
 int mutex_trylock(struct mutex *mutex);
-void mutex_lock(struct mutex *mutex);
+int mutex_lock(struct mutex *mutex);
 void mutex_unlock(struct mutex *mutex);
 
 /* NOTE: Since spinlocks guard mutex acquiring & sleeping, no locks needed */

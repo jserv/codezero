@@ -132,7 +132,7 @@ typedef struct fault_kdata {
 	pte_t pte;
 } __attribute__ ((__packed__)) fault_kdata_t;
 
-
+void arch_hardware_flush(pgd_table_t *pgd);
 void add_section_mapping_init(unsigned int paddr, unsigned int vaddr,
 			      unsigned int size, unsigned int flags);
 

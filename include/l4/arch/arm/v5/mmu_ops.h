@@ -24,6 +24,7 @@ void arm_drain_writebuffer(void);
 void arm_invalidate_tlb(void);
 void arm_invalidate_itlb(void);
 void arm_invalidate_dtlb(void);
+
 static inline void arm_enable_caches(void)
 {
 	arm_enable_icache();

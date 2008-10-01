@@ -12,6 +12,12 @@
 #include <l4/generic/physmem.h>
 #include INC_GLUE(memory.h)
 
+/* FIXME:
+ *
+ * mem_cache_alloc() now has an interruptible mutex.
+ * All routines defined here should check returned errors.
+ */
+
 #define	PGALLOC_PGD_CACHE		0
 #define PGALLOC_PMD_CACHE		1
 #define PGALLOC_PG_CACHE		2

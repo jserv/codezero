@@ -16,25 +16,12 @@
 
 int sys_thread_switch(syscall_context_t *regs)
 {
-	sched_yield();
+	schedule();
 	return 0;
 }
 
 int thread_suspend(struct task_ids *ids)
 {
-	struct ktcb *task;
-
-	if (!(task = find_task(ids->tid)))
-		return -ESRCH;
-
-	/*
-	 * The thread_control_lock is protecting from
-	 * indirect modification of thread context, this
-	 * does not cause any such operation so we don't
-	 * need to acquire that lock here.
-	 */
-	sched_suspend_task(task);
-
 	return 0;
 }
 
@@ -48,14 +35,15 @@ int thread_resume(struct task_ids *ids)
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
 
-	/* Notify scheduler of task resume */
-	sched_notify_resume(task);
+	/* Put task into runqueue as runnable */
+	sched_resume_async(task);
 
 	/* Release lock and return */
 	mutex_unlock(&task->thread_control_lock);
 	return 0;
 }
 
+/* Runs a thread for the first time */
 int thread_start(struct task_ids *ids)
 {
 	struct ktcb *task;
@@ -67,7 +55,7 @@ int thread_start(struct task_ids *ids)
 		return -EAGAIN;
 
 	/* Notify scheduler of task resume */
-	sched_notify_resume(task);
+	sched_resume_async(task);
 
 	/* Release lock and return */
 	mutex_unlock(&task->thread_control_lock);
@@ -264,7 +252,7 @@ out:
 	thread_setup_new_ids(ids, flags, new, task);
 
 	/* Initialise task's scheduling state and parameters. */
-	sched_init_task(new);
+	sched_init_task(new, TASK_PRIO_NORMAL);
 
 	/* Initialise ipc waitqueues */
 	waitqueue_head_init(&new->wqh_send);
@@ -302,7 +290,6 @@ int sys_thread_control(syscall_context_t *regs)
 	case THREAD_RESUME:
 		ret = thread_resume(ids);
 		break;
-	/* TODO: Add THREAD_DESTROY! */
 	default:
 		ret = -EINVAL;
 	}

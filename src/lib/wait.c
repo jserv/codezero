@@ -1,45 +1,117 @@
 /*
  * Implementation of wakeup/wait for processes.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <l4/generic/scheduler.h>
 #include <l4/lib/wait.h>
 #include <l4/lib/spinlock.h>
+#include <l4/api/errno.h>
 
-/* Sleep if the given condition isn't true. */
-#define wait_event(wqh, condition)				\
+/*
+ * This sets any wait details of a task so that any arbitrary
+ * wakers can know where the task is sleeping.
+ */
+void task_set_wqh(struct ktcb *task, struct waitqueue_head *wqh,
+		  struct waitqueue *wq)
+{
+	spin_lock(&task->waitlock);
+	task->waiting_on = wqh;
+	task->wq = wq;
+	spin_unlock(&task->waitlock);
+}
+
+
+/*
+ * This clears all wait details of a task. Used as the
+ * task is removed from its queue and is about to wake up.
+ */
+void task_unset_wqh(struct ktcb *task)
+{
+	spin_lock(&task->waitlock);
+	task->waiting_on = 0;
+	task->wq = 0;
+	spin_unlock(&task->waitlock);
+
+}
+
+/*
+ * Sleep if the given condition isn't true.
+ * ret will tell whether condition was met
+ * or we got interrupted.
+ */
+#define WAIT_EVENT(wqh, condition, ret)				\
 do {								\
+	ret = 0;						\
 	for (;;) {						\
 		if (condition)					\
 			break;					\
-		DECLARE_WAITQUEUE(wq, current);			\
+		CREATE_WAITQUEUE_ON_STACK(wq, current);		\
 		spin_lock(&wqh->slock);				\
+		task_set_wqh(current, wqh, wq);			\
 		wqh->sleepers++;				\
 		list_add_tail(&wq.task_list, &wqh->task_list);	\
-		sched_tell(current, SCHED_FL_SLEEP);		\
-		need_resched = 1;				\
+		task->state = TASK_SLEEPING;			\
 		printk("(%d) waiting...\n", current->tid);	\
 		spin_unlock(&wqh->slock);			\
+		schedule();					\
+		/* Did we wake up normally or get interrupted */\
+		if (current->flags & TASK_INTERRUPTED) {	\
+			current->flags &= ~TASK_INTERRUPTED;	\
+			ret = -EINTR;				\
+			break;					\
+		}						\
 	}							\
 } while(0);
 
 /* Sleep without any condition */
-#define wait_on(wqh)					\
+#define WAIT_ON(wqh, ret)				\
 do {							\
-	DECLARE_WAITQUEUE(wq, current);			\
+	CREATE_WAITQUEUE_ON_STACK(wq, current);		\
 	spin_lock(&wqh->slock);				\
+	task_set_wqh(current, wqh, &wq);		\
 	wqh->sleepers++;				\
 	list_add_tail(&wq.task_list, &wqh->task_list);	\
-	sched_tell(current, SCHED_FL_SLEEP);		\
-	need_resched = 1;				\
-	printk("(%d) waiting...\n", current->tid);	\
+	current->state = TASK_SLEEPING;			\
+	printk("(%d) waiting on wqh at: 0x%p\n",	\
+	       current->tid, wqh);			\
 	spin_unlock(&wqh->slock);			\
+	schedule();					\
+							\
+	/* Did we wake up normally or get interrupted */\
+	if (current->flags & TASK_INTERRUPTED) {	\
+		current->flags &= ~TASK_INTERRUPTED;	\
+		ret = -EINTR;				\
+	} else						\
+		ret = 0;				\
 } while(0);
 
-/* FIXME: Wake up should take the task as an argument, rather than the queue */
+/* Sleep without any condition */
+int wait_on(struct waitqueue_head *wqh)
+{
+	CREATE_WAITQUEUE_ON_STACK(wq, current);
+	spin_lock(&wqh->slock);
+	task_set_wqh(current, wqh, &wq);
+	wqh->sleepers++;
+	list_add_tail(&wq.task_list, &wqh->task_list);
+	current->state = TASK_SLEEPING;
+	printk("(%d) waiting on wqh at: 0x%p\n",
+	       current->tid, wqh);
+	spin_unlock(&wqh->slock);
+	schedule();
+
+	/* Did we wake up normally or get interrupted */
+	if (current->flags & TASK_INTERRUPTED) {
+		current->flags &= ~TASK_INTERRUPTED;
+		return -EINTR;
+	}
+
+	return 0;
+}
+
+
 /* Wake up single waiter */
-void wake_up(struct waitqueue_head *wqh)
+void wake_up(struct waitqueue_head *wqh, int sync)
 {
 	BUG_ON(wqh->sleepers < 0);
 	spin_lock(&wqh->slock);
@@ -48,14 +120,82 @@ void wake_up(struct waitqueue_head *wqh)
 						  struct waitqueue,
 						  task_list);
 		struct ktcb *sleeper = wq->task;
+		task_unset_wqh(sleeper);
+		BUG_ON(list_empty(&wqh->task_list));
 		list_del_init(&wq->task_list);
 		wqh->sleepers--;
-		BUG_ON(list_empty(&wqh->task_list));
+		sleeper->state = TASK_RUNNABLE;
 		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
-		sched_notify_resume(sleeper);
 		spin_unlock(&wqh->slock);
+
+		if (sync)
+			sched_resume_sync(sleeper);
+		else
+			sched_resume_async(sleeper);
 		return;
 	}
 	spin_unlock(&wqh->slock);
 }
+
+/*
+ * Wakes up a task. If task is not waiting, or has been woken up
+ * as we were peeking on it, returns -1. @sync makes us immediately
+ * yield or else leave it to scheduler's discretion.
+ */
+int wake_up_task(struct ktcb *task, int sync)
+{
+	struct waitqueue_head *wqh;
+	struct waitqueue *wq;
+
+	spin_lock(&task->waitlock);
+	if (!task->waiting_on) {
+		spin_unlock(&task->waitlock);
+		return -1;
+	}
+
+	/*
+	 * We have found the waitqueue head.
+	 * That needs to be locked first to conform with
+	 * lock order and avoid deadlocks. Release task's
+	 * waitlock and take the wqh's one.
+	 */
+	wqh = task->waiting_on;
+	wq = task->wq;
+	spin_unlock(&task->waitlock);
+
+	/* -- Task can be woken up by someone else here -- */
+
+	spin_lock(&wqh->slock);
+
+	/*
+	 * Now lets check if the task is still
+	 * waiting and in the same queue
+	 */
+	spin_lock(&task->waitlock);
+	if (task->waiting_on != wqh) {
+		/* No, task has been woken by someone else */
+		spin_unlock(&wqh->slock);
+		spin_unlock(&task->waitlock);
+		return -1;
+	}
+
+	/* Now we can remove the task from its waitqueue */
+	list_del_init(&wq->task_list);
+	wqh->sleepers--;
+	task->waiting_on = 0;
+	task->wq = 0;
+	task->state = TASK_RUNNABLE;
+	spin_unlock(&wqh->slock);
+	spin_unlock(&task->waitlock);
+
+	/* Removed from waitqueue, we can now safely resume task */
+	if (sync)
+		sched_resume_sync(task);
+	else
+		sched_resume_async(task);
+
+	return 0;
+}
+
+
 

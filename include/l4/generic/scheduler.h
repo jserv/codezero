@@ -10,9 +10,22 @@
 #include INC_SUBARCH(mm.h)
 #include INC_GLUE(memory.h)
 
+/* Task priorities */
+#define TASK_PRIO_MAX		10
+#define TASK_PRIO_REALTIME	10
+#define TASK_PRIO_PAGER		8
+#define TASK_PRIO_SERVER	6
+#define TASK_PRIO_NORMAL	4
+#define TASK_PRIO_LOW		2
+
 /* Ticks per second, try ticks = 1000 + timeslice = 1 for regressed preemption test. */
-#define HZ					100
-#define	TASK_TIMESLICE_DEFAULT			HZ/100
+#define SCHED_TICKS				100
+
+/*
+ * A task can run continuously at this granularity,
+ * even if it has a greater total time slice.
+ */
+#define SCHED_GRANULARITY			SCHED_TICKS/10
 
 static inline struct ktcb *current_task(void)
 {
@@ -23,29 +36,10 @@ static inline struct ktcb *current_task(void)
 #define current			current_task()
 #define need_resched		(current->ts_need_resched)
 
-/* Flags set by kernel to direct the scheduler about future task state. */
-#define __SCHED_FL_SUSPEND		1
-#define SCHED_FL_SUSPEND		(1 << __SCHED_FL_SUSPEND)
-#define __SCHED_FL_RESUME		2
-#define SCHED_FL_RESUME			(1 << __SCHED_FL_RESUME)
-#define __SCHED_FL_SLEEP		3
-#define SCHED_FL_SLEEP			(1 << __SCHED_FL_SLEEP)
-#define SCHED_FL_MASK			(SCHED_FL_SLEEP | SCHED_FL_RESUME \
-					 | SCHED_FL_SUSPEND)
-
-void sched_runqueue_init(void);
-void sched_init_task(struct ktcb *task);
-void sched_start_task(struct ktcb *task);
-void sched_resume_task(struct ktcb *task);
-void sched_suspend_task(struct ktcb *task);
-void sched_tell(struct ktcb *task, unsigned int flags);
+void sched_init_task(struct ktcb *task, int priority);
+void sched_resume_sync(struct ktcb *task);
+void sched_resume_async(struct ktcb *task);
 void scheduler_start(void);
-void sched_yield(void);
 void schedule(void);
-
-/* Asynchronous notifications to scheduler */
-void sched_notify_resume(struct ktcb *task);
-void sched_notify_sleep(struct ktcb *task);
-void sched_notify_suspend(struct ktcb *task);
 
 #endif /* __SCHEDULER_H__ */

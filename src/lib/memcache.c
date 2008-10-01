@@ -8,6 +8,7 @@
 #include <l4/lib/printk.h>
 #include INC_GLUE(memory.h)
 #include <l4/lib/bit.h>
+#include <l4/api/errno.h>
 
 /* Allocate, clear and return element */
 void *mem_cache_zalloc(struct mem_cache *cache)
@@ -21,8 +22,11 @@ void *mem_cache_zalloc(struct mem_cache *cache)
 void *mem_cache_alloc(struct mem_cache *cache)
 {
 	int bit;
+	int err;
+
 	if (cache->free > 0) {
-		mutex_lock(&cache->mutex);
+		if ((err = mutex_lock(&cache->mutex)) < 0)
+			return PTR_ERR(err);	/* Interruptible mutex */
 		cache->free--;
 		if ((bit = find_and_set_first_free_bit(cache->bitmap,
 						       cache->total)) < 0) {
@@ -64,7 +68,9 @@ int mem_cache_free(struct mem_cache *cache, void *addr)
 		return err;
 	}
 
-	mutex_lock(&cache->mutex);
+	if ((err = mutex_lock(&cache->mutex)) < 0)
+		return err; /* Interruptible mutex */
+
 	/* Check free/occupied state */
 	if (check_and_clear_bit(cache->bitmap, bit) < 0) {
 		printk("Error: Anomaly in cache occupied state:\n"
