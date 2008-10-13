@@ -30,4 +30,5 @@ int pager_update_stats(struct tcb *sender, unsigned long vnum,
 int pager_notify_fork(struct tcb *sender, l4id_t parid,
 		      l4id_t chid, unsigned long utcb_address);
 
+int pager_notify_exit(struct tcb *sender, l4id_t tid);
 #endif /* __FS0_SYSCALLS_H__ */

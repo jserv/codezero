@@ -197,6 +197,7 @@ struct vm_file *shm_new(key_t key, unsigned long npages)
 	shm_file->vm_obj.pager = &swap_pager;
 	shm_file->vm_obj.flags = VM_OBJ_FILE | VM_WRITE;
 
+	/* Add to shm file and global object list */
 	list_add(&shm_file->list, &shm_file_list);
 	list_add(&shm_file->vm_obj.list, &vm_object_list);
 

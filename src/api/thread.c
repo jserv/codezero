@@ -10,6 +10,7 @@
 #include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
 #include <l4/lib/mutex.h>
+#include <l4/lib/wait.h>
 #include <l4/generic/pgalloc.h>
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
@@ -20,8 +21,68 @@ int sys_thread_switch(syscall_context_t *regs)
 	return 0;
 }
 
+/*
+ * This suspends a thread which is in either suspended,
+ * sleeping or runnable state.
+ */
 int thread_suspend(struct task_ids *ids)
 {
+	struct ktcb *task;
+	int ret;
+
+	if (!(task = find_task(ids->tid)))
+		return -ESRCH;
+
+	if (task->state == TASK_INACTIVE)
+		return 0;
+
+	/* First show our intention to suspend thread */
+	task->flags |= TASK_SUSPENDING;
+
+	/*
+	 * Interrupt the task in case it was sleeping
+	 * so that it will be caught and suspended by
+	 * the scheduler.
+	 */
+	wake_up_task(task, 1);
+
+	/* Wait until scheduler wakes us up */
+	WAIT_EVENT(&task->wqh_pager,
+		   task->state == TASK_INACTIVE, ret);
+
+	return ret;
+}
+
+int thread_destroy(struct task_ids *ids)
+{
+	struct ktcb *task;
+	int ret;
+
+	if (!(task = find_task(ids->tid)))
+		return -ESRCH;
+
+	if ((ret = thread_suspend(ids)) < 0)
+		return ret;
+
+	/* Delete it from global list so any callers will get -ESRCH */
+	list_del(&task->task_list);
+
+	/*
+	 * If there are any sleepers on any of the task's
+	 * waitqueues, we need to wake those tasks up.
+	 */
+	wake_up_all(&task->wqh_send, 0);
+	wake_up_all(&task->wqh_recv, 0);
+
+	/*
+	 * The thread cannot have a pager waiting for it
+	 * since we ought to be the pager.
+	 */
+	BUG_ON(task->wqh_pager.sleepers > 0);
+
+	/* We can now safely delete the task */
+	free_page(task);
+
 	return 0;
 }
 
@@ -257,6 +318,7 @@ out:
 	/* Initialise ipc waitqueues */
 	waitqueue_head_init(&new->wqh_send);
 	waitqueue_head_init(&new->wqh_recv);
+	waitqueue_head_init(&new->wqh_pager);
 
 	arch_setup_new_thread(new, task, flags);
 
@@ -290,6 +352,8 @@ int sys_thread_control(syscall_context_t *regs)
 	case THREAD_RESUME:
 		ret = thread_resume(ids);
 		break;
+	case THREAD_DESTROY:
+		ret = thread_destroy(ids);
 	default:
 		ret = -EINVAL;
 	}

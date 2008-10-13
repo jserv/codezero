@@ -25,8 +25,7 @@
 #define TASK_SUSPENDING			(1 << 1)
 #define TASK_RESUMING			(1 << 2)
 
-
-/* Scheduler states */
+/* Task states */
 enum task_state {
 	TASK_INACTIVE	= 0,
 	TASK_SLEEPING	= 1,
@@ -52,6 +51,7 @@ struct ktcb {
 
 	/* Runqueue related */
 	struct list_head rq_list;
+	struct runqueue *rq;
 
 	/* Thread information */
 	l4id_t tid;		/* Global thread id */
@@ -90,6 +90,9 @@ struct ktcb {
 	struct waitqueue_head wqh_recv;
 	struct waitqueue_head wqh_send;
 	l4id_t expected_sender;
+
+	/* Waitqueue for pagers to wait for task states */
+	struct waitqueue_head wqh_pager;
 
 	/* Tells where we are when we sleep */
 	struct spinlock waitlock;

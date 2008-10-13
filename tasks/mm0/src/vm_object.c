@@ -133,11 +133,23 @@ int vm_object_delete(struct vm_object *vmo)
 	/* Obtain and free via the base object */
 	if (vmo->flags & VM_OBJ_FILE) {
 		f = vm_object_to_file(vmo);
+		BUG_ON(!list_empty(&f->list));
+		if (f->priv_data)
+			kfree(f->priv_data);
 		kfree(f);
 	} else if (vmo->flags & VM_OBJ_SHADOW)
 		kfree(vmo);
 	else BUG();
 
 	return 0;
+}
+
+int vm_file_delete(struct vm_file *f)
+{
+	/* Delete it from global file list */
+	list_del_init(&f->list);
+
+	/* Delete file via base object */
+	return vm_object_delete(&f->vm_obj);
 }
 

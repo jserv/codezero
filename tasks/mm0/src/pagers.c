@@ -46,17 +46,14 @@ int default_release_pages(struct vm_object *vm_obj)
 	struct page *p, *n;
 
 	list_for_each_entry_safe(p, n, &vm_obj->page_cache, list) {
-		list_del(&p->list);
+		list_del_init(&p->list);
 		BUG_ON(p->refcnt);
+
+		/* Reinitialise the page */
+		page_init(p);
 
 		/* Return page back to allocator */
 		free_page((void *)page_to_phys(p));
-
-		/*
-		 * Reset the page structure.
-		 * No freeing for page_array pages
-		 */
-		memset(p, 0, sizeof(*p));
 
 		/* Reduce object page count */
 		BUG_ON(--vm_obj->npages < 0);
@@ -103,7 +100,7 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	/* Unmap it from vfs */
 	l4_unmap(vaddr, 1, VFS_TID);
 
-	/* Update page details */
+	/* Clear dirty flag */
 	page->flags &= ~VM_DIRTY;
 
 	return 0;

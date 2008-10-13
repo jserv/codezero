@@ -37,6 +37,7 @@ static inline struct ktcb *current_task(void)
 #define need_resched		(current->ts_need_resched)
 
 void sched_init_task(struct ktcb *task, int priority);
+void sched_prepare_sleep(void);
 void sched_resume_sync(struct ktcb *task);
 void sched_resume_async(struct ktcb *task);
 void scheduler_start(void);

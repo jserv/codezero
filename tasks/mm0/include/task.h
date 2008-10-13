@@ -121,10 +121,12 @@ int task_setup_regions(struct vm_file *file, struct tcb *task,
 int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager);
 struct tcb *tcb_alloc_init(unsigned int flags);
+int tcb_destroy(struct tcb *task);
 int task_exec(struct vm_file *f, unsigned long task_region_start,
 	      unsigned long task_region_end, struct task_ids *ids);
 int task_start(struct tcb *task, struct task_ids *ids);
 int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags);
+int task_release_vmas(struct task_vma_head *vma_head);
 struct tcb *task_create(struct tcb *orig,
 			struct task_ids *ids,
 			unsigned int ctrl_flags,

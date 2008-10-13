@@ -28,7 +28,6 @@ struct runqueue {
 	struct spinlock lock;		/* Lock */
 	struct list_head task_list;	/* List of tasks in rq */
 	unsigned int total;		/* Total tasks */
-	int recalc_timeslice;		/* Need timeslice redistribution */
 };
 
 #define SCHED_RQ_TOTAL					2
@@ -136,14 +135,20 @@ static void sched_rq_add_task(struct ktcb *task, struct runqueue *rq, int front)
 	else
 		list_add_tail(&task->rq_list, &rq->task_list);
 	rq->total++;
+	task->rq = rq;
 	spin_unlock(&rq->lock);
 }
 
+/* NOTE: Do we need an rq_lock on tcb? */
+
 /* Helper for removing a task from its runqueue. */
-static inline void sched_rq_remove_task(struct ktcb *task, struct runqueue *rq)
+static inline void sched_rq_remove_task(struct ktcb *task)
 {
+	struct runqueue *rq = task->rq;
+
 	spin_lock(&rq->lock);
 	list_del_init(&task->rq_list);
+	task->rq = 0;
 	rq->total--;
 
 	BUG_ON(rq->total < 0);
@@ -161,11 +166,25 @@ void sched_init_task(struct ktcb *task, int prio)
 	task->flags |= TASK_RESUMING;
 }
 
+/*
+ * Takes all the action that will make a task sleep
+ * in the scheduler. If the task is woken up before
+ * it schedules, then operations here are simply
+ * undone and task remains as runnable.
+ */
+void sched_prepare_sleep()
+{
+	preempt_disable();
+	sched_rq_remove_task(current);
+	current->state = TASK_SLEEPING;
+	preempt_enable();
+}
+
 /* Synchronously resumes a task */
 void sched_resume_sync(struct ktcb *task)
 {
+	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
-
 	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
 	schedule();
 }
@@ -177,8 +196,8 @@ void sched_resume_sync(struct ktcb *task)
  */
 void sched_resume_async(struct ktcb *task)
 {
+	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
-
 	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
 }
 
@@ -251,20 +270,23 @@ void schedule()
 	/* Cannot have any irqs that schedule after this */
 	preempt_disable();
 
+#if 0
 	/* NOTE:
-	 * We could avoid double-scheduling by detecting a task
-	 * that's about to schedule voluntarily and skipping the
-	 * schedule() call in irq mode.
+	 * We could avoid unnecessary scheduling by detecting
+	 * a task that has been just woken up.
 	 */
+	if ((task->flags & TASK_WOKEN_UP) && in_process_context()) {
+		preempt_enable();
+		return 0;
+	}
+#endif
 
 	/* Reset schedule flag */
 	need_resched = 0;
 
-	/* Remove from runnable queue */
-	sched_rq_remove_task(current, rq_runnable);
-
-	/* Put it into appropriate runqueue */
+	/* Remove from runnable and put into appropriate runqueue */
 	if (current->state == TASK_RUNNABLE) {
+		sched_rq_remove_task(current);
 		if (current->ticks_left)
 			sched_rq_add_task(current, rq_runnable, RQ_ADD_BEHIND);
 		else
@@ -277,7 +299,8 @@ void schedule()
 		 * The task should have no locks and be in a runnable state.
 		 * (e.g. properly woken up by the suspender)
 		 */
-		if (current->nlocks == 0 && current->state == TASK_RUNNABLE) {
+		if (current->nlocks == 0 &&
+		    current->state == TASK_RUNNABLE) {
 			/* Suspend it if suitable */
 			current->state = TASK_INACTIVE;
 			current->flags &= ~TASK_SUSPENDING;
@@ -290,7 +313,13 @@ void schedule()
 			 */
 			prio_total -= current->priority;
 			BUG_ON(prio_total <= 0);
+
+			/* Prepare to wake up any waiters */
+			wake_up(&current->wqh_pager, 0);
 		} else {
+			if (current->state == TASK_RUNNABLE)
+				sched_rq_remove_task(current);
+
 			/*
 			 * Top up task's ticks temporarily, and
 			 * wait for it to release its locks.

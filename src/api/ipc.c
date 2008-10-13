@@ -82,6 +82,7 @@ int ipc_send(l4id_t recv_tid)
 		/* Remove from waitqueue */
 		list_del_init(&wq->task_list);
 		wqhr->sleepers--;
+		task_unset_wqh(receiver);
 
 		/* Release locks */
 		spin_unlock(&wqhr->slock);
@@ -103,7 +104,7 @@ int ipc_send(l4id_t recv_tid)
 	wqhs->sleepers++;
 	list_add_tail(&wq.task_list, &wqhs->task_list);
 	task_set_wqh(current, wqhs, &wq);
-	current->state = TASK_SLEEPING;
+	sched_prepare_sleep();
 	spin_unlock(&wqhr->slock);
 	spin_unlock(&wqhs->slock);
 	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__,
@@ -168,7 +169,7 @@ int ipc_recv(l4id_t senderid)
 	wqhr->sleepers++;
 	list_add_tail(&wq.task_list, &wqhr->task_list);
 	task_set_wqh(current, wqhr, &wq);
-	current->state = TASK_SLEEPING;
+	sched_prepare_sleep();
 	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__,
 	//       current->tid, current->expected_sender);
 	spin_unlock(&wqhr->slock);

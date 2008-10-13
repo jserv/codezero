@@ -104,6 +104,16 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 	return task;
 }
 
+/* NOTE: We may need to delete shared tcb parts here as well. */
+int tcb_destroy(struct tcb *task)
+{
+	list_del(&task->list);
+	tcb_head.total--;
+
+	kfree(task);
+
+	return 0;
+}
 
 /*
  * Copy all vmas from the given task and populate each with
@@ -144,6 +154,27 @@ int copy_vmas(struct tcb *to, struct tcb *from)
 		task_add_vma(to, new_vma);
 	}
 
+	return 0;
+}
+
+/*
+ * Traverse all vmas, release all links to vm_objects.
+ * Used when a task or thread group with a shared vm is exiting.
+ */
+int task_release_vmas(struct task_vma_head *vma_head)
+{
+	struct vm_area *vma, *n;
+
+	list_for_each_entry_safe(vma, n, &vma_head->list, list) {
+		/* Release all links */
+		vma_drop_merge_delete_all(vma);
+
+		/* Delete the vma from task's vma list */
+		list_del(&vma->list);
+
+		/* Free the vma */
+		kfree(vma);
+	}
 	return 0;
 }
 

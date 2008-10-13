@@ -33,46 +33,6 @@ struct tcb *find_task(int tid)
 	return 0;
 }
 
-/*
- * Asks pager to send information about currently running tasks. Since this is
- * called during initialisation, there can't be that many, so we assume message
- * registers are sufficient. First argument tells how many there are, the rest
- * tells the tids.
- */
-int receive_pager_taskdata_orig(l4id_t *tdata)
-{
-	int err;
-
-	/* Make the actual ipc call */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID,
-			       L4_IPC_TAG_TASKDATA)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	/* Check if call itself was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	/* Read total number of tasks. Note already used one mr. */
-	if ((tdata[0] = (l4id_t)read_mr(L4SYS_ARG0)) >= MR_UNUSED_TOTAL) {
-		printf("%s: Error: Too many tasks to read. Won't fit in mrs.\n",
-		       __FUNCTION__);
-		BUG();
-	}
-	// printf("%s: %d Total tasks.\n", __FUNCTION__, tdata[0]);
-
-	/* Now read task ids. */
-	for (int i = 0; i < (int)tdata[0]; i++) {
-		tdata[1 + i] = (l4id_t)read_mr(L4SYS_ARG1 + i);
-		// printf("%s: Task id: %d\n", __FUNCTION__, tdata[1 + i]);
-	}
-
-	return 0;
-}
-
 /* Allocate a task struct and initialise it */
 struct tcb *create_tcb(void)
 {
@@ -87,6 +47,15 @@ struct tcb *create_tcb(void)
 	tcb_head.total++;
 
 	return t;
+}
+
+void destroy_tcb(struct tcb *t)
+{
+	kfree(t->fdpool);
+
+	list_del(&t->list);
+	tcb_head.total--;
+	kfree(t);
 }
 
 /*
@@ -152,6 +121,24 @@ int pager_notify_fork(struct tcb *sender, l4id_t parid,
 	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
 
 	// printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
+	return 0;
+}
+
+
+/*
+ * Pager tells us that a task is exiting by this call.
+ */
+int pager_notify_exit(struct tcb *sender, l4id_t tid)
+{
+	struct tcb *task;
+
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	BUG_ON(!(task = find_task(tid)));
+
+	destroy_tcb(task);
+
+	printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
+
 	return 0;
 }
 

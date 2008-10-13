@@ -139,9 +139,9 @@ struct vm_object {
 /* In memory representation of either a vfs file, a device. */
 struct vm_file {
 	int openers;
+	struct list_head list;
 	unsigned long length;
 	unsigned int type;
-	struct list_head list;
 	struct vm_object vm_obj;
 	void *priv_data;	/* Device pagers use to access device info */
 };
@@ -230,6 +230,7 @@ struct vm_file *vm_file_alloc_init(void);
 struct vm_object *vm_object_alloc_init(void);
 struct vm_object *vm_object_create(void);
 struct vm_file *vm_file_create(void);
+int vm_file_delete(struct vm_file *f);
 int vm_object_delete(struct vm_object *vmo);
 void vm_object_print(struct vm_object *vmo);
 
@@ -253,5 +254,8 @@ static inline void task_add_vma(struct tcb *task, struct vm_area *vma)
 
 /* Main page fault entry point */
 int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);
+
+int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link);
+int vma_drop_merge_delete_all(struct vm_area *vma);
 
 #endif /* __VM_AREA_H__ */

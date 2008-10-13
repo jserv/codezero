@@ -22,7 +22,7 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 {
 	int err = 0;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	l4_save_ipcregs();
 

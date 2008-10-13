@@ -87,8 +87,8 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
  * the register context of a thread. The thread's registers can be
  * set only when the thread is in user mode. A newly created thread
  * that is the copy of another thread (forked or cloned) will also
- * be given its user mode context so such threads can also be
- * modified by this call before execution.
+ * be given its user mode context on the first chance to execute so 
+ * such threads can also be modified by this call before execution.
  *
  * A thread executing in the kernel cannot be modified since this
  * would compromise the kernel. Also the thread must be in suspended

@@ -35,57 +35,6 @@ void task_unset_wqh(struct ktcb *task)
 
 }
 
-/*
- * Sleep if the given condition isn't true.
- * ret will tell whether condition was met
- * or we got interrupted.
- */
-#define WAIT_EVENT(wqh, condition, ret)				\
-do {								\
-	ret = 0;						\
-	for (;;) {						\
-		if (condition)					\
-			break;					\
-		CREATE_WAITQUEUE_ON_STACK(wq, current);		\
-		spin_lock(&wqh->slock);				\
-		task_set_wqh(current, wqh, wq);			\
-		wqh->sleepers++;				\
-		list_add_tail(&wq.task_list, &wqh->task_list);	\
-		task->state = TASK_SLEEPING;			\
-		printk("(%d) waiting...\n", current->tid);	\
-		spin_unlock(&wqh->slock);			\
-		schedule();					\
-		/* Did we wake up normally or get interrupted */\
-		if (current->flags & TASK_INTERRUPTED) {	\
-			current->flags &= ~TASK_INTERRUPTED;	\
-			ret = -EINTR;				\
-			break;					\
-		}						\
-	}							\
-} while(0);
-
-/* Sleep without any condition */
-#define WAIT_ON(wqh, ret)				\
-do {							\
-	CREATE_WAITQUEUE_ON_STACK(wq, current);		\
-	spin_lock(&wqh->slock);				\
-	task_set_wqh(current, wqh, &wq);		\
-	wqh->sleepers++;				\
-	list_add_tail(&wq.task_list, &wqh->task_list);	\
-	current->state = TASK_SLEEPING;			\
-	printk("(%d) waiting on wqh at: 0x%p\n",	\
-	       current->tid, wqh);			\
-	spin_unlock(&wqh->slock);			\
-	schedule();					\
-							\
-	/* Did we wake up normally or get interrupted */\
-	if (current->flags & TASK_INTERRUPTED) {	\
-		current->flags &= ~TASK_INTERRUPTED;	\
-		ret = -EINTR;				\
-	} else						\
-		ret = 0;				\
-} while(0);
-
 /* Sleep without any condition */
 int wait_on(struct waitqueue_head *wqh)
 {
@@ -94,7 +43,7 @@ int wait_on(struct waitqueue_head *wqh)
 	task_set_wqh(current, wqh, &wq);
 	wqh->sleepers++;
 	list_add_tail(&wq.task_list, &wqh->task_list);
-	current->state = TASK_SLEEPING;
+	sched_prepare_sleep();
 	printk("(%d) waiting on wqh at: 0x%p\n",
 	       current->tid, wqh);
 	spin_unlock(&wqh->slock);
@@ -109,6 +58,31 @@ int wait_on(struct waitqueue_head *wqh)
 	return 0;
 }
 
+/* Wake up all */
+void wake_up_all(struct waitqueue_head *wqh, int sync)
+{
+	BUG_ON(wqh->sleepers < 0);
+	spin_lock(&wqh->slock);
+	while (wqh->sleepers > 0) {
+		struct waitqueue *wq = list_entry(wqh->task_list.next,
+						  struct waitqueue,
+						  task_list);
+		struct ktcb *sleeper = wq->task;
+		task_unset_wqh(sleeper);
+		BUG_ON(list_empty(&wqh->task_list));
+		list_del_init(&wq->task_list);
+		wqh->sleepers--;
+		sleeper->flags |= TASK_INTERRUPTED;
+		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
+		spin_unlock(&wqh->slock);
+
+		if (sync)
+			sched_resume_sync(sleeper);
+		else
+			sched_resume_async(sleeper);
+	}
+	spin_unlock(&wqh->slock);
+}
 
 /* Wake up single waiter */
 void wake_up(struct waitqueue_head *wqh, int sync)
@@ -124,7 +98,7 @@ void wake_up(struct waitqueue_head *wqh, int sync)
 		BUG_ON(list_empty(&wqh->task_list));
 		list_del_init(&wq->task_list);
 		wqh->sleepers--;
-		sleeper->state = TASK_RUNNABLE;
+		sleeper->flags |= TASK_INTERRUPTED;
 		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		spin_unlock(&wqh->slock);
 
@@ -152,6 +126,8 @@ int wake_up_task(struct ktcb *task, int sync)
 		spin_unlock(&task->waitlock);
 		return -1;
 	}
+	wqh = task->waiting_on;
+	wq = task->wq;
 
 	/*
 	 * We have found the waitqueue head.
@@ -159,8 +135,6 @@ int wake_up_task(struct ktcb *task, int sync)
 	 * lock order and avoid deadlocks. Release task's
 	 * waitlock and take the wqh's one.
 	 */
-	wqh = task->waiting_on;
-	wq = task->wq;
 	spin_unlock(&task->waitlock);
 
 	/* -- Task can be woken up by someone else here -- */
@@ -184,11 +158,15 @@ int wake_up_task(struct ktcb *task, int sync)
 	wqh->sleepers--;
 	task->waiting_on = 0;
 	task->wq = 0;
-	task->state = TASK_RUNNABLE;
+	task->flags |= TASK_INTERRUPTED;
 	spin_unlock(&wqh->slock);
 	spin_unlock(&task->waitlock);
 
-	/* Removed from waitqueue, we can now safely resume task */
+	/*
+	 * Task is removed from its waitqueue. Now we can
+	 * safely resume it without locks as this is the only
+	 * code path that can resume the task.
+	 */
 	if (sync)
 		sched_resume_sync(task);
 	else

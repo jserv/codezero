@@ -158,8 +158,11 @@ int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
 	task->files->fd[fd].vmfile = vmfile;
 	vmfile->openers++;
 
-	/* Add to global list */
-	list_add(&vmfile->vm_obj.list, &vm_file_list);
+	/* Add to file list */
+	list_add(&vmfile->list, &vm_file_list);
+
+	/* Add to object list */
+	list_add(&vmfile->vm_obj.list, &vm_object_list);
 
 	return 0;
 }
@@ -399,7 +402,8 @@ int do_close(struct tcb *task, int fd)
 		return err;
 
 	/* Reduce file's opener count */
-	task->files->fd[fd].vmfile->openers--;
+	if (!(--task->files->fd[fd].vmfile->openers))
+		vm_file_delete(task->files->fd[fd].vmfile);
 
 	task->files->fd[fd].vnum = 0;
 	task->files->fd[fd].cursor = 0;

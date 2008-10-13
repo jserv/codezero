@@ -51,7 +51,7 @@ void sem_up(struct mutex *mutex)
 		INIT_LIST_HEAD(&wq.task_list);
 		list_add_tail(&wq.task_list, &mutex->wq.task_list);
 		mutex->sleepers++;
-		current->state = TASK_SLEEPING;
+		sched_prepare_sleep();
 		printk("(%d) produced, now sleeping...\n", current->tid);
 		spin_unlock(&mutex->slock);
 		schedule();
@@ -89,7 +89,7 @@ void sem_down(struct mutex *mutex)
 		INIT_LIST_HEAD(&wq.task_list);
 		list_add_tail(&wq.task_list, &mutex->wq.task_list);
 		mutex->sleepers++;
-		current->state = TASK_SLEEPING;
+		sched_prepare_sleep();
 		printk("(%d) Waiting to consume, now sleeping...\n", current->tid);
 		spin_unlock(&mutex->slock);
 		schedule();
@@ -124,7 +124,7 @@ int mutex_lock(struct mutex *mutex)
 			task_set_wqh(current, &mutex->wqh, &wq);
 			list_add_tail(&wq.task_list, &mutex->wqh.task_list);
 			mutex->wqh.sleepers++;
-			current->state = TASK_SLEEPING;
+			sched_prepare_sleep();
 			spin_unlock(&mutex->wqh.slock);
 			printk("(%d) sleeping...\n", current->tid);
 			schedule();
@@ -160,7 +160,6 @@ void mutex_unlock(struct mutex *mutex)
 		BUG_ON(list_empty(&mutex->wqh.task_list));
 		list_del_init(&wq->task_list);
 		mutex->wqh.sleepers--;
-		sleeper->state = TASK_RUNNABLE;
 		spin_unlock(&mutex->wqh.slock);
 
 		/*

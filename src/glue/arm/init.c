@@ -317,6 +317,7 @@ void init_pager(char *name, struct task_ids *ids)
 	/* Task's rendezvous point */
 	waitqueue_head_init(&task->wqh_send);
 	waitqueue_head_init(&task->wqh_recv);
+	waitqueue_head_init(&task->wqh_pager);
 
 	/* Global hashlist that keeps all existing tasks */
 	add_task_global(task);
