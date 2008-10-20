@@ -32,7 +32,7 @@ int forktest(void)
 	printf("PID: %d, my global: %d\n", myid, global);
 	printf("-- PASSED --\n");
 out:
-	while(1)
-		;
+	printf("PID: %d exiting...\n", myid);
+	_exit(0);
 }
 

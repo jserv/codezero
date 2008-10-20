@@ -229,6 +229,44 @@ static inline int sched_recalc_ticks(struct ktcb *task, int prio_total)
 }
 
 /*
+ * NOTE: Could do these as sched_prepare_suspend()
+ * + schedule() or need_resched = 1
+ */
+void sched_suspend_sync(void)
+{
+	preempt_disable();
+	sched_rq_remove_task(current);
+	current->state = TASK_INACTIVE;
+	current->flags &= ~TASK_SUSPENDING;
+	prio_total -= current->priority;
+	BUG_ON(prio_total <= 0);
+	preempt_enable();
+
+	/* Async wake up any waiters */
+	wake_up_task(find_task(current->pagerid), 0);
+	schedule();
+}
+
+void sched_suspend_async(void)
+{
+	preempt_disable();
+	sched_rq_remove_task(current);
+	current->state = TASK_INACTIVE;
+	current->flags &= ~TASK_SUSPENDING;
+	prio_total -= current->priority;
+	BUG_ON(prio_total <= 0);
+
+	/* This will make sure we yield soon */
+	preempt_enable();
+
+	/* Async wake up any waiters */
+	wake_up_task(find_task(current->pagerid), 0);
+	need_resched = 1;
+}
+
+
+
+/*
  * Tasks come here, either by setting need_resched (via next irq),
  * or by directly calling it (in process context).
  *
@@ -270,17 +308,6 @@ void schedule()
 	/* Cannot have any irqs that schedule after this */
 	preempt_disable();
 
-#if 0
-	/* NOTE:
-	 * We could avoid unnecessary scheduling by detecting
-	 * a task that has been just woken up.
-	 */
-	if ((task->flags & TASK_WOKEN_UP) && in_process_context()) {
-		preempt_enable();
-		return 0;
-	}
-#endif
-
 	/* Reset schedule flag */
 	need_resched = 0;
 
@@ -293,43 +320,13 @@ void schedule()
 			sched_rq_add_task(current, rq_expired, RQ_ADD_BEHIND);
 	}
 
-	/* Check if there's a pending suspend for thread */
-	if (current->flags & TASK_SUSPENDING) {
-		/*
-		 * The task should have no locks and be in a runnable state.
-		 * (e.g. properly woken up by the suspender)
-		 */
-		if (current->nlocks == 0 &&
-		    current->state == TASK_RUNNABLE) {
-			/* Suspend it if suitable */
-			current->state = TASK_INACTIVE;
-			current->flags &= ~TASK_SUSPENDING;
-
-			/*
-			 * The task has been made inactive here.
-			 * A suspended task affects timeslices whereas
-			 * a sleeping task doesn't as it is believed
-			 * sleepers would become runnable soon.
-			 */
-			prio_total -= current->priority;
-			BUG_ON(prio_total <= 0);
-
-			/* Prepare to wake up any waiters */
-			wake_up(&current->wqh_pager, 0);
-		} else {
-			if (current->state == TASK_RUNNABLE)
-				sched_rq_remove_task(current);
-
-			/*
-			 * Top up task's ticks temporarily, and
-			 * wait for it to release its locks.
-			 */
-			current->state = TASK_RUNNABLE;
-			current->ticks_left = max(current->ticks_left,
-						  SCHED_GRANULARITY);
-			sched_rq_add_task(current, rq_runnable, RQ_ADD_FRONT);
-		}
-	}
+	/*
+	 * If task is about to sleep and
+	 * it has pending events, wake it up.
+	 */
+	if (current->flags & TASK_SUSPENDING &&
+	    current->state == TASK_SLEEPING)
+		wake_up_task(current, WAKEUP_INTERRUPT);
 
 	/* Determine the next task to be run */
 	if (rq_runnable->total > 0) {

@@ -6,6 +6,7 @@
 #include <l4/lib/mutex.h>
 #include <l4/lib/printk.h>
 #include <l4/generic/space.h>
+#include <l4/generic/scheduler.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memlayout.h)
 #include INC_GLUE(syscall.h)
@@ -60,13 +61,15 @@ void syscall_init()
 /* Checks a syscall is legitimate and dispatches to appropriate handler. */
 int syscall(syscall_context_t *regs, unsigned long swi_addr)
 {
+	int ret = 0;
+
 	/* Check if genuine system call, coming from the syscall page */
 	if ((swi_addr & ARM_SYSCALL_PAGE) == ARM_SYSCALL_PAGE) {
 		/* Check within syscall offset boundary */
 		if (((swi_addr & syscall_offset_mask) >= 0) &&
 		    ((swi_addr & syscall_offset_mask) <= syscalls_end_offset)) {
 			/* Quick jump, rather than compare each */
-			return (*syscall_table[(swi_addr & 0xFF) >> 2])(regs);
+			ret = (*syscall_table[(swi_addr & 0xFF) >> 2])(regs);
 		} else {
 			printk("System call received from call @ 0x%lx."
 			       "Instruction: 0x%lx.\n", swi_addr,
@@ -78,5 +81,12 @@ int syscall(syscall_context_t *regs, unsigned long swi_addr)
 		       "Discarding.\n", swi_addr);
 		return -ENOSYS;
 	}
+
+	if (current->flags & TASK_SUSPENDING) {
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	}
+
+	return ret;
 }
 

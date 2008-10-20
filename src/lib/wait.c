@@ -59,7 +59,7 @@ int wait_on(struct waitqueue_head *wqh)
 }
 
 /* Wake up all */
-void wake_up_all(struct waitqueue_head *wqh, int sync)
+void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 {
 	BUG_ON(wqh->sleepers < 0);
 	spin_lock(&wqh->slock);
@@ -72,11 +72,12 @@ void wake_up_all(struct waitqueue_head *wqh, int sync)
 		BUG_ON(list_empty(&wqh->task_list));
 		list_del_init(&wq->task_list);
 		wqh->sleepers--;
-		sleeper->flags |= TASK_INTERRUPTED;
+		if (flags & WAKEUP_INTERRUPT)
+			sleeper->flags |= TASK_INTERRUPTED;
 		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		spin_unlock(&wqh->slock);
 
-		if (sync)
+		if (flags & WAKEUP_SYNC)
 			sched_resume_sync(sleeper);
 		else
 			sched_resume_async(sleeper);
@@ -85,7 +86,7 @@ void wake_up_all(struct waitqueue_head *wqh, int sync)
 }
 
 /* Wake up single waiter */
-void wake_up(struct waitqueue_head *wqh, int sync)
+void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 {
 	BUG_ON(wqh->sleepers < 0);
 	spin_lock(&wqh->slock);
@@ -98,11 +99,12 @@ void wake_up(struct waitqueue_head *wqh, int sync)
 		BUG_ON(list_empty(&wqh->task_list));
 		list_del_init(&wq->task_list);
 		wqh->sleepers--;
-		sleeper->flags |= TASK_INTERRUPTED;
+		if (flags & WAKEUP_INTERRUPT)
+			sleeper->flags |= TASK_INTERRUPTED;
 		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		spin_unlock(&wqh->slock);
 
-		if (sync)
+		if (flags & WAKEUP_SYNC)
 			sched_resume_sync(sleeper);
 		else
 			sched_resume_async(sleeper);
@@ -116,7 +118,7 @@ void wake_up(struct waitqueue_head *wqh, int sync)
  * as we were peeking on it, returns -1. @sync makes us immediately
  * yield or else leave it to scheduler's discretion.
  */
-int wake_up_task(struct ktcb *task, int sync)
+int wake_up_task(struct ktcb *task, unsigned int flags)
 {
 	struct waitqueue_head *wqh;
 	struct waitqueue *wq;
@@ -158,7 +160,8 @@ int wake_up_task(struct ktcb *task, int sync)
 	wqh->sleepers--;
 	task->waiting_on = 0;
 	task->wq = 0;
-	task->flags |= TASK_INTERRUPTED;
+	if (flags & WAKEUP_INTERRUPT)
+		task->flags |= TASK_INTERRUPTED;
 	spin_unlock(&wqh->slock);
 	spin_unlock(&task->waitlock);
 
@@ -167,13 +170,11 @@ int wake_up_task(struct ktcb *task, int sync)
 	 * safely resume it without locks as this is the only
 	 * code path that can resume the task.
 	 */
-	if (sync)
+	if (flags & WAKEUP_SYNC)
 		sched_resume_sync(task);
 	else
 		sched_resume_async(task);
 
 	return 0;
 }
-
-
 

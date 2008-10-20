@@ -28,7 +28,7 @@ int sys_thread_switch(syscall_context_t *regs)
 int thread_suspend(struct task_ids *ids)
 {
 	struct ktcb *task;
-	int ret;
+	int ret = 0;
 
 	if (!(task = find_task(ids->tid)))
 		return -ESRCH;
@@ -36,17 +36,13 @@ int thread_suspend(struct task_ids *ids)
 	if (task->state == TASK_INACTIVE)
 		return 0;
 
-	/* First show our intention to suspend thread */
+	/* Signify we want to suspend the thread */
 	task->flags |= TASK_SUSPENDING;
 
-	/*
-	 * Interrupt the task in case it was sleeping
-	 * so that it will be caught and suspended by
-	 * the scheduler.
-	 */
-	wake_up_task(task, 1);
+	/* Wake it up if it's sleeping */
+	wake_up_task(task, WAKEUP_INTERRUPT | WAKEUP_SYNC);
 
-	/* Wait until scheduler wakes us up */
+	/* Wait until task suspends itself */
 	WAIT_EVENT(&task->wqh_pager,
 		   task->state == TASK_INACTIVE, ret);
 

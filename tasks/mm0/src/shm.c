@@ -106,19 +106,6 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 	return shm->shm_addr;
 }
 
-/* TODO: Do we need this?
- * MM0 never needs a task's utcb page. vfs needs it.
- * UTCBs get special treatment here. If the task
- * is attaching to its utcb, mm0 prefaults it so
- * that it can access it later on whether or not
- * the task makes a syscall to mm0 without first
- * faulting the utcb.
- */
-/*
-	if ((unsigned long)shmaddr == task->utcb_address)
-		utcb_prefault(task, VM_READ | VM_WRITE);
-*/
-
 void *sys_shmat(struct tcb *task, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct vm_file *shm_file, *n;

@@ -7,10 +7,11 @@
  */
 #include <l4/config.h>
 #include <l4/macros.h>
+#include <l4/generic/scheduler.h>
 #include <l4/generic/platform.h>
+#include <l4/generic/tcb.h>
 #include <l4/generic/irq.h>
 #include <l4/lib/mutex.h>
-#include <l4/generic/scheduler.h>
 #include <l4/lib/printk.h>
 #include INC_PLAT(irq.h)
 #include INC_ARCH(exception.h)
@@ -73,5 +74,11 @@ void do_irq(void)
 		printk("Spurious or broken irq\n"); BUG();
 	}
 	irq_enable(irq_index);
+
+	/* Process any pending flags for currently runnable task */
+	task_process_pending_flags();
 }
+
+
+
 

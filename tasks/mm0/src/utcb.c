@@ -1,9 +1,8 @@
 /*
- * Utcb address allocation for user tasks.
+ * utcb address allocation for user tasks.
  *
  * Copyright (C) 2008 Bahadir Balban
  */
-
 #include <stdio.h>
 #include <utcb.h>
 #include <lib/addr.h>
@@ -71,44 +70,3 @@ void *task_send_utcb_address(struct tcb *sender, l4id_t taskid)
 	return 0;
 }
 
-#if 0
-
-To be ditched
-/*
- * Triggered during a sys_shmat() by a client task when mapping its utcb.
- * This prefaults the utcb and maps it in to mm0 so that it can freely
- * access it anytime later.
- */
-int utcb_prefault(struct tcb *task, unsigned int vmflags)
-{
-	int err;
-	struct page *pg;
-
-	/* First map in the page to task with given flags, e.g. read/write */
-	if ((err = prefault_page(task, task->utcb_address, vmflags)) < 0) {
-		printf("%s: Failed: %d\n", __FUNCTION__, err);
-		return err;
-	}
-
-	/*
-	 * Get the topmost page. Since we did both a VM_READ and VM_WRITE
-	 * prefault, this gets a writeable instead of a read-only page.
-	 */
-	pg = task_virt_to_page(task, task->utcb_address);
-	if (!pg || IS_ERR(pg)) {
-		printf("%s: Cannot retrieve task %d's utcb page.\n",
-		       __FUNCTION__, task->tid);
-		BUG();
-	}
-
-	/* Map it in to self */
-	l4_map((void *)page_to_phys(pg), (void *)task->utcb_address, 1,
-	       MAP_USR_RW_FLAGS, self_tid());
-
-	/* Flag that says this task's utcb is mapped to mm0 as r/w */
-	task->utcb_mapped = 1;
-
-	return 0;
-}
-
-#endif

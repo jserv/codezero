@@ -10,6 +10,11 @@ struct waitqueue {
 	struct ktcb *task;
 };
 
+enum wakeup_flags {
+	WAKEUP_INTERRUPT = (1 << 0),
+	WAKEUP_SYNC	 = (1 << 1)
+};
+
 #define CREATE_WAITQUEUE_ON_STACK(wq, tsk)		\
 struct waitqueue wq = {					\
 	.task_list = { &wq.task_list, &wq.task_list },	\
@@ -65,9 +70,9 @@ do {								\
 	}							\
 } while(0);
 
-void wake_up(struct waitqueue_head *wqh, int sync);
-int wake_up_task(struct ktcb *task, int sync);
-void wake_up_all(struct waitqueue_head *wqh, int sync);
+void wake_up(struct waitqueue_head *wqh, unsigned int flags);
+int wake_up_task(struct ktcb *task, unsigned int flags);
+void wake_up_all(struct waitqueue_head *wqh, unsigned int flags);
 
 #endif /* __LIB_WAIT_H__ */
 
