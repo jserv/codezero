@@ -27,12 +27,12 @@ int utcb_pool_init()
 	return 0;
 }
 
-void *utcb_vaddr_new(void)
+void *utcb_new_address(void)
 {
 	return address_new(&utcb_vaddr_pool, 1);
 }
 
-int utcb_vaddr_del(void *utcb_addr)
+int utcb_delete_address(void *utcb_addr)
 {
 	return address_del(&utcb_vaddr_pool, utcb_addr, 1);
 }

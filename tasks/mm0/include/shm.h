@@ -41,9 +41,10 @@ struct shm_descriptor {
 #define SHM_SHMMAX			10
 
 /* Initialises shared memory bookkeeping structures */
-void shm_init();
+int shm_pool_init();
 
 void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr);
 struct vm_file *shm_new(key_t key, unsigned long npages);
+void *shm_new_address(int npages);
 
 #endif /* __SHM_H__ */

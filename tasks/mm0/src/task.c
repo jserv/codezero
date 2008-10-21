@@ -293,7 +293,7 @@ int task_mmap_regions(struct tcb *task, struct vm_file *file)
 	}
 
 	/* Task's utcb */
-	task->utcb = utcb_vaddr_new();
+	task->utcb = utcb_new_address();
 
 	/* Create a shared memory segment available for shmat() */
 	if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))

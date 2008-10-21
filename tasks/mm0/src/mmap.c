@@ -9,10 +9,11 @@
 #include <posix/sys/types.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
+#include <memory.h>
 #include <task.h>
 #include <mmap.h>
 #include <file.h>
-#include <memory.h>
+#include <shm.h>
 
 #if 0
 /* TODO: This is to be implemented when fs0 is ready. */
@@ -380,12 +381,7 @@ int vma_intersect(unsigned long pfn_start, unsigned long pfn_end,
 	return 0;
 }
 
-/*
- * FIXME: PASS THIS A VM_SHARED FLAG SO THAT IT CAN SEARCH FOR AN EMPTY
- * SEGMENT FOR SHM, instead of shmat() searching for one.
- *
- * Search an empty space in the task's mmapable address region.
- */
+/* Search an empty space in the task's mmapable address region. */
 unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 {
 	unsigned long pfn_start = __pfn(task->map_start);
@@ -468,6 +464,20 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
 }
 
 /*
+ * Returns a suitably mmap'able address. It allocates
+ * differently for shared and private areas.
+ */
+unsigned long mmap_new_address(struct tcb *task, unsigned int flags,
+			       unsigned int npages)
+{
+	if (flags & VMA_SHARED)
+		return (unsigned long)shm_new_address(npages);
+	else
+		return find_unmapped_area(npages, task);
+}
+
+
+/*
  * Maps the given file with given flags at the given page offset to the given
  * task's address space at the specified virtual memory address and length.
  *
@@ -475,8 +485,8 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
  * the file's pager upon page faults.
  */
 void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
-	      struct tcb *task, unsigned long map_address, unsigned int flags,
-	      unsigned int npages)
+	      struct tcb *task, unsigned long map_address,
+	      unsigned int flags, unsigned int npages)
 {
 	unsigned long map_pfn = __pfn(map_address);
 	struct vm_area *new, *mapped;
@@ -513,8 +523,7 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 
 	/* Check invalid map address */
 	if (!mmap_address_validate(task, map_address, flags)) {
-		/* Get new map address for region of this size */
-		if(!(map_address = find_unmapped_area(npages, task)))
+		if (!(map_address = mmap_new_address(task, flags, npages)))
 			return PTR_ERR(-ENOMEM);
 	} else {
 		/*

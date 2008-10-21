@@ -245,6 +245,53 @@ struct page *copy_to_new_page(struct page *orig)
 	return new;
 }
 
+
+/*
+ * Determine if an object is deletable.
+ *
+ * Shadows are deleted if nlinks = 0, and
+ * merged if they have nlinks = 1, shadows = 1.
+ * See below for explanation.
+ *
+ * vfs-type vmfiles are deleted if their
+ * openers = 0, and their nlinks
+ * (i.e. mappers) = 0.
+ *
+ * shm-type vmfiles are deleted if their
+ * nlinks = 0, since they only have map count.
+ */
+int vm_object_is_deletable(struct vm_object *obj)
+{
+	struct vm_file *f;
+
+	if (obj->nlinks != 0)
+		return 0;
+
+	BUG_ON(obj->shadows != 0);
+
+	if (obj->flags & VM_OBJ_SHADOW)
+		return 1;
+
+	f = vm_object_to_file(obj);
+
+	/* Devzero should probably never have 0 refs left */
+	if (f->type == VM_FILE_DEVZERO)
+		return 0;
+	else if (f->type == VM_FILE_SHM)
+		return 1;
+	else if (f->type == VM_FILE_BOOTFILE ||
+		 f->type == VM_FILE_VFS) {
+		if (f->openers == 0)
+			return 1;
+		else
+			return 0;
+	}
+
+	/* To make gcc happy */
+	BUG();
+	return 0;
+}
+
 /*
  * Drops a link to an object if possible, and if it has dropped it,
  * decides and takes action on the dropped object, depending on
@@ -297,20 +344,10 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 		}
 	}
 
-	/* Now deal with the object itself */
-
-	/* If it's not a shadow, we're not to touch it.
-	 *
-	 * TODO: In the future we can check if a vm_file's
-	 * openers are 0 and take action here. (i.e. keep,
-	 * delete or swap it)
+	/*
+	 * Now deal with the object itself:
 	 */
-	if (!(obj->flags & VM_OBJ_SHADOW))
-		return 0;
-
-	/* If the object has no links left, we can delete it */
-	if (obj->nlinks == 0) {
-		BUG_ON(obj->shadows != 0);
+	 if(vm_object_is_deletable(obj)) {
 		dprintf("Deleting object:\n");
 		vm_object_print(obj);
 		vm_object_delete(obj);
@@ -328,7 +365,8 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 	 * we will go back to identical mirroring instead of merging the
 	 * last shadow, since most unused pages would be swapped out.
 	 */
-	if (obj->nlinks == 1 &&
+	if ((obj->flags & VM_OBJ_SHADOW) &&
+	    obj->nlinks == 1 &&
 	    obj->shadows == 1) {
 		dprintf("Merging object:\n");
 		vm_object_print(obj);

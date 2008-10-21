@@ -143,6 +143,7 @@ struct vm_file {
 	unsigned long length;
 	unsigned int type;
 	struct vm_object vm_obj;
+	void (*destroy_priv_data)(struct vm_file *f);
 	void *priv_data;	/* Device pagers use to access device info */
 };
 

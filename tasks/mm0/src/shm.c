@@ -37,13 +37,33 @@ static struct id_pool *shm_ids;
 /* Globally disjoint shm virtual address pool */
 static struct address_pool shm_vaddr_pool;
 
-void shm_init()
+void *shm_new_address(int npages)
 {
+	return address_new(&shm_vaddr_pool, npages);
+}
+
+int shm_delete_address(void *shm_addr, int npages)
+{
+	return address_del(&shm_vaddr_pool, shm_addr, npages);
+}
+
+int shm_pool_init()
+{
+	int err;
+
 	/* Initialise shm id pool */
-	shm_ids = id_pool_new_init(SHM_AREA_MAX);
+	if(IS_ERR(shm_ids = id_pool_new_init(SHM_AREA_MAX))) {
+		printf("SHM id pool initialisation failed.\n");
+		return (int)shm_ids;
+	}
 
 	/* Initialise the global shm virtual address pool */
-	address_pool_init(&shm_vaddr_pool, SHM_AREA_START, SHM_AREA_END);
+	if ((err = address_pool_init(&shm_vaddr_pool,
+				     SHM_AREA_START, SHM_AREA_END)) < 0) {
+		printf("SHM Address pool initialisation failed.\n");
+		return err;
+	}
+	return 0;
 }
 
 /*
@@ -64,44 +84,47 @@ static void *do_shmat(struct vm_file *shm_file, void *shm_addr, int shmflg,
 		BUG();
 	}
 
-	if (shm_addr)
-		shm_addr = (void *)page_align(shm_addr);
+	if ((unsigned long)shm_addr & PAGE_MASK) {
+		if (shmflg & SHM_RND)
+			shm_addr = (void *)page_align(shm_addr);
+		else
+			return PTR_ERR(-EINVAL);
+	}
 
-	/* Determine mmap flags for segment */
-	if (shmflg & SHM_RDONLY)
-		vmflags = VM_READ | VMA_SHARED | VMA_ANONYMOUS;
-	else
-		vmflags = VM_READ | VM_WRITE |
-			  VMA_SHARED | VMA_ANONYMOUS;
+	/* Set mmap flags for segment */
+	vmflags = VM_READ | VMA_SHARED | VMA_ANONYMOUS;
+	vmflags |= (shmflg & SHM_RDONLY) ? 0 : VM_WRITE;
 
 	/*
-	 * The first user of the segment who supplies a valid
-	 * address sets the base address of the segment. Currently
-	 * all tasks use the same address for each unique segment.
+	 * Currently all tasks use the same address for each unique segment.
+	 * If address is already assigned, the supplied address must match
+	 * the original address. We don't look for object map count because
+	 * utcb addresses are assigned before being mapped. NOTE: We may do
+	 * all this in a specific shm_mmap() call in do_mmap() in the future.
 	 */
-
-	/* First user? */
-	if (!shm_file->vm_obj.nlinks)
-		if (mmap_address_validate(task, (unsigned long)shm_addr,
-					  vmflags))
-			shm->shm_addr = shm_addr;
-		else	/* FIXME: Do this in do_mmap/find_unmapped_area !!! */
-			shm->shm_addr = address_new(&shm_vaddr_pool,
-						    shm->npages);
-	else /* Address must be already assigned */
-		BUG_ON(!shm->shm_addr);
+	if (shm_file_to_desc(shm_file)->shm_addr) {
+		if (shm_addr && (shm->shm_addr != shm_addr))
+			return PTR_ERR(-EINVAL);
+	}
 
 	/*
-	 * mmap the area to the process as shared. Page fault handler would
-	 * handle allocating and paging-in the shared pages.
+	 * mmap the area to the process as shared. Page fault
+	 * handler would handle allocating and paging-in the
+	 * shared pages.
 	 */
 	if (IS_ERR(mapped = do_mmap(shm_file, 0, task,
-				    (unsigned long)shm->shm_addr,
+				    (unsigned long)shm_addr,
 				    vmflags, shm->npages))) {
 		printf("do_mmap: Mapping shm area failed with %d.\n",
 		       (int)mapped);
-		BUG();
+		return PTR_ERR(mapped);
 	}
+
+	/* Assign new shm address if not assigned */
+	if (!shm->shm_addr)
+		shm->shm_addr = mapped;
+	else
+		BUG_ON(shm->shm_addr != mapped);
 
 	return shm->shm_addr;
 }
@@ -148,6 +171,27 @@ int sys_shmdt(struct tcb *task, const void *shmaddr)
 	return -EINVAL;
 }
 
+/*
+ * This finds out what address pool the shm area came from and
+ * returns the address back to that pool. There are 2 pools,
+ * one for utcbs and one for regular shm segments.
+ */
+void shm_destroy_priv_data(struct vm_file *shm_file)
+{
+	struct shm_descriptor *shm_desc = shm_file_to_desc(shm_file);
+
+	if ((unsigned long)shm_desc->shm_addr >= UTCB_AREA_START &&
+	    (unsigned long)shm_desc->shm_addr < UTCB_AREA_END)
+		utcb_delete_address(shm_desc->shm_addr);
+	else if ((unsigned long)shm_desc->shm_addr >= SHM_AREA_START &&
+	    	 (unsigned long)shm_desc->shm_addr < SHM_AREA_END)
+		shm_delete_address(shm_desc->shm_addr,
+				   shm_file->vm_obj.npages);
+	else
+		BUG();
+	/* Now delete the private data itself */
+	kfree(shm_file->priv_data);
+}
 
 /* Creates an shm area and glues its details with shm pager and devzero */
 struct vm_file *shm_new(key_t key, unsigned long npages)
@@ -179,6 +223,7 @@ struct vm_file *shm_new(key_t key, unsigned long npages)
 	shm_file->length = __pfn_to_addr(npages);
 	shm_file->type = VM_FILE_SHM;
 	shm_file->priv_data = shm_desc;
+	shm_file->destroy_priv_data = shm_destroy_priv_data;
 
 	/* Initialise the vm object */
 	shm_file->vm_obj.pager = &swap_pager;

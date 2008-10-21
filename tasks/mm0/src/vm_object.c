@@ -134,8 +134,12 @@ int vm_object_delete(struct vm_object *vmo)
 	if (vmo->flags & VM_OBJ_FILE) {
 		f = vm_object_to_file(vmo);
 		BUG_ON(!list_empty(&f->list));
-		if (f->priv_data)
-			kfree(f->priv_data);
+		if (f->priv_data) {
+			if (f->destroy_priv_data)
+				f->destroy_priv_data(f);
+			else
+				kfree(f->priv_data);
+		}
 		kfree(f);
 	} else if (vmo->flags & VM_OBJ_SHADOW)
 		kfree(vmo);

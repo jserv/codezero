@@ -165,7 +165,10 @@ void init_mm(struct initdata *initdata)
 	init_boot_files(initdata);
 	// printf("%s: Initialised in-memory boot files.\n", __TASKNAME__);
 
-	shm_init();
+	if (shm_pool_init() < 0) {
+		printf("SHM initialisation failed.\n");
+		BUG();
+	}
 	// printf("%s: Initialised shm structures.\n", __TASKNAME__);
 
 	if (utcb_pool_init() < 0) {

@@ -80,7 +80,7 @@ int sys_fork(struct tcb *parent)
 		BUG();
 
 	/* Create new utcb for child since it can't use its parent's */
-	child->utcb = utcb_vaddr_new();
+	child->utcb = utcb_new_address();
 
 	/*
 	 * Create the utcb shared memory segment
@@ -89,8 +89,6 @@ int sys_fork(struct tcb *parent)
 	if (IS_ERR(utcb_shm = shm_new((key_t)child->utcb,
 				      __pfn(DEFAULT_UTCB_SIZE))))
 		return (int)utcb_shm;
-
-	/* FIXME: Should we munmap() parent's utcb page from child? */
 
 	/*
 	 * Map and prefault child utcb to vfs so that vfs need not
@@ -126,7 +124,7 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 		return (int)child;
 
 	/* Allocate a unique utcb address for child */
-	child->utcb = utcb_vaddr_new();
+	child->utcb = utcb_new_address();
 
 	/*
 	 * Create the utcb shared memory segment

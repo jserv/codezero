@@ -3,9 +3,9 @@
 
 #include <l4lib/types.h>
 #include <task.h>
-void *utcb_vaddr_new(void);
 int utcb_pool_init(void);
-int utcb_vaddr_del(void *utcb_addr);
+void *utcb_new_address(void);
+int utcb_delete_address(void *utcb_addr);
 
 
 /* IPC to send utcb address information to tasks */
