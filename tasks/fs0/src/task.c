@@ -132,12 +132,12 @@ int pager_notify_exit(struct tcb *sender, l4id_t tid)
 {
 	struct tcb *task;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	BUG_ON(!(task = find_task(tid)));
 
 	destroy_tcb(task);
 
-	printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
 
 	return 0;
 }

@@ -13,6 +13,7 @@ int forktest(void)
 {
 	pid_t myid;
 
+	/* 16 forks */
 	for (int i = 0; i < 4; i++)
 		fork();
 
