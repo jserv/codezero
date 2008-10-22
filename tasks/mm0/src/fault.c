@@ -178,7 +178,7 @@ int vma_merge_object(struct vm_object *redundant)
 	vma_drop_link(last_link);
 
 	/* Redundant shadow has no shadows anymore */
-	redundant->shadows--;
+	BUG_ON(--redundant->shadows < 0);
 
 	/* Delete the redundant shadow along with all its pages. */
 	vm_object_delete(redundant);
@@ -264,6 +264,9 @@ int vm_object_is_deletable(struct vm_object *obj)
 {
 	struct vm_file *f;
 
+	printf("%s: Checking: ", __FUNCTION__);
+	vm_object_print(obj);
+
 	if (obj->nlinks != 0)
 		return 0;
 
@@ -319,7 +322,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 	 */
 	if (prev) {
 		BUG_ON(!(prev->obj->flags & VM_OBJ_SHADOW));
-		obj->shadows--;
+		BUG_ON(--obj->shadows < 0);
 		list_del_init(&prev->obj->shref);
 	}
 
@@ -327,9 +330,9 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 	 * If there was an object after, that implies current object
 	 * is a shadow, deduce it from the object after.
 	 */
-	if (next && obj->flags & VM_OBJ_SHADOW) {
+	if (next && (obj->flags & VM_OBJ_SHADOW)) {
 		BUG_ON(obj->orig_obj != next->obj);
-		next->obj->shadows--;
+		BUG_ON(--next->obj->shadows < 0);
 		list_del_init(&obj->shref);
 
 		/*
@@ -349,7 +352,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 	 */
 	 if(vm_object_is_deletable(obj)) {
 		dprintf("Deleting object:\n");
-		vm_object_print(obj);
+		// vm_object_print(obj);
 		vm_object_delete(obj);
 	}
 
@@ -369,7 +372,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 	    obj->nlinks == 1 &&
 	    obj->shadows == 1) {
 		dprintf("Merging object:\n");
-		vm_object_print(obj);
+		// vm_object_print(obj);
 		vma_merge_object(obj);
 	}
 
@@ -485,9 +488,9 @@ struct page *copy_on_write(struct fault_data *fault)
 		vmo_link->obj->shadows++;
 
 		dprintf("%s: Created a shadow:\n", __TASKNAME__);
-		vm_object_print(shadow);
+		// vm_object_print(shadow);
 		dprintf("%s: Original object:\n", __TASKNAME__);
-		vm_object_print(shadow->orig_obj);
+		// vm_object_print(shadow->orig_obj);
 
 		/*
 		 * Add the shadow in front of the original:
@@ -672,7 +675,7 @@ out_success:
 	       fault->task->tid);
 	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
 		page_align(fault->address), fault->task->tid);
-	vm_object_print(page->owner);
+	// vm_object_print(page->owner);
 
 	return 0;
 }
@@ -905,7 +908,7 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 	/* Found it */
 	// printf("%s: %s: Found page with file_offset: 0x%x\n",
 	//       __TASKNAME__,  __FUNCTION__, page->offset);
-	vm_object_print(vmo_link->obj);
+	// vm_object_print(vmo_link->obj);
 
 	return page;
 }

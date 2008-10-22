@@ -9,7 +9,6 @@
 #include <l4/api/errno.h>
 #include <kmalloc/kmalloc.h>
 
-#if defined(DEBUG_FAULT_HANDLING)
 void print_cache_pages(struct vm_object *vmo)
 {
 	struct page *p;
@@ -48,13 +47,9 @@ void vm_object_print(struct vm_object *vmo)
 
 		printf("File type: %s\n", ftype);
 	}
-	print_cache_pages(vmo);
-	printf("\n");
+	// print_cache_pages(vmo);
+	// printf("\n");
 }
-#else
-void print_cache_pages(struct vm_object *vmo) { }
-void vm_object_print(struct vm_object *vmo) { }
-#endif
 
 /* Global list of in-memory vm objects. */
 LIST_HEAD(vm_object_list);
@@ -116,6 +111,8 @@ struct vm_file *vfs_file_create(void)
 int vm_object_delete(struct vm_object *vmo)
 {
 	struct vm_file *f;
+
+	// vm_object_print(vmo);
 
 	/* Release all pages */
 	vmo->pager->ops.release_pages(vmo);

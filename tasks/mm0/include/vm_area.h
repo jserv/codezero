@@ -234,6 +234,7 @@ struct vm_file *vm_file_create(void);
 int vm_file_delete(struct vm_file *f);
 int vm_object_delete(struct vm_object *vmo);
 void vm_object_print(struct vm_object *vmo);
+void vm_object_print1(struct vm_object *vmo);
 
 /* Used for pre-faulting a page from mm0 */
 int prefault_page(struct tcb *task, unsigned long address,
