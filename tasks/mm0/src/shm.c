@@ -180,6 +180,7 @@ void shm_destroy_priv_data(struct vm_file *shm_file)
 {
 	struct shm_descriptor *shm_desc = shm_file_to_desc(shm_file);
 
+	/* Release the shared memory address */
 	if ((unsigned long)shm_desc->shm_addr >= UTCB_AREA_START &&
 	    (unsigned long)shm_desc->shm_addr < UTCB_AREA_END)
 		utcb_delete_address(shm_desc->shm_addr);
@@ -189,6 +190,10 @@ void shm_destroy_priv_data(struct vm_file *shm_file)
 				   shm_file->vm_obj.npages);
 	else
 		BUG();
+
+	/* Release the shared memory id */
+	BUG_ON(id_del(shm_ids, shm_desc->shmid) < 0);
+
 	/* Now delete the private data itself */
 	kfree(shm_file->priv_data);
 }
