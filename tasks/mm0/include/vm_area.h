@@ -104,17 +104,6 @@ struct vm_pager {
 	struct vm_pager_ops ops;	/* The ops the pager does on area */
 };
 
-
-/* TODO:
- * How to distinguish different devices handling page faults ???
- * A possible answer:
- *
- * If they are not mmap'ed, this is handled by the vfs calling that file's
- * specific operations (e.g. even calling the device process). If they're
- * mmap'ed, they adhere to a standard mmap_device structure kept in
- * vm_file->priv_data. This is used by the device pager to map those pages.
- */
-
 /*
  * Describes the in-memory representation of a resource. This could
  * point at a file or another resource, e.g. a device area, swapper space,
