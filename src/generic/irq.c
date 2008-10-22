@@ -75,8 +75,16 @@ void do_irq(void)
 	}
 	irq_enable(irq_index);
 
+#if 0
 	/* Process any pending flags for currently runnable task */
-	task_process_pending_flags();
+	if (!in_nested_irq_context()) {
+		/* This is buggy, races on prio_total */
+		if (in_user()) {
+			if (current->flags & TASK_SUSPENDING)
+				sched_suspend_async();
+		}
+	}
+#endif
 }
 
 

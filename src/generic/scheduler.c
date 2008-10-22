@@ -41,6 +41,18 @@ extern unsigned int current_irq_nest_count;
 /* This ensures no scheduling occurs after voluntary preempt_disable() */
 static int voluntary_preempt = 0;
 
+void sched_lock_runqueues(void)
+{
+	spin_lock(&sched_rq[0].lock);
+	spin_lock(&sched_rq[1].lock);
+}
+
+void sched_unlock_runqueues(void)
+{
+	spin_unlock(&sched_rq[0].lock);
+	spin_unlock(&sched_rq[1].lock);
+}
+
 int preemptive()
 {
 	return current_irq_nest_count == 0;
@@ -112,14 +124,6 @@ static void sched_rq_swap_runqueues(void)
 	rq_expired = temp;
 }
 
-/* FIXME:
- * Sleepers should not affect runqueue priority.
- * Suspended tasks should affect runqueue priority.
- *
- * Also make sure that if sleepers get suspended,
- * they do affect runqueue priority.
- */
-
 /* Set policy on where to add tasks in the runqueue */
 #define RQ_ADD_BEHIND		0
 #define RQ_ADD_FRONT		1
@@ -129,30 +133,35 @@ static void sched_rq_add_task(struct ktcb *task, struct runqueue *rq, int front)
 {
 	BUG_ON(!list_empty(&task->rq_list));
 
-	spin_lock(&rq->lock);
+	sched_lock_runqueues();
 	if (front)
 		list_add(&task->rq_list, &rq->task_list);
 	else
 		list_add_tail(&task->rq_list, &rq->task_list);
 	rq->total++;
 	task->rq = rq;
-	spin_unlock(&rq->lock);
+	sched_unlock_runqueues();
 }
-
-/* NOTE: Do we need an rq_lock on tcb? */
 
 /* Helper for removing a task from its runqueue. */
 static inline void sched_rq_remove_task(struct ktcb *task)
 {
-	struct runqueue *rq = task->rq;
+	struct runqueue *rq;
 
-	spin_lock(&rq->lock);
+	sched_lock_runqueues();
+
+	/*
+	 * We must lock both, otherwise rqs may swap and
+	 * we may get the wrong rq.
+	 */
+ 	rq = task->rq;
+	BUG_ON(list_empty(&task->rq_list));
 	list_del_init(&task->rq_list);
 	task->rq = 0;
 	rq->total--;
 
 	BUG_ON(rq->total < 0);
-	spin_unlock(&rq->lock);
+	sched_unlock_runqueues();
 }
 
 
@@ -201,33 +210,6 @@ void sched_resume_async(struct ktcb *task)
 	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
 }
 
-extern void arch_switch(struct ktcb *cur, struct ktcb *next);
-
-static inline void context_switch(struct ktcb *next)
-{
-	struct ktcb *cur = current;
-
-	// printk("(%d) to (%d)\n", cur->tid, next->tid);
-
-	/* Flush caches and everything */
-	arch_hardware_flush(next->pgd);
-
-	/* Switch context */
-	arch_switch(cur, next);
-
-	// printk("Returning from yield. Tid: (%d)\n", cur->tid);
-}
-
-/*
- * Priority calculation is so simple it is inlined. The task gets
- * the ratio of its priority to total priority of all runnable tasks.
- */
-static inline int sched_recalc_ticks(struct ktcb *task, int prio_total)
-{
-	return task->ticks_assigned =
-		SCHED_TICKS * task->priority / prio_total;
-}
-
 /*
  * NOTE: Could do these as sched_prepare_suspend()
  * + schedule() or need_resched = 1
@@ -265,6 +247,35 @@ void sched_suspend_async(void)
 }
 
 
+extern void arch_switch(struct ktcb *cur, struct ktcb *next);
+
+static inline void context_switch(struct ktcb *next)
+{
+	struct ktcb *cur = current;
+
+	// printk("(%d) to (%d)\n", cur->tid, next->tid);
+
+	/* Flush caches and everything */
+	arch_hardware_flush(next->pgd);
+
+	/* Switch context */
+	arch_switch(cur, next);
+
+	// printk("Returning from yield. Tid: (%d)\n", cur->tid);
+}
+
+/*
+ * Priority calculation is so simple it is inlined. The task gets
+ * the ratio of its priority to total priority of all runnable tasks.
+ */
+static inline int sched_recalc_ticks(struct ktcb *task, int prio_total)
+{
+	BUG_ON(prio_total < task->priority);
+	BUG_ON(prio_total == 0);
+	return task->ticks_assigned =
+		SCHED_TICKS * task->priority / prio_total;
+}
+
 
 /*
  * Tasks come here, either by setting need_resched (via next irq),
@@ -299,8 +310,9 @@ void schedule()
 {
 	struct ktcb *next;
 
-	/* Should not schedule with preemption disabled */
+	/* Should not schedule with preemption disabled or in nested irq */
 	BUG_ON(voluntary_preempt);
+	BUG_ON(in_nested_irq_context());
 
 	/* Should not have more ticks than SCHED_TICKS */
 	BUG_ON(current->ticks_left > SCHED_TICKS);
@@ -343,19 +355,18 @@ void schedule()
 		}
 	}
 
+	/* New tasks affect runqueue total priority. */
+	if (next->flags & TASK_RESUMING) {
+		prio_total += next->priority;
+		next->flags &= ~TASK_RESUMING;
+	}
+
 	/* Zero ticks indicates task hasn't ran since last rq swap */
 	if (next->ticks_left == 0) {
-
-		/* New tasks affect runqueue total priority. */
-		if (next->flags & TASK_RESUMING) {
-			prio_total += next->priority;
-			next->flags &= ~TASK_RESUMING;
-		}
-
 		/*
 		 * Redistribute timeslice. We do this as each task
-		 * becomes runnable rather than all at once. It's also
-		 * done only upon a runqueue swap.
+		 * becomes runnable rather than all at once. It is done
+		 * every runqueue swap
 		 */
 		sched_recalc_ticks(next, prio_total);
 		next->ticks_left = next->ticks_assigned;

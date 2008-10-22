@@ -22,38 +22,3 @@ struct list_head global_task_list;
 unsigned int need_resched_offset = offsetof(struct ktcb, ts_need_resched);
 unsigned int syscall_regs_offset = offsetof(struct ktcb, syscall_regs);
 
-
-/*
- * When there is an asynchronous pending event to be handled by
- * the task (e.g. task is suspending), normally it is processed
- * when the task is returning to user mode from the kernel. If
- * the event is raised when the task is in userspace, this call
- * in irq context makes sure it is handled.
- */
-void task_process_pending_flags(void)
-{
-	if (TASK_IN_USER(current)) {
-		if (current->flags & TASK_SUSPENDING) {
-			if (in_irq_context())
-				sched_suspend_async();
-			else
-				sched_suspend_sync();
-		}
-	}
-}
-
-#if 0
-int task_suspend(struct ktcb *task)
-{
-	task->flags |= SCHED_FLAG_SUSPEND;
-
-	return 0;
-}
-
-int task_resume(struct ktcb *task)
-{
-	task->flags &= ~SCHED_FLAG_SUSPEND;
-	return sched_enqueue_task(task);
-}
-#endif
-

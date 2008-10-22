@@ -148,7 +148,5 @@ extern struct id_pool *thread_id_pool;
 extern struct id_pool *space_id_pool;
 extern struct id_pool *tgroup_id_pool;
 
-void task_process_pending_flags(void);
-
 #endif /* __TCB_H__ */
 
