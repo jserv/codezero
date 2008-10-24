@@ -17,17 +17,32 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <syscalls.h>
+#include <globals.h>
 
-struct tcb_head {
-	struct list_head list;
-	int total;			/* Total threads */
-} tcb_head;
+struct global_list global_tasks = {
+	.list = { &global_tasks.list, &global_tasks.list },
+	.total = 0,
+};
+
+void global_add_task(struct tcb *task)
+{
+	BUG_ON(!list_empty(&task->list));
+	list_add_tail(&task->list, &global_tasks.list);
+	global_tasks.total++;
+}
+void global_remove_task(struct tcb *task)
+{
+	BUG_ON(list_empty(&task->list));
+	list_del_init(&task->list);
+	BUG_ON(--global_tasks.total < 0);
+}
+
 
 struct tcb *find_task(int tid)
 {
 	struct tcb *t;
 
-	list_for_each_entry(t, &tcb_head.list, list)
+	list_for_each_entry(t, &global_tasks.list, list)
 		if (t->tid == tid)
 			return t;
 	return 0;
@@ -43,8 +58,6 @@ struct tcb *create_tcb(void)
 
 	t->fdpool = id_pool_new_init(TASK_FILES_MAX);
 	INIT_LIST_HEAD(&t->list);
-	list_add_tail(&t->list, &tcb_head.list);
-	tcb_head.total++;
 
 	return t;
 }
@@ -53,8 +66,7 @@ void destroy_tcb(struct tcb *t)
 {
 	kfree(t->fdpool);
 
-	list_del(&t->list);
-	tcb_head.total--;
+	global_remove_task(t);
 	kfree(t);
 }
 
@@ -119,6 +131,8 @@ int pager_notify_fork(struct tcb *sender, l4id_t parid,
 	/* Copy file descriptors from parent */
 	id_pool_copy(child->fdpool, parent->fdpool, TASK_FILES_MAX);
 	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
+
+	global_add_task(child);
 
 	// printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
 	return 0;
@@ -193,6 +207,7 @@ int init_task_structs(struct task_data_head *tdata_head)
 		/* shm attach to the utcbs for all these tasks except own */
 		if (t->tid != self_tid())
 			task_utcb_attach(t);
+		global_add_task(t);
 	}
 
 	return 0;
@@ -201,8 +216,6 @@ int init_task_structs(struct task_data_head *tdata_head)
 int init_task_data(void)
 {
 	struct task_data_head *tdata_head;
-
-	INIT_LIST_HEAD(&tcb_head.list);
 
 	/* Read how many tasks and tids of each */
 	BUG_ON((tdata_head = receive_pager_taskdata()) < 0);
