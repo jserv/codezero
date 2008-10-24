@@ -9,6 +9,7 @@
 #include <mmap.h>
 #include <utcb.h>
 #include <vm_area.h>
+#include <globals.h>
 #include <kmalloc/kmalloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
@@ -27,9 +28,6 @@
 
 #define shm_file_to_desc(shm_file)	\
 	((struct shm_descriptor *)shm_file->priv_data)
-
-/* The list of shared memory areas that are already set up and working */
-static LIST_HEAD(shm_file_list);
 
 /* Unique shared memory ids */
 static struct id_pool *shm_ids;
@@ -133,8 +131,9 @@ void *sys_shmat(struct tcb *task, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct vm_file *shm_file, *n;
 
-	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
-		if (shm_file_to_desc(shm_file)->shmid == shmid)
+	list_for_each_entry_safe(shm_file, n, &global_vm_files.list, list) {
+		if (shm_file->type == VM_FILE_SHM &&
+		    shm_file_to_desc(shm_file)->shmid == shmid)
 			return do_shmat(shm_file, shmaddr,
 					shmflg, task);
 	}
@@ -159,8 +158,9 @@ int sys_shmdt(struct tcb *task, const void *shmaddr)
 	struct vm_file *shm_file, *n;
 	int err;
 
-	list_for_each_entry_safe(shm_file, n, &shm_file_list, list) {
-		if (shm_file_to_desc(shm_file)->shm_addr == shmaddr) {
+	list_for_each_entry_safe(shm_file, n, &global_vm_files.list, list) {
+		if (shm_file->type == VM_FILE_SHM &&
+		    shm_file_to_desc(shm_file)->shm_addr == shmaddr) {
 			if ((err = do_shmdt(task, shm_file) < 0))
 				return err;
 			else
@@ -235,8 +235,7 @@ struct vm_file *shm_new(key_t key, unsigned long npages)
 	shm_file->vm_obj.flags = VM_OBJ_FILE | VM_WRITE;
 
 	/* Add to shm file and global object list */
-	list_add(&shm_file->list, &shm_file_list);
-	list_add(&shm_file->vm_obj.list, &vm_object_list);
+	global_add_vm_file(shm_file);
 
 	return shm_file;
 }
@@ -250,12 +249,14 @@ void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
 	struct vm_file *shm_file;
 	struct shm_descriptor *shm_desc;
 
-	list_for_each_entry(shm_file, &shm_file_list, list) {
-		shm_desc = shm_file_to_desc(shm_file);
-		/* Found the key, shmat that area */
-		if (shm_desc->key == key)
-			return do_shmat(shm_file, shmaddr,
-					0, task);
+	list_for_each_entry(shm_file, &global_vm_files.list, list) {
+		if(shm_file->type == VM_FILE_SHM) {
+			shm_desc = shm_file_to_desc(shm_file);
+			/* Found the key, shmat that area */
+			if (shm_desc->key == key)
+				return do_shmat(shm_file, shmaddr,
+						0, task);
+		}
 	}
 
 	return PTR_ERR(-EEXIST);
@@ -268,6 +269,7 @@ void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
 int sys_shmget(key_t key, int size, int shmflg)
 {
 	unsigned long npages = __pfn(page_align_up(size));
+	struct shm_descriptor *shm_desc;
 	struct vm_file *shm;
 
 	/* First check argument validity */
@@ -286,8 +288,11 @@ int sys_shmget(key_t key, int size, int shmflg)
 			return shm_file_to_desc(shm)->shmid;
 	}
 
-	list_for_each_entry(shm, &shm_file_list, list) {
-		struct shm_descriptor *shm_desc = shm_file_to_desc(shm);
+	list_for_each_entry(shm, &global_vm_files.list, list) {
+		if (shm->type != VM_FILE_SHM)
+			continue;
+
+		shm_desc = shm_file_to_desc(shm);
 
 		if (shm_desc->key == key) {
 			/*

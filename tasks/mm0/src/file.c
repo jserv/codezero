@@ -13,11 +13,8 @@
 #include <l4/api/kip.h>
 #include <posix/sys/types.h>
 #include <string.h>
+#include <globals.h>
 #include <file.h>
-
-/* List of all generic files */
-LIST_HEAD(vm_file_list);
-
 
 /* Copy from one page's buffer into another page */
 int page_copy(struct page *dst, struct page *src,
@@ -134,7 +131,7 @@ int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
 	task->files->fd[fd].cursor = 0;
 
 	/* Check if that vm_file is already in the list */
-	list_for_each_entry(vmfile, &vm_file_list, list) {
+	list_for_each_entry(vmfile, &global_vm_files.list, list) {
 
 		/* Check whether it is a vfs file and if so vnums match. */
 		if ((vmfile->type & VM_FILE_VFS) &&
@@ -159,10 +156,7 @@ int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
 	vmfile->openers++;
 
 	/* Add to file list */
-	list_add(&vmfile->list, &vm_file_list);
-
-	/* Add to object list */
-	list_add(&vmfile->vm_obj.list, &vm_object_list);
+	global_add_vm_file(vmfile);
 
 	return 0;
 }

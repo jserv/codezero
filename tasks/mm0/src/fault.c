@@ -18,6 +18,8 @@
 #include <memory.h>
 #include <shm.h>
 #include <file.h>
+#include <test.h>
+
 
 /* Given a page and the vma it is in, returns that page's virtual address */
 unsigned long vma_page_to_virtual(struct vm_area *vma, struct page *p)
@@ -117,6 +119,20 @@ static inline int vm_object_is_droppable(struct vm_object *shadow,
 		return 0;
 }
 
+
+
+/*
+ * vma_merge_object()
+ *
+ * FIXME: Currently this is an optimisation that needs to go
+ * away when swapping is available. We have this solely because
+ * currently a shadow needs to identically mirror the whole
+ * object underneath, in order to drop it. A file that is 1MB
+ * long would spend 2MB until dropped. When swapping is available,
+ * we will go back to identical mirroring instead of merging the
+ * last shadow, since most unused pages would be swapped out.
+ */
+
 /*
  * When one shadow object is redundant, merges it into the shadow in front of it.
  * Note it must be determined that it is redundant before calling this function.
@@ -164,13 +180,13 @@ int vma_merge_object(struct vm_object *redundant)
 	BUG_ON(!list_empty(&redundant->shdw_list));
 
 	/* Redundant won't be a shadow of its next object */
-	list_del(&redundant->shref);
+	list_del_init(&redundant->shref);
 
 	/* Front is now a shadow of redundant's next object */
 	list_add(&front->shref, &redundant->orig_obj->shdw_list);
 	front->orig_obj = redundant->orig_obj;
 
-	/* Find, unlink and delete the last link for the object */
+	/* Find last link for the object */
 	last_link = list_entry(redundant->link_list.next,
 			       struct vm_obj_link, linkref);
 
@@ -264,13 +280,14 @@ int vm_object_is_deletable(struct vm_object *obj)
 {
 	struct vm_file *f;
 
-	printf("%s: Checking: ", __FUNCTION__);
-	vm_object_print(obj);
+	//printf("%s: Checking: ", __FUNCTION__);
+	//vm_object_print(obj);
 
 	if (obj->nlinks != 0)
 		return 0;
 
 	BUG_ON(obj->shadows != 0);
+	BUG_ON(!list_empty(&obj->shref));
 
 	if (obj->flags & VM_OBJ_SHADOW)
 		return 1;
@@ -296,10 +313,15 @@ int vm_object_is_deletable(struct vm_object *obj)
 }
 
 /*
- * Drops a link to an object if possible, and if it has dropped it,
- * decides and takes action on the dropped object, depending on
- * how many links and shadows it has left, and the type of the object.
- * This covers both copy_on_write() shadow drops and exit() cases.
+ * exit has: !prev, next || !next
+ * shadow drop has: prev, next
+ */
+
+/*
+ * Shadow drops: Dropping a link to shadow does not mean the shadow's
+ * next object has lost a shadow. There may be other links to both. But
+ * when the shadow has dropped its last link, and is going to be deleted,
+ * it is then true that the shadow is lost by the next object.
  */
 int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 {
@@ -316,66 +338,76 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 	/* Drop the link */
 	obj = vma_drop_link(link);
 
-	/*
-	 * If there was an object in front, that implies it was
-	 * a shadow. Current object has lost it, so deduce it.
-	 */
+	/* If there is an object in front, this is a shadow drop */
 	if (prev) {
 		BUG_ON(!(prev->obj->flags & VM_OBJ_SHADOW));
+		BUG_ON(!(prev->obj->flags & VM_WRITE));
 		BUG_ON(--obj->shadows < 0);
-		list_del_init(&prev->obj->shref);
-	}
+		vm_object_print(obj);
 
-	/*
-	 * If there was an object after, that implies current object
-	 * is a shadow, deduce it from the object after.
-	 */
-	if (next && (obj->flags & VM_OBJ_SHADOW)) {
-		BUG_ON(obj->orig_obj != next->obj);
-		BUG_ON(--next->obj->shadows < 0);
-		list_del_init(&obj->shref);
+		/* Remove prev from current object's shadow list */
+		BUG_ON(list_empty(&prev->obj->shref));
+		list_del_init(&prev->obj->shref);
 
 		/*
-		 * Furthermore, if there was an object in front,
-		 * that means front will become a shadow of after.
+		 * We don't allow dropping non-shadow objects yet,
+		 * (see ...is_droppable) so there must be a next.
 		 */
-		if (prev) {
-			list_add(&prev->obj->shref,
-				 &next->obj->shdw_list);
-			prev->obj->orig_obj = next->obj;
+		BUG_ON(!next);
+
+		/* prev is now shadow of next */
+		list_add(&prev->obj->shref,
+			 &next->obj->shdw_list);
+		prev->obj->orig_obj = next->obj;
+
+		/*
+		 * No referrers left, meaning this object is not
+		 * shadowing its original object anymore.
+		 */
+		if (obj->nlinks == 0) {
+			BUG_ON(obj->orig_obj != next->obj);
+			list_del_init(&obj->shref);
+		} else {
+			/*
+			 * Dropped object still has referrers, which
+			 * means next has gained a new shadow.
+			 * Here's why:
+			 *
+			 * T1 and T2:	        T2: drop-
+			 * prev->drop->next	         \
+			 *              became: T1: prev--- next
+			 *
+			 * Now we have both prev and current object
+			 * in next's shadow list.
+			 */
 			next->obj->shadows++;
+		}
+	/* It's an exit, we check if there's a shadow loss */
+	} else {
+		if (obj->nlinks == 0) {
+			/* Is it a shadow delete? Sort out next */
+			if (next && obj->flags & VM_OBJ_SHADOW) {
+				BUG_ON(obj->orig_obj != next->obj);
+				BUG_ON(--next->obj->shadows < 0);
+				vm_object_print(next->obj);
+				list_del_init(&obj->shref);
+			}
 		}
 	}
 
-	/*
-	 * Now deal with the object itself:
-	 */
-	 if(vm_object_is_deletable(obj)) {
+	/* Now deal with the object itself */
+	if (vm_object_is_deletable(obj)) {
 		dprintf("Deleting object:\n");
 		// vm_object_print(obj);
 		vm_object_delete(obj);
-	}
-
-	/*
-	 * Only one link and one shadow left.
-	 * Merge it with its only shadow.
-	 *
-	 * FIXME: Currently this is an optimisation that needs to go
-	 * away when swapping is available. We have this solely because
-	 * currently a shadow needs to identically mirror the whole
-	 * object underneath, in order to drop it. A file that is 1MB
-	 * long would spend 2MB until dropped. When swapping is available,
-	 * we will go back to identical mirroring instead of merging the
-	 * last shadow, since most unused pages would be swapped out.
-	 */
-	if ((obj->flags & VM_OBJ_SHADOW) &&
-	    obj->nlinks == 1 &&
-	    obj->shadows == 1) {
+	} else if ((obj->flags & VM_OBJ_SHADOW) &&
+		   obj->nlinks == 1 && obj->shadows == 1) {
 		dprintf("Merging object:\n");
 		// vm_object_print(obj);
 		vma_merge_object(obj);
 	}
 
+	mm0_test_global_vm_integrity();
 	return 0;
 }
 
@@ -395,8 +427,8 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
  *
  *			Sobj	Sobj	Sobj	Fobj
  *
- *	Sobj	Sobj
- *	l	l	l	l	l	l		T
+ * Sobj	Sobj	Sobj
+ * l	l	l	l	l	l	l		T
  *
  * l	l	l	l	l	l	l		T
  * Sobj
@@ -438,7 +470,6 @@ int vma_drop_merge_delete_all_old(struct vm_area *vma)
 
 	return 0;
 }
-
 
 /* TODO:
  * - Why not allocate a swap descriptor in vma_create_shadow() rather than
@@ -486,7 +517,8 @@ struct page *copy_on_write(struct fault_data *fault)
 		shadow->flags = VM_OBJ_SHADOW | VM_WRITE;
 		shadow->pager = &swap_pager;
 		vmo_link->obj->shadows++;
-
+		printf("%s: ", __FUNCTION__);
+		vm_object_print(vmo_link->obj);
 		dprintf("%s: Created a shadow:\n", __TASKNAME__);
 		// vm_object_print(shadow);
 		dprintf("%s: Original object:\n", __TASKNAME__);
@@ -506,7 +538,7 @@ struct page *copy_on_write(struct fault_data *fault)
 		list_add(&shadow->shref, &shadow->orig_obj->shdw_list);
 
 		/* Add to global object list */
-		list_add(&shadow->list, &vm_object_list);
+		global_add_vm_object(shadow);
 
 	} else {
 		dprintf("No new shadows. Going to add to "
@@ -554,6 +586,8 @@ struct page *copy_on_write(struct fault_data *fault)
 	/* Add the page to owner's list of in-memory pages */
 	insert_page_olist(new_page, new_page->owner);
 	new_page->owner->npages++;
+
+	mm0_test_global_vm_integrity();
 
 	/* Shared faults don't have shadows so we don't look for collapses */
 	if (!(vma->flags & VMA_SHARED)) {

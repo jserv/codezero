@@ -111,8 +111,14 @@ struct task_data_head {
 	struct task_data tdata[];
 };
 
+struct tcb_head {
+	struct list_head list;
+	int total;			/* Total threads */
+};
+
 struct tcb *find_task(int tid);
-void task_add_global(struct tcb *t);
+void global_add_task(struct tcb *task);
+void global_remove_task(struct tcb *task);
 int send_task_data(struct tcb *requester);
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
 int task_mmap_regions(struct tcb *task, struct vm_file *file);
@@ -122,8 +128,8 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager);
 struct tcb *tcb_alloc_init(unsigned int flags);
 int tcb_destroy(struct tcb *task);
-int task_exec(struct vm_file *f, unsigned long task_region_start,
-	      unsigned long task_region_end, struct task_ids *ids);
+struct tcb *task_exec(struct vm_file *f, unsigned long task_region_start,
+		      unsigned long task_region_end, struct task_ids *ids);
 int task_start(struct tcb *task, struct task_ids *ids);
 int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags);
 int task_release_vmas(struct task_vma_head *vma_head);

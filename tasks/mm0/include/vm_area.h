@@ -223,7 +223,8 @@ struct vm_file *vm_file_create(void);
 int vm_file_delete(struct vm_file *f);
 int vm_object_delete(struct vm_object *vmo);
 void vm_object_print(struct vm_object *vmo);
-void vm_object_print1(struct vm_object *vmo);
+void vm_print_objects(struct list_head *vmo_list);
+void vm_print_files(struct list_head *file_list);
 
 /* Used for pre-faulting a page from mm0 */
 int prefault_page(struct tcb *task, unsigned long address,
@@ -248,5 +249,10 @@ int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);
 
 int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link);
 int vma_drop_merge_delete_all(struct vm_area *vma);
+
+void global_add_vm_object(struct vm_object *obj);
+void global_remove_vm_object(struct vm_object *obj);
+void global_add_vm_file(struct vm_file *f);
+void global_remove_vm_file(struct vm_file *f);
 
 #endif /* __VM_AREA_H__ */

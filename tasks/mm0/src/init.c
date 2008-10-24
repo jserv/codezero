@@ -16,6 +16,7 @@
 #include <file.h>
 #include <init.h>
 #include <utcb.h>
+#include <test.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
 LIST_HEAD(boot_file_list);
@@ -50,13 +51,10 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 		return err;
 
 	/* Add the task to the global task list */
-	task_add_global(task);
+	global_add_task(task);
 
 	/* Add the file to global vm lists */
-	list_del_init(&f->list);
-	list_del_init(&f->vm_obj.list);
-	list_add(&f->list, &vm_file_list);
-	list_add(&f->vm_obj.list, &vm_object_list);
+	global_add_vm_file(f);
 
 	return 0;
 }
@@ -78,13 +76,14 @@ struct vm_file *initdata_next_bootfile(struct initdata *initdata)
  */
 int start_boot_tasks(struct initdata *initdata)
 {
-	struct vm_file *file = 0, *fs0 = 0, *mm0 = 0, *n;
+	struct vm_file *file = 0, *fs0_file = 0, *mm0_file = 0, *n;
+	struct tcb *fs0_task;
 	struct svc_image *img;
 	struct task_ids ids;
-	struct list_head files;
+	struct list_head other_files;
 	int total = 0;
 
-	INIT_LIST_HEAD(&files);
+	INIT_LIST_HEAD(&other_files);
 
 	/* Separate out special server tasks and regular files */
 	do {
@@ -94,11 +93,11 @@ int start_boot_tasks(struct initdata *initdata)
 			BUG_ON(file->type != VM_FILE_BOOTFILE);
 			img = file->priv_data;
 			if (!strcmp(img->name, __PAGERNAME__))
-				mm0 = file;
+				mm0_file = file;
 			else if (!strcmp(img->name, __VFSNAME__))
-				fs0 = file;
+				fs0_file = file;
 			else
-				list_add(&file->list, &files);
+				list_add(&file->list, &other_files);
 		} else
 			break;
 	} while (1);
@@ -109,7 +108,7 @@ int start_boot_tasks(struct initdata *initdata)
 	ids.spid = PAGER_TID;
 	ids.tgid = PAGER_TID;
 
-	if (mm0_task_init(mm0, INITTASK_AREA_START, INITTASK_AREA_END, &ids) < 0)
+	if (mm0_task_init(mm0_file, INITTASK_AREA_START, INITTASK_AREA_END, &ids) < 0)
 		BUG();
 	total++;
 
@@ -119,18 +118,17 @@ int start_boot_tasks(struct initdata *initdata)
 	ids.tgid = VFS_TID;
 
 	printf("%s: Initialising fs0\n",__TASKNAME__);
-	if (task_exec(fs0, USER_AREA_START, USER_AREA_END, &ids) < 0)
-		BUG();
+	BUG_ON((IS_ERR(fs0_task = task_exec(fs0_file, USER_AREA_START, USER_AREA_END, &ids))));
 	total++;
 
 	/* Initialise other tasks */
-	list_for_each_entry_safe(file, n, &files, list) {
+	list_for_each_entry_safe(file, n, &other_files, list) {
 		printf("%s: Initialising new boot task.\n", __TASKNAME__);
 		ids.tid = TASK_ID_INVALID;
 		ids.spid = TASK_ID_INVALID;
 		ids.tgid = TASK_ID_INVALID;
-		if (task_exec(file, USER_AREA_START, USER_AREA_END, &ids) < 0)
-			BUG();
+		list_del_init(&file->list);
+		BUG_ON(IS_ERR(task_exec(file, USER_AREA_START, USER_AREA_END, &ids)));
 		total++;
 	}
 
@@ -189,6 +187,7 @@ void initialise(void)
 
 	start_boot_tasks(&initdata);
 
+	mm0_test_global_vm_integrity();
 	printf("%s: Initialised the memory/process manager.\n", __TASKNAME__);
 }
 

@@ -100,7 +100,7 @@ int sys_fork(struct tcb *parent)
 	vfs_notify_fork(child, parent);
 
 	/* Add child to global task list */
-	task_add_global(child);
+	global_add_task(child);
 
 	/* Start forked child. */
 	l4_thread_control(THREAD_RUN, &ids);
@@ -145,7 +145,7 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 	vfs_notify_fork(child, parent);
 
 	/* Add child to global task list */
-	task_add_global(child);
+	global_add_task(child);
 
 	/* Start forked child. */
 	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);

@@ -8,6 +8,52 @@
 #include <l4/macros.h>
 #include <l4/api/errno.h>
 #include <kmalloc/kmalloc.h>
+#include <globals.h>
+
+/* Global list of all in-memory files on the system */
+struct global_list global_vm_files = {
+	.list = { &global_vm_files.list, &global_vm_files.list },
+	.total = 0,
+};
+
+/* Global list of in-memory vm objects in the system */
+struct global_list global_vm_objects = {
+	.list = { &global_vm_objects.list, &global_vm_objects.list },
+	.total = 0,
+};
+
+
+void global_add_vm_object(struct vm_object *obj)
+{
+	BUG_ON(!list_empty(&obj->list));
+	list_add(&obj->list, &global_vm_objects.list);
+	global_vm_objects.total++;
+}
+
+void global_remove_vm_object(struct vm_object *obj)
+{
+	BUG_ON(list_empty(&obj->list));
+	list_del_init(&obj->list);
+	BUG_ON(--global_vm_objects.total < 0);
+}
+
+void global_add_vm_file(struct vm_file *f)
+{
+	BUG_ON(!list_empty(&f->list));
+	list_add(&f->list, &global_vm_files.list);
+	global_vm_files.total++;
+
+	global_add_vm_object(&f->vm_obj);
+}
+
+void global_remove_vm_file(struct vm_file *f)
+{
+	BUG_ON(list_empty(&f->list));
+	list_del_init(&f->list);
+	BUG_ON(--global_vm_files.total < 0);
+
+	global_remove_vm_object(&f->vm_obj);
+}
 
 void print_cache_pages(struct vm_object *vmo)
 {
@@ -51,8 +97,21 @@ void vm_object_print(struct vm_object *vmo)
 	// printf("\n");
 }
 
-/* Global list of in-memory vm objects. */
-LIST_HEAD(vm_object_list);
+void vm_print_files(struct list_head *files)
+{
+	struct vm_file *f;
+
+	list_for_each_entry(f, files, list)
+		vm_object_print(&f->vm_obj);
+}
+
+void vm_print_objects(struct list_head *objects)
+{
+	struct vm_object *vmo;
+
+	list_for_each_entry(vmo, objects, list)
+		vm_object_print(vmo);
+}
 
 struct vm_object *vm_object_init(struct vm_object *obj)
 {
@@ -118,7 +177,11 @@ int vm_object_delete(struct vm_object *vmo)
 	vmo->pager->ops.release_pages(vmo);
 
 	/* Remove from global list */
-	list_del(&vmo->list);
+	if (vmo->flags & VM_OBJ_FILE)
+		global_remove_vm_file(vm_object_to_file(vmo));
+	else if (vmo->flags & VM_OBJ_SHADOW)
+		global_remove_vm_object(vmo);
+	else BUG();
 
 	/* Check any references */
 	BUG_ON(vmo->nlinks);
@@ -126,6 +189,7 @@ int vm_object_delete(struct vm_object *vmo)
 	BUG_ON(!list_empty(&vmo->shdw_list));
 	BUG_ON(!list_empty(&vmo->link_list));
 	BUG_ON(!list_empty(&vmo->page_cache));
+	BUG_ON(!list_empty(&vmo->shref));
 
 	/* Obtain and free via the base object */
 	if (vmo->flags & VM_OBJ_FILE) {
@@ -147,9 +211,6 @@ int vm_object_delete(struct vm_object *vmo)
 
 int vm_file_delete(struct vm_file *f)
 {
-	/* Delete it from global file list */
-	list_del_init(&f->list);
-
 	/* Delete file via base object */
 	return vm_object_delete(&f->vm_obj);
 }

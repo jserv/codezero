@@ -9,6 +9,7 @@
 #include <mm/alloc_page.h>
 #include <vm_area.h>
 #include <string.h>
+#include <globals.h>
 #include <file.h>
 #include <init.h>
 #include INC_ARCH(bootdesc.h)
@@ -295,9 +296,6 @@ int init_boot_files(struct initdata *initdata)
 		boot_file->vm_obj.flags = VM_OBJ_FILE;
 		boot_file->vm_obj.pager = &bootfile_pager;
 
-		/* Add the object to global vm_object list */
-		list_add(&boot_file->vm_obj.list, &vm_object_list);
-
 		/* Add the file to initdata's bootfile list */
 		list_add_tail(&boot_file->list, &initdata->boot_file_list);
 	}
@@ -332,7 +330,7 @@ struct vm_file *get_devzero(void)
 {
 	struct vm_file *f;
 
-	list_for_each_entry(f, &vm_file_list, list)
+	list_for_each_entry(f, &global_vm_files.list, list)
 		if (f->type == VM_FILE_DEVZERO)
 			return f;
 	return 0;
@@ -364,8 +362,7 @@ int init_devzero(void)
 	zpage->refcnt++;
 	zpage->owner = &devzero->vm_obj;
 
-	list_add(&devzero->vm_obj.list, &vm_object_list);
-	list_add(&devzero->list, &vm_file_list);
+	global_add_vm_file(devzero);
 	return 0;
 }
 

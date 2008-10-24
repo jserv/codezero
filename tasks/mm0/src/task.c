@@ -27,34 +27,40 @@
 #include <task.h>
 #include <shm.h>
 #include <mmap.h>
+#include <globals.h>
 
-struct tcb_head {
-	struct list_head list;
-	int total;			/* Total threads */
-} tcb_head = {
-	.list = { &tcb_head.list, &tcb_head.list },
+struct global_list global_tasks = {
+	.list = { &global_tasks.list, &global_tasks.list },
+	.total = 0,
 };
 
 void print_tasks(void)
 {
 	struct tcb *task;
 	printf("Tasks:\n========\n");
-	list_for_each_entry(task, &tcb_head.list, list) {
+	list_for_each_entry(task, &global_tasks.list, list) {
 		printf("Task tid: %d, spid: %d\n", task->tid, task->spid);
 	}
 }
 
-void task_add_global(struct tcb *task)
+void global_add_task(struct tcb *task)
 {
-	list_add_tail(&task->list, &tcb_head.list);
-	tcb_head.total++;
+	BUG_ON(!list_empty(&task->list));
+	list_add_tail(&task->list, &global_tasks.list);
+	global_tasks.total++;
+}
+void global_remove_task(struct tcb *task)
+{
+	BUG_ON(list_empty(&task->list));
+	list_del_init(&task->list);
+	BUG_ON(--global_tasks.total < 0);
 }
 
 struct tcb *find_task(int tid)
 {
 	struct tcb *t;
 
-	list_for_each_entry(t, &tcb_head.list, list) {
+	list_for_each_entry(t, &global_tasks.list, list) {
 		/* A temporary precaution */
 		BUG_ON(t->tid != t->spid);
 		if (t->tid == tid) {
@@ -107,8 +113,7 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 /* NOTE: We may need to delete shared tcb parts here as well. */
 int tcb_destroy(struct tcb *task)
 {
-	list_del(&task->list);
-	tcb_head.total--;
+	global_remove_task(task);
 
 	kfree(task);
 
@@ -402,43 +407,41 @@ int task_prefault_regions(struct tcb *task, struct vm_file *f)
  * Main entry point for the creation, initialisation and
  * execution of a new task.
  */
-int task_exec(struct vm_file *f, unsigned long task_region_start,
-	      unsigned long task_region_end, struct task_ids *ids)
+struct tcb *task_exec(struct vm_file *f, unsigned long task_region_start,
+		      unsigned long task_region_end, struct task_ids *ids)
 {
 	struct tcb *task;
 	int err;
 
 	if (IS_ERR(task = task_create(0, ids, THREAD_NEW_SPACE,
 				      TCB_NO_SHARING)))
-		return (int)task;
+		return task;
 
 	if ((err = task_setup_regions(f, task, task_region_start,
 				      task_region_end)) < 0)
-		return err;
+		return PTR_ERR(err);
 
 	if ((err = task_mmap_regions(task, f)) < 0)
-		return err;
-
-	if (ids->tid == VFS_TID)
-		if ((err = task_prefault_regions(task, f)) < 0)
-			return err;
+		return PTR_ERR(err);
 
 	if ((err =  task_setup_registers(task, 0, 0, 0)) < 0)
-		return err;
+		return PTR_ERR(err);
 
 	/* Add the task to the global task list */
-	task_add_global(task);
+	global_add_task(task);
 
 	/* Add the file to global vm lists */
-	list_del_init(&f->list);
-	list_del_init(&f->vm_obj.list);
-	list_add(&f->list, &vm_file_list);
-	list_add(&f->vm_obj.list, &vm_object_list);
+	global_add_vm_file(f);
 
+	/* Prefault all its regions */
+	if (ids->tid == VFS_TID)
+		task_prefault_regions(task, f);
+
+	/* Start the task */
 	if ((err = task_start(task, ids)) < 0)
-		return err;
+		return PTR_ERR(err);
 
-	return 0;
+	return task;
 }
 
 /* Maps and prefaults the utcb of a task into another task */
@@ -495,10 +498,10 @@ int send_task_data(struct tcb *vfs)
 	tdata_head = (struct task_data_head *)vfs->utcb;
 
 	/* First word is total number of tcbs */
-	tdata_head->total = tcb_head.total;
+	tdata_head->total = global_tasks.total;
 
 	/* Write per-task data for all tasks */
-	list_for_each_entry(t, &tcb_head.list, list) {
+	list_for_each_entry(t, &global_tasks.list, list) {
 		tdata_head->tdata[li].tid = t->tid;
 		tdata_head->tdata[li].utcb_address = (unsigned long)t->utcb;
 		li++;
