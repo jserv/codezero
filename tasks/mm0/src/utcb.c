@@ -10,6 +10,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <task.h>
+#include <shm.h>
 #include <vm_area.h>
 #include INC_GLUE(memlayout.h)
 
@@ -70,3 +71,36 @@ void *task_send_utcb_address(struct tcb *sender, l4id_t taskid)
 	return 0;
 }
 
+int utcb_map_to_task(struct tcb *owner, struct tcb *mapper, unsigned int flags)
+{
+	struct vm_file *utcb_shm;
+
+	/* Allocate a new utcb address */
+	if (flags & UTCB_NEW_ADDRESS)
+		owner->utcb = utcb_new_address();
+	else if (!owner->utcb)
+		BUG();
+
+	/* Create a new shared memory segment for utcb */
+	if (flags & UTCB_NEW_SHM)
+		if (IS_ERR(utcb_shm = shm_new((key_t)owner->utcb,
+					      __pfn(DEFAULT_UTCB_SIZE))))
+		return (int)utcb_shm;
+
+	/* Map the utcb to mapper */
+	if (IS_ERR(shmat_shmget_internal(mapper, (key_t)owner->utcb,
+					 owner->utcb)))
+		BUG();
+
+	/* Prefault the owner's utcb to mapper's address space */
+	if (flags & UTCB_PREFAULT)
+		for (int i = 0; i < __pfn(DEFAULT_UTCB_SIZE); i++)
+			prefault_page(mapper, (unsigned long)owner->utcb +
+				      __pfn_to_addr(i), VM_READ | VM_WRITE);
+	return 0;
+}
+
+int utcb_unmap_from_task(struct tcb *owner, struct tcb *mapper)
+{
+	return 0;
+}

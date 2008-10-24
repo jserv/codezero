@@ -444,27 +444,6 @@ struct tcb *task_exec(struct vm_file *f, unsigned long task_region_start,
 	return task;
 }
 
-/* Maps and prefaults the utcb of a task into another task */
-void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner)
-{
-	BUG_ON(!owner->utcb);
-
-	/*
-	 * First internally map the utcb as a shm area. We use
-	 * such posix semantics on purpose to have a unified
-	 * way of doing similar operations.
-	 */
-	BUG_ON(IS_ERR(shmat_shmget_internal(mapper,
-					    (key_t)owner->utcb,
-					    owner->utcb)));
-
-	/* Prefault the owner's utcb to mapper's address space */
-	for (int i = 0; i < __pfn(DEFAULT_UTCB_SIZE); i++)
-		prefault_page(mapper, (unsigned long)owner->utcb +
-			      __pfn_to_addr(i), VM_READ | VM_WRITE);
-
-}
-
 /*
  * During its initialisation FS0 wants to learn how many boot tasks
  * are running, and their tids, which includes itself. This function
@@ -487,12 +466,7 @@ int send_task_data(struct tcb *vfs)
 	BUG_ON(!vfs->utcb);
 
 	/* Attach mm0 to vfs's utcb segment just like a normal task */
-	BUG_ON(IS_ERR(shmat_shmget_internal(self, (key_t)vfs->utcb, vfs->utcb)));
-
-	/* Prefault those pages to self. */
-	for (int i = 0; i < __pfn(DEFAULT_UTCB_SIZE); i++)
-		prefault_page(self, (unsigned long)vfs->utcb + __pfn_to_addr(i),
-			      VM_READ | VM_WRITE);
+	utcb_map_to_task(vfs, self, UTCB_PREFAULT);
 
 	/* Write all requested task information to utcb's user buffer area */
 	tdata_head = (struct task_data_head *)vfs->utcb;

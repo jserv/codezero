@@ -55,11 +55,10 @@ int sys_fork(struct tcb *parent)
 	int err;
 	struct tcb *child;
 	struct exregs_data exregs;
-	struct vm_file *utcb_shm;
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
 		.spid = parent->spid,
-		.tgid = TASK_ID_INVALID		/* FIXME: !!! FIX THIS */
+		.tgid = TASK_ID_INVALID,	/* FIXME: !!! FIX THIS */
 	};
 
 	/* Make all shadows in this task read-only */
@@ -76,25 +75,14 @@ int sys_fork(struct tcb *parent)
 	/* Set child's fork return value to 0 */
 	memset(&exregs, 0, sizeof(exregs));
 	exregs_set_mr(&exregs, MR_RETURN, 0);
+
+	/* Do the actual exregs call to c0 */
 	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
 		BUG();
 
-	/* Create new utcb for child since it can't use its parent's */
-	child->utcb = utcb_new_address();
-
-	/*
-	 * Create the utcb shared memory segment
-	 * available for child to shmat()
-	 */
-	if (IS_ERR(utcb_shm = shm_new((key_t)child->utcb,
-				      __pfn(DEFAULT_UTCB_SIZE))))
-		return (int)utcb_shm;
-
-	/*
-	 * Map and prefault child utcb to vfs so that vfs need not
-	 * call us to map it.
-	 */
-	task_map_prefault_utcb(find_task(VFS_TID), child);
+	/* Create and prefault a utcb for child and map it to vfs task */
+	utcb_map_to_task(child, find_task(VFS_TID),
+			 UTCB_NEW_ADDRESS | UTCB_NEW_SHM | UTCB_PREFAULT);
 
 	/* We can now notify vfs about forked process */
 	vfs_notify_fork(child, parent);
@@ -112,7 +100,6 @@ int sys_fork(struct tcb *parent)
 int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 {
 	struct task_ids ids;
-	struct vm_file *utcb_shm;
 	struct tcb *child;
 
 	ids.tid = TASK_ID_INVALID;
@@ -123,19 +110,9 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 			    	       TCB_SHARED_VM | TCB_SHARED_FILES)))
 		return (int)child;
 
-	/* Allocate a unique utcb address for child */
-	child->utcb = utcb_new_address();
-
-	/*
-	 * Create the utcb shared memory segment
-	 * available for child to shmat()
-	 */
-	if (IS_ERR(utcb_shm = shm_new((key_t)child->utcb,
-				      __pfn(DEFAULT_UTCB_SIZE))))
-		return (int)utcb_shm;
-
-	/* Map and prefault child's utcb to vfs task */
-	task_map_prefault_utcb(find_task(VFS_TID), child);
+	/* Create and prefault a utcb for child and map it to vfs task */
+	utcb_map_to_task(child, find_task(VFS_TID),
+			 UTCB_NEW_ADDRESS | UTCB_NEW_SHM | UTCB_PREFAULT);
 
 	/* Set up child stack marks with given stack argument */
 	child->stack_end = (unsigned long)child_stack;
@@ -154,9 +131,6 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 	/* Return child tid to parent */
 	return child->tid;
 }
-
-
-
 
 
 
