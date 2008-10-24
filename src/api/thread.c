@@ -166,69 +166,6 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig, unsigned int flag
 
 extern unsigned int return_from_syscall;
 
-/*
- * Copies the pre-syscall context of original thread into the kernel
- * stack of new thread. Modifies new thread's context registers so that
- * when it schedules it executes as if it is returning from a syscall,
- * i.e. the syscall return path where the previous context copied to its
- * stack is restored. It also modifies r0 to ensure POSIX child return
- * semantics.
- */
-int arch_setup_new_thread_orig(struct ktcb *new, struct ktcb *orig)
-{
-	/*
-	 * Pre-syscall context is saved on the kernel stack upon
-	 * a system call exception. We need the location where it
-	 * is saved relative to the start of ktcb.
-	 */
-	unsigned long syscall_context_offset =
-		((unsigned long)(orig->syscall_regs) - (unsigned long)orig);
-
-	/*
-	 * Copy the saved context from original thread's
-	 * stack to new thread stack.
-	 */
-	memcpy((void *)((unsigned long)new + syscall_context_offset),
-	       (void *)((unsigned long)orig + syscall_context_offset),
-	       sizeof(syscall_context_t));
-
-	/*
-	 * Set new thread's syscall_regs offset since its
-	 * normally set during syscall entry
-	 */
-	new->syscall_regs = (syscall_context_t *)
-				((unsigned long)new + syscall_context_offset);
-
-	/*
-	 * Modify the return register value with 0 to ensure new thread
-	 * returns with that value. This is a POSIX requirement and enforces
-	 * policy on the microkernel, but it is currently the best solution.
-	 *
-	 * A cleaner but slower way would be the pager setting child registers
-	 * via exchange_registers() and start the child thread afterwards.
-	 */
-	KTCB_REF_MR0(new)[MR_RETURN] = 0;
-
-	/*
-	 * Set up the stack pointer, saved program status register and the
-	 * program counter so that next time the new thread schedules, it
-	 * executes the end part of the system call exception where the
-	 * previous context is restored.
-	 */
-	new->context.sp = (unsigned long)new->syscall_regs;
-	new->context.pc = (unsigned long)&return_from_syscall;
-	new->context.spsr = (unsigned long)orig->context.spsr;
-
-	/* Copy other relevant fields from original ktcb */
-	new->pagerid = orig->pagerid;
-
-	/* Distribute original thread's ticks into two threads */
-	new->ticks_left = orig->ticks_left / 2;
-	orig->ticks_left /= 2;
-
-	return 0;
-}
-
 int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 			 struct ktcb *new, struct ktcb *orig)
 {

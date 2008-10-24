@@ -449,27 +449,6 @@ int vma_drop_merge_delete_all(struct vm_area *vma)
 
 	return 0;
 }
-int vma_drop_merge_delete_all_old(struct vm_area *vma)
-{
-	struct vm_obj_link *vmo_link, *n;
-
-	/* Get the first link on the vma */
-	BUG_ON(list_empty(&vma->vm_obj_list));
-	vmo_link = list_entry(vma->vm_obj_list.next,
-			      struct vm_obj_link, list);
-
-	/* Traverse and get rid of all links */
-	list_for_each_entry_safe(vmo_link, n, &vma->vm_obj_list, list) {
-		vma_drop_merge_delete(vma, vmo_link);
-	}
-	do {
-		vma_drop_merge_delete(vma, vmo_link);
-
-	} while((vmo_link = vma_next_link(&vmo_link->list,
-					  &vma->vm_obj_list)));
-
-	return 0;
-}
 
 /* TODO:
  * - Why not allocate a swap descriptor in vma_create_shadow() rather than
