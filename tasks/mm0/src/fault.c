@@ -148,7 +148,7 @@ int vma_merge_object(struct vm_object *redundant)
 	/* The redundant shadow object */
 	struct vm_object *front; /* Shadow in front of redundant */
 	struct vm_obj_link *last_link;
-	struct page *p1, *p2;
+	struct page *p1, *p2, *n;
 
 	/* Check link and shadow count is really 1 */
 	BUG_ON(redundant->nlinks != 1);
@@ -159,10 +159,10 @@ int vma_merge_object(struct vm_object *redundant)
 			   struct vm_object, shref);
 
 	/* Move all non-intersecting pages to front shadow. */
-	list_for_each_entry(p1, &redundant->page_cache, list) {
+	list_for_each_entry_safe(p1, n, &redundant->page_cache, list) {
 		/* Page doesn't exist in front, move it there */
 		if (!(p2 = find_page(front, p1->offset))) {
-			list_del(&p1->list);
+			list_del_init(&p1->list);
 			spin_lock(&p1->lock);
 			p1->owner = front;
 			spin_unlock(&p1->lock);

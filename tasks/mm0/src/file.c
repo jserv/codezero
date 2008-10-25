@@ -194,6 +194,7 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 		list_add_tail(&this->list, &vmo->page_cache);
 		return 0;
 	}
+
 	/* Else find the right interval */
 	list_for_each_entry(before, &vmo->page_cache, list) {
 		after = list_entry(before->list.next, struct page, list);
