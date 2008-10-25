@@ -22,6 +22,7 @@
 #include <shm.h>
 #include <utcb.h>
 #include <mmap.h>
+#include <test.h>
 
 void handle_requests(void)
 {
@@ -54,6 +55,7 @@ void handle_requests(void)
 
 	switch(tag) {
 	case L4_IPC_TAG_SYNC:
+		mm0_test_global_vm_integrity();
 		// printf("%s: Synced with waiting thread.\n", __TASKNAME__);
 		/* This has no receive phase */
 		return;

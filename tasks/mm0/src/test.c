@@ -12,13 +12,16 @@
 #include <globals.h>
 
 struct vm_statistics {
-	int tasks;
-	int vm_objects;
+	int tasks;		/* All tasks counted on the system */
+	int vm_objects;		/* All objects counted on the system */
 	int shadow_objects;	/* Shadows counted by hand (well almost!) */
 	int shadows_referred;	/* Shadows that objects say they have */
-	int file_objects;
-	int vm_files;
-	int tasks_total;
+	int file_objects;	/* Objects that are found to be files */
+	int vm_files;		/* All files counted on the system */
+	int shm_files;		/* SHM files counted */
+	int boot_files;		/* Boot files counted */
+	int vfs_files;		/* VFS files counted */
+	int devzero;		/* Devzero count, must be 1 */
 };
 
 /* Count links in objects link list, and compare with nlinks */
@@ -69,8 +72,18 @@ int mm0_test_global_vm_integrity(void)
 	}
 
 	/* Count all registered vmfiles */
-	list_for_each_entry(f, &global_vm_files.list, list)
+	list_for_each_entry(f, &global_vm_files.list, list) {
 		vmstat.vm_files++;
+		if (f->type == VM_FILE_SHM)
+			vmstat.shm_files++;
+		else if (f->type == VM_FILE_BOOTFILE)
+			vmstat.boot_files++;
+		else if (f->type == VM_FILE_VFS)
+			vmstat.vfs_files++;
+		else if (f->type == VM_FILE_DEVZERO)
+			vmstat.devzero++;
+		else BUG();
+	}
 
 	if (vmstat.vm_files != global_vm_files.total) {
 		printf("Total counted files don't match "
