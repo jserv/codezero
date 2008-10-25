@@ -83,7 +83,7 @@ struct devpage {
 
 /* Fault data specific to this task + ptr to kernel's data */
 struct fault_data {
-	fault_kdata_t *kdata;		/* Generic data flonged by the kernel */
+	fault_kdata_t *kdata;		/* Generic data forged by the kernel */
 	unsigned int reason;		/* Generic fault reason flags */
 	unsigned int address;		/* Aborted address */
 	unsigned int pte_flags;		/* Generic protection flags on pte */
@@ -167,7 +167,7 @@ static inline struct vm_object *vm_unlink_object(struct vm_obj_link *link)
  * Describes a virtually contiguous chunk of memory region in a task. It covers
  * a unique virtual address area within its task, meaning that it does not
  * overlap with other regions in the same task. The region could be backed by a
- * file or various other resources. This is managed by the region's pager.
+ * file or various other resources.
  *
  * COW: Upon copy-on-write, each copy-on-write instance creates a shadow of the
  * original vm object which supersedes the original vm object with its copied
@@ -216,12 +216,12 @@ struct vm_obj_link *vma_next_link(struct list_head *link,
 				  struct list_head *head);
 
 /* vm file and object initialisation */
-struct vm_file *vm_file_alloc_init(void);
-struct vm_object *vm_object_alloc_init(void);
 struct vm_object *vm_object_create(void);
 struct vm_file *vm_file_create(void);
 int vm_file_delete(struct vm_file *f);
 int vm_object_delete(struct vm_object *vmo);
+
+/* Printing objects, files */
 void vm_object_print(struct vm_object *vmo);
 void vm_print_objects(struct list_head *vmo_list);
 void vm_print_files(struct list_head *file_list);
