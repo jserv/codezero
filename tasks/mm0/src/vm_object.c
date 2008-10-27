@@ -1,5 +1,5 @@
 /*
- * vm objects.
+ * vm object utility functions.
  *
  * Copyright (C) 2008 Bahadir Balban
  */

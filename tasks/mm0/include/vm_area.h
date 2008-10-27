@@ -183,6 +183,23 @@ struct vm_area {
 	unsigned long file_offset;	/* File offset in pfns */
 };
 
+static inline struct vm_area *
+find_vma_byrange(unsigned long pfn_start,
+		 unsigned long pfn_end, struct list_head *vm_area_list)
+{
+	struct vm_area *vma;
+	unsigned long pfn = __pfn(addr);
+
+	list_for_each_entry(vma, vm_area_list, list) {
+		if ((pfn_start >= vma->pfn_start) && (pfn_start < vma->pfn_end))
+			return vma;
+		if ((pfn_end >= vma->pfn_start) && (pfn_end < vma->pfn_end))
+			return vma;
+	}
+	return 0;
+}
+
+
 static inline struct vm_area *find_vma(unsigned long addr,
 				       struct list_head *vm_area_list)
 {
