@@ -27,6 +27,7 @@ void *sys_mmap(struct tcb *sender, void *start, size_t length, int prot,
 	       int flags, int fd, off_t offset);
 
 int sys_munmap(struct tcb *sender, void *vaddr, unsigned long size);
+int sys_msync(struct tcb *task, void *start, unsigned long length, int flags);
 
 struct sys_shmat_args {
 	l4id_t shmid;

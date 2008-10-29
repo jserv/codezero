@@ -50,7 +50,6 @@
 #define L4_IPC_TAG_EXIT			27
 #define L4_IPC_TAG_WAIT			28
 
-
 /* Tags for ipc between fs0 and mm0 */
 #define L4_IPC_TAG_TASKDATA		40
 #define L4_IPC_TAG_PAGER_OPEN		41	/* vfs sends the pager open file data. */

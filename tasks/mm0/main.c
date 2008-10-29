@@ -121,6 +121,15 @@ void handle_requests(void)
 			 args->flags, args->fd, __pfn(args->offset));
 		break;
 	}
+	case L4_IPC_TAG_MUNMAP: {
+		ret = sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);
+		break;
+	}
+	case L4_IPC_TAG_MSYNC: {
+		ret = sys_msync(sender, (void *)mr[0],
+				(unsigned long)mr[1], (int)mr[2]);
+		break;
+	}
 	case L4_IPC_TAG_FORK: {
 		ret = sys_fork(sender);
 		break;
@@ -133,16 +142,6 @@ void handle_requests(void)
 	case L4_IPC_TAG_BRK: {
 //		ret = sys_brk(sender, (void *)mr[0]);
 //		break;
-	}
-
-	case L4_IPC_TAG_MUNMAP: {
-		ret = sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);
-		break;
-	}
-	case L4_IPC_TAG_MSYNC: {
-		/* TODO: Use arg struct instead */
-//		sys_msync(sender, (void *)mr[0], (int)mr[1], (int)mr[2]);
-		break;
 	}
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "

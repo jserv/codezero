@@ -8,11 +8,6 @@
 #include <l4/api/errno.h>
 #include <l4lib/arch/syslib.h>
 
-/* TODO: This is to be implemented when fs0 is ready. */
-int do_msync(void *addr, unsigned long size, unsigned int flags, struct tcb *task)
-{
-	return 0;
-}
 
 /* This splits a vma, splitter region must be in the *middle* of original vma */
 int vma_split(struct vm_area *vma, struct tcb *task,
@@ -142,7 +137,7 @@ int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
 		if ((err = vma_flush_pages(vma)) < 0)
 			return err;
 
-		/* Unmap the vma accordingly */
+		/* Unmap the vma accordingly. Note, this may delete the vma */
 		if ((err = vma_unmap(vma, task, munmap_start,
 				     munmap_end)) < 0)
 			return err;
@@ -164,4 +159,36 @@ int sys_munmap(struct tcb *task, void *start, unsigned long length)
 	return do_munmap(task, start, __pfn(page_align_up(length)));
 }
 
+
+/* Syncs mapped area. Currently just synchronously */
+int do_msync(struct tcb *task, void *vaddr, unsigned long npages, int flags)
+{
+	const unsigned long msync_start = __pfn(vaddr);
+	const unsigned long msync_end = msync_start + npages;
+	struct vm_area *vma;
+	int err;
+
+	/* Find a vma that overlaps with this address range */
+	while ((vma = find_vma_byrange(msync_start, msync_end,
+				       &task->vm_area_head->list))) {
+
+		/* Flush pages if vma is writable, dirty and file-backed. */
+		if ((err = vma_flush_pages(vma)) < 0)
+			return err;
+	}
+	return 0;
+}
+
+int sys_msync(struct tcb *task, void *start, unsigned long length, int flags)
+{
+	/* Must be aligned on a page boundary */
+	if ((unsigned long)start & PAGE_MASK)
+		return -EINVAL;
+
+	/*
+	 * TODO: We need to pass sync'ed and non-sync'ed file flushes to vfs
+	 * and support synced and non-synced io.
+	 */
+	return do_msync(task, start, __pfn(page_align_up(length)), flags);
+}
 
