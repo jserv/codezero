@@ -204,38 +204,129 @@ struct vm_area *vma_split(struct vm_area *vma, struct tcb *task,
 	return new;
 }
 
+void page_unmap_all_virtuals(struct page *p)
+{
+
+}
+struct vmo_object *page_to_vm_object(struct page *p)
+{
+	struct list_head *current_page;
+
+	/* Try to reach head of page list in vm object */
+	while (current_page->offset < p->offset) {
+		current_page = list_entry(p->list.prev, struct page, list);
+		p = current_page;
+	}
+}
+
+/* TODO:
+ * Unmapping virtual address ranges:
+ * Implement l4_unmap_range() which would be more efficient than unmapping per-address.
+ *
+ * Finding virtual mappings of a page:
+ * Find a way to obtain all virtual addresses of a physical page.
+ * Linux does it by reaching virtual addresses from the page itself,
+ * we may rather access virtual addresses from vm_object to vma to page virtual address.
+ *
+ * OR:
+ *
+ * We could do this by keeping a list of vma mapping offsets in every object. Then
+ * we can find the individual page offsets from those object offsets.
+ *
+ * Finding unused pages:
+ * We need to traverse all vma's that map the vm object to see which pages are unused.
+ * We could then swap out file-backed pages, and discard private and anonymous pages.
+ */
+
+/* Takes difference of 2 ranges as in the set theory meaning. */
+void set_diff_of_ranges(unsigned long *minstart, unsigned long *minend, unsigned long substart, unsigned long subend)
+{
+	if (*minstart < subend && *minstart > substart)
+		*minstart = subend;
+	if (start1 >= start2 && start1 < end) {
+	}
+}
+
+int vmo_unmap_pages(struct tcb *task, struct vm_area *vma, unsigned long start, unsigned long end)
+{
+	struct vm_obj_link *vmo_link, *n, *link;
+
+	/* Go to each vm object from the vma object chain */
+	list_for_each_entry_safe(vmo_link, n, &vma->vm_obj_list, list) {
+		/* Go to each link for every object */
+		list_for_each_entry(link, &vmo_link->obj->link_list, linkref) {
+			/* Go to each vma that owns the link */
+			struct vm_area *vma = link->vma;
+			unsigned long unused_start, unused_end;
+
+			/* Try every */
+			unused_start = max(start, vma->file_offset);
+			unused_end = min(end, vma->file_offset +
+					 (vma->pfn_end - vma->pfn_start));
+		}
+	}
+}
+
+int vm_obj_unmap_pages(struct vm_object *vmo, unsigned long start, unsigned long end)
+{
+
+}
+
+int vma_unmap_objects(struct tcb *task, struct vm_area *vma,
+		      unsigned long page_start, unsigned long page_end)
+{
+	struct vm_obj_link *vmo_link, *n;
+
+	list_for_each_entry_safe(vmo_link, n, &vma->vm_obj_list, list) {
+		vm_obj_unmap_pages(vmo_link);
+	}
+}
+
 /* This shrinks the vma from *one* end only, either start or end */
-int vma_shrink(struct vm_area *vma, struct tcb *task, unsigned long pfn_start,
-	       unsigned long pfn_end)
+int vma_shrink(struct vm_area *vma, struct tcb *task,
+	       unsigned long pfn_start, unsigned long pfn_end)
 {
 	unsigned long diff;
-
-	BUG_ON(pfn_start >= pfn_end);
-
-	/* FIXME: Shadows are currently buggy - TBD */
-	if (!list_empty(&vma->shadow_list)) {
-		BUG();
-		vma_swapfile_realloc(vma, pfn_start, pfn_end);
-		return 0;
-	}
-
-	/* Release the pages before modifying the original vma */
-	vma_release_pages(vma, task, pfn_start, pfn_end);
-
-	/* Shrink from the beginning */
-	if (pfn_start > vma->pfn_start) {
-		diff = pfn_start - vma->pfn_start;
-		vma->f_offset += diff;
-		vma->pfn_start = pfn_start;
+	unsigned long obj_unmap_start, obj_unmap_end;
 
 	/* Shrink from the end */
-	} else if (pfn_end < vma->pfn_end) {
-		diff = vma->pfn_end - pfn_end;
-		vma->pfn_end = pfn_end;
+	if (vma->pfn_start < pfn_start) {
+		/* Calculate unmap start page */
+		obj_unmap_start = vma->f_offset +
+				  (pfn_start - vma->pfn_start);
+
+		/* Calculate new vma limits */
+		BUG_ON(pfn_start >= vma->pfn_end);
+		diff = vma->pfn_end - pfn_start;
+		vma->pfn_end = pfn_start;
+
+		/* Calculate unmap end page */
+		obj_unmap_end = obj_unmap_start + diff;
+
+	/* Shrink from the beginning */
+	} else if (vma->pfn_end > pfn_end) {
+		/* Calculate unmap start page */
+		obj_unmap_start = vma->f_offset;
+
+		/* Calculate new vma limits */
+		BUG_ON(pfn_end <= vma->pfn_start);
+		diff = pfn_end - vma->pfn_start;
+		vma->f_offset += diff;
+		vma->pfn_start = pfn_end;
+
+		/* Calculate unmap end page */
+		obj_unmap_end = vma->f_offset;
 	} else
 		BUG();
 
-	return vma_unmap_shadows(vma, task, pfn_start, pfn_end);
+	/* Unmap those pages from the task address space */
+	task_unmap_region(task, vma, obj_unmap_start, obj_unmap_end);
+
+	/*
+	 * The objects underneath may now have resident pages
+	 * with no refs, they are released here.
+	 */
+	vma_release_pages(vma, obj_unmap_start, obj_unmap_end);
 }
 
 /*
@@ -252,8 +343,8 @@ int vma_unmap(struct vm_area *vma, struct tcb *task,
 		list_add_tail(&vma_new->list, &vma->list);
 
 	/* Shrink needed? */
-	} else if (((vma->pfn_start == pfn_start) && (vma->pfn_end > pfn_end))
-	    	   || ((vma->pfn_start < pfn_start) && (vma->pfn_end == pfn_end)))
+	} else if (((vma->pfn_start >= pfn_start) && (vma->pfn_end > pfn_end))
+	    	   || ((vma->pfn_start < pfn_start) && (vma->pfn_end <= pfn_end)))
 		vma_shrink(vma, task, pfn_start, pfn_end);
 
 	/* Destroy needed? */
@@ -297,7 +388,7 @@ int sys_munmap(struct tcb *task, void *start, unsigned long length)
 	if ((unsigned long)start & PAGE_MASK)
 		return -EINVAL;
 
-	return do_munmap(task, start, __pfn(length));
+	return do_munmap(task, start, __pfn(page_align_up(length)));
 }
 
 
