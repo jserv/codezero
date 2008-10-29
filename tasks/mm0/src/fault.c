@@ -604,6 +604,8 @@ struct page *copy_on_write(struct fault_data *fault)
  * First access from first process simply writes to the pages
  * of that file. All subsequent accesses by other processes
  * do so as well.
+ *
+ * FIXME: Add VM_DIRTY bit for every page that has write-faulted.
  */
 
 int __do_page_fault(struct fault_data *fault)

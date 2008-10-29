@@ -4,6 +4,7 @@
  * Copyright (C) 2008 Bahadir Balban
  */
 #include <mmap.h>
+#include <file.h>
 #include <l4/api/errno.h>
 #include <l4lib/arch/syslib.h>
 
@@ -87,6 +88,40 @@ int vma_unmap(struct vm_area *vma, struct tcb *task,
 	return 0;
 }
 
+/* Checks vma and vm_object type and flushes its pages accordingly */
+int vma_flush_pages(struct vm_area *vma)
+{
+	struct vm_object *vmo;
+	int err;
+
+	/* Read-only vmas need not flush objects */
+	/* FIXME: Ensure pf_handler sets VM_DIRTY on write-faulted pages */
+	if (!(vma->flags & VM_WRITE))
+		return 0;
+
+	/*
+	 * We just check the first object under the vma, since there
+	 * could only be a single VM_SHARED file-backed object in the chain.
+	 */
+	BUG_ON(list_empty(&vma->list));
+	vmo = list_entry(vma->list.next, struct vm_object, list);
+
+	/* Only vfs file objects are flushed */
+	if (vmo->flags & VM_OBJ_FILE &&
+	    vmo->flags & VMA_SHARED &&
+	    !(vmo->flags & VMA_ANONYMOUS)) {
+
+		/* Only vfs files ought to match above criteria */
+	    	BUG_ON(vm_object_to_file(vmo)->type != VM_FILE_VFS);
+
+		/* Flush the pages */
+		if ((err = flush_file_pages(vm_object_to_file(vmo))) < 0)
+			return err;
+	}
+
+	return 0;
+}
+
 /*
  * Unmaps the given virtual address range from the task, the region
  * may span into zero or more vmas, and may involve shrinking, splitting
@@ -102,6 +137,10 @@ int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
 	/* Find a vma that overlaps with this address range */
 	while ((vma = find_vma_byrange(munmap_start, munmap_end,
 				       &task->vm_area_head->list))) {
+
+		/* Flush pages if vma is writable, dirty and file-backed. */
+		if ((err = vma_flush_pages(vma)) < 0)
+			return err;
 
 		/* Unmap the vma accordingly */
 		if ((err = vma_unmap(vma, task, munmap_start,

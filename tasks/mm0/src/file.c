@@ -355,9 +355,13 @@ int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 /* Flush all dirty file pages and update file stats */
 int flush_file_pages(struct vm_file *f)
 {
-	write_file_pages(f, 0, __pfn(page_align_up(f->length)));
+	int err;
 
-	vfs_update_file_stats(f);
+	if ((err = write_file_pages(f, 0, __pfn(page_align_up(f->length)))) < 0)
+		return err;
+
+	if ((err = vfs_update_file_stats(f)) < 0)
+		return err;
 
 	return 0;
 }
@@ -647,7 +651,7 @@ int sys_read(struct tcb *task, int fd, void *buf, int count)
  *
  * Error:
  * We find the page buffer is in, and then copy from the *start* of the page
- * rather than buffer's offset in that page.
+ * rather than buffer's offset in that page. - I think this is fixed.
  */
 int sys_write(struct tcb *task, int fd, void *buf, int count)
 {

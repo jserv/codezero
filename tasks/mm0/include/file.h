@@ -6,9 +6,6 @@
 #include <posix/sys/types.h>
 #include <task.h>
 
-void vmfile_init(void);
-
-struct vm_file *vmfile_alloc_init(void);
 int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 	     void *pagebuf);
 int vfs_write(unsigned long vnum, unsigned long f_offset, unsigned long npages,
@@ -19,6 +16,7 @@ int sys_lseek(struct tcb *sender, int fd, off_t offset, int whence);
 int sys_close(struct tcb *sender, int fd);
 int sys_fsync(struct tcb *sender, int fd);
 int file_open(struct tcb *opener, int fd);
+int flush_file_pages(struct vm_file *f);
 
 struct vfs_file_data {
 	unsigned long vnum;
