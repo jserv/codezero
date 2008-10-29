@@ -110,16 +110,10 @@ void handle_requests(void)
 		ret = sys_lseek(sender, (int)mr[0], (off_t)mr[1], (int)mr[2]);
 		break;
 
-	case L4_IPC_TAG_MMAP2: {
+	case L4_IPC_TAG_MMAP: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)mr[0];
 		ret = (int)sys_mmap(sender, args->start, args->length, args->prot,
 			 args->flags, args->fd, args->offset);
-	}
-	case L4_IPC_TAG_MMAP: {
-		struct sys_mmap_args *args = (struct sys_mmap_args *)&mr[0];
-		ret = (int)sys_mmap(sender, args->start, args->length, args->prot,
-			 args->flags, args->fd, __pfn(args->offset));
-		break;
 	}
 	case L4_IPC_TAG_MUNMAP: {
 		ret = sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);
