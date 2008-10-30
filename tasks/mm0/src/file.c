@@ -502,6 +502,7 @@ copy:
 	page_copy(head, task_virt_to_page(task, copy_offset),
 		  cursor_offset, copy_offset & PAGE_MASK, copysize);
 	head->flags |= VM_DIRTY;
+	head->owner->flags |= VM_DIRTY;
 	left -= copysize;
 	last_pgoff = head->offset;
 
