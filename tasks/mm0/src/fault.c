@@ -677,7 +677,13 @@ int __do_page_fault(struct fault_data *fault)
 					BUG();
 				}
 			}
-			BUG_ON(!page);
+
+			/*
+			 * Page and object are now dirty. Currently it's
+			 * only relevant for file-backed shared objects.
+			 */
+			page->flags |= VM_DIRTY;
+			page->owner->flags |= VM_DIRTY;
 		} else
 			BUG();
 	}

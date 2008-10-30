@@ -51,8 +51,8 @@ enum VM_FILE_TYPE {
 };
 
 /* Defines the type of object. A file? Just a standalone object? */
-#define VM_OBJ_SHADOW		(1 << 8) /* Anonymous pages, swap_pager */
-#define VM_OBJ_FILE		(1 << 9) /* VFS file and device pages */
+#define VM_OBJ_SHADOW		(1 << 10) /* Anonymous pages, swap_pager */
+#define VM_OBJ_FILE		(1 << 11) /* VFS file and device pages */
 
 struct page {
 	int refcnt;		/* Refcount */

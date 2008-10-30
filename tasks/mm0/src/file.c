@@ -338,6 +338,13 @@ int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 {
 	int err;
 
+	/* We have only thought of vfs files for this */
+	BUG_ON(f->type != VM_FILE_VFS);
+
+	/* Need not flush files that haven't been written */
+	if (!(f->vm_obj.flags & VM_DIRTY))
+		return 0;
+
 	BUG_ON(pfn_end != __pfn(page_align_up(f->length)));
 	for (int f_offset = pfn_start; f_offset < pfn_end; f_offset++) {
 		err = f->vm_obj.pager->ops.page_out(&f->vm_obj, f_offset);

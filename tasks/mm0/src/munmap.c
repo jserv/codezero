@@ -90,7 +90,6 @@ int vma_flush_pages(struct vm_area *vma)
 	int err;
 
 	/* Read-only vmas need not flush objects */
-	/* FIXME: Ensure pf_handler sets VM_DIRTY on write-faulted pages */
 	if (!(vma->flags & VM_WRITE))
 		return 0;
 
@@ -100,6 +99,10 @@ int vma_flush_pages(struct vm_area *vma)
 	 */
 	BUG_ON(list_empty(&vma->list));
 	vmo = list_entry(vma->list.next, struct vm_object, list);
+
+	/* Only dirty objects would need flushing */
+	if (!(vmo->flags & VM_DIRTY))
+		return 0;
 
 	/* Only vfs file objects are flushed */
 	if (vmo->flags & VM_OBJ_FILE &&
