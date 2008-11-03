@@ -71,14 +71,12 @@ void handle_requests(void)
 		break;
 
 	case L4_IPC_TAG_SHMGET: {
-		struct sys_shmget_args *args = (struct sys_shmget_args *)&mr[0];
-		ret = sys_shmget(args->key, args->size, args->shmflg);
+		ret = sys_shmget((key_t)mr[0], (int)mr[1], (int)mr[2]);
 		break;
 	}
 
 	case L4_IPC_TAG_SHMAT: {
-		struct sys_shmat_args *args = (struct sys_shmat_args *)&mr[0];
-		ret = (int)sys_shmat(sender, args->shmid, args->shmaddr, args->shmflg);
+		ret = (int)sys_shmat(sender, (l4id_t)mr[0], (void *)mr[1], (int)mr[2]);
 		break;
 	}
 
@@ -112,8 +110,7 @@ void handle_requests(void)
 
 	case L4_IPC_TAG_MMAP: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)mr[0];
-		ret = (int)sys_mmap(sender, args->start, args->length, args->prot,
-			 args->flags, args->fd, args->offset);
+		ret = (int)sys_mmap(sender, args);
 	}
 	case L4_IPC_TAG_MUNMAP: {
 		ret = sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);

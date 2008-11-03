@@ -5,4 +5,4 @@ sym final.axf
 break break_virtual
 continue
 stepi
-sym start.axf
+sym /opt/codezero/tasks/mm0/mm0.axf

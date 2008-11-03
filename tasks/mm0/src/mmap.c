@@ -14,6 +14,8 @@
 #include <mmap.h>
 #include <file.h>
 #include <shm.h>
+#include <syscalls.h>
+#include <user.h>
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			unsigned int flags, unsigned long file_offset)
@@ -259,8 +261,8 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 }
 
 /* mmap system call implementation */
-void *sys_mmap(struct tcb *task, void *start, size_t length, int prot,
-	       int flags, int fd, unsigned long pfn)
+void *__sys_mmap(struct tcb *task, void *start, size_t length, int prot,
+	      	 int flags, int fd, unsigned long pfn)
 {
 	unsigned long npages = __pfn(page_align_up(length));
 	unsigned long base = (unsigned long)start;
@@ -317,6 +319,25 @@ void *sys_mmap(struct tcb *task, void *start, size_t length, int prot,
 		vmflags |= VM_EXEC;
 
 	return do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
+}
+
+void *sys_mmap(struct tcb *task, struct sys_mmap_args *args)
+{
+
+	struct sys_mmap_args *mapped_args;
+	void *ret;
+
+	if (!(mapped_args = pager_validate_map_user_range(task, args,
+							  sizeof(*args),
+							  VM_READ | VM_WRITE)))
+		return PTR_ERR(-EINVAL);
+
+	ret = __sys_mmap(task, args->start, args->length, args->prot,
+		         args->flags, args->fd, args->offset);
+
+	pager_unmap_user_range(mapped_args, sizeof(*args));
+
+	return ret;
 }
 
 /* Sets the end of data segment for sender */

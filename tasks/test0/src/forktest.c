@@ -8,6 +8,7 @@
 #include <tests.h>
 
 int global = 0;
+extern pid_t pid;
 
 int forktest(void)
 {
@@ -18,6 +19,7 @@ int forktest(void)
 		fork();
 
 	myid = getpid();
+	pid = myid;
 	if (global != 0) {
 		printf("-- FAILED --\n");
 		goto out;

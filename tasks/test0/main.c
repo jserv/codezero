@@ -22,9 +22,10 @@ void wait_pager(l4id_t partner)
 	// printf("Pager synced with us.\n");
 }
 
+pid_t pid;
+
 void main(void)
 {
-	pid_t pid;
 
 	printf("\n%s: Started with tid %d.\n", __TASKNAME__, self_tid());
 	/* Sync with pager */
@@ -32,12 +33,16 @@ void main(void)
 
 	dirtest();
 
+	/* Check mmap/munmap */
+	mmaptest();
+
 	printf("Forking...\n");
 
 	if ((pid = fork()) < 0)
 		printf("Error forking...\n");
 
 	if (pid == 0) {
+		pid = getpid();
 		printf("Child: file IO test 1.\n");
 		if (fileio() == 0)
 			printf("-- PASSED --\n");
@@ -56,12 +61,10 @@ void main(void)
 		else
 			printf("-- FAILED --\n");
 	}
+
 	while (1)
 		wait_pager(0);
 #if 0
-	/* Check mmap/munmap */
-	mmaptest();
-
 	/* Check shmget/shmat/shmdt */
 	shmtest();
 #endif

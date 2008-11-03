@@ -855,28 +855,6 @@ int page_fault_handler(struct tcb *sender, fault_kdata_t *fkdata)
 	return err;
 }
 
-/* Checks if an address range is a validly mapped area for a task */
-int validate_task_range(struct tcb *t, unsigned long start,
-			unsigned long end, unsigned int vmflags)
-{
-	struct vm_area *vma;
-
-	start = page_align(start);
-	end = page_align_up(end);
-
-	/* Find the vma that maps that virtual address */
-	for (unsigned long vaddr = start; vaddr < end; vaddr += PAGE_SIZE) {
-		if (!(vma = find_vma(vaddr, &t->vm_area_head->list))) {
-			printf("%s: No VMA found for 0x%x on task: %d\n",
-			       __FUNCTION__, vaddr, t->tid);
-			return -EINVAL;
-		}
-		if ((vma->flags & vmflags) != vmflags)
-			return -EINVAL;
-	}
-	return 0;
-}
-
 /*
  * Makes the virtual to page translation for a given user task.
  * It traverses the vm_objects and returns the first encountered

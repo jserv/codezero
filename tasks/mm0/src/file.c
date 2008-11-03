@@ -15,6 +15,7 @@
 #include <string.h>
 #include <globals.h>
 #include <file.h>
+#include <user.h>
 
 /* Copy from one page's buffer into another page */
 int page_copy(struct page *dst, struct page *src,
@@ -613,10 +614,10 @@ int sys_read(struct tcb *task, int fd, void *buf, int count)
 		return 0;
 
 	/* Check user buffer validity. */
-	if ((ret = validate_task_range(task, (unsigned long)buf,
+	if ((ret = pager_validate_user_range(task, buf,
 				       (unsigned long)(buf + count),
 				       VM_READ)) < 0)
-		return ret;
+		return -EFAULT;
 
 	vmfile = task->files->fd[fd].vmfile;
 	cursor = task->files->fd[fd].cursor;
@@ -683,10 +684,10 @@ int sys_write(struct tcb *task, int fd, void *buf, int count)
 
 
 	/* Check user buffer validity. */
-	if ((ret = validate_task_range(task, (unsigned long)buf,
-				       (unsigned long)(buf + count),
-				       VM_WRITE | VM_READ)) < 0)
-		return ret;
+	if ((ret = pager_validate_user_range(task, buf,
+					     (unsigned long)(buf + count),
+					     VM_WRITE | VM_READ)) < 0)
+		return -EINVAL;
 
 	vmfile = task->files->fd[fd].vmfile;
 	cursor = task->files->fd[fd].cursor;
