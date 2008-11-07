@@ -193,7 +193,9 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 
 	/* Check invalid map address */
 	if (!mmap_address_validate(task, map_address, flags)) {
-		if (!(map_address = mmap_new_address(task, flags, npages)))
+		if (flags & VMA_FIXED)
+			return PTR_ERR(-EINVAL);
+		else if (!(map_address = mmap_new_address(task, flags, npages)))
 			return PTR_ERR(-ENOMEM);
 	} else {
 		/*
@@ -262,30 +264,21 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 
 /* mmap system call implementation */
 void *__sys_mmap(struct tcb *task, void *start, size_t length, int prot,
-	      	 int flags, int fd, unsigned long pfn)
+	      	 int flags, int fd, unsigned long file_offset)
 {
-	unsigned long npages = __pfn(page_align_up(length));
-	unsigned long base = (unsigned long)start;
-	struct vm_file *file = 0;
 	unsigned int vmflags = 0;
+	struct vm_file *file = 0;
 	int err;
 
-	/* Check fd validity */
+	/* Check file validity */
 	if (!(flags & MAP_ANONYMOUS))
 		if (!task->files->fd[fd].vmfile)
 			if ((err = file_open(task, fd)) < 0)
 				return PTR_ERR(err);
 
-	if (base < task->start || base >= task->end)
+	/* Check file offset is page aligned */
+	if (!is_page_aligned(file_offset))
 		return PTR_ERR(-EINVAL);
-
-	/* Exclude task's stack, text and data from mmappable area in task's space */
-	if (base < task->map_start || base >= task->map_end || !base) {
-		if (flags & MAP_FIXED)	/* Its fixed, we cannot satisfy it */
-			return PTR_ERR(-EINVAL);
-		else
-			start = 0;
-	}
 
 	/* TODO:
 	 * Check that @start does not already have a mapping.
@@ -318,7 +311,8 @@ void *__sys_mmap(struct tcb *task, void *start, size_t length, int prot,
 	if (prot & PROT_EXEC)
 		vmflags |= VM_EXEC;
 
-	return do_mmap(file, __pfn_to_addr(pfn), task, base, vmflags, npages);
+	return do_mmap(file, file_offset, task, (unsigned long)start,
+		       vmflags, __pfn(page_align_up(length)));
 }
 
 void *sys_mmap(struct tcb *task, struct sys_mmap_args *args)
@@ -332,8 +326,9 @@ void *sys_mmap(struct tcb *task, struct sys_mmap_args *args)
 							  VM_READ | VM_WRITE)))
 		return PTR_ERR(-EINVAL);
 
-	ret = __sys_mmap(task, args->start, args->length, args->prot,
-		         args->flags, args->fd, args->offset);
+	ret = __sys_mmap(task, mapped_args->start, mapped_args->length,
+			 mapped_args->prot, mapped_args->flags, mapped_args->fd,
+			 mapped_args->offset);
 
 	pager_unmap_user_range(mapped_args, sizeof(*args));
 

@@ -68,6 +68,6 @@ void *pager_validate_map_user_range(struct tcb *user, void *userptr,
 void pager_unmap_user_range(void *mapped_ptr, unsigned long size)
 {
 	l4_unmap_helper((void *)page_align(mapped_ptr),
-			__pfn(page_align(mapped_ptr) + page_align_up(size)));
+			__pfn(page_align_up(size)));
 }
 

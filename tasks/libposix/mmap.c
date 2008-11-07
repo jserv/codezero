@@ -61,7 +61,7 @@ void *mmap2(void *start, size_t length, int prot, int flags, int fd, off_t pgoff
 		errno = -(int)ret;
 		return MAP_FAILED;
 	}
-	return 0;
+	return ret;
 }
 
 

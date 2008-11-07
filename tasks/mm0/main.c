@@ -111,6 +111,7 @@ void handle_requests(void)
 	case L4_IPC_TAG_MMAP: {
 		struct sys_mmap_args *args = (struct sys_mmap_args *)mr[0];
 		ret = (int)sys_mmap(sender, args);
+		break;
 	}
 	case L4_IPC_TAG_MUNMAP: {
 		ret = sys_munmap(sender, (void *)mr[0], (unsigned long)mr[1]);

@@ -615,7 +615,7 @@ int sys_read(struct tcb *task, int fd, void *buf, int count)
 
 	/* Check user buffer validity. */
 	if ((ret = pager_validate_user_range(task, buf,
-				       (unsigned long)(buf + count),
+				       (unsigned long)count,
 				       VM_READ)) < 0)
 		return -EFAULT;
 
@@ -685,7 +685,7 @@ int sys_write(struct tcb *task, int fd, void *buf, int count)
 
 	/* Check user buffer validity. */
 	if ((ret = pager_validate_user_range(task, buf,
-					     (unsigned long)(buf + count),
+					     (unsigned long)count,
 					     VM_WRITE | VM_READ)) < 0)
 		return -EINVAL;
 
