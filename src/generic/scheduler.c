@@ -201,11 +201,11 @@ void sched_resume_sync(struct ktcb *task)
 /*
  * Asynchronously resumes a task.
  * The task will run in the future, but at
- * the scheduler's discretion.
+ * the scheduler's discretion. It is possible that current
+ * task wakes itself up via this function in the scheduler().
  */
 void sched_resume_async(struct ktcb *task)
 {
-	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
 	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
 }
