@@ -252,6 +252,7 @@ static inline void task_add_vma(struct tcb *task, struct vm_area *vma)
 /* Main page fault entry point */
 int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);
 
+int vma_copy_links(struct vm_area *new_vma, struct vm_area *vma);
 int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link);
 int vma_drop_merge_delete_all(struct vm_area *vma);
 

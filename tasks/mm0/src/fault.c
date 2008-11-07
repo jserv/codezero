@@ -262,6 +262,32 @@ struct page *copy_to_new_page(struct page *orig)
 }
 
 
+/* Copy all mapped object link stack from vma to new vma */
+int vma_copy_links(struct vm_area *new_vma, struct vm_area *vma)
+{
+	struct vm_obj_link *vmo_link, *new_link;
+
+	/* Get the first object on the vma */
+	BUG_ON(list_empty(&vma->vm_obj_list));
+	vmo_link = list_entry(vma->vm_obj_list.next,
+			      struct vm_obj_link, list);
+	do {
+		/* Create a new link */
+		new_link = vm_objlink_create();
+
+		/* Link object with new link */
+		vm_link_object(new_link, vmo_link->obj);
+
+		/* Add the new link to vma in object order */
+		list_add_tail(&new_link->list, &new_vma->vm_obj_list);
+
+	/* Continue traversing links, doing the same copying */
+	} while((vmo_link = vma_next_link(&vmo_link->list,
+					  &vma->vm_obj_list)));
+
+	return 0;
+}
+
 /*
  * Determine if an object is deletable.
  *

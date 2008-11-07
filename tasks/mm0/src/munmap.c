@@ -8,7 +8,7 @@
 #include <l4/api/errno.h>
 #include <l4/lib/math.h>
 #include <l4lib/arch/syslib.h>
-
+#include <vm_area.h>
 
 /* This splits a vma, splitter region must be in the *middle* of original vma */
 int vma_split(struct vm_area *vma, struct tcb *task,
@@ -32,6 +32,13 @@ int vma_split(struct vm_area *vma, struct tcb *task,
 	new->file_offset = vma->file_offset + new->pfn_start - vma->pfn_start;
 	vma->pfn_end = pfn_start;
 	new->flags = vma->flags;
+
+	/*
+	 * Copy the object links of original vma to new vma. A split like this
+	 * increases the map count of mapped object(s) since now 2 vmas on the
+	 * same task maps the same object(s).
+	 */
+	vma_copy_links(new, vma);
 
 	/* Add new one next to original vma */
 	list_add_tail(&new->list, &vma->list);

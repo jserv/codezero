@@ -129,7 +129,6 @@ int tcb_destroy(struct tcb *task)
 int copy_vmas(struct tcb *to, struct tcb *from)
 {
 	struct vm_area *vma, *new_vma;
-	struct vm_obj_link *vmo_link, *new_link;
 
 	list_for_each_entry(vma, &from->vm_area_head->list, list) {
 
@@ -137,23 +136,8 @@ int copy_vmas(struct tcb *to, struct tcb *from)
 		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
 				  vma->flags, vma->file_offset);
 
-		/* Get the first object on the vma */
-		BUG_ON(list_empty(&vma->vm_obj_list));
-		vmo_link = list_entry(vma->vm_obj_list.next,
-				      struct vm_obj_link, list);
-		do {
-			/* Create a new link */
-			new_link = vm_objlink_create();
-
-			/* Link object with new link */
-			vm_link_object(new_link, vmo_link->obj);
-
-			/* Add the new link to vma in object order */
-			list_add_tail(&new_link->list, &new_vma->vm_obj_list);
-
-		/* Continue traversing links, doing the same copying */
-		} while((vmo_link = vma_next_link(&vmo_link->list,
-						  &vma->vm_obj_list)));
+		/* Copy all object links */
+		vma_copy_links(new_vma, vma);
 
 		/* All link copying is finished, now add the new vma to task */
 		task_add_vma(to, new_vma);
