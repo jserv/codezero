@@ -219,8 +219,13 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 		to->files = from->files;
 		to->files->tcb_refs++;
 	} else {
-	       	/* Copy all file descriptors */
+	       	/* Bulk copy all file descriptors */
 		memcpy(to->files, from->files, sizeof(*to->files));
+
+		/* Increase refcount for all open files */
+		for (int i = 0; i < TASK_FILES_MAX; i++)
+			if (to->files->fd[i].vmfile)
+				to->files->fd[i].vmfile->openers++;
 	}
 
 	return 0;

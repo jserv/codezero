@@ -410,7 +410,10 @@ int do_close(struct tcb *task, int fd)
 
 	/* Reduce file's opener count */
 	if (!(--task->files->fd[fd].vmfile->openers))
-		vm_file_delete(task->files->fd[fd].vmfile);
+		/* No openers left, check any mappers */
+		if (!task->files->fd[fd].vmfile->vm_obj.nlinks)
+			/* No links or openers, delete the file */
+			vm_file_delete(task->files->fd[fd].vmfile);
 
 	task->files->fd[fd].vnum = 0;
 	task->files->fd[fd].cursor = 0;
