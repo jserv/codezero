@@ -183,8 +183,6 @@ struct vm_area {
 	unsigned long file_offset;	/* File offset in pfns */
 };
 
-int vma_intersect(unsigned long pfn_start, unsigned long pfn_end,
-		      struct vm_area *vma);
 /*
  * Finds the vma that has the given address.
  * TODO: In the future a lot of use cases may need to traverse each vma

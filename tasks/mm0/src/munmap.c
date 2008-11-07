@@ -6,6 +6,7 @@
 #include <mmap.h>
 #include <file.h>
 #include <l4/api/errno.h>
+#include <l4/lib/math.h>
 #include <l4lib/arch/syslib.h>
 
 
@@ -134,7 +135,8 @@ int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
 
 	list_for_each_entry_safe(vma, n, &task->vm_area_head->list, list) {
 		/* Check for intersection */
-		if (vma_intersect(munmap_start, munmap_end, vma)) {
+		if (set_intersection(munmap_start, munmap_end,
+				     vma->pfn_start, vma->pfn_end)) {
 			/*
 			 * Flush pages if vma is writable,
 			 * dirty and file-backed.

@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007, 2008 Bahadir Balban
  */
+#include <l4/lib/math.h>
 #include <vm_area.h>
 #include <kmalloc/kmalloc.h>
 #include INC_API(errno.h)
@@ -37,20 +38,6 @@ struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 	return vma;
 }
 
-int vma_intersect(unsigned long pfn_start, unsigned long pfn_end,
-		      struct vm_area *vma)
-{
-	if ((pfn_start <= vma->pfn_start) && (pfn_end > vma->pfn_start)) {
-		printf("%s: VMAs overlap.\n", __FUNCTION__);
-		return 1;
-	}
-	if ((pfn_end >= vma->pfn_end) && (pfn_start < vma->pfn_end)) {
-		printf("%s: VMAs overlap.\n", __FUNCTION__);
-		return 1;
-	}
-	return 0;
-}
-
 /* Search an empty space in the task's mmapable address region. */
 unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 {
@@ -72,7 +59,8 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 	while (pfn_end <= __pfn(task->end)) {
 
 		/* If intersection, skip the vma and fast-forward to next */
-		if (vma_intersect(pfn_start, pfn_end, vma)) {
+		if (set_intersection(pfn_start, pfn_end,
+				     vma->pfn_start, vma->pfn_end)) {
 
 			/* Update interval to next available space */
 			pfn_start = vma->pfn_end;
@@ -204,8 +192,9 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		 * splitting, shrink/grow etc.
 		 */
 		list_for_each_entry(mapped, &task->vm_area_head->list, list)
-			BUG_ON(vma_intersect(map_pfn, map_pfn + npages,
-					     mapped));
+			BUG_ON(set_intersection(map_pfn, map_pfn + npages,
+						mapped->pfn_start,
+						mapped->pfn_end));
 	}
 
 	/* For valid regions that aren't allocated by us, create the vma. */
