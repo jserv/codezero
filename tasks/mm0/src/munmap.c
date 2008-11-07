@@ -169,23 +169,31 @@ int do_msync(struct tcb *task, void *vaddr, unsigned long npages, int flags)
 	const unsigned long msync_start = __pfn(vaddr);
 	const unsigned long msync_end = msync_start + npages;
 	struct vm_area *vma;
+	unsigned long addr = (unsigned long)vaddr;
 	int err;
 
 	/* Find a vma that overlaps with this address range */
-	while ((vma = find_vma_byrange(msync_start, msync_end,
-				       &task->vm_area_head->list))) {
+	while ((vma = find_vma(addr, &task->vm_area_head->list))) {
 
 		/* Flush pages if vma is writable, dirty and file-backed. */
 		if ((err = vma_flush_pages(vma)) < 0)
 			return err;
+
+		/* Update address to next vma */
+		addr = __pfn_to_addr(vma->pfn_end);
+
+		/* Are we still good to go? */
+		if (addr >= msync_end)
+			break;
 	}
+
 	return 0;
 }
 
 int sys_msync(struct tcb *task, void *start, unsigned long length, int flags)
 {
 	/* Must be aligned on a page boundary */
-	if ((unsigned long)start & PAGE_MASK)
+	if (!is_page_aligned(start))
 		return -EINVAL;
 
 	/*

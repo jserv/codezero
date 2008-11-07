@@ -183,6 +183,7 @@ struct vm_area {
 	unsigned long file_offset;	/* File offset in pfns */
 };
 
+/* Finds 'a' vma that is in this range. Only useful for munmap() */
 static inline struct vm_area *
 find_vma_byrange(unsigned long pfn_start,
 		 unsigned long pfn_end, struct list_head *vm_area_list)
@@ -199,6 +200,11 @@ find_vma_byrange(unsigned long pfn_start,
 }
 
 
+/*
+ * Finds the vma that has the given address.
+ * TODO: In the future a lot of use cases may need to traverse each vma
+ * rather than searching the address. E.g. munmap/msync
+ */
 static inline struct vm_area *find_vma(unsigned long addr,
 				       struct list_head *vm_area_list)
 {
