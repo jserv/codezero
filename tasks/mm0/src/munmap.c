@@ -129,21 +129,24 @@ int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
 {
 	const unsigned long munmap_start = __pfn(vaddr);
 	const unsigned long munmap_end = munmap_start + npages;
-	struct vm_area *vma;
+	struct vm_area *vma, *n;
 	int err;
 
-	/* Find a vma that overlaps with this address range */
-	while ((vma = find_vma_byrange(munmap_start, munmap_end,
-				       &task->vm_area_head->list))) {
+	list_for_each_entry_safe(vma, n, &task->vm_area_head->list, list) {
+		/* Check for intersection */
+		if (vma_intersect(munmap_start, munmap_end, vma)) {
+			/*
+			 * Flush pages if vma is writable,
+			 * dirty and file-backed.
+			 */
+			if ((err = vma_flush_pages(vma)) < 0)
+				return err;
 
-		/* Flush pages if vma is writable, dirty and file-backed. */
-		if ((err = vma_flush_pages(vma)) < 0)
-			return err;
-
-		/* Unmap the vma accordingly. Note, this may delete the vma */
-		if ((err = vma_unmap(vma, task, munmap_start,
-				     munmap_end)) < 0)
-			return err;
+			/* Unmap the vma accordingly. This may delete the vma */
+			if ((err = vma_unmap(vma, task, munmap_start,
+					     munmap_end)) < 0)
+				return err;
+		}
 	}
 
 	/* Unmap those pages from the task address space */
@@ -151,7 +154,6 @@ int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
 
 	return 0;
 }
-
 
 int sys_munmap(struct tcb *task, void *start, unsigned long length)
 {
