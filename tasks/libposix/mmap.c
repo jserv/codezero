@@ -78,7 +78,7 @@ int l4_munmap(void *start, size_t length)
 	write_mr(L4SYS_ARG1, length);
 
 	/* Call pager with MMAP request. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MMAP)) < 0) {
+	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MUNMAP)) < 0) {
 		printf("%s: IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -116,7 +116,7 @@ int l4_msync(void *start, size_t length, int flags)
 	}
 	/* Check if syscall itself was successful */
 	if ((errno = l4_get_retval()) < 0) {
-		printf("%s: MUNMAP Error: %d.\n", __FUNCTION__, errno);
+		printf("%s: MSYNC Error: %d.\n", __FUNCTION__, errno);
 		return -1;
 	}
 	return 0;

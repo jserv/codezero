@@ -38,17 +38,20 @@ int mmaptest(void)
 	else
 		printf("write: Success.\n");
 
+	printf("%s: Calling mmap()\n", __TASKNAME__);
 	if ((int)(base = mmap(0, PAGE_SIZE*16, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
 		perror("mmap");
 	else
 		printf("mmap: Success: %p\n", base);
 
 	*(unsigned int *)(base + PAGE_SIZE*2) = 0x1000;
+	printf("%s: Calling msync()\n", __TASKNAME__);
 	if (msync(base + PAGE_SIZE*2, PAGE_SIZE, MS_SYNC) < 0)
 		perror("msync");
 	else
 		printf("msync: Success: %p\n", base);
 
+	printf("%s: Calling munmap()\n", __TASKNAME__);
 	if (munmap(base + PAGE_SIZE*2, PAGE_SIZE) < 0)
 		perror("munmap");
 	else
