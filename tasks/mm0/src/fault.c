@@ -343,7 +343,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 		BUG_ON(!(prev->obj->flags & VM_OBJ_SHADOW));
 		BUG_ON(!(prev->obj->flags & VM_WRITE));
 		BUG_ON(--obj->shadows < 0);
-		vm_object_print(obj);
+		// vm_object_print(obj);
 
 		/* Remove prev from current object's shadow list */
 		BUG_ON(list_empty(&prev->obj->shref));
@@ -389,7 +389,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 			if (next && obj->flags & VM_OBJ_SHADOW) {
 				BUG_ON(obj->orig_obj != next->obj);
 				BUG_ON(--next->obj->shadows < 0);
-				vm_object_print(next->obj);
+				// vm_object_print(next->obj);
 				list_del_init(&obj->shref);
 			}
 		}
@@ -496,8 +496,7 @@ struct page *copy_on_write(struct fault_data *fault)
 		shadow->flags = VM_OBJ_SHADOW | VM_WRITE;
 		shadow->pager = &swap_pager;
 		vmo_link->obj->shadows++;
-		printf("%s: ", __FUNCTION__);
-		vm_object_print(vmo_link->obj);
+		// vm_object_print(vmo_link->obj);
 		dprintf("%s: Created a shadow:\n", __TASKNAME__);
 		// vm_object_print(shadow);
 		dprintf("%s: Original object:\n", __TASKNAME__);
