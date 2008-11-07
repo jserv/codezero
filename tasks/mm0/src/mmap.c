@@ -147,9 +147,10 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	      unsigned int flags, unsigned int npages)
 {
 	unsigned long map_pfn = __pfn(map_address);
+	unsigned long file_npages;
 	struct vm_area *new, *mapped;
 	struct vm_obj_link *vmo_link, *vmo_link2;
-	unsigned long file_npages;
+	int err;
 
 	/* Set up devzero if none given */
 	if (!mapfile) {
@@ -185,17 +186,11 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 			return PTR_ERR(-EINVAL);
 		else if (!(map_address = mmap_new_address(task, flags, npages)))
 			return PTR_ERR(-ENOMEM);
-	} else {
-		/*
-		 * FIXME: Currently we don't allow overlapping vmas.
-		 * To be fixed soon. We need to handle intersection,
-		 * splitting, shrink/grow etc.
-		 */
-		list_for_each_entry(mapped, &task->vm_area_head->list, list)
-			BUG_ON(set_intersection(map_pfn, map_pfn + npages,
-						mapped->pfn_start,
-						mapped->pfn_end));
 	}
+
+	/* Unmap any existing vmas that overlap with the new mapping */
+	if ((err = do_munmap(task, map_address, npages)) < 0)
+		return PTR_ERR(err);
 
 	/* For valid regions that aren't allocated by us, create the vma. */
 	if (!(new = vma_new(__pfn(map_address), npages, flags, file_offset)))

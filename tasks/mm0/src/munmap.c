@@ -133,7 +133,7 @@ int vma_flush_pages(struct vm_area *vma)
  * may span into zero or more vmas, and may involve shrinking, splitting
  * and destruction of multiple vmas.
  */
-int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
+int do_munmap(struct tcb *task, unsigned long vaddr, unsigned long npages)
 {
 	const unsigned long munmap_start = __pfn(vaddr);
 	const unsigned long munmap_end = munmap_start + npages;
@@ -167,10 +167,11 @@ int do_munmap(struct tcb *task, void *vaddr, unsigned long npages)
 int sys_munmap(struct tcb *task, void *start, unsigned long length)
 {
 	/* Must be aligned on a page boundary */
-	if ((unsigned long)start & PAGE_MASK)
+	if (!is_page_aligned(start))
 		return -EINVAL;
 
-	return do_munmap(task, start, __pfn(page_align_up(length)));
+	return do_munmap(task, (unsigned long)start,
+			 __pfn(page_align_up(length)));
 }
 
 
