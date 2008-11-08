@@ -111,8 +111,8 @@ void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
 		     pgd_table_t *pgd);
 void add_mapping(unsigned int paddr, unsigned int vaddr,
 		 unsigned int size, unsigned int flags);
-void remove_mapping(unsigned long vaddr);
-void remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd);
+int remove_mapping(unsigned long vaddr);
+int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd);
 void prealloc_phys_pagedesc(void);
 
 int check_mapping_pgd(unsigned long vaddr, unsigned long size,

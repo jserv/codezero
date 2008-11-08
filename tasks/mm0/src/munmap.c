@@ -9,12 +9,14 @@
 #include <l4/lib/math.h>
 #include <l4lib/arch/syslib.h>
 #include <vm_area.h>
+#include <lib/malloc.h>
 
 /* This splits a vma, splitter region must be in the *middle* of original vma */
 int vma_split(struct vm_area *vma, struct tcb *task,
 	      const unsigned long pfn_start, const unsigned long pfn_end)
 {
 	struct vm_area *new;
+	unsigned long unmap_start = pfn_start, unmap_end = pfn_end;
 
 	/* Allocate an uninitialised vma first */
 	if (!(new = vma_new(0, 0, 0, 0)))
@@ -43,6 +45,10 @@ int vma_split(struct vm_area *vma, struct tcb *task,
 	/* Add new one next to original vma */
 	list_add_tail(&new->list, &vma->list);
 
+	/* Unmap the removed portion */
+	BUG_ON(l4_unmap((void *)__pfn_to_addr(unmap_start),
+	       unmap_end - unmap_start, task->tid) < 0);
+
 	return 0;
 }
 
@@ -50,20 +56,49 @@ int vma_split(struct vm_area *vma, struct tcb *task,
 int vma_shrink(struct vm_area *vma, struct tcb *task,
 	       const unsigned long pfn_start, const unsigned long pfn_end)
 {
-	unsigned long diff;
+	unsigned long diff, unmap_start, unmap_end;
 
 	/* Shrink from the end */
 	if (vma->pfn_start < pfn_start) {
 		BUG_ON(pfn_start >= vma->pfn_end);
+		unmap_start = pfn_start;
+		unmap_end = vma->pfn_end;
 		vma->pfn_end = pfn_start;
 
 	/* Shrink from the beginning */
 	} else if (vma->pfn_end > pfn_end) {
 		BUG_ON(pfn_end <= vma->pfn_start);
+		unmap_start = vma->pfn_start;
+		unmap_end = pfn_end;
 		diff = pfn_end - vma->pfn_start;
 		vma->file_offset += diff;
 		vma->pfn_start = pfn_end;
-	} else BUG();
+	} else
+		BUG();
+
+	/* Unmap the shrinked portion */
+	BUG_ON(l4_unmap((void *)__pfn_to_addr(unmap_start),
+	       unmap_end - unmap_start, task->tid) < 0);
+
+	return 0;
+}
+
+/* Destroys a single vma from a task and unmaps its range from task space */
+int vma_destroy_single(struct tcb *task, struct vm_area *vma)
+{
+	int ret;
+
+	/* Release all object links */
+	if ((ret = vma_drop_merge_delete_all(vma)) < 0)
+		return ret;
+
+	/* Unmap the whole vma address range */
+	BUG_ON(l4_unmap((void *)__pfn_to_addr(vma->pfn_start),
+	       vma->pfn_end - vma->pfn_start, task->tid) < 0);
+
+	/* Unlink and delete vma */
+	list_del(&vma->list);
+	kfree(vma);
 
 	return 0;
 }
@@ -84,7 +119,7 @@ int vma_unmap(struct vm_area *vma, struct tcb *task,
 		return vma_shrink(vma, task, pfn_start, pfn_end);
 	/* Destroy needed? */
 	else if ((vma->pfn_start >= pfn_start) && (vma->pfn_end <= pfn_end))
-		return vma_drop_merge_delete_all(vma);
+		return vma_destroy_single(task, vma);
 	else
 		BUG();
 
@@ -157,9 +192,6 @@ int do_munmap(struct tcb *task, unsigned long vaddr, unsigned long npages)
 				return err;
 		}
 	}
-
-	/* Unmap those pages from the task address space */
-	l4_unmap(vaddr, npages, task->tid);
 
 	return 0;
 }

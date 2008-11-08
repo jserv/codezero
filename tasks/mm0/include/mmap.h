@@ -24,7 +24,7 @@
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			unsigned int flags, unsigned long file_offset);
 
-int do_munmap(struct tcb *task, void *vaddr, unsigned long size);
+int do_munmap(struct tcb *task, unsigned long vaddr, unsigned long size);
 
 void *do_mmap(struct vm_file *mapfile, unsigned long f_offset, struct tcb *t,
 	      unsigned long map_address, unsigned int flags, unsigned int pages);

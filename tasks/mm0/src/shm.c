@@ -146,7 +146,7 @@ int do_shmdt(struct tcb *task, struct vm_file *shm)
 	int err;
 
 	if ((err = do_munmap(task,
-			     shm_file_to_desc(shm)->shm_addr,
+			     (unsigned long)shm_file_to_desc(shm)->shm_addr,
 			     shm_file_to_desc(shm)->npages)) < 0)
 		return err;
 

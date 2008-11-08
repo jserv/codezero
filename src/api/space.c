@@ -40,26 +40,30 @@ found:
 	return 0;
 }
 
-
+/*
+ * Unmaps given range from given task. If the complete range is unmapped
+ * sucessfully, returns 0. If part of the range was found to be already
+ * unmapped, returns -1. This is may or may not be an error.
+ */
 int sys_unmap(syscall_context_t *regs)
 {
-	unsigned long virt = regs->r0;
+	unsigned long virtual = regs->r0;
 	unsigned long npages = regs->r1;
 	unsigned int tid = regs->r2;
 	struct ktcb *target;
+	int ret, retval;
 
-	if (tid == current->tid) { /* The easiest case */
+	if (tid == current->tid)
 		target = current;
-		goto found;
-	} else 	/* else search the tcb from its hash list */
-		if ((target = find_task(tid)))
-			goto found;
-	BUG();
-	return -EINVAL;
-found:
-	for (int i = 0; i < npages; i++)
-		remove_mapping_pgd(virt, target->pgd);
+	else if (!(target = find_task(tid)))
+		return -ESRCH;
 
-	return 0;
+	for (int i = 0; i < npages; i++) {
+		ret = remove_mapping_pgd(virtual + i * PAGE_SIZE, target->pgd);
+		if (ret)
+			retval = ret;
+	}
+
+	return retval;
 }
 

@@ -146,10 +146,9 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	      struct tcb *task, unsigned long map_address,
 	      unsigned int flags, unsigned int npages)
 {
-	unsigned long map_pfn = __pfn(map_address);
-	unsigned long file_npages;
-	struct vm_area *new, *mapped;
 	struct vm_obj_link *vmo_link, *vmo_link2;
+	unsigned long file_npages;
+	struct vm_area *new;
 	int err;
 
 	/* Set up devzero if none given */

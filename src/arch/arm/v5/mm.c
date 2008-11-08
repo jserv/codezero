@@ -274,31 +274,38 @@ int check_mapping(unsigned long vaddr, unsigned long size,
 }
 
 /* FIXME: Empty PMDs should be returned here !!! */
-void __remove_mapping(pmd_table_t *pmd, unsigned long vaddr)
+int __remove_mapping(pmd_table_t *pmd, unsigned long vaddr)
 {
 	pmd_t pmd_i = PMD_INDEX(vaddr);
+	int ret;
 
 	switch (pmd->entry[pmd_i] & PMD_TYPE_MASK) {
+		case PMD_TYPE_FAULT:
+			ret = -1;
+			break;
 		case PMD_TYPE_LARGE:
 			pmd->entry[pmd_i] = 0;
 			pmd->entry[pmd_i] |= PMD_TYPE_FAULT;
+			ret = 0;
 			break;
 		case PMD_TYPE_SMALL:
 			pmd->entry[pmd_i] = 0;
 			pmd->entry[pmd_i] |= PMD_TYPE_FAULT;
+			ret = 0;
 			break;
 		default:
 			printk("Unknown page mapping in pmd. Assuming bug.\n");
 			BUG();
 	}
-	return;
+	return ret;
 }
 
-void remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
+int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 {
 	pgd_t pgd_i = PGD_INDEX(vaddr);
 	pmd_table_t *pmd;
 	pmd_t pmd_i;
+	int ret;
 
 	/*
 	 * Clean the cache to main memory before removing the mapping. Otherwise
@@ -321,20 +328,19 @@ void remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 			      phys_to_virt((pgd->entry[pgd_i]
 					   & PGD_COARSE_ALIGN_MASK));
 			pmd_i = PMD_INDEX(vaddr);
-			__remove_mapping(pmd, vaddr);
+			ret = __remove_mapping(pmd, vaddr);
 			break;
 
 		case PGD_TYPE_FAULT:
-			dprintk("Attempting to remove fault mapping. "
-				"Assuming bug.\n", vaddr);
-			BUG();
+			ret = -1;
 			break;
 
 		case PGD_TYPE_SECTION:
-				printk("Removing section mapping for 0x%lx",
-				       vaddr);
-				pgd->entry[pgd_i] = 0;
-				pgd->entry[pgd_i] |= PGD_TYPE_FAULT;
+			printk("Removing section mapping for 0x%lx",
+			       vaddr);
+			pgd->entry[pgd_i] = 0;
+			pgd->entry[pgd_i] |= PGD_TYPE_FAULT;
+			ret = 0;
 			break;
 
 		case PGD_TYPE_FINE:
@@ -352,11 +358,13 @@ void remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 	/* The tlb must be invalidated here because it might have cached the
 	 * old translation for this mapping. */
 	arm_invalidate_tlb();
+
+	return ret;
 }
 
-void remove_mapping(unsigned long vaddr)
+int remove_mapping(unsigned long vaddr)
 {
-	remove_mapping_pgd(vaddr, current->pgd);
+	return remove_mapping_pgd(vaddr, current->pgd);
 }
 
 /*
