@@ -182,13 +182,13 @@ void shm_destroy_priv_data(struct vm_file *shm_file)
 
 	/* Release the shared memory address */
 	if ((unsigned long)shm_desc->shm_addr >= UTCB_AREA_START &&
-	    (unsigned long)shm_desc->shm_addr < UTCB_AREA_END)
-		utcb_delete_address(shm_desc->shm_addr);
-	else if ((unsigned long)shm_desc->shm_addr >= SHM_AREA_START &&
-	    	 (unsigned long)shm_desc->shm_addr < SHM_AREA_END)
-		shm_delete_address(shm_desc->shm_addr,
-				   shm_file->vm_obj.npages);
-	else
+	    (unsigned long)shm_desc->shm_addr < UTCB_AREA_END) {
+		BUG_ON(utcb_delete_address(shm_desc->shm_addr) < 0);
+	} else if ((unsigned long)shm_desc->shm_addr >= SHM_AREA_START &&
+	    	   (unsigned long)shm_desc->shm_addr < SHM_AREA_END) {
+		BUG_ON(shm_delete_address(shm_desc->shm_addr,
+					  shm_file->vm_obj.npages) < 0);
+	} else
 		BUG();
 
 	/* Release the shared memory id */

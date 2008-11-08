@@ -51,7 +51,7 @@ int sys_unmap(syscall_context_t *regs)
 	unsigned long npages = regs->r1;
 	unsigned int tid = regs->r2;
 	struct ktcb *target;
-	int ret, retval;
+	int ret = 0, retval = 0;
 
 	if (tid == current->tid)
 		target = current;

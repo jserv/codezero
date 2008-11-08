@@ -83,6 +83,7 @@ int sys_fork(struct tcb *parent)
 	/* Create and prefault a utcb for child and map it to vfs task */
 	utcb_map_to_task(child, find_task(VFS_TID),
 			 UTCB_NEW_ADDRESS | UTCB_NEW_SHM | UTCB_PREFAULT);
+	// printf("Mapped 0x%p to vfs as utcb of %d\n", child->utcb, child->tid);
 
 	/* We can now notify vfs about forked process */
 	vfs_notify_fork(child, parent);

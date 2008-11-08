@@ -12,6 +12,7 @@
 #include <task.h>
 #include <shm.h>
 #include <vm_area.h>
+#include <syscalls.h>
 #include INC_GLUE(memlayout.h)
 
 static struct address_pool utcb_vaddr_pool;
@@ -102,5 +103,5 @@ int utcb_map_to_task(struct tcb *owner, struct tcb *mapper, unsigned int flags)
 
 int utcb_unmap_from_task(struct tcb *owner, struct tcb *mapper)
 {
-	return 0;
+	return sys_shmdt(mapper, owner->utcb);
 }
