@@ -49,6 +49,7 @@ void global_add_task(struct tcb *task)
 	list_add_tail(&task->list, &global_tasks.list);
 	global_tasks.total++;
 }
+
 void global_remove_task(struct tcb *task)
 {
 	BUG_ON(list_empty(&task->list));
@@ -114,6 +115,11 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 int tcb_destroy(struct tcb *task)
 {
 	global_remove_task(task);
+
+	if (--task->vm_area_head->tcb_refs == 0)
+		kfree(task->vm_area_head);
+	if (--task->files->tcb_refs == 0)
+		kfree(task->files);
 
 	kfree(task);
 

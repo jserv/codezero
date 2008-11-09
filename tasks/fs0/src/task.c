@@ -148,6 +148,11 @@ void tcb_destroy(struct tcb *task)
 {
 	global_remove_task(task);
 
+	if (--task->fs_data->tcb_refs == 0)
+		kfree(task->fs_data);
+	if (--task->files->tcb_refs == 0)
+		kfree(task->files);
+
 	kfree(task);
 }
 
