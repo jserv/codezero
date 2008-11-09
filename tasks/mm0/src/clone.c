@@ -99,7 +99,7 @@ int sys_fork(struct tcb *parent)
 	return child->tid;
 }
 
-int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
+int do_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 {
 	struct task_ids ids;
 	struct tcb *child;
@@ -134,6 +134,10 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 	return child->tid;
 }
 
+
+int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
+{
+}
 
 
 
