@@ -143,15 +143,25 @@ struct tcb *tcb_create(struct tcb *orig, l4id_t tid, unsigned long utcb,
 	return task;
 }
 
-/* FIXME: Modify it to work with shared structures!!! */
+/* Free shared structures if no references left */
+void tcb_free_resources(struct tcb *task)
+{
+
+	if (--task->fs_data->tcb_refs == 0)
+		kfree(task->fs_data);
+
+	if (--task->files->tcb_refs == 0) {
+		kfree(task->files->fdpool);
+		kfree(task->files);
+	}
+
+}
+
 void tcb_destroy(struct tcb *task)
 {
 	global_remove_task(task);
 
-	if (--task->fs_data->tcb_refs == 0)
-		kfree(task->fs_data);
-	if (--task->files->tcb_refs == 0)
-		kfree(task->files);
+	tcb_free_resources(task);
 
 	kfree(task);
 }

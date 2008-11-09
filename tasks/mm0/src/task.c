@@ -111,15 +111,41 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 	return task;
 }
 
-/* NOTE: We may need to delete shared tcb parts here as well. */
+/*
+ * Free vmas, fd structure and utcb address.
+ * Make sure to sync all IO beforehand
+ */
+int task_free_resources(struct tcb *task)
+{
+	/*
+	 * Threads may share file descriptor structure
+	 * if no users left, free it.
+	 */
+	if (!(--task->files->tcb_refs))
+		kfree(task->files);
+
+	/*
+	 * Threads may share the virtual space.
+	 * if no users of the vma struct left,
+	 * free it along with all its vma links.
+	 */
+	if (!(--task->vm_area_head->tcb_refs)) {
+		/* Free all vmas */
+		task_release_vmas(task->vm_area_head);
+
+		/* Free the head */
+		kfree(task->vm_area_head);
+	}
+
+	return 0;
+}
+
 int tcb_destroy(struct tcb *task)
 {
 	global_remove_task(task);
 
-	if (--task->vm_area_head->tcb_refs == 0)
-		kfree(task->vm_area_head);
-	if (--task->files->tcb_refs == 0)
-		kfree(task->files);
+	/* Free all resources of the task */
+	task_free_resources(task);
 
 	kfree(task);
 
