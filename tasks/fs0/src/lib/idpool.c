@@ -9,12 +9,15 @@
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <stdio.h>
+#include <l4/api/errno.h>
 
 struct id_pool *id_pool_new_init(int totalbits)
 {
 	int nwords = BITWISE_GETWORD(totalbits);
 	struct id_pool *new = kzalloc((nwords * SZ_WORD)
 				      + sizeof(struct id_pool));
+	if (!new)
+		return PTR_ERR(-ENOMEM);
 	new->nwords = nwords;
 	return new;
 }
@@ -61,5 +64,18 @@ int id_del(struct id_pool *pool, int id)
 	if ((ret = check_and_clear_bit(pool->bitmap, id) < 0))
 		printf("%s: Error: Could not delete id.\n", __FUNCTION__);
 	return ret;
+}
+
+/* Return a specific id, if available */
+int id_get(struct id_pool *pool, int id)
+{
+	int ret;
+
+	ret = check_and_set_bit(pool->bitmap, id);
+
+	if (ret < 0)
+		return ret;
+	else
+		return id;
 }
 

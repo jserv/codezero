@@ -10,18 +10,32 @@
 
 #define __TASKNAME__			__VFSNAME__
 
+#define TCB_NO_SHARING				0
+#define	TCB_SHARED_VM				(1 << 0)
+#define	TCB_SHARED_FILES			(1 << 1)
+#define TCB_SHARED_FS				(1 << 2)
+
 #define TASK_FILES_MAX			32
+
+struct task_fd_head {
+	int fd[TASK_FILES_MAX];
+	struct id_pool *fdpool;
+	int tcb_refs;
+};
+
+struct task_fs_data {
+	struct vnode *curdir;
+	struct vnode *rootdir;
+	int tcb_refs;
+};
 
 /* Thread control block, fs0 portion */
 struct tcb {
 	l4id_t tid;
-	unsigned long utcb_address;
-	int utcb_mapped;		/* Set if we mapped their utcb */
 	struct list_head list;
-	int fd[TASK_FILES_MAX];
-	struct id_pool *fdpool;
-	struct vnode *curdir;
-	struct vnode *rootdir;
+	unsigned long utcb_address;
+	struct task_fd_head *files;
+	struct task_fs_data *fs_data;
 };
 
 /* Structures used when receiving new task info from pager */
@@ -34,11 +48,6 @@ struct task_data_head {
 	unsigned long total;
 	struct task_data tdata[];
 };
-
-static inline int task_is_utcb_mapped(struct tcb *t)
-{
-	return t->utcb_mapped;
-}
 
 struct tcb *find_task(int tid);
 int init_task_data(void);

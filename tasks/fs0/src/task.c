@@ -10,6 +10,7 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <lib/malloc.h>
+#include <lib/idpool.h>
 #include <task.h>
 #include <vfs.h>
 #include <sys/ipc.h>
@@ -30,13 +31,13 @@ void global_add_task(struct tcb *task)
 	list_add_tail(&task->list, &global_tasks.list);
 	global_tasks.total++;
 }
+
 void global_remove_task(struct tcb *task)
 {
 	BUG_ON(list_empty(&task->list));
 	list_del_init(&task->list);
 	BUG_ON(--global_tasks.total < 0);
 }
-
 
 struct tcb *find_task(int tid)
 {
@@ -48,31 +49,112 @@ struct tcb *find_task(int tid)
 	return 0;
 }
 
-/* Allocate a task struct and initialise it */
-struct tcb *create_tcb(void)
+/* Allocate a vfs task structure according to given flags */
+struct tcb *tcb_alloc_init(unsigned int flags)
 {
-	struct tcb *t;
+	struct tcb *task;
 
-	if (!(t = kmalloc(sizeof(*t))))
+	if (!(task = kzalloc(sizeof(struct tcb))))
 		return PTR_ERR(-ENOMEM);
 
-	t->fdpool = id_pool_new_init(TASK_FILES_MAX);
-	INIT_LIST_HEAD(&t->list);
+	/* Allocate new fs data struct if its not shared */
+	if (!(flags & TCB_SHARED_FS)) {
+		if (!(task->fs_data =
+		      kzalloc(sizeof(*task->fs_data)))) {
+			kfree(task);
+			return PTR_ERR(-ENOMEM);
+		}
+		task->fs_data->tcb_refs = 1;
+	}
 
-	return t;
+	/* Allocate file structures if not shared */
+	if (!(flags & TCB_SHARED_FILES)) {
+		if (!(task->files =
+		      kzalloc(sizeof(*task->files)))) {
+			kfree(task->fs_data);
+			kfree(task);
+			return PTR_ERR(-ENOMEM);
+		}
+		if (IS_ERR(task->files->fdpool =
+			   id_pool_new_init(TASK_FILES_MAX))) {
+			void *err = task->files->fdpool;
+
+			kfree(task->files);
+			kfree(task->fs_data);
+			kfree(task);
+			return err;
+		}
+		task->files->tcb_refs = 1;
+	}
+
+	/* Ids will be set up later */
+	task->tid = TASK_ID_INVALID;
+
+	/* Initialise list structure */
+	INIT_LIST_HEAD(&task->list);
+
+	return task;
 }
 
-void destroy_tcb(struct tcb *t)
+void copy_tcb(struct tcb *to, struct tcb *from, unsigned int share_flags)
 {
-	kfree(t->fdpool);
+	if (share_flags & TCB_SHARED_FILES) {
+		to->files = from->files;
+		to->files->tcb_refs++;
+	} else {
+		/* Copy all file descriptors */
+		memcpy(to->files->fd, from->files->fd,
+		       TASK_FILES_MAX * sizeof(to->files->fd[0]));
 
-	global_remove_task(t);
-	kfree(t);
+		/* Copy the idpool */
+		id_pool_copy(to->files->fdpool, from->files->fdpool, TASK_FILES_MAX);
+	}
+
+	if (share_flags & TCB_SHARED_FS) {
+		to->fs_data = from->fs_data;
+		to->fs_data->tcb_refs++;
+	} else
+		memcpy(to->fs_data, from->fs_data, sizeof(*to->fs_data));
+}
+
+/* Allocate a task struct and initialise it */
+struct tcb *tcb_create(struct tcb *orig, l4id_t tid, unsigned long utcb,
+		       unsigned int share_flags)
+{
+	struct tcb *task;
+
+	/* Can't have some share flags with no original task */
+	BUG_ON(!orig && share_flags);
+
+	/* Create a task and use given space and thread ids. */
+	if (IS_ERR(task = tcb_alloc_init(share_flags)))
+		return task;
+
+	task->tid = tid;
+	task->utcb_address = utcb;
+
+	/*
+	 * If there's an original task that means this will be a full
+	 * or partial copy of it. We copy depending on share_flags.
+	 */
+	if (orig)
+		copy_tcb(task, orig, share_flags);
+
+	return task;
+}
+
+/* FIXME: Modify it to work with shared structures!!! */
+void tcb_destroy(struct tcb *task)
+{
+	global_remove_task(task);
+
+	kfree(task);
 }
 
 /*
- * Attaches to task's utcb. FIXME: Add SHM_RDONLY and test it.
+ * Attaches to task's utcb. TODO: Add SHM_RDONLY and test it.
  * FIXME: This calls the pager and is a potential for deadlock
+ * it only doesn't lock because it is called during initialisation.
  */
 int task_utcb_attach(struct tcb *t)
 {
@@ -106,31 +188,18 @@ out_err:
  * Receives ipc from pager about a new fork event and
  * the information on the resulting child task.
  */
-int pager_notify_fork(struct tcb *sender, l4id_t parid,
-		      l4id_t chid, unsigned long utcb_address)
+int pager_notify_fork(struct tcb *sender, l4id_t parentid,
+		      l4id_t childid, unsigned long utcb_address,
+		      unsigned int flags)
 {
 	struct tcb *child, *parent;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-	BUG_ON(!(parent = find_task(parid)));
+	BUG_ON(!(parent = find_task(parentid)));
 
-	if (IS_ERR(child = create_tcb()))
+	/* Create a child vfs tcb using given parent and copy flags */
+	if (IS_ERR(child = tcb_create(parent, childid, utcb_address, flags)))
 		return (int)child;
-
-	/* Initialise fields sent by pager */
-	child->tid = chid;
-	child->utcb_address = utcb_address;
-
-	/*
-	 * Initialise vfs specific fields.
-	 * FIXME: Or copy from parent???
-	 */
-	child->rootdir = vfs_root.pivot;
-	child->curdir = vfs_root.pivot;
-
-	/* Copy file descriptors from parent */
-	id_pool_copy(child->fdpool, parent->fdpool, TASK_FILES_MAX);
-	memcpy(child->fd, parent->fd, TASK_FILES_MAX * sizeof(int));
 
 	global_add_task(child);
 
@@ -149,7 +218,7 @@ int pager_notify_exit(struct tcb *sender, l4id_t tid)
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	BUG_ON(!(task = find_task(tid)));
 
-	destroy_tcb(task);
+	tcb_destroy(task);
 
 	// printf("%s/%s: Exiting...\n", __TASKNAME__, __FUNCTION__);
 
@@ -188,16 +257,15 @@ int init_task_structs(struct task_data_head *tdata_head)
 	struct tcb *t;
 
 	for (int i = 0; i < tdata_head->total; i++) {
-		if (IS_ERR(t = create_tcb()))
+		/* New tcb with fields sent by pager */
+		if (IS_ERR(t = tcb_create(0, tdata_head->tdata[i].tid,
+					  tdata_head->tdata[i].utcb_address,
+					  0)))
 			return (int)t;
 
-		/* Initialise fields sent by pager */
-		t->tid = tdata_head->tdata[i].tid;
-		t->utcb_address = tdata_head->tdata[i].utcb_address;
-
 		/* Initialise vfs specific fields. */
-		t->rootdir = vfs_root.pivot;
-		t->curdir = vfs_root.pivot;
+		t->fs_data->rootdir = vfs_root.pivot;
+		t->fs_data->curdir = vfs_root.pivot;
 
 		/* Print task information */
 		//printf("%s: Task info received from mm0:\n", __TASKNAME__);

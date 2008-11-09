@@ -96,3 +96,16 @@ int check_and_clear_contig_bits(u32 *word, int first, int nbits)
 	return 0;
 }
 
+int check_and_set_bit(u32 *word, int bit)
+{
+	/* Check that bit was clear */
+	if (!(word[BITWISE_GETWORD(bit)] & BITWISE_GETBIT(bit))) {
+		word[BITWISE_GETWORD(bit)] |= BITWISE_GETBIT(bit);
+		return 0;
+	} else {
+		//printf("Trying to set already set bit\n");
+		return -1;
+	}
+}
+
+

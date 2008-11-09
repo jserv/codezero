@@ -10,6 +10,7 @@ int find_and_set_first_free_contig_bits(u32 *word,  unsigned int limit,
 int check_and_clear_bit(u32 *word, int bit);
 int check_and_clear_contig_bits(u32 *word, int first, int nbits);
 
+int check_and_set_bit(u32 *word, int bit);
 
 /* Set */
 static inline void setbit(unsigned int *w, unsigned int flags)

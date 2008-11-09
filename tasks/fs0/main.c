@@ -111,7 +111,7 @@ void handle_fs_requests(void)
 		break;
 	case L4_IPC_TAG_NOTIFY_FORK:
 		ret = pager_notify_fork(sender, (l4id_t)mr[0], (l4id_t)mr[1],
-					(unsigned long)mr[2]);
+					(unsigned long)mr[2], (unsigned int)mr[3]);
 		break;
 	case L4_IPC_TAG_NOTIFY_EXIT:
 		ret = pager_notify_exit(sender, (l4id_t)mr[0]);

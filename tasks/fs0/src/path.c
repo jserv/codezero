@@ -91,7 +91,7 @@ struct pathdata *pathdata_parse(const char *pathname,
 		list_add_tail(&comp->list, &pdata->list);
 
 		/* Lookup start vnode is root vnode */
-		pdata->vstart = task->rootdir;
+		pdata->vstart = task->fs_data->rootdir;
 
 	/* Otherwise start from current directory */
 	} else {
@@ -104,7 +104,7 @@ struct pathdata *pathdata_parse(const char *pathname,
 		INIT_LIST_HEAD(&comp->list);
 
 		/* Get current dentry for this task */
-		curdir = list_entry(task->curdir->dentries.next,
+		curdir = list_entry(task->fs_data->curdir->dentries.next,
 				    struct dentry, vref);
 
 		/* Use its name in path component */
@@ -112,7 +112,7 @@ struct pathdata *pathdata_parse(const char *pathname,
 		list_add_tail(&comp->list, &pdata->list);
 
 		/* Lookup start vnode is current dir vnode */
-		pdata->vstart = task->curdir;
+		pdata->vstart = task->fs_data->curdir;
 	}
 
 	/* Add every other path component */

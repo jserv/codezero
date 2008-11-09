@@ -15,7 +15,7 @@
 #include <lib/addr.h>
 #include <l4/api/kip.h>
 
-#define __TASKNAME__		__PAGERNAME__
+#define __TASKNAME__			__PAGERNAME__
 
 #define TASK_FILES_MAX			32
 
@@ -24,12 +24,10 @@
 #define DEFAULT_STACK_SIZE		SZ_16K
 #define DEFAULT_UTCB_SIZE		PAGE_SIZE
 
-
-enum tcb_create_flags {
-	TCB_NO_SHARING = 0,
-	TCB_SHARED_VM = 1,
-	TCB_SHARED_FILES = 2,
-};
+#define TCB_NO_SHARING				0
+#define	TCB_SHARED_VM				(1 << 0)
+#define	TCB_SHARED_FILES			(1 << 1)
+#define TCB_SHARED_FS				(1 << 2)
 
 struct vm_file;
 

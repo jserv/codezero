@@ -167,6 +167,9 @@ int vma_flush_pages(struct vm_area *vma)
  * Unmaps the given virtual address range from the task, the region
  * may span into zero or more vmas, and may involve shrinking, splitting
  * and destruction of multiple vmas.
+ *
+ * NOTE: Shared object addresses are returned back to their pools when
+ * such objects are deleted, and not via this function.
  */
 int do_munmap(struct tcb *task, unsigned long vaddr, unsigned long npages)
 {

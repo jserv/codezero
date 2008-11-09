@@ -46,12 +46,12 @@ int pager_sys_open(struct tcb *pager, l4id_t opener, int fd)
 		return -ESRCH;
 
 	/* Check if that fd has been opened */
-	if (task->fd[fd] == NILFD)
+	if (task->files->fd[fd] == NILFD)
 		return -EBADF;
 
 	/* Search the vnode by that vnum */
 	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
-					 task->fd[fd])))
+					 task->files->fd[fd])))
 		return (int)v;
 
 	/*
@@ -119,12 +119,12 @@ int pager_sys_close(struct tcb *sender, l4id_t closer, int fd)
 
 	BUG_ON(!(task = find_task(closer)));
 
-	if ((err = id_del(task->fdpool, fd)) < 0) {
+	if ((err = id_del(task->files->fdpool, fd)) < 0) {
 		printf("%s: Error releasing fd identifier.\n",
 		       __FUNCTION__);
 		return err;
 	}
-	task->fd[fd] = NILFD;
+	task->files->fd[fd] = NILFD;
 
 	return 0;
 }
@@ -166,11 +166,11 @@ int sys_open(struct tcb *task, const char *pathname, int flags, unsigned int mod
 	}
 
 	/* Get a new fd */
-	BUG_ON((fd = id_new(task->fdpool)) < 0);
+	BUG_ON((fd = id_new(task->files->fdpool)) < 0);
 	retval = fd;
 
 	/* Assign the new fd with the vnode's number */
-	task->fd[fd] = v->vnum;
+	task->files->fd[fd] = v->vnum;
 
 out:
 	pathdata_destroy(pdata);
@@ -226,7 +226,7 @@ int sys_chdir(struct tcb *task, const char *pathname)
 	}
 
 	/* Assign the current directory pointer */
-	task->curdir = v;
+	task->fs_data->curdir = v;
 
 out:
 	/* Destroy extracted path data */
@@ -254,10 +254,10 @@ int sys_fstat(struct tcb *task, int fd, void *statbuf)
 	unsigned long vnum;
 
 	/* Get the vnum */
-	if (fd < 0 || fd > TASK_FILES_MAX || task->fd[fd] == NILFD)
+	if (fd < 0 || fd > TASK_FILES_MAX || task->files->fd[fd] == NILFD)
 		return -EBADF;
 
-	vnum = task->fd[fd];
+	vnum = task->files->fd[fd];
 
 	/* Lookup vnode */
 	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
@@ -437,10 +437,10 @@ int sys_readdir(struct tcb *t, int fd, void *buf, int count)
 	    (unsigned long)buf > t->utcb_address + PAGE_SIZE)
 		return -EINVAL;
 
-	if (fd < 0 || fd > TASK_FILES_MAX || t->fd[fd] == NILFD)
+	if (fd < 0 || fd > TASK_FILES_MAX || t->files->fd[fd] == NILFD)
 		return -EBADF;
 
-	vnum = t->fd[fd];
+	vnum = t->files->fd[fd];
 
 	/* Lookup vnode */
 	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))

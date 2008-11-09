@@ -18,7 +18,7 @@
 /*
  * Sends vfs task information about forked child, and its utcb
  */
-int vfs_notify_fork(struct tcb *child, struct tcb *parent)
+int vfs_notify_fork(struct tcb *child, struct tcb *parent, unsigned int flags)
 {
 	int err = 0;
 
@@ -30,6 +30,7 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent)
 	write_mr(L4SYS_ARG0, parent->tid);
 	write_mr(L4SYS_ARG1, child->tid);
 	write_mr(L4SYS_ARG2, (unsigned int)child->utcb);
+	write_mr(L4SYS_ARG3, flags);
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
 			       L4_IPC_TAG_NOTIFY_FORK)) < 0) {
@@ -86,7 +87,7 @@ int sys_fork(struct tcb *parent)
 	// printf("Mapped 0x%p to vfs as utcb of %d\n", child->utcb, child->tid);
 
 	/* We can now notify vfs about forked process */
-	vfs_notify_fork(child, parent);
+	vfs_notify_fork(child, parent, TCB_NO_SHARING);
 
 	/* Add child to global task list */
 	global_add_task(child);
@@ -120,7 +121,7 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 	child->stack_start = 0;
 
 	/* We can now notify vfs about forked process */
-	vfs_notify_fork(child, parent);
+	vfs_notify_fork(child, parent, TCB_SHARED_FILES);
 
 	/* Add child to global task list */
 	global_add_task(child);

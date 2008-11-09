@@ -22,6 +22,7 @@ static inline void id_pool_copy(struct id_pool *to, struct id_pool *from, int to
 struct id_pool *id_pool_new_init(int mapsize);
 int id_new(struct id_pool *pool);
 int id_del(struct id_pool *pool, int id);
+int id_get(struct id_pool *pool, int id);
 int ids_new_contiguous(struct id_pool *pool, int numids);
 int ids_del_contiguous(struct id_pool *pool, int first, int numids);
 

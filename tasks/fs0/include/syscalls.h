@@ -27,8 +27,9 @@ int pager_sys_close(struct tcb *sender, l4id_t closer, int fd);
 int pager_update_stats(struct tcb *sender, unsigned long vnum,
 		       unsigned long newsize);
 
-int pager_notify_fork(struct tcb *sender, l4id_t parid,
-		      l4id_t chid, unsigned long utcb_address);
+int pager_notify_fork(struct tcb *sender, l4id_t parentid,
+		      l4id_t childid, unsigned long utcb_address,
+		      unsigned int flags);
 
 int pager_notify_exit(struct tcb *sender, l4id_t tid);
 #endif /* __FS0_SYSCALLS_H__ */
