@@ -122,9 +122,13 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 	child->stack_end = child_stack;
 	child->stack_start = 0;
 
-	/* Set child's stack pointer */
 	memset(&exregs, 0, sizeof(exregs));
+
+	/* Set child's stack pointer */
 	exregs_set_stack(&exregs, child_stack);
+
+	/* Set child's clone return value to 0 */
+	exregs_set_mr(&exregs, MR_RETURN, 0);
 
 	/* Do the actual exregs call to c0 */
 	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)

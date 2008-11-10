@@ -126,6 +126,10 @@ void handle_requests(void)
 		ret = sys_fork(sender);
 		break;
 	}
+	case L4_IPC_TAG_CLONE: {
+		ret = sys_clone(sender, (void *)mr[0], (unsigned int)mr[1]);
+		break;
+	}
 	case L4_IPC_TAG_EXIT: {
 		/* An exiting task has no receive phase */
 		sys_exit(sender, (int)mr[0]);

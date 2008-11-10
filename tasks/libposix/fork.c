@@ -65,8 +65,8 @@ int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
 	l4_set_tag(L4_IPC_TAG_CLONE);
 
 	/* Write the args as in usual ipc */
-	write_mr(L4SYS_ARG0, flags);
-	write_mr(L4SYS_ARG1, (unsigned long)child_stack);
+	write_mr(L4SYS_ARG0, (unsigned long)child_stack);
+	write_mr(L4SYS_ARG1, flags);
 
 	/* Perform an ipc but with different return logic. See implementation. */
 	if ((ret = arch_clone(PAGER_TID, PAGER_TID)) < 0) {

@@ -61,13 +61,9 @@ struct tcb *find_task(int tid)
 {
 	struct tcb *t;
 
-	list_for_each_entry(t, &global_tasks.list, list) {
-		/* A temporary precaution */
-		BUG_ON(t->tid != t->spid);
-		if (t->tid == tid) {
+	list_for_each_entry(t, &global_tasks.list, list)
+		if (t->tid == tid)
 			return t;
-		}
-	}
 	return 0;
 }
 

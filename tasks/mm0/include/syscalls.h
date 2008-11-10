@@ -32,6 +32,7 @@ int sys_shmdt(struct tcb *requester, const void *shmaddr);
 int sys_shmget(key_t key, int size, int shmflg);
 
 int sys_fork(struct tcb *parent);
+int sys_clone(struct tcb *parent, void *child_stack, unsigned int clone_flags);
 void sys_exit(struct tcb *task, int status);
 
 #endif /* __MM0_SYSARGS_H__ */

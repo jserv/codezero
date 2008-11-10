@@ -63,7 +63,11 @@ void main(void)
 	}
 
 	printf("Testing clone syscall...\n");
-	clonetest();
+	if ((pid = fork()) < 0)
+		printf("Error forking...\n");
+	/* Child does the clonetest(). All of them will exit */
+	if (pid == 0)
+		clonetest();
 
 	while (1)
 		wait_pager(0);
