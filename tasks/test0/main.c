@@ -62,6 +62,9 @@ void main(void)
 			printf("-- FAILED --\n");
 	}
 
+	printf("Testing clone syscall...\n");
+	clonetest();
+
 	while (1)
 		wait_pager(0);
 #if 0

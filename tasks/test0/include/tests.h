@@ -9,5 +9,6 @@ int mmaptest(void);
 int dirtest(void);
 int fileio(void);
 int fileio2(void);
+int clonetest(void);
 
 #endif /* __TEST0_TESTS_H__ */
