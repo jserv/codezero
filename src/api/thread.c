@@ -164,8 +164,10 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig, unsigned int flag
 	return 0;
 }
 
-extern unsigned int return_from_syscall;
-
+/*
+ * Sets up the thread, thread group and space id of newly created thread
+ * according to supplied flags.
+ */
 int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 			 struct ktcb *new, struct ktcb *orig)
 {
@@ -187,20 +189,19 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 					ids->spid)) < 0)
 			ids->spid = id_new(space_id_pool);
 
-		/* It also gets a thread group id */
-		if ((ids->tgid = id_get(tgroup_id_pool,
-					ids->tgid)) < 0)
-			ids->tgid = id_new(tgroup_id_pool);
+		/* Thread gets same group id as its thread id */
+		ids->tgid = ids->tid;
 	}
 
-	/* If thread space is the same, tgid is either new or existing one */
 	if (flags == THREAD_SAME_SPACE) {
-		/* Check if same tgid is expected */
-		if (ids->tgid != orig->tgid) {
-			if ((ids->tgid = id_get(tgroup_id_pool,
-					ids->tgid)) < 0)
-				ids->tgid = id_new(tgroup_id_pool);
-		}
+		/*
+		 * If the tgid of original thread is supplied, that
+		 * implies the new thread wants to be in the same group,
+		 * and we leave it as it is. Otherwise the thread gets
+		 * the same group id as its unique thread id.
+		 */
+		if (ids->tgid != orig->tgid)
+			ids->tgid = ids->tid;
 	}
 
 	/* Set all ids */
