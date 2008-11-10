@@ -28,6 +28,7 @@
 #define	TCB_SHARED_VM				(1 << 0)
 #define	TCB_SHARED_FILES			(1 << 1)
 #define TCB_SHARED_FS				(1 << 2)
+#define TCB_SAME_GROUP				(1 << 3)
 
 struct vm_file;
 

@@ -3,17 +3,18 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
-#include <syscalls.h>
-#include <vm_area.h>
-#include <task.h>
-#include <mmap.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
 #include <l4/api/errno.h>
 #include <l4/api/thread.h>
+#include <syscalls.h>
+#include <vm_area.h>
+#include <task.h>
+#include <mmap.h>
 #include <utcb.h>
 #include <shm.h>
+#include <clone.h>
 
 /*
  * Sends vfs task information about forked child, and its utcb
@@ -58,7 +59,7 @@ int sys_fork(struct tcb *parent)
 	struct exregs_data exregs;
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
-		.spid = parent->spid,
+		.spid = parent->spid,		/* spid to copy from */
 		.tgid = TASK_ID_INVALID,	/* FIXME: !!! FIX THIS */
 	};
 
@@ -99,35 +100,48 @@ int sys_fork(struct tcb *parent)
 	return child->tid;
 }
 
-int do_clone(struct tcb *parent, void *child_stack, unsigned int flags)
+int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 {
+	struct exregs_data exregs;
 	struct task_ids ids;
 	struct tcb *child;
+	int err;
 
 	ids.tid = TASK_ID_INVALID;
 	ids.spid = parent->spid;
-	ids.tgid = parent->tgid;
 
-	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE,
-			    	       TCB_SHARED_VM | TCB_SHARED_FILES)))
+	if (flags & TCB_SAME_GROUP)
+		ids.tgid = parent->tgid;
+	else
+		ids.tgid = TASK_ID_INVALID;
+
+	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE, flags)))
 		return (int)child;
+
+	/* Set up child stack marks with given stack argument */
+	child->stack_end = child_stack;
+	child->stack_start = 0;
+
+	/* Set child's stack pointer */
+	memset(&exregs, 0, sizeof(exregs));
+	exregs_set_stack(&exregs, child_stack);
+
+	/* Do the actual exregs call to c0 */
+	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
+		BUG();
 
 	/* Create and prefault a utcb for child and map it to vfs task */
 	utcb_map_to_task(child, find_task(VFS_TID),
 			 UTCB_NEW_ADDRESS | UTCB_NEW_SHM | UTCB_PREFAULT);
 
-	/* Set up child stack marks with given stack argument */
-	child->stack_end = (unsigned long)child_stack;
-	child->stack_start = 0;
-
 	/* We can now notify vfs about forked process */
-	vfs_notify_fork(child, parent, TCB_SHARED_FILES);
+	vfs_notify_fork(child, parent, flags);
 
 	/* Add child to global task list */
 	global_add_task(child);
 
-	/* Start forked child. */
-	printf("%s/%s: Starting forked child.\n", __TASKNAME__, __FUNCTION__);
+	/* Start cloned child. */
+	printf("%s/%s: Starting cloned child.\n", __TASKNAME__, __FUNCTION__);
 	l4_thread_control(THREAD_RUN, &ids);
 
 	/* Return child tid to parent */
@@ -135,9 +149,22 @@ int do_clone(struct tcb *parent, void *child_stack, unsigned int flags)
 }
 
 
-int sys_clone(struct tcb *parent, void *child_stack, unsigned int flags)
+int sys_clone(struct tcb *parent, void *child_stack, unsigned int clone_flags)
 {
+	unsigned int flags = 0;
+
+	if (!child_stack)
+		return -EINVAL;
+
+	if (clone_flags & CLONE_VM)
+		flags |= TCB_SHARED_VM;
+	if (clone_flags & CLONE_FS)
+		flags |= TCB_SHARED_FS;
+	if (clone_flags & CLONE_FILES)
+		flags |= TCB_SHARED_FILES;
+	if (clone_flags & CLONE_THREAD)
+		flags |= TCB_SAME_GROUP;
+
+	return do_clone(parent, (unsigned long)child_stack, flags);
 }
-
-
 
