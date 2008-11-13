@@ -33,11 +33,15 @@
 #define page_align(addr)		(((unsigned int)(addr)) &  \
 					 (~PAGE_MASK))
 
-#define is_aligned(val, mask)		(!(((unsigned long)val) & mask))
-#define is_page_aligned(val)		(!(((unsigned long)val) & PAGE_MASK))
+#define is_aligned(val, mask)		(!(((unsigned long)(val)) & mask))
+#define is_page_aligned(val)		(!(((unsigned long)(val)) & PAGE_MASK))
+#define page_boundary(x)		is_page_aligned(x)
 
 /* Align to given size */
 #define	align(addr, size)		(((unsigned int)(addr)) & (~(size-1)))
+
+/* The bytes left until the end of the page that x is in */
+#define TILL_PAGE_ENDS(x)	(PAGE_SIZE - ((unsigned long)(x) & PAGE_MASK))
 
 /* Extract page frame number from address and vice versa. */
 #define __pfn(x)		(((unsigned long)(x)) >> PAGE_BITS)

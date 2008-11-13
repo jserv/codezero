@@ -59,5 +59,5 @@
 #define L4_IPC_TAG_PAGER_UPDATE_STATS	45	/* Pager updates file stats in vfs */
 #define L4_IPC_TAG_NOTIFY_FORK		46	/* Pager notifies vfs of process fork */
 #define L4_IPC_TAG_NOTIFY_EXIT		47	/* Pager notifies vfs of process exit */
-
+#define L4_IPC_TAG_PAGER_OPEN_BYPATH	48	/* Pager opens a vfs file by pathname */
 #endif /* __IPCDEFS_H__ */

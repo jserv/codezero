@@ -54,16 +54,22 @@ static inline void write_mr(unsigned int offset, unsigned int val)
  * map-in the task utcb and read those arguments from there.
  */
 
-static inline void copy_to_utcb(void *arg, int offset, int size)
+static inline int copy_to_utcb(void *arg, int offset, int size)
 {
-	BUG_ON(offset + size > PAGE_SIZE);
+	if (offset + size > PAGE_SIZE)
+		return -1;
+
 	memcpy(utcb_page + offset, arg, size);
+	return 0;
 }
 
-static inline void copy_from_utcb(void *buf, int offset, int size)
+static inline int copy_from_utcb(void *buf, int offset, int size)
 {
-	BUG_ON(offset + size > PAGE_SIZE);
+	if (offset + size > PAGE_SIZE)
+		return -1;
+
 	memcpy(buf, utcb_page + offset, size);
+	return 0;
 }
 
 #endif /* !__ASSEMBLY__ */

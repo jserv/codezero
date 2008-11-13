@@ -10,5 +10,6 @@ int dirtest(void);
 int fileio(void);
 int fileio2(void);
 int clonetest(void);
+void exectest(void);
 
 #endif /* __TEST0_TESTS_H__ */

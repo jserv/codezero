@@ -17,6 +17,9 @@
 
 #define __TASKNAME__			__PAGERNAME__
 
+#define ARGS_MAX			DEFAULT_ENV_SIZE
+#define PATH_MAX			PAGE_SIZE
+
 #define TASK_FILES_MAX			32
 
 /* POSIX minimum is 4Kb */

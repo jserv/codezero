@@ -40,6 +40,9 @@ int pager_validate_user_range(struct tcb *user, void *userptr, unsigned long siz
  * Validates and maps the user virtual address range to the pager.
  * Every virtual page needs to be mapped individually because it's
  * not guaranteed pages are physically contiguous.
+ *
+ * FIXME: There's no logic here to make non-contiguous physical pages
+ * to get mapped virtually contiguous.
  */
 void *pager_validate_map_user_range(struct tcb *user, void *userptr,
 				    unsigned long size, unsigned int vm_flags)

@@ -33,11 +33,12 @@ void main(void)
 
 	dirtest();
 
+	exectest();
+
 	/* Check mmap/munmap */
 	mmaptest();
 
 	printf("Forking...\n");
-
 	if ((pid = fork()) < 0)
 		printf("Error forking...\n");
 

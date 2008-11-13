@@ -15,7 +15,7 @@ int sys_mkdir(struct tcb *sender, const char *pathname, unsigned int mode);
 int sys_chdir(struct tcb *sender, const char *pathname);
 
 /* Calls from pager that completes a posix call */
-
+int pager_open_bypath(struct tcb *pager, char *pathname);
 int pager_sys_open(struct tcb *sender, l4id_t opener, int fd);
 int pager_sys_read(struct tcb *sender, unsigned long vnum, unsigned long f_offset,
 		   unsigned long npages, void *pagebuf);

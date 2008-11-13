@@ -135,6 +135,14 @@ void handle_requests(void)
 		sys_exit(sender, (int)mr[0]);
 		return;
 	}
+	case L4_IPC_TAG_EXECVE: {
+		ret = sys_execve(sender, (char *)mr[0],
+				 (char **)mr[1], (char **)mr[2]);
+		if (ret < 0)
+			break;	/* We reply for errors */
+		else
+			return; /* else we're done */
+	}
 	case L4_IPC_TAG_BRK: {
 //		ret = sys_brk(sender, (void *)mr[0]);
 //		break;

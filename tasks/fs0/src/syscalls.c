@@ -64,6 +64,48 @@ int pager_sys_open(struct tcb *pager, l4id_t opener, int fd)
 	return 0;
 }
 
+/* This is called when the pager needs to open a vfs file via its path */
+int pager_open_bypath(struct tcb *pager, char *pathname)
+{
+	struct pathdata *pdata;
+	struct tcb *task;
+	struct vnode *v;
+	int retval;
+
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	if (pager->tid != PAGER_TID)
+		return -EINVAL;
+
+	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task)))
+		return (int)pdata;
+
+	/* Search the vnode by that path */
+	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+		retval = (int)v;
+		goto out;
+	}
+
+	/*
+	 * Write file information, they will
+	 * be sent via the return reply.
+	 */
+	write_mr(L4SYS_ARG0, v->vnum);
+	write_mr(L4SYS_ARG1, v->size);
+
+	return 0;
+
+out:
+	pathdata_destroy(pdata);
+	return retval;
+
+}
+
+
 /* Directories only for now */
 void print_vnode(struct vnode *v)
 {

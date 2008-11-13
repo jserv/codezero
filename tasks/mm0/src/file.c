@@ -1,4 +1,6 @@
 /*
+ * File read, write, open and close.
+ *
  * Copyright (C) 2008 Bahadir Balban
  */
 #include <init.h>
@@ -116,6 +118,62 @@ int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
 out:
 	l4_restore_ipcregs();
 	return err;
+}
+
+/*
+ * Initialise a new file and the descriptor for it from given file data.
+ * Could be called by an actual task or a pager
+ */
+struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
+{
+	struct vm_file *vmfile;
+
+	/* Is this an open by a task (as opposed to by the pager)? */
+	if (task) {
+		/* fd slot must be empty */
+		BUG_ON(task->files->fd[fd].vnum != 0);
+		BUG_ON(task->files->fd[fd].cursor != 0);
+
+		/* Assign vnum to given fd on the task */
+		task->files->fd[fd].vnum = vnum;
+		task->files->fd[fd].cursor = 0;
+	}
+
+	/* Check if that vm_file is already in the list */
+	list_for_each_entry(vmfile, &global_vm_files.list, list) {
+
+		/* Check whether it is a vfs file and if so vnums match. */
+		if ((vmfile->type & VM_FILE_VFS) &&
+		    vm_file_to_vnum(vmfile) == vnum) {
+
+			/* Task opener? */
+			if (task)
+				/* Add a reference to it from the task */
+				task->files->fd[fd].vmfile = vmfile;
+
+			vmfile->openers++;
+			return vmfile;
+		}
+	}
+
+	/* Otherwise allocate a new one for this vnode */
+	if (IS_ERR(vmfile = vfs_file_create()))
+		return vmfile;
+
+	/* Initialise and add a reference to it from the task */
+	vm_file_to_vnum(vmfile) = vnum;
+	vmfile->length = length;
+	vmfile->vm_obj.pager = &file_pager;
+
+	/* Task opener? */
+	if (task)
+		task->files->fd[fd].vmfile = vmfile;
+	vmfile->openers++;
+
+	/* Add to file list */
+	global_add_vm_file(vmfile);
+
+	return vmfile;
 }
 
 /* Initialise a new file and the descriptor for it from given file data */
