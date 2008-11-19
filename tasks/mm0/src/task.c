@@ -274,6 +274,21 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 	struct tcb *task;
 	int err;
 
+	/* Set task ids if a parent is supplied */
+	if (parent) {
+		ids->tid = TASK_ID_INVALID;
+		ids->spid = parent->spid;
+
+		/*
+		 * Determine whether the cloned thread
+		 * is in parent's thread group
+		 */
+		if (share_flags & TCB_SHARED_TGROUP)
+			ids->tgid = parent->tgid;
+		else
+			ids->tgid = TASK_ID_INVALID;
+	}
+
 	/* Create the thread structures and address space */
 	if ((err = l4_thread_control(THREAD_CREATE | ctrl_flags, ids)) < 0) {
 		printf("l4_thread_control failed with %d.\n", err);
@@ -301,8 +316,21 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 		copy_tcb(task, parent, share_flags);
 
 		/* Set up parent-child relationship */
-		list_add_tail(&task->child_ref, &parent->children);
-		task->parent = parent;
+		if ((share_flags & TCB_SHARED_PARENT) ||
+		    (share_flags & TCB_SHARED_TGROUP)) {
+
+			/*
+			 * On these conditions child shares
+			 * the parent of the caller
+			 */
+			list_add_tail(&task->child_ref,
+				      &parent->parent->children);
+			task->parent = parent->parent;
+		} else {
+			list_add_tail(&task->child_ref,
+				      &parent->children);
+			task->parent = parent;
+		}
 	} else {
 		struct tcb *pager = find_task(PAGER_TID);
 

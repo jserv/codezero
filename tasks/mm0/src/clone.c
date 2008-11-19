@@ -58,11 +58,12 @@ int sys_fork(struct tcb *parent)
 	int err;
 	struct tcb *child;
 	struct exregs_data exregs;
-	struct task_ids ids = {
-		.tid = TASK_ID_INVALID,
-		.spid = parent->spid,		/* spid to copy from */
-		.tgid = TASK_ID_INVALID,	/* FIXME: !!! FIX THIS */
-	};
+	struct task_ids ids;
+//	 	= {
+//		.tid = TASK_ID_INVALID,
+//		.spid = parent->spid,		/* spid to copy from */
+//		.tgid = TASK_ID_INVALID,	/* FIXME: !!! FIX THIS */
+//	};
 
 	/* Make all shadows in this task read-only */
 	vm_freeze_shadows(parent);
@@ -108,8 +109,8 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 	struct tcb *child;
 	int err;
 
-	ids.tid = TASK_ID_INVALID;
-	ids.spid = parent->spid;
+	//ids.tid = TASK_ID_INVALID;
+	//ids.spid = parent->spid;
 
 
 	/* Determine whether the cloned thread is in parent's thread group */
