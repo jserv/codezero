@@ -225,6 +225,7 @@ struct vm_object *vm_object_create(void);
 struct vm_file *vm_file_create(void);
 int vm_file_delete(struct vm_file *f);
 int vm_object_delete(struct vm_object *vmo);
+void vm_file_put(struct vm_file *f);
 
 /* Printing objects, files */
 void vm_object_print(struct vm_object *vmo);
@@ -235,6 +236,9 @@ void vm_print_files(struct list_head *file_list);
 int prefault_page(struct tcb *task, unsigned long address,
 		  unsigned int vmflags);
 struct page *page_init(struct page *page);
+struct page *find_page(struct vm_object *vmo, unsigned long page_offset);
+void *pager_map_page(struct vm_file *f, unsigned long page_offset);
+void pager_unmap_page(void *vaddr);
 
 /* To get currently mapped page of a virtual address on a task */
 struct page *task_virt_to_page(struct tcb *t, unsigned long virtual);

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <fs.h>
 #include <task.h>
+#include <vfs.h>
 
 const char *pathdata_next_component(struct pathdata *pdata)
 {
@@ -90,8 +91,11 @@ struct pathdata *pathdata_parse(const char *pathname,
 		comp->str = VFS_STR_ROOTDIR;
 		list_add_tail(&comp->list, &pdata->list);
 
-		/* Lookup start vnode is root vnode */
-		pdata->vstart = task->fs_data->rootdir;
+		if (task)
+			/* Lookup start vnode is root vnode */
+			pdata->vstart = task->fs_data->rootdir;
+		else /* If no task, we use the root mountpoint pivot vnode */
+			pdata->vstart = vfs_root.pivot;
 
 	/* Otherwise start from current directory */
 	} else {

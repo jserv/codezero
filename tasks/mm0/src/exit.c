@@ -6,6 +6,8 @@
 #include <task.h>
 #include <file.h>
 #include <utcb.h>
+#include <exit.h>
+#include <test.h>
 #include <vm_area.h>
 #include <syscalls.h>
 #include <l4lib/arch/syslib.h>
@@ -13,6 +15,7 @@
 #include <l4lib/exregs.h>
 #include <l4lib/ipcdefs.h>
 #include <lib/malloc.h>
+#include <l4/api/space.h>
 
 /*
  * Sends vfs task information about forked child, and its utcb
@@ -65,7 +68,7 @@ int task_close_files(struct tcb *task)
 	return err;
 }
 
-void sys_exit(struct tcb *task, int status)
+void do_exit(struct tcb *task, unsigned int flags, int status)
 {
 	struct task_ids ids = {
 		.tid = task->tid,
@@ -86,8 +89,14 @@ void sys_exit(struct tcb *task, int status)
 	/* Free task's local tcb */
 	tcb_destroy(task);
 
-	/* Ask the kernel to delete it from its records */
-	l4_thread_control(THREAD_DESTROY, &ids);
+	/* Ask the kernel to reset this thread's page tables */
+	if (flags & EXIT_UNMAP_ALL_SPACE)
+		l4_unmap((void *)UNMAP_ALL_SPACE,
+			 UNMAP_ALL_SPACE, task->tid);
+
+	/* Ask the kernel to delete the thread from its records */
+	if (flags & EXIT_THREAD_DESTROY)
+		l4_thread_control(THREAD_DESTROY, &ids);
 
 	/* TODO: Wake up any waiters about task's destruction */
 #if 0
@@ -98,5 +107,10 @@ void sys_exit(struct tcb *task, int status)
 		l4_thread_control(THREAD_RUN, parent->tid);
 	}
 #endif
+}
+
+void sys_exit(struct tcb *task, int status)
+{
+	do_exit(task, EXIT_THREAD_DESTROY, status);
 }
 

@@ -17,7 +17,7 @@
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
 #include <lib/addr.h>
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
 #include <init.h>
 #include <string.h>
 #include <vm_area.h>
@@ -25,9 +25,12 @@
 #include <file.h>
 #include <utcb.h>
 #include <task.h>
+#include <exec.h>
 #include <shm.h>
 #include <mmap.h>
+#include <boot.h>
 #include <globals.h>
+#include <test.h>
 
 struct global_list global_tasks = {
 	.list = { &global_tasks.list, &global_tasks.list },
@@ -103,6 +106,8 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 
 	/* Initialise list structure */
 	INIT_LIST_HEAD(&task->list);
+	INIT_LIST_HEAD(&task->child_ref);
+	INIT_LIST_HEAD(&task->children);
 
 	return task;
 }
@@ -138,11 +143,31 @@ int task_free_resources(struct tcb *task)
 
 int tcb_destroy(struct tcb *task)
 {
+	struct tcb *child, *n;
+
 	global_remove_task(task);
 
 	/* Free all resources of the task */
 	task_free_resources(task);
 
+	/*
+	 * All children of the current task becomes children
+	 * of the parent of this task.
+	 */
+	list_for_each_entry_safe(child, n, &task->children,
+				 child_ref) {
+		list_del_init(&child->child_ref);
+		list_add_tail(&child->child_ref,
+			      &task->parent->children);
+		child->parent = task->parent;
+	}
+	/* The task is not a child of its parent */
+	list_del_init(&task->child_ref);
+
+	/* Now task deletion make sure task is in no list */
+	BUG_ON(!list_empty(&task->list));
+	BUG_ON(!list_empty(&task->child_ref));
+	BUG_ON(!list_empty(&task->children));
 	kfree(task);
 
 	return 0;
@@ -154,7 +179,7 @@ int tcb_destroy(struct tcb *task)
  * Note, that we don't copy vm objects but just the links to
  * them, because vm objects are not per-process data.
  */
-int copy_vmas(struct tcb *to, struct tcb *from)
+int task_copy_vmas(struct tcb *to, struct tcb *from)
 {
 	struct vm_area *vma, *new_vma;
 
@@ -223,7 +248,7 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 		to->vm_area_head->tcb_refs++;
 	} else {
 	       	/* Copy all vm areas */
-		copy_vmas(to, from);
+		task_copy_vmas(to, from);
 	}
 
 	/* Copy all file descriptors */
@@ -243,7 +268,7 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 	return 0;
 }
 
-struct tcb *task_create(struct tcb *orig, struct task_ids *ids,
+struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 			unsigned int ctrl_flags, unsigned int share_flags)
 {
 	struct tcb *task;
@@ -264,36 +289,64 @@ struct tcb *task_create(struct tcb *orig, struct task_ids *ids,
 	task->spid = ids->spid;
 	task->tgid = ids->tgid;
 
+	/* Set task's creation flags */
+	task->clone_flags = share_flags;
+
 	/*
-	 * If an original task has been specified, that means either
+	 * If a parent task has been specified, that means either
 	 * we are forking, or we are cloning the original tcb fully
 	 * or partially. Therefore we copy tcbs depending on share flags.
 	 */
-	if (orig)
-		copy_tcb(task, orig, share_flags);
+	if (parent) {
+		copy_tcb(task, parent, share_flags);
+
+		/* Set up parent-child relationship */
+		list_add_tail(&task->child_ref, &parent->children);
+		task->parent = parent;
+	} else {
+		struct tcb *pager = find_task(PAGER_TID);
+
+		/* All parentless tasks are children of the pager */
+		list_add_tail(&task->child_ref, &pager->children);
+		task->parent = pager;
+	}
 
 	return task;
 }
 
-
-int task_mmap_regions(struct tcb *task, struct vm_file *file)
+int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd)
 {
 	void *mapped;
 	struct vm_file *shm;
 
-	/*
-	 * mmap each task's physical image to task's address space.
-	 * TODO: Map data and text separately when available from bootdesc.
-	 */
-	if (IS_ERR(mapped = do_mmap(file, 0, task, task->text_start,
+	/* mmap task's text to task's address space. */
+	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task, task->text_start,
 				    VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
 				    __pfn(page_align_up(task->text_end) -
-				    task->text_start)))) {
+				    page_align(task->text_start))))) {
 		printf("do_mmap: failed with %d.\n", (int)mapped);
 		return (int)mapped;
 	}
 
-	/* mmap each task's environment as anonymous memory. */
+	/* mmap task's data to task's address space. */
+	if (IS_ERR(mapped = do_mmap(file, efd->data_offset, task, task->data_start,
+				    VM_READ | VM_WRITE | VMA_PRIVATE,
+				    __pfn(page_align_up(task->data_end) -
+				    page_align(task->data_start))))) {
+		printf("do_mmap: failed with %d.\n", (int)mapped);
+		return (int)mapped;
+	}
+
+	/* mmap task's bss as anonymous memory. */
+	if (IS_ERR(mapped = do_mmap(0, 0, task, task->bss_start,
+				    VM_READ | VM_WRITE |
+				    VMA_PRIVATE | VMA_ANONYMOUS,
+				    __pfn(task->bss_end - task->bss_start)))) {
+		printf("do_mmap: Mapping environment failed with %d.\n",
+		       (int)mapped);
+		return (int)mapped;
+	}
+	/* mmap task's environment as anonymous memory. */
 	if (IS_ERR(mapped = do_mmap(0, 0, task, task->env_start,
 				    VM_READ | VM_WRITE |
 				    VMA_PRIVATE | VMA_ANONYMOUS,
@@ -303,7 +356,7 @@ int task_mmap_regions(struct tcb *task, struct vm_file *file)
 		return (int)mapped;
 	}
 
-	/* mmap each task's stack as anonymous memory. */
+	/* mmap task's stack as anonymous memory. */
 	if (IS_ERR(mapped = do_mmap(0, 0, task, task->stack_start,
 				    VM_READ | VM_WRITE |
 				    VMA_PRIVATE | VMA_ANONYMOUS,
@@ -324,39 +377,6 @@ int task_mmap_regions(struct tcb *task, struct vm_file *file)
 	return 0;
 }
 
-int task_setup_regions(struct vm_file *file, struct tcb *task,
-		       unsigned long task_start, unsigned long task_end)
-{
-	/*
-	 * Set task's main address space boundaries. Not all tasks
-	 * run in the default user boundaries, e.g. mm0 pager.
-	 */
-	task->start = task_start;
-	task->end = task_end;
-
-	/* Prepare environment boundaries. */
-	task->env_end = task->end;
-	task->env_start = task->env_end - DEFAULT_ENV_SIZE;
-	task->args_end = task->env_start;
-	task->args_start = task->env_start;
-
-	/* Task stack starts right after the environment. */
-	task->stack_end = task->env_start;
-	task->stack_start = task->stack_end - DEFAULT_STACK_SIZE;
-
-	/* Currently RO text and RW data are one region. TODO: Fix this */
-	task->data_start = task->start;
-	task->data_end = task->start + page_align_up(file->length);
-	task->text_start = task->data_start;
-	task->text_end = task->data_end;
-
-	/* Task's region available for mmap */
-	task->map_start = task->data_end;
-	task->map_end = task->stack_start;
-
-	return 0;
-}
-
 int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager)
 {
@@ -367,7 +387,7 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 	if (!sp)
 		sp = align(task->stack_end - 1, 8);
 	if (!pc)
-		pc = task->text_start;
+		pc = task->entry;
 	if (!pager)
 		pager = self_tid();
 
@@ -384,13 +404,18 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 	return 0;
 }
 
-int task_start(struct tcb *task, struct task_ids *ids)
+int task_start(struct tcb *task)
 {
 	int err;
+	struct task_ids ids = {
+		.tid = task->tid,
+		.spid = task->spid,
+		.tgid = task->tgid,
+	};
 
 	/* Start the thread */
 	printf("Starting task with id %d, spid: %d\n", task->tid, task->spid);
-	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
+	if ((err = l4_thread_control(THREAD_RUN, &ids)) < 0) {
 		printf("l4_thread_control failed with %d\n", err);
 		return err;
 	}
@@ -399,74 +424,11 @@ int task_start(struct tcb *task, struct task_ids *ids)
 }
 
 /*
- * Prefaults all mapped regions of a task. The reason we have this is
- * some servers are in the page fault handling path (e.g. fs0), and we
- * don't want them to fault and cause deadlocks and circular deps.
- *
- * Normally fs0 faults dont cause dependencies because its faults
- * are handled by the boot pager, which is part of mm0. BUT: It may
- * cause deadlocks because fs0 may fault while serving a request
- * from mm0.(Which is expected to also handle the fault).
- */
-int task_prefault_regions(struct tcb *task, struct vm_file *f)
-{
-	struct vm_area *vma;
-
-	list_for_each_entry(vma, &task->vm_area_head->list, list) {
-		for (int pfn = vma->pfn_start; pfn < vma->pfn_end; pfn++)
-			BUG_ON(prefault_page(task, __pfn_to_addr(pfn),
-					     VM_READ | VM_WRITE) < 0);
-	}
-	return 0;
-}
-
-/*
- * Main entry point for the creation, initialisation and
- * execution of a new task.
- */
-struct tcb *task_exec(struct vm_file *f, unsigned long task_region_start,
-		      unsigned long task_region_end, struct task_ids *ids)
-{
-	struct tcb *task;
-	int err;
-
-	if (IS_ERR(task = task_create(0, ids, THREAD_NEW_SPACE,
-				      TCB_NO_SHARING)))
-		return task;
-
-	if ((err = task_setup_regions(f, task, task_region_start,
-				      task_region_end)) < 0)
-		return PTR_ERR(err);
-
-	if ((err = task_mmap_regions(task, f)) < 0)
-		return PTR_ERR(err);
-
-	if ((err =  task_setup_registers(task, 0, 0, 0)) < 0)
-		return PTR_ERR(err);
-
-	/* Add the task to the global task list */
-	global_add_task(task);
-
-	/* Add the file to global vm lists */
-	global_add_vm_file(f);
-
-	/* Prefault all its regions */
-	if (ids->tid == VFS_TID)
-		task_prefault_regions(task, f);
-
-	/* Start the task */
-	if ((err = task_start(task, ids)) < 0)
-		return PTR_ERR(err);
-
-	return task;
-}
-
-/*
  * During its initialisation FS0 wants to learn how many boot tasks
  * are running, and their tids, which includes itself. This function
  * provides that information.
  */
-int send_task_data(struct tcb *vfs)
+int vfs_send_task_data(struct tcb *vfs)
 {
 	int li = 0;
 	struct tcb *t, *self;
@@ -498,6 +460,28 @@ int send_task_data(struct tcb *vfs)
 		li++;
 	}
 
+	return 0;
+}
+
+/*
+ * Prefaults all mapped regions of a task. The reason we have this is
+ * some servers are in the page fault handling path (e.g. fs0), and we
+ * don't want them to fault and cause deadlocks and circular deps.
+ *
+ * Normally fs0 faults dont cause dependencies because its faults
+ * are handled by the boot pager, which is part of mm0. BUT: It may
+ * cause deadlocks because fs0 may fault while serving a request
+ * from mm0.(Which is expected to also handle the fault).
+ */
+int task_prefault_regions(struct tcb *task, struct vm_file *f)
+{
+	struct vm_area *vma;
+
+	list_for_each_entry(vma, &task->vm_area_head->list, list) {
+		for (int pfn = vma->pfn_start; pfn < vma->pfn_end; pfn++)
+			BUG_ON(prefault_page(task, __pfn_to_addr(pfn),
+					     VM_READ | VM_WRITE) < 0);
+	}
 	return 0;
 }
 

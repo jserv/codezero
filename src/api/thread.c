@@ -76,6 +76,10 @@ int thread_destroy(struct task_ids *ids)
 	 */
 	BUG_ON(task->wqh_pager.sleepers > 0);
 
+	/*
+	 * FIXME: We need to free the pgd and any thread specific pmds!!!
+	 */
+
 	/* We can now safely delete the task */
 	free_page(task);
 

@@ -14,6 +14,7 @@
 #include <mmap.h>
 #include <utcb.h>
 #include <shm.h>
+#include <test.h>
 #include <clone.h>
 
 /*
@@ -110,14 +111,15 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 	ids.tid = TASK_ID_INVALID;
 	ids.spid = parent->spid;
 
-	if (flags & TCB_SAME_GROUP)
+
+	/* Determine whether the cloned thread is in parent's thread group */
+	if (flags & TCB_SHARED_TGROUP)
 		ids.tgid = parent->tgid;
 	else
 		ids.tgid = TASK_ID_INVALID;
 
 	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE, flags)))
 		return (int)child;
-
 	/* Set up child stack marks with given stack argument */
 	child->stack_end = child_stack;
 	child->stack_start = 0;
@@ -167,7 +169,9 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int clone_flags)
 	if (clone_flags & CLONE_FILES)
 		flags |= TCB_SHARED_FILES;
 	if (clone_flags & CLONE_THREAD)
-		flags |= TCB_SAME_GROUP;
+		flags |= TCB_SHARED_TGROUP;
+	if (clone_flags & CLONE_PARENT)
+		flags |= TCB_SHARED_PARENT;
 
 	return do_clone(parent, (unsigned long)child_stack, flags);
 }

@@ -5,7 +5,8 @@
  */
 #include <init.h>
 #include <vm_area.h>
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
+#include <mm/alloc_page.h>
 #include <l4/macros.h>
 #include <l4/api/errno.h>
 #include <l4lib/types.h>
@@ -18,6 +19,7 @@
 #include <globals.h>
 #include <file.h>
 #include <user.h>
+#include <test.h>
 
 /* Copy from one page's buffer into another page */
 int page_copy(struct page *dst, struct page *src,
@@ -306,6 +308,27 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	return 0;
 }
 
+/* Maps a page from a vm_file to the pager's address space */
+void *pager_map_page(struct vm_file *f, unsigned long page_offset)
+{
+	int err;
+	struct page *p;
+
+	if ((err = read_file_pages(f, page_offset, page_offset + 1)) < 0)
+		return PTR_ERR(err);
+
+	if ((p = find_page(&f->vm_obj, page_offset)))
+		return (void *)l4_map_helper((void *)page_to_phys(p), 1);
+	else
+		return 0;
+}
+
+/* Unmaps a page's virtual address from the pager's address space */
+void pager_unmap_page(void *addr)
+{
+	l4_unmap_helper(addr, 1);
+}
+
 int vfs_write(unsigned long vnum, unsigned long file_offset,
 	      unsigned long npages, void *pagebuf)
 {
@@ -456,6 +479,17 @@ int fsync_common(struct tcb *task, int fd)
 	return 0;
 }
 
+void vm_file_put(struct vm_file *file)
+{
+	/* Reduce file's opener count */
+	if (!(file->openers))
+		/* No openers left, check any mappers */
+		if (!file->vm_obj.nlinks)
+			/* No links or openers, delete the file */
+			vm_file_delete(file);
+
+}
+
 /* Closes the file descriptor and notifies vfs */
 int do_close(struct tcb *task, int fd)
 {
@@ -466,12 +500,8 @@ int do_close(struct tcb *task, int fd)
 	if ((err = vfs_close(task->tid, fd)) < 0)
 		return err;
 
-	/* Reduce file's opener count */
-	if (!(--task->files->fd[fd].vmfile->openers))
-		/* No openers left, check any mappers */
-		if (!task->files->fd[fd].vmfile->vm_obj.nlinks)
-			/* No links or openers, delete the file */
-			vm_file_delete(task->files->fd[fd].vmfile);
+	/* Reduce file refcount etc. */
+	vm_file_put(task->files->fd[fd].vmfile);
 
 	task->files->fd[fd].vnum = 0;
 	task->files->fd[fd].cursor = 0;

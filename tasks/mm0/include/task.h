@@ -14,6 +14,7 @@
 #include <l4lib/utcb.h>
 #include <lib/addr.h>
 #include <l4/api/kip.h>
+#include <exec.h>
 
 #define __TASKNAME__			__PAGERNAME__
 
@@ -31,7 +32,8 @@
 #define	TCB_SHARED_VM				(1 << 0)
 #define	TCB_SHARED_FILES			(1 << 1)
 #define TCB_SHARED_FS				(1 << 2)
-#define TCB_SAME_GROUP				(1 << 3)
+#define TCB_SHARED_TGROUP			(1 << 3)
+#define TCB_SHARED_PARENT			(1 << 4)
 
 struct vm_file;
 
@@ -57,6 +59,14 @@ struct tcb {
 	/* Task list */
 	struct list_head list;
 
+	/* Fields for parent-child relations */
+	struct list_head child_ref;	/* Child ref in parent's list */
+	struct list_head children;	/* List of children */
+	struct tcb *parent;		/* Parent task */
+
+	/* Task creation flags */
+	unsigned int clone_flags;
+
 	/* Name of the task */
 	char name[16];
 
@@ -66,13 +76,14 @@ struct tcb {
 	int tgid;
 
 	/* Related task ids */
-	unsigned int pagerid;	/* Task's pager */
+	unsigned int pagerid;		/* Task's pager */
 
 	/* Task's main address space region, usually USER_AREA_START/END */
 	unsigned long start;
 	unsigned long end;
 
 	/* Page aligned program segment marks, ends exclusive as usual */
+	unsigned long entry;
 	unsigned long text_start;
 	unsigned long text_end;
 	unsigned long data_start;
@@ -102,17 +113,6 @@ struct tcb {
 	struct task_fd_head *files;
 };
 
-/* Structures to use when sending new task information to vfs */
-struct task_data {
-	unsigned long tid;
-	unsigned long utcb_address;
-};
-
-struct task_data_head {
-	unsigned long total;
-	struct task_data tdata[];
-};
-
 struct tcb_head {
 	struct list_head list;
 	int total;			/* Total threads */
@@ -121,20 +121,16 @@ struct tcb_head {
 struct tcb *find_task(int tid);
 void global_add_task(struct tcb *task);
 void global_remove_task(struct tcb *task);
-int send_task_data(struct tcb *requester);
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
-int task_mmap_regions(struct tcb *task, struct vm_file *file);
-int task_setup_regions(struct vm_file *file, struct tcb *task,
-		       unsigned long task_start, unsigned long task_end);
+int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd);
 int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager);
 struct tcb *tcb_alloc_init(unsigned int flags);
 int tcb_destroy(struct tcb *task);
-struct tcb *task_exec(struct vm_file *f, unsigned long task_region_start,
-		      unsigned long task_region_end, struct task_ids *ids);
-int task_start(struct tcb *task, struct task_ids *ids);
+int task_start(struct tcb *task);
 int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags);
 int task_release_vmas(struct task_vma_head *vma_head);
+int task_prefault_regions(struct tcb *task, struct vm_file *f);
 struct tcb *task_create(struct tcb *orig,
 			struct task_ids *ids,
 			unsigned int ctrl_flags,

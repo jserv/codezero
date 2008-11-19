@@ -23,6 +23,7 @@
 #include <utcb.h>
 #include <mmap.h>
 #include <test.h>
+#include <boot.h>
 
 void handle_requests(void)
 {
@@ -67,7 +68,7 @@ void handle_requests(void)
 
 	case L4_IPC_TAG_TASKDATA:
 		/* Send runnable task information to fs0 */
-		ret = send_task_data(sender);
+		ret = vfs_send_task_data(sender);
 		break;
 
 	case L4_IPC_TAG_SHMGET: {

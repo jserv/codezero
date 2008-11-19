@@ -7,7 +7,7 @@
 #include <string.h>
 #include <init.h>
 #include INC_API(kip.h)
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
 #include <l4lib/arch/syscalls.h>
 
 /* Kernel data acquired during initialisation */

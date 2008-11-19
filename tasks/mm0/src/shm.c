@@ -10,7 +10,7 @@
 #include <utcb.h>
 #include <vm_area.h>
 #include <globals.h>
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <lib/idpool.h>

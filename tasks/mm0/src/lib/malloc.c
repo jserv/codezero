@@ -205,14 +205,6 @@ create a new, free block */
 	return (char *)n + sizeof(malloc_t);
 }
 
-static inline void *kzalloc(size_t size)
-{
-	void *buf = kmalloc(size);
-
-	memset(buf, 0, size);
-	return buf;
-}
-
 /*****************************************************************************
 *****************************************************************************/
 void kfree(void *blk)
@@ -254,6 +246,9 @@ void kfree(void *blk)
 	}
 /* free the block */
 	m->used = 0;
+/* BB: Addition: put 0xFF to block memory so we know if we use freed memory */
+	memset(blk, 0xFF, m->size);
+
 /* coalesce adjacent free blocks
 Hard to spell, hard to do */
 	for(m = (malloc_t *)g_heap_bot; m != NULL; m = m->next)

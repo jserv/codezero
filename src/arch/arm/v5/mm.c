@@ -300,6 +300,57 @@ int __remove_mapping(pmd_table_t *pmd, unsigned long vaddr)
 	return ret;
 }
 
+/*
+ * Tell if a pgd index is a common kernel index. This is used to distinguish
+ * common kernel entries in a pgd, when copying page tables.
+ */
+int is_kern_pgdi(int i)
+{
+	if ((i >= PGD_INDEX(KERNEL_AREA_START) && i < PGD_INDEX(KERNEL_AREA_END)) ||
+	    (i >= PGD_INDEX(IO_AREA_START) && i < PGD_INDEX(IO_AREA_END)) ||
+	    (i == PGD_INDEX(USER_KIP_PAGE)) ||
+	    (i == PGD_INDEX(ARM_HIGH_VECTOR)) ||
+	    (i == PGD_INDEX(ARM_SYSCALL_VECTOR)) ||
+	    (i == PGD_INDEX(USERSPACE_UART_BASE)))
+		return 1;
+	else
+		return 0;
+}
+
+/*
+ * Removes all userspace mappings from a pgd. Frees any pmds that it
+ * detects to be user pmds
+ */
+int remove_mapping_pgd_all_user(pgd_table_t *pgd)
+{
+	pmd_table_t *pmd;
+
+	/* Traverse through all pgd entries */
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
+
+		/* Detect a pgd entry that is not a kernel entry */
+		if (!is_kern_pgdi(i)) {
+
+			/* Detect a pmd entry */
+			if (((pgd->entry[i] & PGD_TYPE_MASK)
+			     == PGD_TYPE_COARSE)) {
+
+				/* Obtain the user pmd handle */
+				pmd = (pmd_table_t *)
+				      phys_to_virt((pgd->entry[i] &
+						    PGD_COARSE_ALIGN_MASK));
+				/* Free it */
+				free_pmd(pmd);
+			}
+
+			/* Clear the pgd entry */
+			pgd->entry[i] = PGD_TYPE_FAULT;
+		}
+	}
+
+	return 0;
+}
+
 int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 {
 	pgd_t pgd_i = PGD_INDEX(vaddr);
@@ -365,23 +416,6 @@ int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 int remove_mapping(unsigned long vaddr)
 {
 	return remove_mapping_pgd(vaddr, current->pgd);
-}
-
-/*
- * Tell if a pgd index is a common kernel index. This is used to distinguish
- * common kernel entries in a pgd, when copying page tables.
- */
-int is_kern_pgdi(int i)
-{
-	if ((i >= PGD_INDEX(KERNEL_AREA_START) && i < PGD_INDEX(KERNEL_AREA_END)) ||
-	    (i >= PGD_INDEX(IO_AREA_START) && i < PGD_INDEX(IO_AREA_END)) ||
-	    (i == PGD_INDEX(USER_KIP_PAGE)) ||
-	    (i == PGD_INDEX(ARM_HIGH_VECTOR)) ||
-	    (i == PGD_INDEX(ARM_SYSCALL_VECTOR)) ||
-	    (i == PGD_INDEX(USERSPACE_UART_BASE)))
-		return 1;
-	else
-		return 0;
 }
 
 /*

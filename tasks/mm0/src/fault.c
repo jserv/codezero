@@ -6,7 +6,7 @@
 #include <vm_area.h>
 #include <task.h>
 #include <mm/alloc_page.h>
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include INC_GLUE(memory.h)

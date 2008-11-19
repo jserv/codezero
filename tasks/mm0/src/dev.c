@@ -3,7 +3,7 @@
  */
 #include <l4/lib/list.h>
 #include <vm_area.h>
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
 
 /*
  * This is yet unused, it is more of an anticipation

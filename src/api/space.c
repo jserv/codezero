@@ -7,6 +7,7 @@
 #include INC_API(syscall.h)
 #include INC_SUBARCH(mm.h)
 #include <l4/api/errno.h>
+#include <l4/api/space.h>
 
 /* NOTE:
  * For lazy mm switching, a list of newly created mappings that are common to
@@ -57,6 +58,16 @@ int sys_unmap(syscall_context_t *regs)
 		target = current;
 	else if (!(target = find_task(tid)))
 		return -ESRCH;
+
+	/*
+	 * These special values mean unmap all the mappings
+	 * from task space except the kernel mappings
+	 */
+	if (virtual == UNMAP_ALL_SPACE &&
+	    npages == UNMAP_ALL_SPACE) {
+		remove_mapping_pgd_all_user(target->pgd);
+		return 0;
+	}
 
 	for (int i = 0; i < npages; i++) {
 		ret = remove_mapping_pgd(virtual + i * PAGE_SIZE, target->pgd);

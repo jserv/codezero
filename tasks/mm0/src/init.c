@@ -7,7 +7,7 @@
 #include <string.h>
 #include <memory.h>
 #include <mm/alloc_page.h>
-#include <kmalloc/kmalloc.h>
+#include <lib/malloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/utcb.h>
@@ -17,6 +17,7 @@
 #include <init.h>
 #include <utcb.h>
 #include <test.h>
+#include <boot.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
 LIST_HEAD(boot_file_list);
@@ -44,11 +45,15 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 	task->spid = ids->spid;
 	task->tgid = ids->tgid;
 
-	if ((err = task_setup_regions(f, task, task_start, task_end)) < 0)
+	if ((err = boottask_setup_regions(f, task, task_start, task_end)) < 0)
 		return err;
 
-	if ((err =  task_mmap_regions(task, f)) < 0)
+	if ((err =  boottask_mmap_regions(task, f)) < 0)
 		return err;
+
+	/* Set pager as child and parent of itself */
+	list_add(&task->child_ref, &task->children);
+	task->parent = task;
 
 	/* Add the task to the global task list */
 	global_add_task(task);
@@ -118,7 +123,7 @@ int start_boot_tasks(struct initdata *initdata)
 	ids.tgid = VFS_TID;
 
 	printf("%s: Initialising fs0\n",__TASKNAME__);
-	BUG_ON((IS_ERR(fs0_task = task_exec(fs0_file, USER_AREA_START, USER_AREA_END, &ids))));
+	BUG_ON((IS_ERR(fs0_task = boottask_exec(fs0_file, USER_AREA_START, USER_AREA_END, &ids))));
 	total++;
 
 	/* Initialise other tasks */
@@ -128,7 +133,7 @@ int start_boot_tasks(struct initdata *initdata)
 		ids.spid = TASK_ID_INVALID;
 		ids.tgid = TASK_ID_INVALID;
 		list_del_init(&file->list);
-		BUG_ON(IS_ERR(task_exec(file, USER_AREA_START, USER_AREA_END, &ids)));
+		BUG_ON(IS_ERR(boottask_exec(file, USER_AREA_START, USER_AREA_END, &ids)));
 		total++;
 	}
 
@@ -150,10 +155,6 @@ void init_mm(struct initdata *initdata)
 	/* Initialise the page allocator on first bank. */
 	init_page_allocator(membank[0].free, membank[0].end);
 	// printf("%s: Initialised page allocator.\n", __TASKNAME__);
-
-	/* Initialise the pager's memory allocator */
-	kmalloc_init();
-	// printf("%s: Initialised kmalloc.\n", __TASKNAME__);
 
 	/* Initialise the zero page */
 	init_devzero();

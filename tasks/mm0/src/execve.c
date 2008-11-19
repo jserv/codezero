@@ -13,9 +13,11 @@
 #include <vm_area.h>
 #include <syscalls.h>
 #include <string.h>
+#include <exec.h>
 #include <file.h>
 #include <user.h>
 #include <task.h>
+#include <exit.h>
 
 /*
  * Different from vfs_open(), which validates an already opened
@@ -67,39 +69,99 @@ out:
 	return err;
 }
 
-
-int do_execve(char *filename)
+/*
+ * Probes and parses the low-level executable file format and creates a
+ * generic execution description that can be used to run the task.
+ */
+int task_setup_from_executable(struct vm_file *vmfile, struct tcb *task,
+			       struct exec_file_desc *efd)
 {
-	int err;
+	memset(efd, 0, sizeof(*efd));
+
+	return 0;
+}
+
+int do_execve(struct tcb *sender, char *filename)
+{
 	unsigned long vnum, length;
-	struct vm_file *f;
+	struct vm_file *vmfile;
+	struct exec_file_desc efd;
+	struct tcb *new_task, *tgleader;
+	int err;
 
 	/* Get file info from vfs */
 	if ((err = vfs_open_bypath(filename, &vnum, &length)) < 0)
 		return err;
 
 	/* Create and get the file structure */
-	if (IS_ERR(f = do_open2(0, 0, vnum, length)))
-		return (int)f;
+	if (IS_ERR(vmfile = do_open2(0, 0, vnum, length)))
+		return (int)vmfile;
 
+	/* Create a new tcb */
+	if (IS_ERR(new_task = tcb_alloc_init(TCB_NO_SHARING))) {
+		vm_file_put(vmfile);
+		return (int)new_task;
+	}
 
-	/* Determine file segments to be mapped */
+	/* Fill in tcb memory segment markers from executable file */
+	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
+		vm_file_put(vmfile);
+		kfree(new_task);
+		return err;
+	}
 
-	/* See if an interpreter (dynamic linker) is needed */
-
-	/* Destroy all threads in the same thread group except group leader */
-
-	/* Release all task resources, do almost everything done in exit() */
+	/* Map task segment markers as virtual memory regions */
+	if ((err = task_mmap_segments(new_task, vmfile, &efd)) < 0) {
+		vm_file_put(vmfile);
+		kfree(new_task);
+		return err;
+	}
 
 	/*
-	 * Create new process address space. Start by mapping all
-	 * static file segments. We will need brk() for bss.
+	 * If sender is a thread in a group, need to find the
+	 * group leader and destroy all threaded children in
+	 * the group.
 	 */
+	if (sender->clone_flags & TCB_SHARED_TGROUP) {
+		struct tcb *thread;
 
+		/* Find the thread group leader of sender */
+		BUG_ON(!(tgleader = find_task(sender->tgid)));
+
+		/*
+		 * Destroy all children threads.
+		 * TODO: Set up parents for children's children
+		 */
+		list_for_each_entry(thread, &tgleader->children, child_ref)
+			do_exit(thread, EXIT_THREAD_DESTROY, 0);
+	} else {
+		/* Otherwise group leader is same as sender */
+		tgleader = sender;
+	}
+
+	/* Copy data to new task that is to be retained from exec'ing task */
+	new_task->tid = tgleader->tid;
+	new_task->spid = tgleader->spid;
+	new_task->tgid = tgleader->tgid;
+	new_task->pagerid = tgleader->pagerid;
+
+	/*
+	 * Release all task resources, do everything done in
+	 * exit() except destroying the actual thread.
+	 */
+	do_exit(tgleader, EXIT_UNMAP_ALL_SPACE, 0);
+
+	/* Set up task registers via exchange_registers() */
+	task_setup_registers(new_task, 0, 0, new_task->pagerid);
+
+	/* Start the task */
+	task_start(new_task);
 
 #if 0
 TODO:
 Dynamic Linking.
+
+	/* See if an interpreter (dynamic linker) is needed */
 
 	/* Find the interpreter executable file, if needed */
 
@@ -113,9 +175,9 @@ Dynamic Linking.
 	/* Run the interpreter */
 
 	/*
-	 * The interpreter:
-	 * - May need some initial info (dyn sym tables) at a certain location
-	 * - Will find necessary shared library files in userspace
+	 * The interpreter will:
+	 * - Need some initial info (dyn sym tables) at a certain location
+	 * - Find necessary shared library files in userspace
 	 *   (will use open/read).
 	 * - Map them into process address space via mmap()
 	 * - Reinitialise references to symbols in the shared libraries
@@ -206,7 +268,7 @@ int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 		return err;
 	printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
 
-	return do_execve(path);
+	return do_execve(sender, path);
 }
 
 
