@@ -78,7 +78,8 @@ int task_setup_from_executable(struct vm_file *vmfile, struct tcb *task,
 {
 	memset(efd, 0, sizeof(*efd));
 
-	return 0;
+	return elf_parse_executable(task, vmfile, efd,
+				    pager_map_page, pager_unmap_page);
 }
 
 int do_execve(struct tcb *sender, char *filename)
