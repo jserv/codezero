@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
+#include <memory.h>
 #include <vm_area.h>
 #include <lib/elf/elf.h>
 #include <lib/elf/elfprg.h>
@@ -24,13 +25,6 @@ int elf_probe(struct elf_header *header)
 		return -1;
 }
 
-static inline void *pager_map_file_offset(struct vm_file *f, unsigned long f_offset)
-{
-	void *page = pager_map_page(f, __pfn(f_offset));
-
-	return (void *)((unsigned long)page | (PAGE_MASK & f_offset));
-}
-
 /*
  * Loading an ELF file:
  *
@@ -48,6 +42,8 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	struct elf_header *elf_header = pager_map_page(file, 0);
 	struct elf_program_header *prg_header_start, *prg_header_load;
 	struct elf_section_header *sect_header;
+	unsigned long sect_start, sect_end;
+	unsigned long prg_start, prg_end;
 
 	/* Test that it is a valid elf file */
 	if ((err = elf_probe(elf_header)) < 0)
@@ -66,7 +62,9 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	}
 
 	/* Get the section header table */
-	if (__pfn(elf_header->e_shoff) > 0)
+	if (__pfn(elf_header->e_shoff) > 0) {
+
+	}
 		sect_header = pager_map_file_offset(file, elf_header->e_shoff);
 	else
 		sect_header = (struct elf_section_header *)

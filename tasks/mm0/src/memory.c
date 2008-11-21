@@ -168,8 +168,26 @@ void *pager_map_pages(struct vm_file *f, unsigned long page_offset, unsigned lon
 /* Unmaps a page's virtual address from the pager's address space */
 void pager_unmap_pages(void *addr, unsigned long npages)
 {
+	/* Align to page if unaligned */
+	if (!is_page_aligned(addr))
+		addr = (void *)page_align(addr);
+
+	/* Unmap so many pages */
 	l4_unmap_helper(addr, npages);
+
+	/* Free the address range */
 	pager_delete_address(addr, npages);
 }
 
+/*
+ * Maps multiple pages on a contiguous virtual address range,
+ * returns pointer to byte offset in the file.
+ */
+void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
+		`	   unsigned long size)
+{
+	void *page = pager_map_pages(f, __pfn(byte_offset), __pfn(size));
+
+	return (void *)((unsigned long)page | (PAGE_MASK & f_offset));
+}
 
