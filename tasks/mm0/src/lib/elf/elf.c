@@ -24,6 +24,13 @@ int elf_probe(struct elf_header *header)
 		return -1;
 }
 
+static inline void *pager_map_file_offset(struct vm_file *f, unsigned long f_offset)
+{
+	void *page = pager_map_page(f, __pfn(f_offset));
+
+	return (void *)((unsigned long)page | (PAGE_MASK & f_offset));
+}
+
 /*
  * Loading an ELF file:
  *
@@ -59,8 +66,14 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	}
 
 	/* Get the section header table */
-	sect_header = (struct elf_section_header *)
-		      ((void *)elf_header + elf_header->e_shoff);
+	if (__pfn(elf_header->e_shoff) > 0)
+		sect_header = pager_map_file_offset(file, elf_header->e_shoff);
+	else
+		sect_header = (struct elf_section_header *)
+			      ((void *)elf_header + elf_header->e_shoff);
+
+	/* Determine if we cross a page boundary during traversal */
+	if (elf_header->e_shentsize * elf_header->e_shnum > TILL_PAGE_ENDS(sect_header))
 
 	/*
 	 * Sift through sections and copy their marks to tcb and efd

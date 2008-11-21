@@ -174,6 +174,10 @@ void init_mm(struct initdata *initdata)
 		printf("UTCB initialisation failed.\n");
 		BUG();
 	}
+
+	/* For supplying contiguous virtual addresses to pager */
+	pager_address_pool_init();
+
 	// printf("%s: Initialised utcb address pool.\n", __TASKNAME__);
 
 	/* Give the kernel some memory to use for its allocators */

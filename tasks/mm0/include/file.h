@@ -19,6 +19,8 @@ int file_open(struct tcb *opener, int fd);
 
 struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned long length);
 int flush_file_pages(struct vm_file *f);
+int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
+		    unsigned long pfn_end);
 
 struct vfs_file_data {
 	unsigned long vnum;

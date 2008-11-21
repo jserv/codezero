@@ -8,14 +8,18 @@
 #include <l4/macros.h>
 #include <l4/config.h>
 #include <l4/types.h>
+#include <l4/api/errno.h>
 #include <l4/generic/space.h>
 #include <l4lib/arch/syslib.h>
 #include INC_GLUE(memory.h)
 #include INC_SUBARCH(mm.h)
 #include <memory.h>
+#include <file.h>
 
 struct membank membank[1];
 struct page *page_array;
+
+struct address_pool pager_vaddr_pool;
 
 void *phys_to_virt(void *addr)
 {
@@ -89,4 +93,83 @@ void init_physmem(struct initdata *initdata, struct membank *membank)
 	/* Set global page array to this bank's array */
 	page_array = membank[0].page_array;
 }
+
+/* Maps a page from a vm_file to the pager's address space */
+void *pager_map_page(struct vm_file *f, unsigned long page_offset)
+{
+	int err;
+	struct page *p;
+
+	if ((err = read_file_pages(f, page_offset, page_offset + 1)) < 0)
+		return PTR_ERR(err);
+
+	if ((p = find_page(&f->vm_obj, page_offset)))
+		return (void *)l4_map_helper((void *)page_to_phys(p), 1);
+	else
+		return 0;
+}
+
+/* Unmaps a page's virtual address from the pager's address space */
+void pager_unmap_page(void *addr)
+{
+	l4_unmap_helper(addr, 1);
+}
+
+int pager_address_pool_init(void)
+{
+	int err;
+
+	/* Initialise the global shm virtual address pool */
+	if ((err = address_pool_init(&pager_vaddr_pool,
+				     (unsigned long)0xD0000000,
+				     (unsigned long)0xE0000000)) < 0) {
+		printf("Pager virtual address pool initialisation failed.\n");
+		return err;
+	}
+	return 0;
+}
+
+void *pager_new_address(int npages)
+{
+	return address_new(&pager_vaddr_pool, npages);
+}
+
+int pager_delete_address(void *virt_addr, int npages)
+{
+	return address_del(&pager_vaddr_pool, virt_addr, npages);
+}
+
+/* Maps a page from a vm_file to the pager's address space */
+void *pager_map_pages(struct vm_file *f, unsigned long page_offset, unsigned long npages)
+{
+	int err;
+	struct page *p;
+	void *addr_start, *addr;
+
+	/* Get the pages */
+	if ((err = read_file_pages(f, page_offset, page_offset + npages)) < 0)
+		return PTR_ERR(err);
+
+	/* Get the address range */
+	if (!(addr_start = pager_new_address(npages)))
+		return PTR_ERR(-ENOMEM);
+	addr = addr_start;
+
+	/* Map pages contiguously one by one */
+	for (unsigned long pfn = page_offset; pfn < page_offset + npages; pfn++) {
+		BUG_ON(!(p = find_page(&f->vm_obj, page_offset)))
+			l4_map((void *)page_to_phys(p), addr, 1, MAP_USR_RW_FLAGS, self_tid());
+			addr += PAGE_SIZE;
+	}
+
+	return addr_start;
+}
+
+/* Unmaps a page's virtual address from the pager's address space */
+void pager_unmap_pages(void *addr, unsigned long npages)
+{
+	l4_unmap_helper(addr, npages);
+	pager_delete_address(addr, npages);
+}
+
 

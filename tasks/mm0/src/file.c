@@ -21,6 +21,7 @@
 #include <user.h>
 #include <test.h>
 
+
 /* Copy from one page's buffer into another page */
 int page_copy(struct page *dst, struct page *src,
 	      unsigned long dst_offset, unsigned long src_offset,
@@ -306,27 +307,6 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 	}
 
 	return 0;
-}
-
-/* Maps a page from a vm_file to the pager's address space */
-void *pager_map_page(struct vm_file *f, unsigned long page_offset)
-{
-	int err;
-	struct page *p;
-
-	if ((err = read_file_pages(f, page_offset, page_offset + 1)) < 0)
-		return PTR_ERR(err);
-
-	if ((p = find_page(&f->vm_obj, page_offset)))
-		return (void *)l4_map_helper((void *)page_to_phys(p), 1);
-	else
-		return 0;
-}
-
-/* Unmaps a page's virtual address from the pager's address space */
-void pager_unmap_page(void *addr)
-{
-	l4_unmap_helper(addr, 1);
 }
 
 int vfs_write(unsigned long vnum, unsigned long file_offset,
