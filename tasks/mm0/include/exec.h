@@ -13,6 +13,7 @@
 struct exec_file_desc {
 	unsigned long text_offset;	/* File offset of text section */
 	unsigned long data_offset;	/* File offset of data section */
+	unsigned long bss_offset;	/* File offset of bss section */
 };
 
 #endif /* __EXEC_H__ */

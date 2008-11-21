@@ -121,6 +121,7 @@ int memfs_file_read_write(struct vnode *v, unsigned int pfn,
 		for (int x = pfn, bufpage = 0; x < pfn + npages; x++, bufpage++)
 			memcpy(i->block[x], ((void *)buf) + (bufpage * blocksize), blocksize);
 	}
+
 	return (int)(npages * blocksize);
 }
 

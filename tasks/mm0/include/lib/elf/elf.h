@@ -58,4 +58,7 @@ struct elf_header {
 } __attribute__((__packed__));
 
 
+int elf_parse_executable(struct tcb *task, struct vm_file *file,
+			 struct exec_file_desc *efd);
+
 #endif /* __ELF_H__ */

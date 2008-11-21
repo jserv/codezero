@@ -4,10 +4,10 @@
  * Copyright (C) 2008 Bahadir Balban
  */
 #include <vm_area.h>
-#include <lib/elf.h>
-#include <lib/elfprg.h>
-#include <lib/elfsym.h>
-#include <lib/elfsect.h>
+#include <lib/elf/elf.h>
+#include <lib/elf/elfprg.h>
+#include <lib/elf/elfsym.h>
+#include <lib/elf/elfsect.h>
 
 
 int elf_probe(struct elf_header *header)
@@ -32,8 +32,7 @@ int elf_probe(struct elf_header *header)
  * only) segment that has type LOAD. Then it looks at the section header
  * table, to find out about every loadable section that is part of this
  * aforementioned loadable program segment. Each section is marked in the
- * efd and tcb structures for further memory mappings. Loading an elf
- * executable is simple as that, but it is described poorly in manuals.
+ * efd and tcb structures for further memory mappings.
  */
 int elf_parse_executable(struct tcb *task, struct vm_file *file,
 			 struct exec_file_desc *efd)
@@ -41,7 +40,7 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	int err;
 	struct elf_header *elf_header = pager_map_page(file, 0);
 	struct elf_program_header *prg_header_start, *prg_header_load;
-	struct elf_section_header *sect_header_start;
+	struct elf_section_header *sect_header;
 
 	/* Test that it is a valid elf file */
 	if ((err = elf_probe(elf_header)) < 0)
@@ -53,14 +52,55 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 
 	/* Get the first loadable segment */
 	for (int i = 0; i < elf_header->e_phnum; i++) {
-		if (prg_header_start[i].type == PT_LOAD) {
+		if (prg_header_start[i].p_type == PT_LOAD) {
 			prg_header_load = &prg_header_start[i];
 			break;
 		}
 	}
 
 	/* Get the section header table */
-	sect_header_start = (struct elf_section_header *)
-			    ((void *)elf_header + elf_header->e_shoff);
+	sect_header = (struct elf_section_header *)
+		      ((void *)elf_header + elf_header->e_shoff);
+
+	/*
+	 * Sift through sections and copy their marks to tcb and efd
+	 * if they are recognised and loadable sections.
+	 *
+	 * NOTE: There may be multiple sections of same kind, in
+	 * consecutive address regions. Then we need to increase
+	 * that region's marks.
+	 */
+	for (int i = 0; i < elf_header->e_shnum; i++) {
+		struct elf_section_header *section = &sect_header[i];
+
+		/* Text section */
+		if (section->sh_type == SHT_PROGBITS &&
+		    section->sh_flags & SHF_ALLOC &&
+		    section->sh_flags & SHF_EXECINSTR) {
+			efd->text_offset = section->sh_offset;
+			task->text_start = section->sh_addr;
+			task->text_end = section->sh_addr + section->sh_size;
+		}
+
+		/* Data section */
+		if (section->sh_type == SHT_PROGBITS &&
+		    section->sh_flags & SHF_ALLOC &&
+		    section->sh_flags & SHF_WRITE) {
+			efd->data_offset = section->sh_offset;
+			task->data_start = section->sh_addr;
+			task->data_end = section->sh_addr + section->sh_size;
+		}
+
+		/* BSS section */
+		if (section->sh_type == SHT_NOBITS &&
+		    section->sh_flags & SHF_ALLOC &&
+		    section->sh_flags & SHF_WRITE) {
+			efd->bss_offset = section->sh_offset;
+			task->bss_start = section->sh_addr;
+			task->bss_end = section->sh_addr + section->sh_size;
+		}
+	}
+
+	return 0;
 }
 

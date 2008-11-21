@@ -125,7 +125,7 @@ arch, subarch, plat = extract_arch_subarch_plat(config_h)
 
 create_symlinks(arch) # Creates symlinks to architecture specific directories.
 
-src = [glob("src/*.c"), glob("src/lib/*.c"), glob("*.c"), glob("src/arch/*.c")]
+src = [glob("src/*.c"), glob("src/lib/*.c"), glob("src/lib/elf/*.c"), glob("*.c"), glob("src/arch/*.c")]
 objs = env.Object(src)
 physical_base = env.Command(physical_base_ld_script, prev_image, get_physical_base)
 crt0_copied = env.Command("crt0.o", libc_crt0, copy_crt0)

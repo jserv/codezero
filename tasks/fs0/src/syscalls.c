@@ -72,7 +72,7 @@ int pager_open_bypath(struct tcb *pager, char *pathname)
 	struct vnode *v;
 	int retval;
 
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (pager->tid != PAGER_TID)
 		return -EINVAL;
 
@@ -400,6 +400,8 @@ int pager_sys_write(struct tcb *pager, unsigned long vnum, unsigned long f_offse
 		    unsigned long npages, void *pagebuf)
 {
 	struct vnode *v;
+	int ret;
+	int fwrite_end;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
@@ -417,12 +419,21 @@ int pager_sys_write(struct tcb *pager, unsigned long vnum, unsigned long f_offse
 	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%x, %d pages, buf at 0x%x\n",
 		__TASKNAME__, __FUNCTION__, vnum, f_offset, npages, pagebuf);
 
+	if ((ret = v->fops.write(v, f_offset, npages, pagebuf)) < 0)
+		return ret;
+
 	/*
 	 * If the file is extended, write silently extends it.
-	 * But we expect an explicit pager_update_stats from the
-	 * pager to update the new file size on the vnode.
+	 * We update the extended size here. Otherwise subsequent write's
+	 * may fail by relying on wrong file size.
 	 */
-	return v->fops.write(v, f_offset, npages, pagebuf);
+	fwrite_end = __pfn_to_addr(f_offset) + ret;
+	if (v->size < fwrite_end) {
+		v->size = fwrite_end;
+		v->sb->ops->write_vnode(v->sb, v);
+	}
+
+	return ret;
 }
 
 /*

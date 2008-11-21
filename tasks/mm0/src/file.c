@@ -262,12 +262,12 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 
 		/* If there's only one in list */
 		if (before->list.next == &vmo->page_cache) {
-			/* Add to end if greater */
+			/* Add as next if greater */
 			if (this->offset > before->offset)
-				list_add_tail(&this->list, &before->list);
-			/* Add to beginning if smaller */
-			else if (this->offset < before->offset)
 				list_add(&this->list, &before->list);
+			/* Add  as previous if smaller */
+			else if (this->offset < before->offset)
+				list_add_tail(&this->list, &before->list);
 			else
 				BUG();
 			return 0;
@@ -276,7 +276,7 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 		/* If this page is in-between two other, insert it there */
 		if (before->offset < this->offset &&
 		    after->offset > this->offset) {
-			list_add_tail(&this->list, &before->list);
+			list_add(&this->list, &before->list);
 			return 0;
 		}
 		BUG_ON(this->offset == before->offset);
@@ -565,7 +565,7 @@ int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
  */
 
 /* Writes user data in buffer into pages in cache */
-int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
+int write_cache_pages_orig(struct vm_file *vmfile, struct tcb *task, void *buf,
 		      unsigned long pfn_start, unsigned long pfn_end,
 		      unsigned long cursor_offset, int count)
 {
@@ -618,6 +618,62 @@ copy:
 		left -= copysize;
 		last_pgoff = this->offset;
 	}
+	BUG_ON(left != 0);
+
+	return count - left;
+}
+
+/*
+ * Writes user data in buffer into pages in cache. If a page is not
+ * found, it's a bug. The writeable page range must have been readied
+ * by read_file_pages()/new_file_pages().
+ */
+int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
+		      unsigned long pfn_start, unsigned long pfn_end,
+		      unsigned long cursor_offset, int count)
+{
+	struct page *head;
+	unsigned long last_pgoff;	/* Last copied page's offset */
+	unsigned long copy_offset;	/* Current copy offset on the buffer */
+	int copysize, left;
+
+	/* Find the head of consecutive pages */
+	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list) {
+		/* First page */
+		if (head->offset == pfn_start) {
+			left = count;
+
+			/* Copy the first page and unmap. */
+			copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+			copy_offset = (unsigned long)buf;
+			page_copy(head, task_virt_to_page(task, copy_offset),
+				  cursor_offset, copy_offset & PAGE_MASK, copysize);
+			head->flags |= VM_DIRTY;
+			head->owner->flags |= VM_DIRTY;
+			left -= copysize;
+			last_pgoff = head->offset;
+
+		/* Rest of the consecutive pages */
+		} else if (head->offset > pfn_start && head->offset < pfn_end) {
+
+			/* Make sure we're advancing on pages consecutively */
+			BUG_ON(head->offset != last_pgoff + 1);
+
+			copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+			copy_offset = (unsigned long)buf + count - left;
+
+			/* Must be page aligned */
+			BUG_ON(!is_page_aligned(copy_offset));
+
+			page_copy(head, task_virt_to_page(task, copy_offset),
+				  0, 0, copysize);
+			head->flags |= VM_DIRTY;
+			left -= copysize;
+			last_pgoff = head->offset;
+		} else if (head->offset == pfn_end || left == 0)
+			break;
+	}
+
 	BUG_ON(left != 0);
 
 	return count - left;

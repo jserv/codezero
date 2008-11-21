@@ -56,7 +56,7 @@ struct memfs_inode {
 	u64 mtime;	/* Last content modification */
 	u64 ctime;	/* Last inode modification */
 	u64 size;	/* Size of contents */
-	void *block[5];	/* Number of blocks */
+	void *block[MEMFS_FMAX_BLOCKS]; /* Number of blocks */
 };
 
 struct memfs_superblock {

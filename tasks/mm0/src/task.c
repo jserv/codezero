@@ -347,6 +347,8 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	void *mapped;
 	struct vm_file *shm;
 
+	/* Set up heap as one page after bss */
+
 	/* mmap task's text to task's address space. */
 	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task, task->text_start,
 				    VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
