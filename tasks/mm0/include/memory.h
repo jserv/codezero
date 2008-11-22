@@ -29,5 +29,5 @@ void pager_unmap_pages(void *addr, unsigned long npages);
 void *pager_map_page(struct vm_file *f, unsigned long page_offset);
 void pager_unmap_page(void *addr);
 void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
-		`	   unsigned long size);
+			   unsigned long size);
 #endif /* __MEMORY_H__ */

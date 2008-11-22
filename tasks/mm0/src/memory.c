@@ -157,7 +157,7 @@ void *pager_map_pages(struct vm_file *f, unsigned long page_offset, unsigned lon
 
 	/* Map pages contiguously one by one */
 	for (unsigned long pfn = page_offset; pfn < page_offset + npages; pfn++) {
-		BUG_ON(!(p = find_page(&f->vm_obj, page_offset)))
+		BUG_ON(!(p = find_page(&f->vm_obj, pfn)))
 			l4_map((void *)page_to_phys(p), addr, 1, MAP_USR_RW_FLAGS, self_tid());
 			addr += PAGE_SIZE;
 	}
@@ -184,10 +184,12 @@ void pager_unmap_pages(void *addr, unsigned long npages)
  * returns pointer to byte offset in the file.
  */
 void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
-		`	   unsigned long size)
+			   unsigned long size)
 {
-	void *page = pager_map_pages(f, __pfn(byte_offset), __pfn(size));
+	unsigned long mapsize = (byte_offset & PAGE_MASK) + size;
 
-	return (void *)((unsigned long)page | (PAGE_MASK & f_offset));
+	void *page = pager_map_pages(f, __pfn(byte_offset), __pfn(page_align_up(mapsize)));
+
+	return (void *)((unsigned long)page | (PAGE_MASK & byte_offset));
 }
 

@@ -26,6 +26,68 @@ int elf_probe(struct elf_header *header)
 }
 
 /*
+ * Sets or expands a segment region if it has the given type and flags
+ * For expansion we assume any new section must come consecutively
+ * after the existing segment, otherwise we ignore it for simplicity.
+ */
+int elf_test_expand_segment(struct elf_section_header *section,
+			    unsigned int sec_type, unsigned int sec_flags,
+			    unsigned int sec_flmask, unsigned long *start,
+			    unsigned long *end, unsigned long *offset)
+{
+	if (section->sh_type == sec_type &&
+	    (section->sh_flags & sec_flmask) == sec_flags) {
+		/* Set new section */
+		if (!*start) {
+			*offset = section->sh_offset;
+			*start = section->sh_addr;
+			*end = section->sh_addr + section->sh_size;
+		/* Expand existing section from the end */
+		} else if (*end == section->sh_addr)
+			*end = section->sh_addr + section->sh_size;
+	}
+
+	return 0;
+}
+/*
+ * Sift through sections and copy their marks to tcb and efd
+ * if they are recognised and loadable sections.
+ *
+ * NOTE: There may be multiple sections of same kind, in
+ * consecutive address regions. Then we need to increase
+ * that region's marks.
+ */
+int elf_mark_segments(struct elf_section_header *sect_header, int nsections,
+		      struct tcb *task, struct exec_file_desc *efd)
+{
+	for (int i = 0; i < nsections; i++) {
+		struct elf_section_header *section = &sect_header[i];
+
+		/* Text + read-only data segments */
+		elf_test_expand_segment(section, SHT_PROGBITS, SHF_ALLOC,
+					SHF_ALLOC | SHF_WRITE, &task->text_start,
+					&task->text_end, &efd->text_offset);
+
+		/* Data segment */
+		elf_test_expand_segment(section, SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
+					SHF_ALLOC | SHF_WRITE, &task->data_start,
+					&task->data_end, &efd->data_offset);
+
+		/* Bss segment */
+		elf_test_expand_segment(section, SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
+					SHF_ALLOC | SHF_WRITE, &task->bss_start,
+					&task->bss_end, &efd->bss_offset);
+	}
+
+	if (!task->text_start || !task->data_start || !task->bss_start) {
+		printf("%s: NOTE: Could not find one of text, data or "
+		       "bss segments in elf file.\n", __FUNCTION__);
+	}
+
+	return 0;
+}
+
+/*
  * Loading an ELF file:
  *
  * This first probes and detects that the given file is a valid elf file.
@@ -38,23 +100,34 @@ int elf_probe(struct elf_header *header)
 int elf_parse_executable(struct tcb *task, struct vm_file *file,
 			 struct exec_file_desc *efd)
 {
-	int err;
-	struct elf_header *elf_header = pager_map_page(file, 0);
+	struct elf_header elf_header, *elf_headerp = pager_map_page(file, 0);
 	struct elf_program_header *prg_header_start, *prg_header_load;
 	struct elf_section_header *sect_header;
-	unsigned long sect_start, sect_end;
-	unsigned long prg_start, prg_end;
+	unsigned long sect_offset, sect_size;
+	unsigned long prg_offset, prg_size;
+	int err;
 
 	/* Test that it is a valid elf file */
-	if ((err = elf_probe(elf_header)) < 0)
+	if ((err = elf_probe(elf_headerp)) < 0)
 		return err;
+
+	/* Copy the elf header and unmap first page */
+	memcpy(&elf_header, elf_headerp, sizeof(elf_header));
+	pager_unmap_page(elf_headerp);
+
+	/* Find the markers for section and program header tables */
+	sect_offset = elf_header.e_shoff;
+	sect_size = elf_header.e_shentsize * elf_header.e_shnum;
+
+	prg_offset = elf_header.e_phoff;
+	prg_size = elf_header.e_phentsize * elf_header.e_phnum;
 
 	/* Get the program header table */
 	prg_header_start = (struct elf_program_header *)
-			   ((void *)elf_header + elf_header->e_phoff);
+			   pager_map_file_range(file, prg_offset, prg_size);
 
-	/* Get the first loadable segment */
-	for (int i = 0; i < elf_header->e_phnum; i++) {
+	/* Get the first loadable segment. We currently just stare at it */
+	for (int i = 0; i < elf_header.e_phnum; i++) {
 		if (prg_header_start[i].p_type == PT_LOAD) {
 			prg_header_load = &prg_header_start[i];
 			break;
@@ -62,55 +135,16 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	}
 
 	/* Get the section header table */
-	if (__pfn(elf_header->e_shoff) > 0) {
+	sect_header = (struct elf_section_header *)
+		      pager_map_file_range(file, sect_offset, sect_size);
 
-	}
-		sect_header = pager_map_file_offset(file, elf_header->e_shoff);
-	else
-		sect_header = (struct elf_section_header *)
-			      ((void *)elf_header + elf_header->e_shoff);
+	elf_mark_segments(sect_header, elf_header.e_shnum, task, efd);
 
-	/* Determine if we cross a page boundary during traversal */
-	if (elf_header->e_shentsize * elf_header->e_shnum > TILL_PAGE_ENDS(sect_header))
+	/* Unmap program header table */
+	pager_unmap_pages(prg_header_start, __pfn(page_align_up(prg_size)));
 
-	/*
-	 * Sift through sections and copy their marks to tcb and efd
-	 * if they are recognised and loadable sections.
-	 *
-	 * NOTE: There may be multiple sections of same kind, in
-	 * consecutive address regions. Then we need to increase
-	 * that region's marks.
-	 */
-	for (int i = 0; i < elf_header->e_shnum; i++) {
-		struct elf_section_header *section = &sect_header[i];
-
-		/* Text section */
-		if (section->sh_type == SHT_PROGBITS &&
-		    section->sh_flags & SHF_ALLOC &&
-		    section->sh_flags & SHF_EXECINSTR) {
-			efd->text_offset = section->sh_offset;
-			task->text_start = section->sh_addr;
-			task->text_end = section->sh_addr + section->sh_size;
-		}
-
-		/* Data section */
-		if (section->sh_type == SHT_PROGBITS &&
-		    section->sh_flags & SHF_ALLOC &&
-		    section->sh_flags & SHF_WRITE) {
-			efd->data_offset = section->sh_offset;
-			task->data_start = section->sh_addr;
-			task->data_end = section->sh_addr + section->sh_size;
-		}
-
-		/* BSS section */
-		if (section->sh_type == SHT_NOBITS &&
-		    section->sh_flags & SHF_ALLOC &&
-		    section->sh_flags & SHF_WRITE) {
-			efd->bss_offset = section->sh_offset;
-			task->bss_start = section->sh_addr;
-			task->bss_end = section->sh_addr + section->sh_size;
-		}
-	}
+	/* Unmap section header table */
+	pager_unmap_pages(sect_header, __pfn(page_align_up(sect_size)));
 
 	return 0;
 }
