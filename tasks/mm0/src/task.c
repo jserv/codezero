@@ -16,6 +16,7 @@
 #include <l4lib/arch/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
+#include <l4/lib/math.h>
 #include <lib/addr.h>
 #include <lib/malloc.h>
 #include <init.h>
@@ -342,12 +343,79 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 	return task;
 }
 
+/*
+ * If bss comes consecutively after the data section, prefault the
+ * last page of the data section and zero out the bit that contains
+ * the beginning of bss. If bss spans into more pages, then map those
+ * pages as anonymous pages which are mapped by the devzero file.
+ */
+int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task)
+{
+	unsigned long bss_mmap_start;
+	void *mapped;
+
+	/*
+	 * Test if bss starts right from the end of data,
+	 * and not on a new page boundary.
+	 */
+	if ((task->data_end == task->bss_start) &&
+	    !is_page_aligned(task->bss_start)) {
+		unsigned long bss_size = task->bss_end - task->bss_start;
+		struct page *last_data_page;
+		void *pagebuf, *bss;
+
+		/* Prefault the last data page */
+		BUG_ON(prefault_page(task, task->data_end,
+				     VM_READ | VM_WRITE) < 0);
+		/* Get the page */
+		last_data_page = task_virt_to_page(task, task->data_end);
+
+		/* Map the page */
+		pagebuf = l4_map_helper((void *)page_to_phys(last_data_page), 1);
+
+		/* Find the bss offset */
+		bss = (void *)((unsigned long)pagebuf |
+			       (PAGE_MASK & task->bss_start));
+
+		/*
+		 * Zero out the part that is bss. This is minimum of either
+		 * end of bss or until the end of page, whichever is met first.
+		 */
+		memset((void *)bss, 0, min(TILL_PAGE_ENDS(task->data_end),
+		       (int)bss_size));
+
+		/* Unmap the page */
+		l4_unmap_helper(pagebuf, 1);
+
+		/* Push bss mmap start to next page */
+		bss_mmap_start = page_align_up(task->bss_start);
+	} else	/* Otherwise bss mmap start is same as bss_start */
+		bss_mmap_start = task->bss_start;
+
+	/*
+	 * Now if there are more pages covering bss,
+	 * map those as anonymous zero pages
+	 */
+	if (task->bss_end > bss_mmap_start) {
+		if (IS_ERR(mapped = do_mmap(0, 0, task, task->bss_start,
+					    VM_READ | VM_WRITE |
+					    VMA_PRIVATE | VMA_ANONYMOUS,
+					    __pfn(page_align_up(task->bss_end) -
+						  page_align(task->bss_start))))) {
+			printf("do_mmap: Mapping environment failed with %d.\n",
+			       (int)mapped);
+			return (int)mapped;
+		}
+	}
+
+	return 0;
+}
+
 int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd)
 {
 	void *mapped;
 	struct vm_file *shm;
-
-	/* Set up heap as one page after bss */
+	int err;
 
 	/* mmap task's text to task's address space. */
 	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task, task->text_start,
@@ -368,14 +436,12 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	}
 
 	/* mmap task's bss as anonymous memory. */
-	if (IS_ERR(mapped = do_mmap(0, 0, task, task->bss_start,
-				    VM_READ | VM_WRITE |
-				    VMA_PRIVATE | VMA_ANONYMOUS,
-				    __pfn(task->bss_end - task->bss_start)))) {
-		printf("do_mmap: Mapping environment failed with %d.\n",
-		       (int)mapped);
-		return (int)mapped;
+	if ((err = task_map_bss(file, efd, task)) < 0) {
+		printf("%s: Mapping bss has failed.\n",
+		       __FUNCTION__);
+		return err;
 	}
+
 	/* mmap task's environment as anonymous memory. */
 	if (IS_ERR(mapped = do_mmap(0, 0, task, task->env_start,
 				    VM_READ | VM_WRITE |

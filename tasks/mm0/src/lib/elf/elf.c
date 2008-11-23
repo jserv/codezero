@@ -5,6 +5,7 @@
  */
 #include <memory.h>
 #include <vm_area.h>
+#include <l4/api/errno.h>
 #include <lib/elf/elf.h>
 #include <lib/elf/elfprg.h>
 #include <lib/elf/elfsym.h>
@@ -39,6 +40,7 @@ int elf_test_expand_segment(struct elf_section_header *section,
 	    (section->sh_flags & sec_flmask) == sec_flags) {
 		/* Set new section */
 		if (!*start) {
+			BUG_ON(*offset || *end);
 			*offset = section->sh_offset;
 			*start = section->sh_addr;
 			*end = section->sh_addr + section->sh_size;
@@ -49,13 +51,11 @@ int elf_test_expand_segment(struct elf_section_header *section,
 
 	return 0;
 }
+
 /*
  * Sift through sections and copy their marks to tcb and efd
- * if they are recognised and loadable sections.
- *
- * NOTE: There may be multiple sections of same kind, in
- * consecutive address regions. Then we need to increase
- * that region's marks.
+ * if they are recognised and loadable sections. Test the
+ * assigned segment marks and return an error if they're invalid.
  */
 int elf_mark_segments(struct elf_section_header *sect_header, int nsections,
 		      struct tcb *task, struct exec_file_desc *efd)
@@ -64,24 +64,45 @@ int elf_mark_segments(struct elf_section_header *sect_header, int nsections,
 		struct elf_section_header *section = &sect_header[i];
 
 		/* Text + read-only data segments */
-		elf_test_expand_segment(section, SHT_PROGBITS, SHF_ALLOC,
-					SHF_ALLOC | SHF_WRITE, &task->text_start,
-					&task->text_end, &efd->text_offset);
+		elf_test_expand_segment(section, SHT_PROGBITS,
+					SHF_ALLOC, SHF_ALLOC | SHF_WRITE,
+					&task->text_start, &task->text_end,
+					&efd->text_offset);
 
 		/* Data segment */
-		elf_test_expand_segment(section, SHT_PROGBITS, SHF_ALLOC | SHF_WRITE,
-					SHF_ALLOC | SHF_WRITE, &task->data_start,
-					&task->data_end, &efd->data_offset);
+		elf_test_expand_segment(section, SHT_PROGBITS, SHF_ALLOC |
+					SHF_WRITE, SHF_ALLOC | SHF_WRITE,
+					&task->data_start, &task->data_end,
+					&efd->data_offset);
 
 		/* Bss segment */
-		elf_test_expand_segment(section, SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
-					SHF_ALLOC | SHF_WRITE, &task->bss_start,
-					&task->bss_end, &efd->bss_offset);
+		elf_test_expand_segment(section, SHT_NOBITS, SHF_ALLOC |
+					SHF_WRITE, SHF_ALLOC | SHF_WRITE,
+					&task->bss_start, &task->bss_end,
+					&efd->bss_offset);
 	}
 
-	if (!task->text_start || !task->data_start || !task->bss_start) {
-		printf("%s: NOTE: Could not find one of text, data or "
-		       "bss segments in elf file.\n", __FUNCTION__);
+	/* Test anomalies with the mappings */
+
+	/* No text */
+	if (!task->text_start) {
+		printf("%s: Error: Could not find a text "
+		       "segment in ELF file.\n", __FUNCTION__);
+		return -ENOEXEC;
+	}
+
+	/* Warn if no data or bss but it's not an error */
+	if (!task->data_start || !task->bss_start) {
+		printf("%s: NOTE: Could not find a data and/or "
+		       "bss segment in ELF file.\n", __FUNCTION__);
+	}
+
+	/* Data and text are less than page apart */
+	if ((task->data_start - task->text_start) < PAGE_SIZE) {
+		printf("%s: Error: Distance between data and text"
+		       " sections are less than page size (4K)\n",
+		      __FUNCTION__);
+		return -ENOEXEC;
 	}
 
 	return 0;
@@ -105,7 +126,7 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	struct elf_section_header *sect_header;
 	unsigned long sect_offset, sect_size;
 	unsigned long prg_offset, prg_size;
-	int err;
+	int err = 0;
 
 	/* Test that it is a valid elf file */
 	if ((err = elf_probe(elf_headerp)) < 0)
@@ -138,7 +159,8 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	sect_header = (struct elf_section_header *)
 		      pager_map_file_range(file, sect_offset, sect_size);
 
-	elf_mark_segments(sect_header, elf_header.e_shnum, task, efd);
+	/* Copy segment marks from ELF file to task + efd. Return errors */
+	err = elf_mark_segments(sect_header, elf_header.e_shnum, task, efd);
 
 	/* Unmap program header table */
 	pager_unmap_pages(prg_header_start, __pfn(page_align_up(prg_size)));
@@ -146,6 +168,6 @@ int elf_parse_executable(struct tcb *task, struct vm_file *file,
 	/* Unmap section header table */
 	pager_unmap_pages(sect_header, __pfn(page_align_up(sect_size)));
 
-	return 0;
+	return err;
 }
 
