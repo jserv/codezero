@@ -192,7 +192,8 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		return PTR_ERR(err);
 
 	/* For valid regions that aren't allocated by us, create the vma. */
-	if (!(new = vma_new(__pfn(map_address), npages, flags, file_offset)))
+	if (!(new = vma_new(__pfn(map_address), npages, flags,
+			    __pfn(file_offset))))
 		return PTR_ERR(-ENOMEM);
 
 	/* Attach the file as the first vm object of this vma */
