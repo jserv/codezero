@@ -20,6 +20,7 @@ int exectest(void)
 	void *exec_start = (void *)_start_test1;
 	unsigned long size = _end_test1 - _start_test1;
 	int left, cnt;
+	char *argv[5];
 
 	/* First create a new file and write the executable data to that file */
 	printf("%s: Creating new executable file.\n", __FUNCTION__);
@@ -41,9 +42,16 @@ int exectest(void)
 
 	close(fd);
 
+	/* Set up some arguments */
+	argv[0] = "FIRST ARG";
+	argv[1] = "SECOND ARG";
+	argv[2] = "THIRD ARG";
+	argv[3] = "FOURTH ARG";
+	argv[4] = 0;
+
 	printf("%s: Executing the file.\n", __FUNCTION__);
 	/* Execute the file */
-	execve("/home/bahadir/test1.axf", 0, 0);
+	execve("/home/bahadir/test1.axf", argv, 0);
 
 	return 0;
 }

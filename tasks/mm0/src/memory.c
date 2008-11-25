@@ -15,6 +15,7 @@
 #include INC_SUBARCH(mm.h)
 #include <memory.h>
 #include <file.h>
+#include <user.h>
 
 struct membank membank[1];
 struct page *page_array;
@@ -192,4 +193,52 @@ void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
 
 	return (void *)((unsigned long)page | (PAGE_MASK & byte_offset));
 }
+
+void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
+				    unsigned long size, unsigned int vm_flags)
+{
+	unsigned long start = page_align(userptr);
+	unsigned long end = page_align_up(userptr + size);
+	unsigned long npages = end - start;
+	void *virt, *virt_start;
+	void *mapped = 0;
+
+	/* Validate that user task owns this address range */
+	if (pager_validate_user_range(user, userptr, size, vm_flags) < 0)
+		return 0;
+
+	/* Get the address range */
+	if (!(virt_start = pager_new_address(npages)))
+		return PTR_ERR(-ENOMEM);
+	virt = virt_start;
+
+	/* Map every page contiguously in the allocated virtual address range */
+	for (unsigned long addr = start; addr < end; addr += PAGE_SIZE) {
+		struct page *p = task_virt_to_page(user, addr);
+
+		if (IS_ERR(p)) {
+			/* Unmap pages mapped so far */
+			l4_unmap_helper(virt_start, __pfn(addr - start));
+
+			/* Delete virtual address range */
+			pager_delete_address(virt_start, npages);
+
+			return p;
+		}
+
+		l4_map((void *)page_to_phys(task_virt_to_page(user, addr)),
+		       virt, 1, MAP_USR_RW_FLAGS, self_tid());
+		virt += PAGE_SIZE;
+	}
+
+	/* Set the mapped pointer to offset of user pointer given */
+	mapped = virt_start;
+	mapped = (void *)(((unsigned long)mapped) |
+			  ((unsigned long)(PAGE_MASK &
+				  	   (unsigned long)userptr)));
+
+	/* Return the mapped pointer */
+	return mapped;
+}
+
 

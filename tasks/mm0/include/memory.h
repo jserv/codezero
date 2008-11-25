@@ -30,4 +30,6 @@ void *pager_map_page(struct vm_file *f, unsigned long page_offset);
 void pager_unmap_page(void *addr);
 void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
 			   unsigned long size);
+void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
+				    unsigned long size, unsigned int vm_flags);
 #endif /* __MEMORY_H__ */

@@ -896,8 +896,8 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 
 	/* First find the vma that maps that virtual address */
 	if (!(vma = find_vma(virtual, &t->vm_area_head->list))) {
-		printf("%s: No VMA found for 0x%x on task: %d\n",
-		       __FUNCTION__, virtual, t->tid);
+		//printf("%s: No VMA found for 0x%x on task: %d\n",
+		//       __FUNCTION__, virtual, t->tid);
 		return PTR_ERR(-EINVAL);
 	}
 
@@ -923,7 +923,7 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 					       &vma->vm_obj_list))) {
 			printf("%s:%s: Traversed all shadows and the original "
 			       "file's vm_object, but could not find the "
-			       "faulty page in this vma.\n",__TASKNAME__,
+			       "page in this vma.\n",__TASKNAME__,
 			       __FUNCTION__);
 			BUG();
 		}

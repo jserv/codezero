@@ -104,15 +104,8 @@ int do_execve(struct tcb *sender, char *filename)
 		return (int)new_task;
 	}
 
-	/* Fill in tcb memory segment markers from executable file */
+	/* Fill and validate tcb memory segment markers from executable file */
 	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
-		vm_file_put(vmfile);
-		kfree(new_task);
-		return err;
-	}
-
-	/* Map task segment markers as virtual memory regions */
-	if ((err = task_mmap_segments(new_task, vmfile, &efd)) < 0) {
 		vm_file_put(vmfile);
 		kfree(new_task);
 		return err;
@@ -152,6 +145,13 @@ int do_execve(struct tcb *sender, char *filename)
 	 */
 	do_exit(tgleader, EXIT_UNMAP_ALL_SPACE, 0);
 
+	/* Map task's new segment markers as virtual memory regions */
+	if ((err = task_mmap_segments(new_task, vmfile, &efd)) < 0) {
+		vm_file_put(vmfile);
+		kfree(new_task);
+		return err;
+	}
+
 	/* Set up task registers via exchange_registers() */
 	task_setup_registers(new_task, 0, 0, new_task->pagerid);
 
@@ -190,16 +190,6 @@ Dynamic Linking.
 
 
 /*
- * Copies a null-terminated ragged array (i.e. argv[0]) from userspace into
- * buffer. If any page boundary is hit, unmaps previous page, validates and
- * maps the new page.
- */
-int copy_user_ragged(struct tcb *task, char *buf[], char *user[], int maxlength)
-{
-	return 0;
-}
-
-/*
  * Copy from one buffer to another. Stop if maxlength or
  * a page boundary is hit.
  */
@@ -208,9 +198,11 @@ int strncpy_page(char *to, char *from, int maxlength)
 	int count = 0;
 
 	do {
-		if ((to[count] = from[count]) == '\0')
+		if ((to[count] = from[count]) == '\0') {
+			count++;
 			break;
-		count++;
+		} else
+			count++;
 	} while (count < maxlength && !page_boundary(&from[count]));
 
 	if (page_boundary(&from[count]))
@@ -218,19 +210,18 @@ int strncpy_page(char *to, char *from, int maxlength)
 	if (count == maxlength)
 		return -E2BIG;
 
-	return 0;
+	return count;
 }
 
 /*
  * Copies a userspace string into buffer. If a page boundary is hit,
- * unmaps the previous page, validates and maps the new page
+ * unmaps the previous page, validates and maps the new page.
  */
 int copy_user_string(struct tcb *task, char *buf, char *user, int maxlength)
 {
 	int count = maxlength;
+	int copied = 0, ret = 0, total = 0;
 	char *mapped = 0;
-	int copied = 0;
-	int err = 0;
 
 	/* Map the first page the user buffer is in */
 	if (!(mapped = pager_validate_map_user_range(task, user,
@@ -238,10 +229,10 @@ int copy_user_string(struct tcb *task, char *buf, char *user, int maxlength)
 						     VM_READ)))
 		return -EINVAL;
 
-	while ((err = strncpy_page(&buf[copied], mapped, count)) < 0) {
-		if (err == -E2BIG)
-			return err;
-		if (err == -EFAULT) {
+	while ((ret = strncpy_page(&buf[copied], mapped, count)) < 0) {
+		if (ret == -E2BIG)
+			return ret;
+		else if (ret == -EFAULT) {
 			pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 			copied += TILL_PAGE_ENDS(mapped);
 			count -= TILL_PAGE_ENDS(mapped);
@@ -252,25 +243,158 @@ int copy_user_string(struct tcb *task, char *buf, char *user, int maxlength)
 				return -EINVAL;
 		}
 	}
+	total = copied + ret;
 
 	/* Unmap the final page */
 	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 
-	return 0;
+	return total;
 }
+
+/*
+ * Copy from one buffer to another. Stop if maxlength or
+ * a page boundary is hit. Breaks if unsigned long sized copy value is 0,
+ * as opposed to a 0 byte as in string copy.
+ */
+int bufncpy_page(unsigned long *to, unsigned long *from, int maxlength)
+{
+	int count = 0;
+
+	do {
+		if ((to[count] = from[count]) == 0) {
+			count++;
+			break;
+		} else
+			count++;
+	} while (count < maxlength && !page_boundary(&from[count]));
+
+	if (page_boundary(&from[count]))
+		return -EFAULT;
+	if (count == maxlength)
+		return -E2BIG;
+
+	return count;
+}
+
+/*
+ * Copies a userspace string into buffer. If a page boundary is hit,
+ * unmaps the previous page, validates and maps the new page.
+ */
+int copy_user_buf(struct tcb *task, char *buf, char *user, int maxlength)
+{
+	int count = maxlength;
+	int copied = 0, ret = 0, total = 0;
+	unsigned long *mapped = 0;
+
+	/* Map the first page the user buffer is in */
+	if (!(mapped = pager_validate_map_user_range(task, user,
+						     TILL_PAGE_ENDS(user),
+						     VM_READ)))
+		return -EINVAL;
+
+	while ((ret = bufncpy_page((unsigned long *)&buf[copied], mapped, count)) < 0) {
+		if (ret == -E2BIG)
+			return ret;
+		else if (ret == -EFAULT) {
+			pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
+			copied += TILL_PAGE_ENDS(mapped);
+			count -= TILL_PAGE_ENDS(mapped);
+			if (!(mapped =
+			      pager_validate_map_user_range(task, user + copied,
+							    TILL_PAGE_ENDS(user + copied),
+							    VM_READ)))
+				return -EINVAL;
+		}
+	}
+	total = copied + ret;
+
+	/* Unmap the final page */
+	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
+
+	return total;
+}
+
+struct args_struct {
+	int argc;
+	char **argv;
+	int size;	/* Size of strings + string pointers */
+};
+
+int copy_user_args(struct tcb *task, struct args_struct *args,
+		   void *argv_user, int args_max)
+{
+	char **argv = 0;
+	void *argsbuf;
+	char *curbuf;
+	int argc = 0;
+	int used;
+	int count;
+
+	if (!(argsbuf = kzalloc(args_max)))
+		return -ENOMEM;
+
+	/*
+	 * First, copy the null-terminated array of
+	 * pointers to argument strings.
+	 */
+	if ((count = copy_user_buf(task, argsbuf, argv_user, args_max)) < 0)
+		goto out;
+
+	/* On success, we get the number of arg strings + the terminator */
+	argc = count - 1;
+	used = count * sizeof(char *);
+	argv = argsbuf;
+	curbuf = argsbuf + used;
+
+	/* Now we copy each argument string into buffer */
+	for (int i = 0; i < argc; i++) {
+		/* Copy string into empty space in buffer */
+		if ((count = copy_user_string(task, curbuf, argv[i],
+					      args_max - used)) < 0)
+			goto out;
+
+		/* Replace pointer to string with copied location */
+		argv[i] = curbuf;
+
+		/* Update current empty buffer location */
+		curbuf += count;
+
+		/* Increase used buffer count */
+		used += count;
+	}
+
+	/* Set up the args struct */
+	args->argc = argc;
+	args->argv = argv;
+	args->size = used;
+
+	return 0;
+
+out:
+	kfree(argsbuf);
+	return count;
+}
+
 
 int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 {
-	int err;
+	int ret;
 	char *path = kzalloc(PATH_MAX);
+	struct args_struct args;
 
 	/* Copy the executable path string */
-	if ((err = copy_user_string(sender, path, pathname, PATH_MAX)) < 0)
-		return err;
+	if ((ret = copy_user_string(sender, path, pathname, PATH_MAX)) < 0)
+		return ret;
 	printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
 
-	return do_execve(sender, path);
-}
+	/* Copy the env and args */
+	if ((ret = copy_user_args(sender, &args, argv, ARGS_MAX)) < 0)
+		return ret;
 
+	ret = do_execve(sender, path);
+	kfree(path);
+
+	return ret;
+}
 
 

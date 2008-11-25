@@ -25,8 +25,8 @@ int pager_validate_user_range(struct tcb *user, void *userptr, unsigned long siz
 	/* Find the vma that maps that virtual address */
 	for (unsigned long vaddr = start; vaddr < end; vaddr += PAGE_SIZE) {
 		if (!(vma = find_vma(vaddr, &user->vm_area_head->list))) {
-			printf("%s: No VMA found for 0x%x on task: %d\n",
-			       __FUNCTION__, vaddr, user->tid);
+			//printf("%s: No VMA found for 0x%x on task: %d\n",
+			//       __FUNCTION__, vaddr, user->tid);
 			return -1;
 		}
 		if ((vma->flags & vmflags) != vmflags)
