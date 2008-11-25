@@ -187,45 +187,6 @@ Dynamic Linking.
 #endif
 	return -1;
 }
-#if 0
-/*
- * Copies a userspace string into buffer. If a page boundary is hit,
- * unmaps the previous page, validates and maps the new page.
- */
-int copy_user_string(struct tcb *task, char *buf, char *user, int maxlength)
-{
-	int count = maxlength;
-	int copied = 0, ret = 0, total = 0;
-	char *mapped = 0;
-
-	/* Map the first page the user buffer is in */
-	if (!(mapped = pager_validate_map_user_range(task, user,
-						     TILL_PAGE_ENDS(user),
-						     VM_READ)))
-		return -EINVAL;
-
-	while ((ret = strncpy_page(&buf[copied], mapped, count)) < 0) {
-		if (ret == -E2BIG)
-			return ret;
-		else if (ret == -EFAULT) {
-			pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
-			copied += TILL_PAGE_ENDS(mapped);
-			count -= TILL_PAGE_ENDS(mapped);
-			if (!(mapped =
-			      pager_validate_map_user_range(task, user + copied,
-							    TILL_PAGE_ENDS(user + copied),
-							    VM_READ)))
-				return -EINVAL;
-		}
-	}
-	total = copied + ret;
-
-	/* Unmap the final page */
-	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
-
-	return total;
-}
-#endif
 
 /*
  * Copy from one buffer to another. Stop if maxlength or
@@ -279,7 +240,8 @@ int bufncpy_page(void *to_ptr, void *from_ptr, int maxlength)
 }
 
 /*
- * Copies a userspace string into buffer. If a page boundary is hit,
+ * Copies a variable sized userspace string or array of pointers
+ * (think &argv[0]), into buffer. If a page boundary is hit,
  * unmaps the previous page, validates and maps the new page.
  */
 int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,
@@ -332,6 +294,10 @@ int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,
 	return total;
 }
 
+/*
+ * Calls copy_user_buf with char-sized copying. This matters because
+ * buffer is variable and the terminator must be in char size
+ */
 static inline int
 copy_user_string(struct tcb *task, void *buf, char *user,
 		 int maxlength)
@@ -339,6 +305,10 @@ copy_user_string(struct tcb *task, void *buf, char *user,
 	return copy_user_buf(task, buf, user, maxlength, sizeof(char));
 }
 
+/*
+ * Calls copy_user_buf with unsigned long sized copying. This matters
+ * because buffer is variable and the terminator must be in ulong size
+ */
 static inline int
 copy_user_ptrs(struct tcb *task, void *buf, char *user,
 		 int maxlength)
