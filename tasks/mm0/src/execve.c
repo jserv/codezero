@@ -187,32 +187,7 @@ Dynamic Linking.
 #endif
 	return -1;
 }
-
-
-/*
- * Copy from one buffer to another. Stop if maxlength or
- * a page boundary is hit.
- */
-int strncpy_page(char *to, char *from, int maxlength)
-{
-	int count = 0;
-
-	do {
-		if ((to[count] = from[count]) == '\0') {
-			count++;
-			break;
-		} else
-			count++;
-	} while (count < maxlength && !page_boundary(&from[count]));
-
-	if (page_boundary(&from[count]))
-		return -EFAULT;
-	if (count == maxlength)
-		return -E2BIG;
-
-	return count;
-}
-
+#if 0
 /*
  * Copies a userspace string into buffer. If a page boundary is hit,
  * unmaps the previous page, validates and maps the new page.
@@ -250,15 +225,42 @@ int copy_user_string(struct tcb *task, char *buf, char *user, int maxlength)
 
 	return total;
 }
+#endif
+
+/*
+ * Copy from one buffer to another. Stop if maxlength or
+ * a page boundary is hit.
+ */
+int strncpy_page(void *to_ptr, void *from_ptr, int maxlength)
+{
+	int count = 0;
+	char *to = to_ptr, *from = from_ptr;
+
+	do {
+		if ((to[count] = from[count]) == '\0') {
+			count++;
+			break;
+		} else
+			count++;
+	} while (count < maxlength && !page_boundary(&from[count]));
+
+	if (page_boundary(&from[count]))
+		return -EFAULT;
+	if (count == maxlength)
+		return -E2BIG;
+
+	return count;
+}
 
 /*
  * Copy from one buffer to another. Stop if maxlength or
  * a page boundary is hit. Breaks if unsigned long sized copy value is 0,
  * as opposed to a 0 byte as in string copy.
  */
-int bufncpy_page(unsigned long *to, unsigned long *from, int maxlength)
+int bufncpy_page(void *to_ptr, void *from_ptr, int maxlength)
 {
 	int count = 0;
+	unsigned long *to = to_ptr, *from = from_ptr;
 
 	do {
 		if ((to[count] = from[count]) == 0) {
@@ -280,11 +282,20 @@ int bufncpy_page(unsigned long *to, unsigned long *from, int maxlength)
  * Copies a userspace string into buffer. If a page boundary is hit,
  * unmaps the previous page, validates and maps the new page.
  */
-int copy_user_buf(struct tcb *task, char *buf, char *user, int maxlength)
+int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,
+		  int elem_size)
 {
 	int count = maxlength;
 	int copied = 0, ret = 0, total = 0;
-	unsigned long *mapped = 0;
+	void *mapped = 0;
+	int (*copy_func)(void *, void *, int count);
+
+	if (elem_size == sizeof(char))
+		copy_func = strncpy_page;
+	else if (elem_size == sizeof(unsigned long))
+		copy_func = bufncpy_page;
+	else
+		return -EINVAL;
 
 	/* Map the first page the user buffer is in */
 	if (!(mapped = pager_validate_map_user_range(task, user,
@@ -292,10 +303,15 @@ int copy_user_buf(struct tcb *task, char *buf, char *user, int maxlength)
 						     VM_READ)))
 		return -EINVAL;
 
-	while ((ret = bufncpy_page((unsigned long *)&buf[copied], mapped, count)) < 0) {
+	while ((ret = copy_func(buf + copied, mapped, count)) < 0) {
 		if (ret == -E2BIG)
 			return ret;
 		else if (ret == -EFAULT) {
+			/*
+			 * Copied is always in bytes no matter what elem_size is
+			 * because we know we hit a page boundary and we increase
+			 * by the page boundary bytes
+			 */
 			pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 			copied += TILL_PAGE_ENDS(mapped);
 			count -= TILL_PAGE_ENDS(mapped);
@@ -306,12 +322,28 @@ int copy_user_buf(struct tcb *task, char *buf, char *user, int maxlength)
 				return -EINVAL;
 		}
 	}
-	total = copied + ret;
+
+	/* Note copied is always in bytes */
+	total = (copied / elem_size) + ret;
 
 	/* Unmap the final page */
 	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 
 	return total;
+}
+
+static inline int
+copy_user_string(struct tcb *task, void *buf, char *user,
+		 int maxlength)
+{
+	return copy_user_buf(task, buf, user, maxlength, sizeof(char));
+}
+
+static inline int
+copy_user_ptrs(struct tcb *task, void *buf, char *user,
+		 int maxlength)
+{
+	return copy_user_buf(task, buf, user, maxlength, sizeof(unsigned long));
 }
 
 struct args_struct {
@@ -337,7 +369,7 @@ int copy_user_args(struct tcb *task, struct args_struct *args,
 	 * First, copy the null-terminated array of
 	 * pointers to argument strings.
 	 */
-	if ((count = copy_user_buf(task, argsbuf, argv_user, args_max)) < 0)
+	if ((count = copy_user_ptrs(task, argsbuf, argv_user, args_max)) < 0)
 		goto out;
 
 	/* On success, we get the number of arg strings + the terminator */
