@@ -16,4 +16,10 @@ struct exec_file_desc {
 	unsigned long bss_offset;	/* File offset of bss section */
 };
 
+struct args_struct {
+	int argc;
+	char **argv;
+	int size;	/* Size of strings + string pointers */
+};
+
 #endif /* __EXEC_H__ */

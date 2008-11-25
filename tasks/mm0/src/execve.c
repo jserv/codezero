@@ -82,7 +82,8 @@ int task_setup_from_executable(struct vm_file *vmfile, struct tcb *task,
 	return elf_parse_executable(task, vmfile, efd);
 }
 
-int do_execve(struct tcb *sender, char *filename)
+int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
+	      struct args_struct *env)
 {
 	unsigned long vnum, length;
 	struct vm_file *vmfile;
@@ -316,11 +317,6 @@ copy_user_ptrs(struct tcb *task, void *buf, char *user,
 	return copy_user_buf(task, buf, user, maxlength, sizeof(unsigned long));
 }
 
-struct args_struct {
-	int argc;
-	char **argv;
-	int size;	/* Size of strings + string pointers */
-};
 
 int copy_user_args(struct tcb *task, struct args_struct *args,
 		   void *argv_user, int args_max)
@@ -377,26 +373,33 @@ out:
 	return count;
 }
 
-
 int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 {
 	int ret;
 	char *path = kzalloc(PATH_MAX);
 	struct args_struct args;
+	struct args_struct env;
 
 	/* Copy the executable path string */
 	if ((ret = copy_user_string(sender, path, pathname, PATH_MAX)) < 0)
 		return ret;
 	printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
 
-	/* Copy the env and args */
+	/* Copy the args */
 	if ((ret = copy_user_args(sender, &args, argv, ARGS_MAX)) < 0)
-		return ret;
+		goto out1;
 
-	ret = do_execve(sender, path);
+	/* Copy the env */
+	if ((ret = copy_user_args(sender, &env, envp, ARGS_MAX - args.size)))
+		goto out2;
+
+	ret = do_execve(sender, path, &args, &env);
+
+	kfree(env.argv);
+out2:
+	kfree(args.argv);
+out1:
 	kfree(path);
-
 	return ret;
 }
-
 
