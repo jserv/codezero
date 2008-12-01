@@ -128,7 +128,7 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 		 * TODO: Set up parents for children's children
 		 */
 		list_for_each_entry(thread, &tgleader->children, child_ref)
-			do_exit(thread, EXIT_THREAD_DESTROY, 0);
+			do_exit(thread, 0);
 	} else {
 		/* Otherwise group leader is same as sender */
 		tgleader = sender;
@@ -139,22 +139,30 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	new_task->spid = tgleader->spid;
 	new_task->tgid = tgleader->tgid;
 	new_task->pagerid = tgleader->pagerid;
+	new_task->utcb = tgleader->utcb;
 
 	/*
 	 * Release all task resources, do everything done in
 	 * exit() except destroying the actual thread.
 	 */
-	do_exit(tgleader, EXIT_UNMAP_ALL_SPACE, 0);
+	if ((err = execve_recycle_task(tgleader)) < 0) {
+		vm_file_put(vmfile);
+		kfree(new_task);
+		return err;
+	}
 
 	/* Map task's new segment markers as virtual memory regions */
-	if ((err = task_mmap_segments(new_task, vmfile, &efd)) < 0) {
+	if ((err = task_mmap_segments(new_task, vmfile, &efd, args, env)) < 0) {
 		vm_file_put(vmfile);
 		kfree(new_task);
 		return err;
 	}
 
 	/* Set up task registers via exchange_registers() */
-	task_setup_registers(new_task, 0, 0, new_task->pagerid);
+	task_setup_registers(new_task, 0, new_task->args_start, new_task->pagerid);
+
+	/* Add new task to global list */
+	global_add_task(new_task);
 
 	/* Start the task */
 	task_start(new_task);
@@ -186,7 +194,7 @@ Dynamic Linking.
 	 * - Jump to the entry point of main executable.
 	 */
 #endif
-	return -1;
+	return 0;
 }
 
 /*
@@ -253,6 +261,7 @@ int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,
 	void *mapped = 0;
 	int (*copy_func)(void *, void *, int count);
 
+	/* This bit determines what size copier function to use. */
 	if (elem_size == sizeof(char))
 		copy_func = strncpy_page;
 	else if (elem_size == sizeof(unsigned long))
@@ -376,9 +385,15 @@ out:
 int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 {
 	int ret;
-	char *path = kzalloc(PATH_MAX);
+	char *path;
 	struct args_struct args;
 	struct args_struct env;
+
+	if (!(path = kzalloc(PATH_MAX)))
+		return -ENOMEM;
+
+	memset(&args, 0, sizeof(args));
+	memset(&env, 0, sizeof(env));
 
 	/* Copy the executable path string */
 	if ((ret = copy_user_string(sender, path, pathname, PATH_MAX)) < 0)
@@ -386,18 +401,21 @@ int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 	printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
 
 	/* Copy the args */
-	if ((ret = copy_user_args(sender, &args, argv, ARGS_MAX)) < 0)
+	if (argv && ((ret = copy_user_args(sender, &args, argv, ARGS_MAX)) < 0))
 		goto out1;
 
 	/* Copy the env */
-	if ((ret = copy_user_args(sender, &env, envp, ARGS_MAX - args.size)))
+	if (envp && ((ret = copy_user_args(sender, &env, envp,
+					   ARGS_MAX - args.size)) < 0))
 		goto out2;
 
 	ret = do_execve(sender, path, &args, &env);
 
-	kfree(env.argv);
+	if (env.argv)
+		kfree(env.argv);
 out2:
-	kfree(args.argv);
+	if (args.argv)
+		kfree(args.argv);
 out1:
 	kfree(path);
 	return ret;

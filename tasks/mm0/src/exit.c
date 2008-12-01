@@ -68,7 +68,37 @@ int task_close_files(struct tcb *task)
 	return err;
 }
 
-void do_exit(struct tcb *task, unsigned int flags, int status)
+/* Prepare old task's environment for new task */
+int execve_recycle_task(struct tcb *task)
+{
+	int err;
+	struct task_ids ids = {
+		.tid = task->tid,
+		.spid = task->spid,
+		.tgid = task->tgid,
+	};
+
+	/* Flush all IO on task's files and close fds */
+	task_close_files(task);
+
+	/* Vfs still knows the thread */
+
+	/* Keep the utcb on vfs */
+
+	/* Ask the kernel to recycle the thread */
+	if ((err = l4_thread_control(THREAD_RECYCLE, &ids)) < 0) {
+		printf("%s: Suspending thread %d failed with %d.\n",
+		       __FUNCTION__, task->tid, err);
+		return err;
+	}
+
+	/* Destroy the locally known tcb */
+	tcb_destroy(task);
+
+	return 0;
+}
+
+void do_exit(struct tcb *task, int status)
 {
 	struct task_ids ids = {
 		.tid = task->tid,
@@ -89,14 +119,8 @@ void do_exit(struct tcb *task, unsigned int flags, int status)
 	/* Free task's local tcb */
 	tcb_destroy(task);
 
-	/* Ask the kernel to reset this thread's page tables */
-	if (flags & EXIT_UNMAP_ALL_SPACE)
-		l4_unmap((void *)UNMAP_ALL_SPACE,
-			 UNMAP_ALL_SPACE, task->tid);
-
 	/* Ask the kernel to delete the thread from its records */
-	if (flags & EXIT_THREAD_DESTROY)
-		l4_thread_control(THREAD_DESTROY, &ids);
+	l4_thread_control(THREAD_DESTROY, &ids);
 
 	/* TODO: Wake up any waiters about task's destruction */
 #if 0
@@ -111,6 +135,6 @@ void do_exit(struct tcb *task, unsigned int flags, int status)
 
 void sys_exit(struct tcb *task, int status)
 {
-	do_exit(task, EXIT_THREAD_DESTROY, status);
+	do_exit(task, status);
 }
 

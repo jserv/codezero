@@ -25,7 +25,7 @@
 
 /* POSIX minimum is 4Kb */
 #define DEFAULT_ENV_SIZE		SZ_4K
-#define DEFAULT_STACK_SIZE		SZ_16K
+#define DEFAULT_STACK_SIZE		SZ_32K
 #define DEFAULT_UTCB_SIZE		PAGE_SIZE
 
 #define TCB_NO_SHARING				0
@@ -94,8 +94,6 @@ struct tcb {
 	unsigned long stack_end;
 	unsigned long heap_start;
 	unsigned long heap_end;
-	unsigned long env_start;
-	unsigned long env_end;
 	unsigned long args_start;
 	unsigned long args_end;
 
@@ -122,7 +120,8 @@ struct tcb *find_task(int tid);
 void global_add_task(struct tcb *task);
 void global_remove_task(struct tcb *task);
 void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
-int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd);
+int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd,
+			struct args_struct *args, struct args_struct *env);
 int task_setup_registers(struct tcb *task, unsigned int pc,
 			 unsigned int sp, l4id_t pager);
 struct tcb *tcb_alloc_init(unsigned int flags);

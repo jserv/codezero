@@ -49,6 +49,47 @@ int thread_suspend(struct task_ids *ids)
 	return ret;
 }
 
+int arch_clear_thread(struct ktcb *task)
+{
+	memset(&task->context, 0, sizeof(task->context));
+	task->context.spsr = ARM_MODE_USR;
+
+	/* Clear the page tables */
+	remove_mapping_pgd_all_user(task->pgd);
+
+	return 0;
+}
+
+int thread_recycle(struct task_ids *ids)
+{
+	struct ktcb *task;
+	int ret;
+
+	if (!(task = find_task(ids->tid)))
+		return -ESRCH;
+
+	if ((ret = thread_suspend(ids)) < 0)
+		return ret;
+
+	/*
+	 * If there are any sleepers on any of the task's
+	 * waitqueues, we need to wake those tasks up.
+	 */
+	wake_up_all(&task->wqh_send, 0);
+	wake_up_all(&task->wqh_recv, 0);
+
+	/*
+	 * The thread cannot have a pager waiting for it
+	 * since we ought to be the pager.
+	 */
+	BUG_ON(task->wqh_pager.sleepers > 0);
+
+	/* Clear the task's tcb */
+	arch_clear_thread(task);
+
+	return 0;
+}
+
 int thread_destroy(struct task_ids *ids)
 {
 	struct ktcb *task;
@@ -292,6 +333,10 @@ int sys_thread_control(syscall_context_t *regs)
 		break;
 	case THREAD_DESTROY:
 		ret = thread_destroy(ids);
+		break;
+	case THREAD_RECYCLE:
+		ret = thread_recycle(ids);
+		break;
 	default:
 		ret = -EINVAL;
 	}

@@ -223,8 +223,15 @@ int bootfile_release_pages(struct vm_object *vm_obj)
 		list_del(&p->list);
 		BUG_ON(p->refcnt);
 
-		/* Free the page structure */
-		kfree(p);
+		/* Reinitialise the page */
+		page_init(p);
+
+		/*
+		 * We don't free the page because it doesn't
+		 * come from the page allocator
+		 */
+		// free_page((void *)page_to_phys(p));
+
 
 		/* Reduce object page count */
 		BUG_ON(--vm_obj->npages < 0);
@@ -276,6 +283,10 @@ struct vm_pager bootfile_pager = {
 	},
 };
 
+void bootfile_destroy_priv_data(struct vm_file *bootfile)
+{
+
+}
 
 /* From bare boot images, create mappable device files */
 int init_boot_files(struct initdata *initdata)
@@ -292,6 +303,8 @@ int init_boot_files(struct initdata *initdata)
 		boot_file->priv_data = img;
 		boot_file->length = img->phys_end - img->phys_start;
 		boot_file->type = VM_FILE_BOOTFILE;
+		boot_file->destroy_priv_data =
+			bootfile_destroy_priv_data;
 
 		/* Initialise the vm object */
 		boot_file->vm_obj.flags = VM_OBJ_FILE;
@@ -300,6 +313,7 @@ int init_boot_files(struct initdata *initdata)
 		/* Add the file to initdata's bootfile list */
 		list_add_tail(&boot_file->list, &initdata->boot_file_list);
 	}
+
 	return 0;
 }
 

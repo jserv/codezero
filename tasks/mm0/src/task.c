@@ -236,8 +236,6 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 	to->stack_end = from->stack_end;
 	to->heap_start = from->heap_start;
 	to->heap_end = from->heap_end;
-	to->env_start = from->env_start;
-	to->env_end = from->env_end;
 	to->args_start = from->args_start;
 	to->args_end = from->args_end;
 	to->map_start = from->map_start;
@@ -344,6 +342,87 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 }
 
 /*
+ * Copy argument and environment strings into task's stack in a
+ * format that is expected by the C runtime.
+ *
+ * e.g. uclibc expects stack state:
+ *
+ * (low) |->argc|argv[0]|argv[1]|...|argv[argc] = 0|envp[0]|...|NULL| (high)
+ *
+ */
+int task_args_to_user(char *user_stack, struct args_struct *args,
+		      struct args_struct *env)
+{
+	BUG_ON((unsigned long)user_stack & 7);
+
+	/* Copy argc */
+	*((int *)user_stack) = args->argc;
+	user_stack += sizeof(int);
+
+	/* Copy argument strings one by one */
+	for (int i = 0; i < args->argc; i++) {
+		strcpy(user_stack, args->argv[i]);
+		user_stack += strlen(args->argv[i]) + 1;
+	}
+	/* Put the null terminator integer */
+	*((int *)user_stack) = 0;
+	user_stack = user_stack + sizeof(int);
+
+	/* Copy environment strings one by one */
+	for (int i = 0; i < env->argc; i++) {
+		strcpy(user_stack, env->argv[i]);
+		user_stack += strlen(env->argv[i]) + 1;
+	}
+
+	return 0;
+}
+
+int task_map_stack(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task,
+		   struct args_struct *args, struct args_struct *env)
+{
+	/* First set up task's stack markers */
+	unsigned long stack_used = align_up(args->size + env->size, 8);
+	unsigned long arg_pages = __pfn(page_align_up(stack_used));
+	char *args_on_stack;
+	void *mapped;
+
+	task->stack_end = USER_AREA_END;
+	task->stack_start = USER_AREA_END - DEFAULT_STACK_SIZE;
+	task->args_end = task->stack_end;
+	task->args_start = task->stack_end - stack_used;
+
+	BUG_ON(stack_used > DEFAULT_STACK_SIZE);
+
+	/*
+	 * mmap task's stack as anonymous memory.
+	 * TODO: Add VMA_GROWSDOWN here so the stack can expand.
+	 */
+	if (IS_ERR(mapped = do_mmap(0, 0, task, task->stack_start,
+				    VM_READ | VM_WRITE |
+				    VMA_PRIVATE | VMA_ANONYMOUS,
+				    __pfn(task->stack_end -
+					  task->stack_start)))) {
+		printf("do_mmap: Mapping stack failed with %d.\n",
+		       (int)mapped);
+		return (int)mapped;
+	}
+
+	/* Map the stack's part that will contain args and environment */
+	args_on_stack =
+		pager_validate_map_user_range2(task,
+					       (void *)task->args_start,
+					       stack_used, VM_READ | VM_WRITE);
+
+	/* Copy arguments and env */
+	task_args_to_user(args_on_stack, args, env);
+
+	/* Unmap task's those stack pages from pager */
+	pager_unmap_pages(args_on_stack, arg_pages);
+
+	return 0;
+}
+
+/*
  * If bss comes consecutively after the data section, prefault the
  * last page of the data section and zero out the bit that contains
  * the beginning of bss. If bss spans into more pages, then map those
@@ -411,10 +490,11 @@ int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task
 	return 0;
 }
 
-int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd)
+int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd,
+		       struct args_struct *args, struct args_struct *env)
 {
 	void *mapped;
-	struct vm_file *shm;
+	//struct vm_file *shm;
 	int err;
 
 	/* mmap task's text to task's address space. */
@@ -442,33 +522,19 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 		return err;
 	}
 
-	/* mmap task's environment as anonymous memory. */
-	if (IS_ERR(mapped = do_mmap(0, 0, task, task->env_start,
-				    VM_READ | VM_WRITE |
-				    VMA_PRIVATE | VMA_ANONYMOUS,
-				    __pfn(task->env_end - task->env_start)))) {
-		printf("do_mmap: Mapping environment failed with %d.\n",
-		       (int)mapped);
-		return (int)mapped;
+	/* mmap task's stack, writing in the arguments and environment */
+	if ((err = task_map_stack(file, efd, task, args, env)) < 0) {
+		printf("%s: Mapping task's stack has failed.\n",
+		       __FUNCTION__);
+		return err;
 	}
 
-	/* mmap task's stack as anonymous memory. */
-	if (IS_ERR(mapped = do_mmap(0, 0, task, task->stack_start,
-				    VM_READ | VM_WRITE |
-				    VMA_PRIVATE | VMA_ANONYMOUS,
-				    __pfn(task->stack_end -
-					  task->stack_start)))) {
-		printf("do_mmap: Mapping stack failed with %d.\n",
-		       (int)mapped);
-		return (int)mapped;
-	}
-
-	/* Task's utcb */
-	task->utcb = utcb_new_address();
-
-	/* Create a shared memory segment available for shmat() */
-	if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
-		return (int)shm;
+	/*
+	 * Task already has recycled task's utcb. It will attach to it
+	 * when it starts in userspace.
+	 */
+	//if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
+	//	return (int)shm;
 
 	return 0;
 }
@@ -483,7 +549,8 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 	if (!sp)
 		sp = align(task->stack_end - 1, 8);
 	if (!pc)
-		pc = task->entry;
+		if (!(pc = task->entry))
+			pc = task->text_start;
 	if (!pager)
 		pager = self_tid();
 
@@ -492,7 +559,7 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 	exregs_set_pc(&exregs, pc);
 	exregs_set_pager(&exregs, pager);
 
-	if ((err = l4_exchange_registers(&exregs, task->tid) < 0)) {
+	if ((err = l4_exchange_registers(&exregs, task->tid)) < 0) {
 		printf("l4_exchange_registers failed with %d.\n", err);
 		return err;
 	}

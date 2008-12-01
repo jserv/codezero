@@ -39,6 +39,8 @@
 
 /* Align to given size */
 #define	align(addr, size)		(((unsigned int)(addr)) & (~(size-1)))
+#define align_up(addr, size)		((((unsigned long)(addr)) + \
+					((size) - 1)) & (~((size) - 1)))
 
 /* The bytes left until the end of the page that x is in */
 #define TILL_PAGE_ENDS(x)	(PAGE_SIZE - ((unsigned long)(x) & PAGE_MASK))
@@ -57,7 +59,6 @@
 #define BITWISE_GETWORD(x)	((x) >> WORD_BITS_LOG2) /* Divide by 32 */
 #define	BITWISE_GETBIT(x)	(1 << ((x) % WORD_BITS))
 
-#define align_up(addr, size)		((((unsigned long)(addr)) + ((size) - 1)) & (~((size) - 1)))
 
 /* Endianness conversion */
 static inline void be32_to_cpu(unsigned int x)

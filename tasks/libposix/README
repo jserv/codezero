@@ -41,6 +41,7 @@ shmat
 shmget
 shmdt
 mmap
+munmap
 read
 readdir
 write
@@ -51,19 +52,18 @@ creat
 mkdir
 mknod
 fork
+clone
+execve
+exit
+getpid
 
 
 Functions to be supported in the near future are:
 
-munmap
 link
 unlink
-getpid
-execve
-clone
 wait
 kill
-exit
 sbrk
 getenv
 setenv

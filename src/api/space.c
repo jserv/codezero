@@ -59,16 +59,6 @@ int sys_unmap(syscall_context_t *regs)
 	else if (!(target = find_task(tid)))
 		return -ESRCH;
 
-	/*
-	 * These special values mean unmap all the mappings
-	 * from task space except the kernel mappings
-	 */
-	if (virtual == UNMAP_ALL_SPACE &&
-	    npages == UNMAP_ALL_SPACE) {
-		remove_mapping_pgd_all_user(target->pgd);
-		return 0;
-	}
-
 	for (int i = 0; i < npages; i++) {
 		ret = remove_mapping_pgd(virtual + i * PAGE_SIZE, target->pgd);
 		if (ret)
