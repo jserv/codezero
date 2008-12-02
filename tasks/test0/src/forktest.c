@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <tests.h>
+#include <l4/macros.h>
 
 int global = 0;
 extern pid_t pid;
@@ -39,5 +40,6 @@ int forktest(void)
 out:
 	printf("PID: %d exiting...\n", myid);
 	_exit(0);
+	BUG();
 }
 

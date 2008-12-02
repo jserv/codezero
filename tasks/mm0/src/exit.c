@@ -69,17 +69,36 @@ int task_close_files(struct tcb *task)
 }
 
 /* Prepare old task's environment for new task */
-int execve_recycle_task(struct tcb *task)
+int execve_recycle_task(struct tcb *new, struct tcb *orig)
 {
 	int err;
 	struct task_ids ids = {
-		.tid = task->tid,
-		.spid = task->spid,
-		.tgid = task->tgid,
+		.tid = orig->tid,
+		.spid = orig->spid,
+		.tgid = orig->tgid,
 	};
 
+	/*
+	 * Copy data to new task that is
+	 * to be retained from original
+	 */
+
+	/* Copy ids */
+	new->tid = orig->tid;
+	new->spid = orig->spid;
+	new->tgid = orig->tgid;
+	new->pagerid = orig->pagerid;
+
+	/* Copy utcb */
+	new->utcb = orig->utcb;
+
+	/* Copy parent relationship */
+	BUG_ON(new->parent);
+	new->parent = orig->parent;
+	list_add(&new->child_ref, &orig->parent->children);
+
 	/* Flush all IO on task's files and close fds */
-	task_close_files(task);
+	task_close_files(orig);
 
 	/* Vfs still knows the thread */
 
@@ -88,12 +107,12 @@ int execve_recycle_task(struct tcb *task)
 	/* Ask the kernel to recycle the thread */
 	if ((err = l4_thread_control(THREAD_RECYCLE, &ids)) < 0) {
 		printf("%s: Suspending thread %d failed with %d.\n",
-		       __FUNCTION__, task->tid, err);
+		       __FUNCTION__, orig->tid, err);
 		return err;
 	}
 
 	/* Destroy the locally known tcb */
-	tcb_destroy(task);
+	tcb_destroy(orig);
 
 	return 0;
 }

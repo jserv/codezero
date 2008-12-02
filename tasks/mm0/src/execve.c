@@ -123,10 +123,7 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 		/* Find the thread group leader of sender */
 		BUG_ON(!(tgleader = find_task(sender->tgid)));
 
-		/*
-		 * Destroy all children threads.
-		 * TODO: Set up parents for children's children
-		 */
+		/* Destroy all children threads. */
 		list_for_each_entry(thread, &tgleader->children, child_ref)
 			do_exit(thread, 0);
 	} else {
@@ -134,18 +131,12 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 		tgleader = sender;
 	}
 
-	/* Copy data to new task that is to be retained from exec'ing task */
-	new_task->tid = tgleader->tid;
-	new_task->spid = tgleader->spid;
-	new_task->tgid = tgleader->tgid;
-	new_task->pagerid = tgleader->pagerid;
-	new_task->utcb = tgleader->utcb;
-
 	/*
+	 * Copy data to be retained from exec'ing task to new one.
 	 * Release all task resources, do everything done in
 	 * exit() except destroying the actual thread.
 	 */
-	if ((err = execve_recycle_task(tgleader)) < 0) {
+	if ((err = execve_recycle_task(new_task, tgleader)) < 0) {
 		vm_file_put(vmfile);
 		kfree(new_task);
 		return err;

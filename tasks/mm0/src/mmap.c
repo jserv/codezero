@@ -97,14 +97,23 @@ int task_insert_vma(struct vm_area *this, struct list_head *vma_list)
 	BUG();
 }
 
-/* Search an empty space in the task's mmapable address region. */
+/*
+ * Search an empty space in the task's mmapable address region.
+ *
+ * This does a less than O(n) algorithm by starting the estimated region
+ * and vma comparison from the beginning, once a vma is not intersected
+ * that means it is an available slot. However if vma's and estimated
+ * region does not go head-to-head for comparison, individual intersection
+ * checks would be meaningless since any other vma could be intersecting.
+ * Therefore head-to-head comparison is essential here.
+ */
 unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 {
-	unsigned long pfn_start = __pfn(task->map_start);
+	unsigned long pfn_start = __pfn(task->start);
 	unsigned long pfn_end = pfn_start + npages;
 	struct vm_area *vma;
 
-	if (npages > __pfn(task->map_end - task->map_start))
+	if (npages > __pfn(task->end - task->start))
 		return 0;
 
 	/* If no vmas, first map slot is available. */

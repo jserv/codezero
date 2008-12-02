@@ -22,9 +22,14 @@
 
 
 /* Given a page and the vma it is in, returns that page's virtual address */
-unsigned long vma_page_to_virtual(struct vm_area *vma, struct page *p)
+unsigned long vma_page_to_virtual(struct vm_area *vma, struct page *page)
 {
-	return __pfn_to_addr(vma->pfn_start + p->offset);
+	unsigned long virtual_pfn = vma->pfn_start + page->offset - vma->file_offset;
+
+	/* Page must be contained in vma's pages  */
+	BUG_ON(vma->file_offset > page->offset);
+
+	return __pfn_to_addr(virtual_pfn);
 }
 
 unsigned long fault_to_file_offset(struct fault_data *fault)

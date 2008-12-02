@@ -497,6 +497,12 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	//struct vm_file *shm;
 	int err;
 
+	/* Set up task's user boundary regions */
+	task->start = USER_AREA_START;
+	task->end = USER_AREA_END;
+	task->map_start = task->start;
+	task->map_end = task->end;
+
 	/* mmap task's text to task's address space. */
 	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task, task->text_start,
 				    VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,

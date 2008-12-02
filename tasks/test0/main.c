@@ -46,21 +46,21 @@ void main(void)
 		pid = getpid();
 		printf("Child: file IO test 1.\n");
 		if (fileio() == 0)
-			printf("-- PASSED --\n");
+			printf("-- Fileio PASSED --\n");
 		else
-			printf("-- FAILED --\n");
+			printf("-- Fileio FAILED --\n");
 
 		printf("Child: forktest.\n");
 		if (forktest() == 0)
-			printf("-- PASSED -- \n");
+			printf("-- Fork PASSED -- \n");
 		else
-			printf("-- FAILED -- \n");
+			printf("-- Fork FAILED -- \n");
 	} else {
 		printf("Parent: file IO test 2. child pid %d:\n", pid);
 		if (fileio2() == 0)
-			printf("-- PASSED --\n");
+			printf("-- Fileio2 PASSED --\n");
 		else
-			printf("-- FAILED --\n");
+			printf("-- Fileio2 FAILED --\n");
 	}
 
 	printf("Testing clone syscall...\n");
