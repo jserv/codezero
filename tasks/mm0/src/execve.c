@@ -225,7 +225,8 @@ int strncpy_page(void *to_ptr, void *from_ptr, int maxlength)
 /*
  * Copy from one buffer to another. Stop if maxlength or
  * a page boundary is hit. Breaks if unsigned long sized copy value is 0,
- * as opposed to a 0 byte as in string copy.
+ * as opposed to a 0 byte as in string copy. If byte size 0 was used
+ * a valid pointer with a 0 byte in it would give a false termination.
  */
 int bufncpy_page(void *to_ptr, void *from_ptr, int maxlength)
 {

@@ -21,6 +21,7 @@ static inline void __attribute__ ((noreturn)) l4_exit(int status)
 
 void __attribute__ ((noreturn)) _exit(int status)
 {
+	printf("In %s.\n", __FUNCTION__);
 	l4_exit(status);
 }
 

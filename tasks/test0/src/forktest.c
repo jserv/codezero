@@ -21,12 +21,14 @@ int forktest(void)
 	myid = getpid();
 	pid = myid;
 	if (global != 0) {
+		printf("Global not zero.\n");
 		printf("-- FAILED --\n");
 		goto out;
 	}
 	global = myid;
 
 	if (global != myid) {
+		printf("Global has not changed to myid.\n");
 		printf("-- FAILED --\n");
 		goto out;
 	}

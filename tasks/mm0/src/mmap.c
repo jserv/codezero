@@ -38,6 +38,65 @@ struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 	return vma;
 }
 
+/*
+ * Inserts a new vma to the ordered vm area list.
+ *
+ * The new vma is assumed to have been correctly set up not to intersect
+ * with any other existing vma.
+ */
+int task_insert_vma(struct vm_area *this, struct list_head *vma_list)
+{
+	struct vm_area *before, *after;
+
+	/* Add if list is empty */
+	if (list_empty(vma_list)) {
+		list_add_tail(&this->list, vma_list);
+		return 0;
+	}
+
+	/* Else find the right interval */
+	list_for_each_entry(before, vma_list, list) {
+		after = list_entry(before->list.next, struct vm_area, list);
+
+		/* If there's only one in list */
+		if (before->list.next == vma_list) {
+
+			/* Eliminate the possibility of intersection */
+			BUG_ON(set_intersection(this->pfn_start, this->pfn_end,
+						before->pfn_start,
+						before->pfn_end));
+
+			/* Add as next if greater */
+			if (this->pfn_start > before->pfn_start)
+				list_add(&this->list, &before->list);
+			/* Add as previous if smaller */
+			else if (this->pfn_start < before->pfn_start)
+				list_add_tail(&this->list, &before->list);
+			else
+				BUG();
+
+			return 0;
+		}
+
+		/* If this page is in-between two other, insert it there */
+		if (before->pfn_start < this->pfn_start &&
+		    after->pfn_start > this->pfn_start) {
+
+			/* Eliminate possibility of intersection */
+			BUG_ON(set_intersection(this->pfn_start, this->pfn_end,
+						before->pfn_start,
+						before->pfn_end));
+			BUG_ON(set_intersection(this->pfn_start, this->pfn_end,
+						after->pfn_start,
+						after->pfn_end));
+			list_add(&this->list, &before->list);
+
+			return 0;
+		}
+	}
+	BUG();
+}
+
 /* Search an empty space in the task's mmapable address region. */
 unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 {
@@ -234,7 +293,7 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	/* Finished initialising the vma, add it to task */
 	dprintf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
 		map_address, map_address + __pfn_to_addr(npages));
-	task_add_vma(task, new);
+	task_insert_vma(new, &task->vm_area_head->list);
 
 	/*
 	 * If area is going to be used going downwards, (i.e. as a stack)

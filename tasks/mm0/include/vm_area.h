@@ -248,10 +248,7 @@ int validate_task_range(struct tcb *t, unsigned long start,
 /* Changes all shadows and their ptes to read-only */
 int vm_freeze_shadows(struct tcb *task);
 
-static inline void task_add_vma(struct tcb *task, struct vm_area *vma)
-{
-	list_add(&vma->list, &task->vm_area_head->list);
-}
+int task_insert_vma(struct vm_area *vma, struct list_head *vma_list);
 
 /* Main page fault entry point */
 int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);

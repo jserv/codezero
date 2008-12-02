@@ -194,7 +194,7 @@ int task_copy_vmas(struct tcb *to, struct tcb *from)
 		vma_copy_links(new_vma, vma);
 
 		/* All link copying is finished, now add the new vma to task */
-		task_add_vma(to, new_vma);
+		task_insert_vma(new_vma, &to->vm_area_head->list);
 	}
 
 	return 0;
