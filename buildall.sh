@@ -1,6 +1,13 @@
 #!/bin/bash
 
 rm -rf build
+
+echo -e "\n--- Building External Libs --- "
+cd libs/c
+scons
+cd ../elf
+scons
+cd ../..
 echo -e "\n--- Building kernel --- "
 scons configure
 scons build
