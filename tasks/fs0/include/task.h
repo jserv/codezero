@@ -33,7 +33,7 @@ struct task_fs_data {
 struct tcb {
 	l4id_t tid;
 	struct list_head list;
-	unsigned long utcb_address;
+	unsigned long shpage_address;
 	struct task_fd_head *files;
 	struct task_fs_data *fs_data;
 };
@@ -41,7 +41,7 @@ struct tcb {
 /* Structures used when receiving new task info from pager */
 struct task_data {
 	unsigned long tid;
-	unsigned long utcb_address;
+	unsigned long shpage_address;
 };
 
 struct task_data_head {

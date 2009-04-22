@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
+
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,14 +15,14 @@
 #include <l4lib/os/posix/readdir.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
-
+#include <shpage.h>
 
 static inline int l4_readdir(int fd, void *buf, size_t count)
 {
 	int cnt;
 
 	write_mr(L4SYS_ARG0, fd);
-	write_mr(L4SYS_ARG1, (unsigned long)utcb_page);
+	write_mr(L4SYS_ARG1, (unsigned long)shared_page);
 	write_mr(L4SYS_ARG2, count);
 
 	/* Call pager with readdir() request. Check ipc error. */
@@ -36,7 +37,7 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 
 	}
 
-	copy_from_utcb(buf, 0, cnt);
+	copy_from_shpage(buf, 0, cnt);
 	return cnt;
 }
 

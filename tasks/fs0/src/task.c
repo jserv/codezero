@@ -20,6 +20,8 @@
 #include <syscalls.h>
 #include <globals.h>
 
+extern void *shared_page;
+
 struct global_list global_tasks = {
 	.list = { &global_tasks.list, &global_tasks.list },
 	.total = 0,
@@ -118,7 +120,7 @@ void copy_tcb(struct tcb *to, struct tcb *from, unsigned int share_flags)
 }
 
 /* Allocate a task struct and initialise it */
-struct tcb *tcb_create(struct tcb *orig, l4id_t tid, unsigned long utcb,
+struct tcb *tcb_create(struct tcb *orig, l4id_t tid, unsigned long shpage,
 		       unsigned int share_flags)
 {
 	struct tcb *task;
@@ -131,7 +133,7 @@ struct tcb *tcb_create(struct tcb *orig, l4id_t tid, unsigned long utcb,
 		return task;
 
 	task->tid = tid;
-	task->utcb_address = utcb;
+	task->shpage_address = shpage;
 
 	/*
 	 * If there's an original task that means this will be a full
@@ -177,18 +179,18 @@ int task_utcb_attach(struct tcb *t)
 	void *shmaddr;
 
 	/* Use it as a key to create a shared memory region */
-	if ((shmid = shmget((key_t)t->utcb_address, PAGE_SIZE, 0)) == -1)
+	if ((shmid = shmget((key_t)t->shpage_address, PAGE_SIZE, 0)) == -1)
 		goto out_err;
 
 	/* Attach to the region */
-	if ((int)(shmaddr = shmat(shmid, (void *)t->utcb_address, 0)) == -1)
+	if ((int)(shmaddr = shmat(shmid, (void *)t->shpage_address, 0)) == -1)
 		goto out_err;
 
 	/* Ensure address is right */
-	if ((unsigned long)shmaddr != t->utcb_address)
+	if ((unsigned long)shmaddr != t->shpage_address)
 		return -EINVAL;
 
-	// printf("%s: Mapped utcb of task %d @ 0x%x\n",
+	// printf("%s: Mapped shared page of task %d @ 0x%x\n",
 	//       __TASKNAME__, t->tid, shmaddr);
 
 	return 0;
@@ -204,7 +206,7 @@ out_err:
  * the information on the resulting child task.
  */
 int pager_notify_fork(struct tcb *sender, l4id_t parentid,
-		      l4id_t childid, unsigned long utcb_address,
+		      l4id_t childid, unsigned long shpage_address,
 		      unsigned int flags)
 {
 	struct tcb *child, *parent;
@@ -213,7 +215,7 @@ int pager_notify_fork(struct tcb *sender, l4id_t parentid,
 	BUG_ON(!(parent = find_task(parentid)));
 
 	/* Create a child vfs tcb using given parent and copy flags */
-	if (IS_ERR(child = tcb_create(parent, childid, utcb_address, flags)))
+	if (IS_ERR(child = tcb_create(parent, childid, shpage_address, flags)))
 		return (int)child;
 
 	global_add_task(child);
@@ -261,9 +263,9 @@ struct task_data_head *receive_pager_taskdata(void)
 
 	/* Data is expected in the utcb page */
 	// printf("%s: %d Total tasks.\n", __FUNCTION__,
-	//      ((struct task_data_head *)utcb_page)->total);
+	//      ((struct task_data_head *)shared_page)->total);
 
-	return (struct task_data_head *)utcb_page;
+	return (struct task_data_head *)shared_page;
 }
 
 
@@ -274,7 +276,7 @@ int init_task_structs(struct task_data_head *tdata_head)
 	for (int i = 0; i < tdata_head->total; i++) {
 		/* New tcb with fields sent by pager */
 		if (IS_ERR(t = tcb_create(0, tdata_head->tdata[i].tid,
-					  tdata_head->tdata[i].utcb_address,
+					  tdata_head->tdata[i].shpage_address,
 					  0)))
 			return (int)t;
 

@@ -12,6 +12,7 @@
 #include <l4lib/utcb.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
+#include <posix_init.h>
 
 static inline int l4_fork(void)
 {
@@ -40,9 +41,12 @@ int fork(void)
 		return -1;
 	}
 
-	/* If we're a child, we need to initialise the utcb page */
+	/*
+	 * If we're a child, we need to initialise the default
+	 * shared page via posix_init()
+	 */
 	if (ret == 0)
-		utcb_init();
+		posix_init();
 
 	return ret;
 }

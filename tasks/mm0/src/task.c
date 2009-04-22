@@ -624,7 +624,7 @@ int vfs_send_task_data(struct tcb *vfs)
 	/* Write per-task data for all tasks */
 	list_for_each_entry(t, &global_tasks.list, list) {
 		tdata_head->tdata[li].tid = t->tid;
-		tdata_head->tdata[li].utcb_address = (unsigned long)t->shared_page;
+		tdata_head->tdata[li].shpage_address = (unsigned long)t->shared_page;
 		li++;
 	}
 

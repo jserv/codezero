@@ -7,7 +7,7 @@
 /* Structures to use when sending new task information to vfs */
 struct task_data {
 	unsigned long tid;
-	unsigned long utcb_address;
+	unsigned long shpage_address;
 };
 
 struct task_data_head {

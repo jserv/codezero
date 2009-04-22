@@ -30,7 +30,6 @@ struct utcb {
 } __attribute__((__packed__));
 
 extern struct utcb utcb;
-extern void *utcb_page;
 
 static inline struct utcb *l4_get_utcb()
 {
@@ -46,30 +45,6 @@ static inline unsigned int read_mr(int offset)
 static inline void write_mr(unsigned int offset, unsigned int val)
 {
 	l4_get_utcb()->mr[offset] = val;
-}
-
-/*
- * Arguments that are too large to fit in message registers are
- * copied onto another area that is still on the utcb, and the servers
- * map-in the task utcb and read those arguments from there.
- */
-
-static inline int copy_to_utcb(void *arg, int offset, int size)
-{
-	if (offset + size > PAGE_SIZE)
-		return -1;
-
-	memcpy(utcb_page + offset, arg, size);
-	return 0;
-}
-
-static inline int copy_from_utcb(void *buf, int offset, int size)
-{
-	if (offset + size > PAGE_SIZE)
-		return -1;
-
-	memcpy(buf, utcb_page + offset, size);
-	return 0;
 }
 
 #endif /* !__ASSEMBLY__ */

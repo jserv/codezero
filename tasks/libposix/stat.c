@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
+#include <shpage.h>
 
 static inline int l4_fstat(int fd, void *buffer)
 {
@@ -62,10 +63,10 @@ static inline int l4_stat(const char *pathname, void *buffer)
 	int err;
 	struct kstat ks;
 
-	copy_to_utcb((void *)pathname, 0, strlen(pathname) + 1);
+	copy_to_shpage((void *)pathname, 0, strlen(pathname) + 1);
 
 	/* Pathname address on utcb page */
-	write_mr(L4SYS_ARG0, (unsigned long)utcb_page);
+	write_mr(L4SYS_ARG0, (unsigned long)shared_page);
 
 	/* Pass on buffer that should receive stat */
 	write_mr(L4SYS_ARG1, (unsigned long)&ks);

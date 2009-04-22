@@ -10,8 +10,6 @@
 #include <l4/macros.h>
 #include INC_GLUE(memlayout.h)
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/shm.h>
 
 __l4_ipc_t __l4_ipc = 0;
 __l4_map_t __l4_map = 0;

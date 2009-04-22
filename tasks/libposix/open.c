@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -17,13 +18,14 @@
 #include <fcntl.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
+#include <shpage.h>
 
 static inline int l4_open(const char *pathname, int flags, mode_t mode)
 {
 	int fd;
 
-	copy_to_utcb((void *)pathname, 0, strlen(pathname) + 1);
-	write_mr(L4SYS_ARG0, (unsigned long)utcb_page);
+	copy_to_shpage((void *)pathname, 0, strlen(pathname) + 1);
+	write_mr(L4SYS_ARG0, (unsigned long)shared_page);
 	write_mr(L4SYS_ARG1, flags);
 	write_mr(L4SYS_ARG2, (u32)mode);
 

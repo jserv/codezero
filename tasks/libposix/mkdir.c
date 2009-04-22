@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
+#include <shpage.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -23,8 +24,8 @@ static inline int l4_mkdir(const char *pathname, mode_t mode)
 	int fd;
 
 	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
-	copy_to_utcb((void *)pathname, 0, strlen(pathname) + 1);
-	write_mr(L4SYS_ARG0, (unsigned long)utcb_page);
+	copy_to_shpage((void *)pathname, 0, strlen(pathname) + 1);
+	write_mr(L4SYS_ARG0, (unsigned long)shared_page);
 	write_mr(L4SYS_ARG1, (u32)mode);
 
 	/* Call pager with shmget() request. Check ipc error. */

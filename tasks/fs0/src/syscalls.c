@@ -486,8 +486,8 @@ int sys_readdir(struct tcb *t, int fd, void *buf, int count)
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	/* Check address is in task's utcb */
-	if ((unsigned long)buf < t->utcb_address ||
-	    (unsigned long)buf > t->utcb_address + PAGE_SIZE)
+	if ((unsigned long)buf < t->shpage_address ||
+	    (unsigned long)buf > t->shpage_address + PAGE_SIZE)
 		return -EINVAL;
 
 	if (fd < 0 || fd > TASK_FILES_MAX || t->files->fd[fd] == NILFD)
