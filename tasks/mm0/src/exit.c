@@ -3,9 +3,9 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
+#include <shm.h>
 #include <task.h>
 #include <file.h>
-#include <utcb.h>
 #include <exit.h>
 #include <test.h>
 #include <vm_area.h>
@@ -90,7 +90,7 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 	new->pagerid = orig->pagerid;
 
 	/* Copy utcb */
-	new->utcb = orig->utcb;
+	new->shared_page = orig->shared_page;
 
 	/* Copy parent relationship */
 	BUG_ON(new->parent);
@@ -131,9 +131,9 @@ void do_exit(struct tcb *task, int status)
 	/* Tell vfs that task is exiting */
 	vfs_notify_exit(task, status);
 
-	/* Remove utcb shm areas from vfs */
-	// printf("Unmapping 0x%p from vfs as utcb of %d\n", task->utcb, task->tid);
-	utcb_unmap_from_task(task, find_task(VFS_TID));
+	/* Remove default shared page shm areas from vfs */
+	// printf("Unmapping 0x%p from vfs as shared-page of %d\n", task->shared_page, task->tid);
+	shpage_unmap_from_task(task, find_task(VFS_TID));
 
 	/* Free task's local tcb */
 	tcb_destroy(task);

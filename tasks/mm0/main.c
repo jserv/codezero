@@ -20,7 +20,6 @@
 #include <syscalls.h>
 #include <file.h>
 #include <shm.h>
-#include <utcb.h>
 #include <mmap.h>
 #include <test.h>
 #include <boot.h>
@@ -85,8 +84,8 @@ void handle_requests(void)
 		ret = sys_shmdt(sender, (void *)mr[0]);
 		break;
 
-	case L4_IPC_TAG_UTCB:
-		ret = (int)task_send_utcb_address(sender, (l4id_t)mr[0]);
+	case L4_IPC_TAG_SHPAGE:
+		ret = (int)task_send_shpage_address(sender, (l4id_t)mr[0]);
 		break;
 
 	case L4_IPC_TAG_READ:

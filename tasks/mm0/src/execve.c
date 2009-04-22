@@ -37,16 +37,16 @@ int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *le
 		return -ESRCH;
 
 	/*
-	 * Copy string to vfs utcb.
+	 * Copy string to vfs shared page.
 	 *
 	 * FIXME: There's a chance we're overwriting other tasks'
-	 * ipc information that is on the vfs utcb.
+	 * ipc information that is on the vfs shared page.
 	 */
-	strcpy(vfs->utcb, pathname);
+	strcpy(vfs->shared_page, pathname);
 
 	l4_save_ipcregs();
 
-	write_mr(L4SYS_ARG0, (unsigned long)vfs->utcb);
+	write_mr(L4SYS_ARG0, (unsigned long)vfs->shared_page);
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
 			       L4_IPC_TAG_PAGER_OPEN_BYPATH)) < 0) {

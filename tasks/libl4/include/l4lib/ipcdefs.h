@@ -19,8 +19,8 @@
 /* For ping ponging */
 #define L4_IPC_TAG_SYNC			3
 
-/* To obtain utcb address */
-#define L4_IPC_TAG_UTCB			4
+/* To obtain default shared page address */
+#define L4_IPC_TAG_SHPAGE		4
 
 /* XXX: unused */
 #define L4_IPC_TAG_GRANT		5

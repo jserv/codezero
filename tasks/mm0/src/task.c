@@ -24,7 +24,6 @@
 #include <vm_area.h>
 #include <memory.h>
 #include <file.h>
-#include <utcb.h>
 #include <task.h>
 #include <exec.h>
 #include <shm.h>
@@ -611,13 +610,13 @@ int vfs_send_task_data(struct tcb *vfs)
 	}
 
 	BUG_ON(!(self = find_task(self_tid())));
-	BUG_ON(!vfs->utcb);
+	BUG_ON(!vfs->shared_page);
 
 	/* Attach mm0 to vfs's utcb segment just like a normal task */
-	utcb_map_to_task(vfs, self, UTCB_PREFAULT);
+	shpage_map_to_task(vfs, self, SHPAGE_PREFAULT);
 
-	/* Write all requested task information to utcb's user buffer area */
-	tdata_head = (struct task_data_head *)vfs->utcb;
+	/* Write all requested task information to shared pages's user buffer area */
+	tdata_head = (struct task_data_head *)vfs->shared_page;
 
 	/* First word is total number of tcbs */
 	tdata_head->total = global_tasks.total;
@@ -625,7 +624,7 @@ int vfs_send_task_data(struct tcb *vfs)
 	/* Write per-task data for all tasks */
 	list_for_each_entry(t, &global_tasks.list, list) {
 		tdata_head->tdata[li].tid = t->tid;
-		tdata_head->tdata[li].utcb_address = (unsigned long)t->utcb;
+		tdata_head->tdata[li].utcb_address = (unsigned long)t->shared_page;
 		li++;
 	}
 

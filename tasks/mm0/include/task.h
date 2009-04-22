@@ -26,7 +26,7 @@
 /* POSIX minimum is 4Kb */
 #define DEFAULT_ENV_SIZE		SZ_4K
 #define DEFAULT_STACK_SIZE		SZ_32K
-#define DEFAULT_UTCB_SIZE		PAGE_SIZE
+#define DEFAULT_SHPAGE_SIZE		PAGE_SIZE
 
 #define TCB_NO_SHARING				0
 #define	TCB_SHARED_VM				(1 << 0)
@@ -101,8 +101,8 @@ struct tcb {
 	unsigned long map_start;
 	unsigned long map_end;
 
-	/* UTCB information */
-	void *utcb;
+	/* Default ipc-shared-page information */
+	void *shared_page;
 
 	/* Virtual memory areas */
 	struct task_vma_head *vm_area_head;

@@ -5,7 +5,6 @@
  */
 #include <boot.h>
 #include <mmap.h>
-#include <utcb.h>
 #include <shm.h>
 #include <l4/api/thread.h>
 #include <l4lib/arch/syslib.h>
@@ -74,11 +73,12 @@ int boottask_mmap_regions(struct tcb *task, struct vm_file *file)
 		return (int)mapped;
 	}
 
-	/* Task's utcb */
-	task->utcb = utcb_new_address();
+	/* Task's default shared page */
+	task->shared_page = shm_new_address(DEFAULT_SHPAGE_SIZE/PAGE_SIZE);
 
 	/* Create a shared memory segment available for shmat() */
-	if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
+	if (IS_ERR(shm = shm_new((key_t)task->shared_page,
+				 __pfn(DEFAULT_SHPAGE_SIZE))))
 		return (int)shm;
 
 	return 0;

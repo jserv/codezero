@@ -12,7 +12,6 @@
 #include <vm_area.h>
 #include <task.h>
 #include <mmap.h>
-#include <utcb.h>
 #include <shm.h>
 #include <test.h>
 #include <clone.h>
@@ -31,7 +30,7 @@ int vfs_notify_fork(struct tcb *child, struct tcb *parent, unsigned int flags)
 	/* Write parent and child information */
 	write_mr(L4SYS_ARG0, parent->tid);
 	write_mr(L4SYS_ARG1, child->tid);
-	write_mr(L4SYS_ARG2, (unsigned int)child->utcb);
+	write_mr(L4SYS_ARG2, (unsigned int)child->shared_page);
 	write_mr(L4SYS_ARG3, flags);
 
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
@@ -85,8 +84,10 @@ int sys_fork(struct tcb *parent)
 		BUG();
 
 	/* Create and prefault a utcb for child and map it to vfs task */
-	utcb_map_to_task(child, find_task(VFS_TID),
-			 UTCB_NEW_ADDRESS | UTCB_NEW_SHM | UTCB_PREFAULT);
+	shpage_map_to_task(child, find_task(VFS_TID),
+			   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
+			   SHPAGE_PREFAULT);
+
 	// printf("Mapped 0x%p to vfs as utcb of %d\n", child->utcb, child->tid);
 
 	/* We can now notify vfs about forked process */
@@ -138,8 +139,9 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 		BUG();
 
 	/* Create and prefault a utcb for child and map it to vfs task */
-	utcb_map_to_task(child, find_task(VFS_TID),
-			 UTCB_NEW_ADDRESS | UTCB_NEW_SHM | UTCB_PREFAULT);
+	shpage_map_to_task(child, find_task(VFS_TID),
+			   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
+			   SHPAGE_PREFAULT);
 
 	/* We can now notify vfs about forked process */
 	vfs_notify_fork(child, parent, flags);

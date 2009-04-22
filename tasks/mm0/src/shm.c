@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <task.h>
 #include <mmap.h>
-#include <utcb.h>
 #include <vm_area.h>
 #include <globals.h>
 #include <lib/malloc.h>
@@ -181,15 +180,8 @@ void shm_destroy_priv_data(struct vm_file *shm_file)
 	struct shm_descriptor *shm_desc = shm_file_to_desc(shm_file);
 
 	/* Release the shared memory address */
-	if ((unsigned long)shm_desc->shm_addr >= UTCB_AREA_START &&
-	    (unsigned long)shm_desc->shm_addr < UTCB_AREA_END) {
-		BUG_ON(utcb_delete_address(shm_desc->shm_addr) < 0);
-	} else if ((unsigned long)shm_desc->shm_addr >= SHM_AREA_START &&
-	    	   (unsigned long)shm_desc->shm_addr < SHM_AREA_END) {
-		BUG_ON(shm_delete_address(shm_desc->shm_addr,
-					  shm_file->vm_obj.npages) < 0);
-	} else
-		BUG();
+	BUG_ON(shm_delete_address(shm_desc->shm_addr,
+				  shm_file->vm_obj.npages) < 0);
 
 	/* Release the shared memory id */
 	BUG_ON(id_del(shm_ids, shm_desc->shmid) < 0);
@@ -320,3 +312,76 @@ int sys_shmget(key_t key, int size, int shmflg)
 		return -ENOENT;
 }
 
+
+
+/*
+ * Currently, a default shm page is allocated to every thread in the system
+ * for efficient ipc communication. This part below provides the allocation
+ * and mapping of this page using shmat/get/dt call semantics.
+ */
+
+/*
+ * Sends shpage address information to requester. The requester then uses
+ * this address as a shm key and maps it via shmget/shmat.
+ */
+void *task_send_shpage_address(struct tcb *sender, l4id_t taskid)
+{
+	struct tcb *task = find_task(taskid);
+
+	/* Is the task asking for its own utcb address */
+	if (sender->tid == taskid) {
+		/* It hasn't got one allocated. */
+		BUG_ON(!task->shared_page);
+
+		/* Return it to requester */
+		return task->shared_page;
+
+	/* A task is asking for someone else's utcb */
+	} else {
+		/* Only vfs is allowed to do so yet, because its a server */
+		if (sender->tid == VFS_TID) {
+			/*
+			 * Return shpage address to requester. Note if there's
+			 * none allocated so far, requester gets 0. We don't
+			 * allocate one here.
+			 */
+			return task->shared_page;
+		}
+	}
+	return 0;
+}
+
+int shpage_map_to_task(struct tcb *owner, struct tcb *mapper, unsigned int flags)
+{
+	struct vm_file *default_shm;
+
+	/* Allocate a new utcb address */
+	if (flags & SHPAGE_NEW_ADDRESS)
+		owner->shared_page =
+			shm_new_address(DEFAULT_SHPAGE_SIZE/PAGE_SIZE);
+	else if (!owner->shared_page)
+		BUG();
+
+	/* Create a new shared memory segment for utcb */
+	if (flags & SHPAGE_NEW_SHM)
+		if (IS_ERR(default_shm = shm_new((key_t)owner->shared_page,
+					      __pfn(DEFAULT_SHPAGE_SIZE))))
+		return (int)default_shm;
+
+	/* Map the utcb to mapper */
+	if (IS_ERR(shmat_shmget_internal(mapper, (key_t)owner->shared_page,
+					 owner->shared_page)))
+		BUG();
+
+	/* Prefault the owner's utcb to mapper's address space */
+	if (flags & SHPAGE_PREFAULT)
+		for (int i = 0; i < __pfn(DEFAULT_SHPAGE_SIZE); i++)
+			prefault_page(mapper, (unsigned long)owner->shared_page +
+				      __pfn_to_addr(i), VM_READ | VM_WRITE);
+	return 0;
+}
+
+int shpage_unmap_from_task(struct tcb *owner, struct tcb *mapper)
+{
+	return sys_shmdt(mapper, owner->shared_page);
+}

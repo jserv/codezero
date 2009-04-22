@@ -47,4 +47,25 @@ void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr);
 struct vm_file *shm_new(key_t key, unsigned long npages);
 void *shm_new_address(int npages);
 
+
+/* Below is the special-case per-task default shared memory page prototypes */
+
+/* Prefaults shared page after mapping */
+#define SHPAGE_PREFAULT		(1 << 0)
+
+/* Creates new shm segment for default shpage */
+#define	SHPAGE_NEW_SHM		(1 << 1)
+
+/* Allocates a virtual address for default shpage */
+#define	SHPAGE_NEW_ADDRESS	(1 << 2)
+
+/* IPC to send utcb address information to tasks */
+void *task_send_shpage_address(struct tcb *sender, l4id_t taskid);
+
+int shpage_map_to_task(struct tcb *owner, struct tcb *mapper, unsigned int flags);
+int shpage_unmap_from_task(struct tcb *owner, struct tcb *mapper);
+
+/* Prefault a *mmaped* default shared page */
+int shpage_prefault(struct tcb *task, unsigned int vmflags);
+
 #endif /* __SHM_H__ */

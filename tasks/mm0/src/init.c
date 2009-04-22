@@ -15,7 +15,6 @@
 #include <shm.h>
 #include <file.h>
 #include <init.h>
-#include <utcb.h>
 #include <test.h>
 #include <boot.h>
 
@@ -168,12 +167,8 @@ void init_mm(struct initdata *initdata)
 		printf("SHM initialisation failed.\n");
 		BUG();
 	}
-	// printf("%s: Initialised shm structures.\n", __TASKNAME__);
+	printf("%s: Initialised shm structures.\n", __TASKNAME__);
 
-	if (utcb_pool_init() < 0) {
-		printf("UTCB initialisation failed.\n");
-		BUG();
-	}
 
 	/* For supplying contiguous virtual addresses to pager */
 	pager_address_pool_init();
