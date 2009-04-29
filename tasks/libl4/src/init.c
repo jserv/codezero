@@ -1,7 +1,7 @@
 /*
- * Initialise system call offsets.
+ * Initialise system call offsets and utcb reference.
  *
- * Copyright (C) 2007, 2008 Bahadir Balban
+ * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
 #include <l4lib/kip.h>
 #include <l4lib/arch/syslib.h>
@@ -27,15 +27,19 @@ __l4_time_t __l4_time = 0;
 struct kip *kip;
 
 /*
- * Private UTCB of this task. Used only for pushing/reading ipc
- * message registers.
+ * Reference to private UTCB of this thread.
+ * Used only for pushing/reading ipc message registers.
  */
-struct utcb utcb;
+struct utcb **kip_utcb_ref;
 
 
 void __l4_init(void)
 {
+	/* Kernel interface page */
 	kip = l4_kernel_interface(0, 0, 0);
+
+	/* Reference to utcb field of KIP */
+	kip_utcb_ref = (struct utcb **)&kip->utcb;
 
 	__l4_ipc =		(__l4_ipc_t)kip->ipc;
 	__l4_map =		(__l4_map_t)kip->map;

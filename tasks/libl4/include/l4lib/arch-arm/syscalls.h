@@ -6,6 +6,7 @@
 #ifndef __ARM_SYSCALLS_H__
 #define __ARM_SYSCALLS_H__
 
+
 #include <l4lib/arch/types.h>
 #include <l4lib/arch/utcb.h>
 #include <l4/generic/space.h>
@@ -13,6 +14,12 @@
 #include <l4/api/kip.h>
 #include <l4/api/ipc.h>
 #include <l4/api/thread.h>
+
+struct task_ids {
+	int tid;
+	int spid;
+	int tgid;
+};
 
 static inline void *
 l4_kernel_interface(unsigned int *api_version, unsigned int *api_flags,
@@ -46,9 +53,9 @@ typedef int (*__l4_unmap_t)(void *virt, unsigned long npages, l4id_t tid);
 extern __l4_unmap_t __l4_unmap;
 int l4_unmap(void *virtual, unsigned long numpages, l4id_t tid);
 
-typedef int (*__l4_thread_control_t)(unsigned int action, struct task_ids *ids);
+typedef int (*__l4_thread_control_t)(unsigned int action, struct task_ids *ids, void *utcb_address);
 extern __l4_thread_control_t __l4_thread_control;
-int l4_thread_control(unsigned int action, struct task_ids *ids);
+int l4_thread_control(unsigned int action, struct task_ids *ids, void *utcb_address);
 
 typedef int (*__l4_space_control_t)(unsigned int action, void *kdata);
 extern __l4_space_control_t __l4_space_control;

@@ -6,6 +6,7 @@
 #ifndef __GLUE_ARM_MESSAGE_H__
 #define __GLUE_ARM_MESSAGE_H__
 
+#define MR_REST			56	
 #define MR_TOTAL		6
 #define MR_TAG			0	/* Contains the purpose of message */
 #define MR_SENDER		1	/* For anythread receivers to discover sender */

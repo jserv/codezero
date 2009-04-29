@@ -68,6 +68,8 @@ struct kip {
 	u32 arch_syscall2;
 	u32 arch_syscall3;
 
+	u32 utcb;
+
 	struct kernel_desc kdesc;
 } __attribute__((__packed__));
 

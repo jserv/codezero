@@ -1,7 +1,7 @@
 #ifndef __THREAD_H__
 #define __THREAD_H__
 
-#define THREAD_CREATE_MASK		0x00F0
+#define THREAD_CREATE_MASK		0x0030
 
 /* Create new thread and new space */
 #define THREAD_NEW_SPACE		0x0010
@@ -12,7 +12,11 @@
 /* Create new thread, use given space */
 #define THREAD_SAME_SPACE		0x0030
 
-
+/* Shared UTCB, New UTCB, No UTCB */
+#define THREAD_UTCB_MASK		0x00C0
+#define THREAD_UTCB_NEW			0x0040
+#define THREAD_UTCB_SAME		0x0080
+#define THREAD_UTCB_NONE		0x00C0
 
 
 #define THREAD_ACTION_MASK		0x000F

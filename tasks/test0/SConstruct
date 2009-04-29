@@ -68,7 +68,7 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  CPPFLAGS = "-D__USERSPACE__",
 		  CPPPATH = ['#include', libl4_incpath, libposix_incpath, kernel_incpath])
 
-src = [glob("src/*.c"), glob("*.c"), glob("*.S"), glob("src/arch/arm/*.c")]
+src = [glob("src/*.c"), glob("*.c"), glob("*.S"), glob("src/arch/arm/*.c"), glob("../libcont/*.c")]
 objs = env.Object(src)
 physical_base = env.Command(physical_base_ld_script, prev_image, get_physical_base)
 crt0_copied = env.Command("crt0.o", libc_crt0, copy_crt0)

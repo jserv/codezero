@@ -1,6 +1,7 @@
-#ifndef __POSIX_INIT_H__
-#define __POSIX_INIT_H__
+#ifndef __LIBPOSIX_INIT_H__
+#define __LIBPOSIX_INIT_H__
 
-void posix_init(void);
+void libposix_init(void);
+void posix_service_init(void);
 
-#endif /* __POSIX_INIT_H__ */
+#endif /* __LIBPOSIX_INIT_H__ */

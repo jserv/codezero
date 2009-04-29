@@ -9,8 +9,17 @@
 #include <l4/macros.h>
 #include INC_GLUE(message.h)
 
+/* Old macro */
+#if 0
 	.macro	utcb_address	rx
 		ldr	\rx, =utcb
+	.endm
+#endif
+
+	/* New macro does double dereference */
+	.macro	utcb_address	rx
+		ldr	\rx, =kip_utcb_ref	@ First get pointer to utcb pointer in KIP
+		ldr	\rx, [\rx]		@ Get UTCB address from UTCB pointer in KIP
 	.endm
 
 BEGIN_PROC(l4_thread_switch)
@@ -152,7 +161,7 @@ END_PROC(l4_time)
 
 /*
  * System call that controls thread creation, destruction and modification.
- * @r0 = thread action, @r1 = &ids
+ * @r0 = thread action, @r1 = &ids, @r2 = utcb address
  */
 BEGIN_PROC(l4_thread_control)
 	stmfd	sp!, {lr}

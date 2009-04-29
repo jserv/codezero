@@ -18,6 +18,7 @@
 #include <test.h>
 #include <boot.h>
 
+
 /* A separate list than the generic file list that keeps just the boot files */
 LIST_HEAD(boot_file_list);
 

@@ -70,7 +70,10 @@ struct ktcb {
 	u32 ts_need_resched;	/* Scheduling flag */
 	enum task_state state;
 	struct list_head task_list; /* Global task list. */
-	struct utcb *utcb;	/* Reference to task's utcb area */
+
+	/* UTCB related, see utcb.txt in docs */
+	unsigned long utcb_virt;	/* Virtual ref to task's utcb area */
+	unsigned long utcb_phys;	/* Physical ref to task's utcb area */
 
 	/* Thread times */
 	u32 kernel_time;	/* Ticks spent in kernel */

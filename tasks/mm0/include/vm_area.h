@@ -7,10 +7,10 @@
 #define __VM_AREA_H__
 
 #include <stdio.h>
-#include <task.h>
 #include <l4/macros.h>
 #include <l4/config.h>
 #include <l4/types.h>
+#include <task.h>
 #include <arch/mm.h>
 #include <lib/spinlock.h>
 

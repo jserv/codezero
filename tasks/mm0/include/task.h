@@ -11,6 +11,7 @@
 #include INC_GLUE(memlayout.h)
 #include <l4/lib/list.h>
 #include <l4lib/arch/types.h>
+#include <l4lib/arch/syscalls.h>
 #include <l4lib/utcb.h>
 #include <lib/addr.h>
 #include <l4/api/kip.h>
@@ -53,6 +54,20 @@ struct task_vma_head {
 	int tcb_refs;
 };
 
+/*
+ * TLS and UTCB bookkeeping:
+ *
+ * This structure is shared among threads whose utcbs are on the same
+ * physical page. Threads with utcbs on different physical pages have
+ * their own utcb_data structure, even though they are in the same
+ * address space, and share their vm_area_list structure.
+ */
+struct utcb_data {
+	unsigned long phys;	/* Physical utcb address */
+	unsigned long virt;	/* Virtual utcb address */
+	u32 bit;		/* Bitvector of free utcb slots on page */
+	struct page *p;		/* Physical page */
+};
 
 /* Stores all task information that can be kept in userspace. */
 struct tcb {
@@ -103,6 +118,9 @@ struct tcb {
 
 	/* Default ipc-shared-page information */
 	void *shared_page;
+
+	/* Task's utcb data */
+	struct utcb_data *utcb;
 
 	/* Virtual memory areas */
 	struct task_vma_head *vm_area_head;

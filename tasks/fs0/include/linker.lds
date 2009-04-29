@@ -32,6 +32,10 @@ SECTIONS
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
 	.data : AT (ADDR(.data) - offset)
 	{
+		. = ALIGN(4K);	/* Align UTCB to page boundary */
+		_start_utcb = .;
+		*(.utcb)
+		_end_utcb = .;
 		. = ALIGN(4K);
 		_start_bdev = .;
 		*(.data.memfs)
@@ -39,5 +43,6 @@ SECTIONS
 		*(.data)
 	}
 	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
+
 	_end = .;
 }

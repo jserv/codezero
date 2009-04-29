@@ -11,9 +11,8 @@
 #include INC_GLUE(context.h)
 #include <l4/types.h>
 
-enum exregs_flags {
-	EXREGS_SET_PAGER = 1,
-};
+#define EXREGS_SET_PAGER		1
+#define	EXREGS_SET_UTCB			2
 
 /* Structure passed by userspace pagers for exchanging registers */
 struct exregs_data {
@@ -21,6 +20,8 @@ struct exregs_data {
 	u32 valid_vect;
 	u32 flags;
 	l4id_t pagerid;
+	unsigned long utcb_phys;
+	unsigned long utcb_virt;
 };
 
 

@@ -29,7 +29,11 @@ SECTIONS
 	/* rodata is needed else your strings will link at physical! */
 	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
-	.data : AT (ADDR(.data) - offset) { *(.data) }
+	.data : AT (ADDR(.data) - offset)
+	{
+		*(.data)
+	}
+	. = ALIGN(4K);
 	_start_init = .;
 	.init : AT (ADDR(.init) - offset) { *(.init.stack) }
 	. = ALIGN(8);

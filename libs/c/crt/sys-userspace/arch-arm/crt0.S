@@ -87,7 +87,6 @@
 _start:
 	ldr	sp, =__stack
 	bl	platform_init
-	bl	__l4_init
 	bl	__container_init
 1:
 	b	1b

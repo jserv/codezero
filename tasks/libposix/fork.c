@@ -12,7 +12,7 @@
 #include <l4lib/utcb.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
-#include <posix_init.h>
+#include <shpage.h>
 
 static inline int l4_fork(void)
 {
@@ -43,10 +43,10 @@ int fork(void)
 
 	/*
 	 * If we're a child, we need to initialise the default
-	 * shared page via posix_init()
+	 * shared page via libposix_init()
 	 */
 	if (ret == 0)
-		posix_init();
+		shared_page_init();
 
 	return ret;
 }

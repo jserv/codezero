@@ -9,6 +9,7 @@
 #include INC_GLUE(message.h)
 
 
+
 void exregs_set_mr(struct exregs_data *s, int offset, unsigned long val)
 {
 	/* Get MR0 */
@@ -28,6 +29,14 @@ void exregs_set_pager(struct exregs_data *s, l4id_t pagerid)
 {
 	s->pagerid = pagerid;
 	s->flags |= EXREGS_SET_PAGER;
+}
+
+void exregs_set_utcb(struct exregs_data *s, unsigned long phys,
+		     unsigned long virt)
+{
+	s->utcb_phys = phys;
+	s->utcb_virt = virt;
+	s->flags |= EXREGS_SET_UTCB;
 }
 
 void exregs_set_stack(struct exregs_data *s, unsigned long sp)

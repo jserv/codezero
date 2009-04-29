@@ -1,9 +1,12 @@
+/*
+ * Copyright (C) 2009 Bahadir Bilgehan Balban
+ */
 #ifndef __ARM_UTCB_H__
 #define __ARM_UTCB_H__
 
-#define USER_UTCB_REF           0xFF000FF0
+#define USER_UTCB_REF           0xFF000050
 #define L4_KIP_ADDRESS		0xFF000000
-#define UTCB_KIP_OFFSET		0xFF0
+#define UTCB_KIP_OFFSET		0x50
 
 #ifndef __ASSEMBLY__
 #include <l4lib/types.h>
@@ -13,27 +16,37 @@
 #include <string.h>
 #include <stdio.h>
 
+/* UTCB implementation */
+
 /*
  * NOTE: In syslib.h the first few mrs are used by data frequently
  * needed for all ipcs. Those mrs are defined the kernel message.h
  */
 
-/*
- * This is a per-task private structure where message registers are
- * pushed for ipc. Its *not* TLS, but can be part of TLS when it is
- * supported.
- */
 struct utcb {
-	u32 mr[MR_TOTAL];
-	u32 saved_tag;
-	u32 saved_sender;
-} __attribute__((__packed__));
+	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
+	u32 saved_tag;		/* Saved tag field for stacked ipcs */
+	u32 saved_sender;	/* Saved sender field for stacked ipcs */
+	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
+};
 
-extern struct utcb utcb;
+extern struct kip *kip;
+
+
+/*
+ * Pointer to Kernel Interface Page's UTCB pointer offset.
+ */
+extern struct utcb **kip_utcb_ref;
 
 static inline struct utcb *l4_get_utcb()
 {
-	return &utcb;
+ 	/*
+	 * By double dereferencing, we get the private TLS (aka UTCB). First
+	 * reference is to the KIP's utcb offset, second is to the utcb itself,
+	 * to which the KIP's utcb reference had been updated during context
+	 * switch.
+	 */
+	return *kip_utcb_ref;
 }
 
 /* Functions to read/write utcb registers */

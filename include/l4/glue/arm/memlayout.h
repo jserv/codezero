@@ -43,7 +43,7 @@
 #define USER_KIP_PAGE		0xFF000000
 
 /* ARM-specific offset in KIP that tells the address of UTCB page */
-#define UTCB_KIP_OFFSET		0xFF0
+#define UTCB_KIP_OFFSET		0x50
 
 #define IO_AREA0_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*0))
 #define IO_AREA1_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*1))

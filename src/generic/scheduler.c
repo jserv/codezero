@@ -255,6 +255,9 @@ static inline void context_switch(struct ktcb *next)
 
 	// printk("(%d) to (%d)\n", cur->tid, next->tid);
 
+	/* Update KIP UTCB pointer for new thread to run */
+	kip.utcb = next->utcb_address;
+
 	/* Flush caches and everything */
 	arch_hardware_flush(next->pgd);
 

@@ -78,6 +78,13 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
 	if (exregs->flags & EXREGS_SET_PAGER)
 		task->pagerid = exregs->pagerid;
 
+	/* Set thread's utcb if supplied */
+	if (exregs->flags & EXREGS_SET_UTCB) {
+		BUG(); /* Check that physical and virtual addresses are in range */
+		task->utcb_phys = exregs->utcb_phys;
+		task->utcb_virt = exregs->utcb_virt;
+	}
+
 }
 
 /*

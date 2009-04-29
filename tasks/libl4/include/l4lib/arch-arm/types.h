@@ -1,13 +1,8 @@
-#ifndef __L4_ARCH_ARM__
-#define __L4_ARCH_ARM__
+#ifndef __L4LIB_ARM_TYPES_H___
+#define __L4LIB_ARM_TYPES_H__
 
 #define TASK_ID_INVALID			-1
-struct task_ids {
-	int tid;
-	int spid;
-	int tgid;
-};
 
 #include <l4/arch/arm/types.h>
 
-#endif
+#endif /* __L4LIB_ARM_TYPES_H__ */
