@@ -89,8 +89,12 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 	new->tgid = orig->tgid;
 	new->pagerid = orig->pagerid;
 
-	/* Copy utcb */
+	/* Copy shared page */
 	new->shared_page = orig->shared_page;
+
+	/* Copy utcb descriptors and unique utcb */
+	new->utcb_head = orig->utcb_head;
+	new->utcb_address = orig->utcb_address;
 
 	/* Copy parent relationship */
 	BUG_ON(new->parent);
@@ -102,7 +106,7 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 
 	/* Vfs still knows the thread */
 
-	/* Keep the utcb on vfs */
+	/* Keep the shared page on vfs */
 
 	/* Ask the kernel to recycle the thread */
 	if ((err = l4_thread_control(THREAD_RECYCLE, &ids)) < 0) {

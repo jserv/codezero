@@ -20,8 +20,7 @@ struct exregs_data {
 	u32 valid_vect;
 	u32 flags;
 	l4id_t pagerid;
-	unsigned long utcb_phys;
-	unsigned long utcb_virt;
+	unsigned long utcb_address;
 };
 
 

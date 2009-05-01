@@ -572,6 +572,7 @@ void copy_pgds_by_vrange(pgd_table_t *to, pgd_table_t *from,
 	       irange * sizeof(pgd_t));
 }
 
+
 /* Scheduler uses this to switch context */
 void arch_hardware_flush(pgd_table_t *pgd)
 {

@@ -8,6 +8,7 @@
 #include <memory.h>
 #include <mm/alloc_page.h>
 #include <lib/malloc.h>
+#include <lib/bit.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/utcb.h>
@@ -17,7 +18,7 @@
 #include <init.h>
 #include <test.h>
 #include <boot.h>
-
+#include <utcb.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
 LIST_HEAD(boot_file_list);
@@ -54,6 +55,16 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 	/* Set pager as child and parent of itself */
 	list_add(&task->child_ref, &task->children);
 	task->parent = task;
+
+	/*
+	 * The first UTCB address is already assigned
+	 * by the microkernel for this pager. Ensure that we also got
+	 * the same from our internal utcb bookkeeping.
+	 */
+	BUG_ON(task->utcb_address != UTCB_AREA_START);
+
+	/* Pager must prefault its utcb */
+	prefault_page(task, task->utcb_address, VM_READ | VM_WRITE);
 
 	/* Add the task to the global task list */
 	global_add_task(task);
@@ -170,6 +181,10 @@ void init_mm(struct initdata *initdata)
 	}
 	printf("%s: Initialised shm structures.\n", __TASKNAME__);
 
+	if (utcb_pool_init() < 0) {
+		printf("SHM initialisation failed.\n");
+		BUG();
+	}
 
 	/* For supplying contiguous virtual addresses to pager */
 	pager_address_pool_init();

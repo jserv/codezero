@@ -164,90 +164,9 @@ int thread_start(struct task_ids *ids)
 	return 0;
 }
 
-/*
- * Given thread creation flags, determines whether to use a new user
- * (pager)-supplied utcb address, the utcb address of the original thread,
- * or no utcb at all. Validation of flags done at beginning of thread_create().
- */
-int arch_new_thread_setup_utcb(struct ktcb *new, struct ktcb *orig, unsigned int flags,
-			       unsigned long utcb_address)
-{
-	unsigned int create_flags = flags & THREAD_CREATE_MASK;
-	unsigned int utcb_flags = flags & THREAD_UTCB_MASK;
-
-	/* In case of multiple threads in same address space */
-	if (create_flags == THREAD_SAME_SPACE) {
-		switch (utcb_flags) {
-		case THREAD_UTCB_SAME:
-			new->utcb_address = orig->utcb_address;
-			break;
-		case THREAD_UTCB_NEW:
-			new->utcb_address = utcb_address;
-			break;
-		case THREAD_UTCB_NONE:
-			new->utcb_address = 0;
-			break;
-		default:
-			printk("%s: Bad thread creation flags. "
-			       "Incorrect flag validation?\n",__FUNCTION__);
-			BUG();
-		}
-	}
-
-	/* In case of brand new address space and thread */
-	if (create_flags == THREAD_NEW_SPACE) {
-		switch (utcb_flags) {
-		case THREAD_UTCB_NEW:
-			new->utcb_address = utcb_address;
-			break;
-			/*
-			 * No UTCB for brand new space means the thread cannot do
-			 * an ipc other than exceptions. This is allowed for now.
-			 */
-		case THREAD_UTCB_NONE:
-			new->utcb_address = 0;
-			break;
-		default:
-			printk("%s: Bad thread creation flags. "
-			       "Incorrect flag validation?\n",__FUNCTION__);
-			BUG();
-		}
-	}
-
-	/*
-	 * This essentially corresponds to fork() and normally we would expect
-	 * the UTCB to be the same as original thread, since the whole address
-	 * space is an identical image of the original. Nevertheless it doesn't
-	 * do harm to have none or different utcb address and this is left to
-	 * the implementor to decide.
-	 */
-	if (create_flags == THREAD_COPY_SPACE) {
-		switch (utcb_flags) {
-		case THREAD_UTCB_SAME:
-			new->utcb_address = orig->utcb_address;
-			break;
-		case THREAD_UTCB_NEW:
-			new->utcb_address = utcb_address;
-			break;
-		case THREAD_UTCB_NONE:
-			new->utcb_address = 0;
-			break;
-		default:
-			printk("%s: Bad thread creation flags. "
-			       "Incorrect flag validation?\n",__FUNCTION__);
-			BUG();
-		}
-	}
-
-	return 0;
-}
-
 int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
-			  unsigned int flags, unsigned long utcb_address)
+			  unsigned int flags)
 {
-	/* Set up the utcb address */
-	arch_new_thread_setup_utcb(new, orig, flags, utcb_address);
-
 	/* New threads just need their mode set up */
 	if ((flags & THREAD_CREATE_MASK) == THREAD_NEW_SPACE) {
 		BUG_ON(orig);
@@ -344,25 +263,10 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
  * are respectively used when creating a brand new task, creating a
  * new thread in an existing address space, or forking a task.
  */
-int thread_create(struct task_ids *ids, unsigned int flags,
-		  unsigned long utcb_address)
+int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *task = 0, *new = (struct ktcb *)zalloc_page();
 	unsigned int create_flags = flags & THREAD_CREATE_MASK;
-	unsigned int utcb_flags = flags & THREAD_UTCB_MASK;
-
-	/* Handle error cases. Should have valid flags for each */
-	if (!utcb_flags || !create_flags)
-		return -EINVAL;
-
-	/* Cannot have new space with same utcb */
-	else if (create_flags == THREAD_NEW_SPACE &&
-	    utcb_flags == THREAD_UTCB_SAME)
-		return -EINVAL;
-
-	/* Cannot have new utcb with invalid address */
-	else if (utcb_flags == THREAD_UTCB_NEW && !utcb_address)
-		return -EINVAL;
 
 	/* Determine space allocation */
 	if (create_flags == THREAD_NEW_SPACE) {
@@ -397,7 +301,7 @@ out:
 	waitqueue_head_init(&new->wqh_recv);
 	waitqueue_head_init(&new->wqh_pager);
 
-	arch_setup_new_thread(new, task, flags, utcb_address);
+	arch_setup_new_thread(new, task, flags);
 
 	/* Add task to global hlist of tasks */
 	add_task_global(new);
@@ -415,11 +319,10 @@ int sys_thread_control(syscall_context_t *regs)
 	int ret = 0;
 	unsigned int flags = regs->r0;
 	struct task_ids *ids = (struct task_ids *)regs->r1;
-	unsigned long utcb_address = regs->r2;
 
 	switch (flags & THREAD_ACTION_MASK) {
 	case THREAD_CREATE:
-		ret = thread_create(ids, flags, utcb_address);
+		ret = thread_create(ids, flags);
 		break;
 	case THREAD_RUN:
 		ret = thread_start(ids);

@@ -19,7 +19,8 @@
 	/* New macro does double dereference */
 	.macro	utcb_address	rx
 		ldr	\rx, =kip_utcb_ref	@ First get pointer to utcb pointer in KIP
-		ldr	\rx, [\rx]		@ Get UTCB address from UTCB pointer in KIP
+		ldr	\rx, [\rx]		@ Get pointer to UTCB address from UTCB pointer in KIP
+		ldr	\rx, [\rx]		@ Get the utcb address
 	.endm
 
 BEGIN_PROC(l4_thread_switch)

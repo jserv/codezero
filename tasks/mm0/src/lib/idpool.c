@@ -12,29 +12,29 @@
 
 struct id_pool *id_pool_new_init(int totalbits)
 {
-	int nwords = BITWISE_GETWORD(totalbits);
+	int nwords = BITWISE_GETWORD(totalbits) + 1;
 	struct id_pool *new = kzalloc((nwords * SZ_WORD)
 				      + sizeof(struct id_pool));
 	if (!new)
 		return PTR_ERR(-ENOMEM);
+
 	new->nwords = nwords;
+	new->bitlimit = totalbits;
+
 	return new;
 }
 
+/* Search for a free slot up to the limit given */
 int id_new(struct id_pool *pool)
 {
-	int id = find_and_set_first_free_bit(pool->bitmap,
-					     pool->nwords * WORD_BITS);
-	if (id < 0)
-		printf("%s: Warning! New id alloc failed\n", __FUNCTION__);
-	return id;
+	return find_and_set_first_free_bit(pool->bitmap, pool->bitlimit);
 }
 
 /* This finds n contiguous free ids, allocates and returns the first one */
 int ids_new_contiguous(struct id_pool *pool, int numids)
 {
 	int id = find_and_set_first_free_contig_bits(pool->bitmap,
-						     pool->nwords *WORD_BITS,
+						     pool->bitlimit,
 						     numids);
 	if (id < 0)
 		printf("%s: Warning! New id alloc failed\n", __FUNCTION__);
@@ -70,9 +70,7 @@ int id_get(struct id_pool *pool, int id)
 {
 	int ret;
 
-	spin_lock(&pool->lock);
 	ret = check_and_set_bit(pool->bitmap, id);
-	spin_unlock(&pool->lock);
 
 	if (ret < 0)
 		return ret;

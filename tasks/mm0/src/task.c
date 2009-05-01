@@ -31,6 +31,7 @@
 #include <boot.h>
 #include <globals.h>
 #include <test.h>
+#include <utcb.h>
 
 struct global_list global_tasks = {
 	.list = { &global_tasks.list, &global_tasks.list },
@@ -86,6 +87,16 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 		}
 		task->vm_area_head->tcb_refs = 1;
 		INIT_LIST_HEAD(&task->vm_area_head->list);
+
+		/* Also allocate a utcb head for new address space */
+		if (!(task->utcb_head =
+		      kzalloc(sizeof(*task->utcb_head)))) {
+			kfree(task->vm_area_head);
+			kfree(task);
+			return PTR_ERR(-ENOMEM);
+		}
+		task->utcb_head->tcb_refs = 1;
+		INIT_LIST_HEAD(&task->utcb_head->list);
 	}
 
 	/* Allocate file structures if not shared */
@@ -93,6 +104,7 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 		if (!(task->files =
 		      kzalloc(sizeof(*task->files)))) {
 			kfree(task->vm_area_head);
+			kfree(task->utcb_head);
 			kfree(task);
 			return PTR_ERR(-ENOMEM);
 		}
@@ -240,14 +252,25 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 	to->map_start = from->map_start;
 	to->map_end = from->map_end;
 
-	/* Sharing the list of vmas */
+	/* Sharing the list of vmas and utcbs */
 	if (flags & TCB_SHARED_VM) {
 		to->vm_area_head = from->vm_area_head;
 		to->vm_area_head->tcb_refs++;
+		to->utcb_head = from->utcb_head;
+		to->utcb_head->tcb_refs++;
 	} else {
 	       	/* Copy all vm areas */
 		task_copy_vmas(to, from);
+
+		/*
+		 * NOTE:
+		 * No copy for utcb descriptor list,
+		 * forker shall start its own unique.
+		 */
 	}
+
+	/* Set up a new utcb for new thread */
+	task_setup_utcb(to);
 
 	/* Copy all file descriptors */
 	if (flags & TCB_SHARED_FILES) {
@@ -535,8 +558,9 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	}
 
 	/*
-	 * Task already has recycled task's utcb. It will attach to it
-	 * when it starts in userspace.
+	 * Task already has recycled task's shared page. It will attach to it
+	 * when it starts in userspace. Task also already utilizes recycled
+	 * task's utcb.
 	 */
 	//if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
 	//	return (int)shm;
@@ -563,6 +587,7 @@ int task_setup_registers(struct tcb *task, unsigned int pc,
 	exregs_set_stack(&exregs, sp);
 	exregs_set_pc(&exregs, pc);
 	exregs_set_pager(&exregs, pager);
+	exregs_set_utcb(&exregs, task->utcb_address);
 
 	if ((err = l4_exchange_registers(&exregs, task->tid)) < 0) {
 		printf("l4_exchange_registers failed with %d.\n", err);

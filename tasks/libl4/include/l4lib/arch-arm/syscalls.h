@@ -53,9 +53,9 @@ typedef int (*__l4_unmap_t)(void *virt, unsigned long npages, l4id_t tid);
 extern __l4_unmap_t __l4_unmap;
 int l4_unmap(void *virtual, unsigned long numpages, l4id_t tid);
 
-typedef int (*__l4_thread_control_t)(unsigned int action, struct task_ids *ids, void *utcb_address);
+typedef int (*__l4_thread_control_t)(unsigned int action, struct task_ids *ids);
 extern __l4_thread_control_t __l4_thread_control;
-int l4_thread_control(unsigned int action, struct task_ids *ids, void *utcb_address);
+int l4_thread_control(unsigned int action, struct task_ids *ids);
 
 typedef int (*__l4_space_control_t)(unsigned int action, void *kdata);
 extern __l4_space_control_t __l4_space_control;

@@ -255,8 +255,8 @@ void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
 }
 
 /*
- * FIXME: Make sure hostile tasks don't subvert other tasks' utcbs
- * by early-registring their utcb address here.
+ * FIXME: Make sure hostile tasks don't subvert other tasks' shared pages
+ * by early-registring their shared page address here.
  */
 int sys_shmget(key_t key, int size, int shmflg)
 {
@@ -355,25 +355,25 @@ int shpage_map_to_task(struct tcb *owner, struct tcb *mapper, unsigned int flags
 {
 	struct vm_file *default_shm;
 
-	/* Allocate a new utcb address */
+	/* Allocate a new shared page address */
 	if (flags & SHPAGE_NEW_ADDRESS)
 		owner->shared_page =
 			shm_new_address(DEFAULT_SHPAGE_SIZE/PAGE_SIZE);
 	else if (!owner->shared_page)
 		BUG();
 
-	/* Create a new shared memory segment for utcb */
+	/* Create a new shared memory segment */
 	if (flags & SHPAGE_NEW_SHM)
 		if (IS_ERR(default_shm = shm_new((key_t)owner->shared_page,
 					      __pfn(DEFAULT_SHPAGE_SIZE))))
 		return (int)default_shm;
 
-	/* Map the utcb to mapper */
+	/* Map the shared page to mapper */
 	if (IS_ERR(shmat_shmget_internal(mapper, (key_t)owner->shared_page,
 					 owner->shared_page)))
 		BUG();
 
-	/* Prefault the owner's utcb to mapper's address space */
+	/* Prefault the owner's shared page to mapper's address space */
 	if (flags & SHPAGE_PREFAULT)
 		for (int i = 0; i < __pfn(DEFAULT_SHPAGE_SIZE); i++)
 			prefault_page(mapper, (unsigned long)owner->shared_page +

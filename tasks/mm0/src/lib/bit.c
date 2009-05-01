@@ -51,6 +51,7 @@ int find_and_set_first_free_contig_bits(u32 *word,  unsigned int limit,
 		return -1;
 
 	/* This is a state machine that checks n contiguous free bits. */
+	/* FIXME: It should be <= instead of <. Fix & test in a single patch */
 	while (i + nbits < limit) {
 		first = i;
 		last  = i;

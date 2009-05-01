@@ -130,6 +130,7 @@ int vma_unmap(struct vm_area *vma, struct tcb *task,
 int vma_flush_pages(struct vm_area *vma)
 {
 	struct vm_object *vmo;
+	struct vm_obj_link *vmo_link;
 	int err;
 
 	/* Read-only vmas need not flush objects */
@@ -141,7 +142,8 @@ int vma_flush_pages(struct vm_area *vma)
 	 * could only be a single VM_SHARED file-backed object in the chain.
 	 */
 	BUG_ON(list_empty(&vma->list));
-	vmo = list_entry(vma->list.next, struct vm_object, list);
+	vmo_link = list_entry(vma->vm_obj_list.next, struct vm_obj_link, list);
+	vmo = vmo_link->obj;
 
 	/* Only dirty objects would need flushing */
 	if (!(vmo->flags & VM_DIRTY))

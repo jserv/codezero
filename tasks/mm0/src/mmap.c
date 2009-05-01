@@ -166,8 +166,10 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
 
 	/* Private mappings can only go in task address space */
 	if (vm_flags & VMA_PRIVATE) {
-		if (map_address >= task->start ||
-	    	    map_address < task->end) {
+		if ((map_address >= task->start &&
+	    	     map_address < task->end) ||
+		    (map_address >= UTCB_AREA_START &&
+		     map_address < UTCB_AREA_END)) {
 			return 1;
 		} else
 			return 0;
@@ -176,9 +178,7 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
 	 * memory address space,
 	 */
 	} else if (vm_flags & VMA_SHARED) {
-		if ((map_address >= UTCB_AREA_START &&
-		     map_address < UTCB_AREA_END) ||
-		    (map_address >= task->start &&
+		if ((map_address >= task->start &&
 	    	     map_address < task->end) ||
 		    (map_address >= SHM_AREA_START &&
 	    	     map_address < SHM_AREA_END))
@@ -202,6 +202,13 @@ unsigned long mmap_new_address(struct tcb *task, unsigned int flags,
 		return find_unmapped_area(npages, task);
 }
 
+/*
+ * Side note:
+ * Why in do_mmap() shm files have devzero mapped behind separately but
+ * anonymous files map devzero directly? Because private anonymous files get
+ * shadow objects in front when written to. Shm files are not private, so they
+ * stay where they are and just grow. Other processes can reach and map them.
+ */
 
 /*
  * Maps the given file with given flags at the given page offset to the given

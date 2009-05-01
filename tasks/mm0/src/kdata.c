@@ -62,6 +62,7 @@ void print_page_map(struct page_bitmap *map)
 	printf("Total of %d pages. %d Kbytes.\n", total_used, total_used << 2);
 }
 
+
 int request_initdata(struct initdata *initdata)
 {
 	int err;
@@ -96,6 +97,7 @@ int request_initdata(struct initdata *initdata)
 		       "KDATA_BOOTDESC request.\n");
 		goto error;
 	}
+
 	return 0;
 
 error:

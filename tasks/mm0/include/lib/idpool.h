@@ -5,8 +5,8 @@
 #include <lib/spinlock.h>
 
 struct id_pool {
-	struct spinlock lock;
 	int nwords;
+	int bitlimit;
 	u32 bitmap[];
 };
 

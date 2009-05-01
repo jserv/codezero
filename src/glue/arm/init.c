@@ -84,8 +84,10 @@ void print_sections(void)
 	dprintk("_end: ", (unsigned int)_end);
 }
 
-/* Enable virtual memory using kernel's first level table
- * and continue execution on virtual addresses.*/
+/*
+ * Enable virtual memory using kernel's pgd
+ * and continue execution on virtual addresses.
+ */
 void start_vm()
 {
 	/*
@@ -125,9 +127,7 @@ void start_vm()
 	/* Jump to virtual memory addresses */
 	__asm__ __volatile__ (
 		"add	sp, sp, %0	\n"	/* Update stack pointer */
-#ifndef		__OPTIMIZED_FP__		/* If fp not optimised away */
 		"add	fp, fp, %0	\n"	/* Update frame pointer */
-#endif
 		/* On the next instruction below, r0 gets
 		 * current PC + KOFFSET + 2 instructions after itself. */
 		"add	r0, pc, %0	\n"
@@ -293,6 +293,9 @@ void init_pager(char *name, struct task_ids *ids)
 	task->context.spsr = ARM_MODE_USR;
 
 	set_task_ids(task, ids);
+
+	/* Pager gets first UTCB area available by default */
+	task->utcb_address = UTCB_AREA_START;
 
 	if (!task->pgd) {
 		BUG();	/* Inittask won't come here */

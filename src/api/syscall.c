@@ -79,12 +79,8 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
 		task->pagerid = exregs->pagerid;
 
 	/* Set thread's utcb if supplied */
-	if (exregs->flags & EXREGS_SET_UTCB) {
-		BUG(); /* Check that physical and virtual addresses are in range */
-		task->utcb_phys = exregs->utcb_phys;
-		task->utcb_virt = exregs->utcb_virt;
-	}
-
+	if (exregs->flags & EXREGS_SET_UTCB)
+		task->utcb_address = exregs->utcb_address;
 }
 
 /*
@@ -138,6 +134,12 @@ int sys_exchange_registers(syscall_context_t *regs)
 		goto out;
 	}
 #endif
+
+	/* Check UTCB is in valid range */
+	if (exregs->flags & EXREGS_SET_UTCB &&
+	    !(exregs->utcb_address >= UTCB_AREA_START &&
+	    exregs->utcb_address < UTCB_AREA_END))
+		return -EINVAL;
 
 	/* Copy registers */
 	do_exchange_registers(task, exregs);

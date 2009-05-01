@@ -79,11 +79,15 @@ int sys_fork(struct tcb *parent)
 	memset(&exregs, 0, sizeof(exregs));
 	exregs_set_mr(&exregs, MR_RETURN, 0);
 
+	/* Set child's new utcb address set by task_create() */
+	BUG_ON(!child->utcb_address);
+	exregs_set_utcb(&exregs, child->utcb_address);
+
 	/* Do the actual exregs call to c0 */
 	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
 		BUG();
 
-	/* Create and prefault a utcb for child and map it to vfs task */
+	/* Create and prefault a shared page for child and map it to vfs task */
 	shpage_map_to_task(child, find_task(VFS_TID),
 			   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
 			   SHPAGE_PREFAULT);
@@ -122,6 +126,7 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 
 	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE, flags)))
 		return (int)child;
+
 	/* Set up child stack marks with given stack argument */
 	child->stack_end = child_stack;
 	child->stack_start = 0;
@@ -133,12 +138,14 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 
 	/* Set child's clone return value to 0 */
 	exregs_set_mr(&exregs, MR_RETURN, 0);
+	BUG_ON(!child->utcb_address);
+	exregs_set_utcb(&exregs, child->utcb_address);
 
 	/* Do the actual exregs call to c0 */
 	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
 		BUG();
 
-	/* Create and prefault a utcb for child and map it to vfs task */
+	/* Create and prefault a shared page for child and map it to vfs task */
 	shpage_map_to_task(child, find_task(VFS_TID),
 			   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
 			   SHPAGE_PREFAULT);

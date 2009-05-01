@@ -31,11 +31,9 @@ void exregs_set_pager(struct exregs_data *s, l4id_t pagerid)
 	s->flags |= EXREGS_SET_PAGER;
 }
 
-void exregs_set_utcb(struct exregs_data *s, unsigned long phys,
-		     unsigned long virt)
+void exregs_set_utcb(struct exregs_data *s, unsigned long virt)
 {
-	s->utcb_phys = phys;
-	s->utcb_virt = virt;
+	s->utcb_address = virt;
 	s->flags |= EXREGS_SET_UTCB;
 }
 

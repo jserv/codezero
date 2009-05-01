@@ -6,7 +6,9 @@
 #ifndef __GLUE_ARM_MESSAGE_H__
 #define __GLUE_ARM_MESSAGE_H__
 
-#define MR_REST			56	
+#include INC_GLUE(memlayout.h)
+
+#define MR_REST			(UTCB_SIZE - MR_TOTAL - 2)	/* -2 is for fields on utcb */
 #define MR_TOTAL		6
 #define MR_TAG			0	/* Contains the purpose of message */
 #define MR_SENDER		1	/* For anythread receivers to discover sender */

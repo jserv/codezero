@@ -72,8 +72,7 @@ struct ktcb {
 	struct list_head task_list; /* Global task list. */
 
 	/* UTCB related, see utcb.txt in docs */
-	unsigned long utcb_virt;	/* Virtual ref to task's utcb area */
-	unsigned long utcb_phys;	/* Physical ref to task's utcb area */
+	unsigned long utcb_address;	/* Virtual ref to task's utcb area */
 
 	/* Thread times */
 	u32 kernel_time;	/* Ticks spent in kernel */
@@ -150,6 +149,8 @@ static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 extern struct id_pool *thread_id_pool;
 extern struct id_pool *space_id_pool;
 extern struct id_pool *tgroup_id_pool;
+
+void task_update_utcb(struct ktcb *cur, struct ktcb *next);
 
 #endif /* __TCB_H__ */
 
