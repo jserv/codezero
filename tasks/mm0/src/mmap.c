@@ -249,7 +249,7 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 		printf("Trying to map %d pages.\n", npages);
 		return PTR_ERR(-EINVAL);
 	}
-	if (npages > __pfn(task->stack_start - task->data_end)) {
+	if (npages > __pfn(TASK_SIZE)) {
 		printf("Trying to map too many pages: %d\n", npages);
 		return PTR_ERR(-ENOMEM);
 	}

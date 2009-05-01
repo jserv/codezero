@@ -147,7 +147,7 @@ out:
 
 	/* Assign task's utcb address */
 	task->utcb_address = slot;
-	printf("UTCB at 0x%x.\n", slot);
+	// printf("UTCB created at 0x%x.\n", slot);
 
 	return 0;
 }
@@ -160,7 +160,7 @@ int task_destroy_utcb(struct tcb *task)
 {
 	struct utcb_desc *udesc;
 
-	printf("UTCB: Destroying 0x%x\n", task->utcb_address);
+	// printf("UTCB: Destroying 0x%x\n", task->utcb_address);
 
 	/* Find the utcb descriptor slot first */
 	list_for_each_entry(udesc, &task->utcb_head->list, list) {

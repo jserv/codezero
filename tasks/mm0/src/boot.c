@@ -82,7 +82,6 @@ int boottask_mmap_regions(struct tcb *task, struct vm_file *file)
 				 __pfn(DEFAULT_SHPAGE_SIZE))))
 		return (int)shm;
 
-	/* Task's utcb region */
 	task_setup_utcb(task);
 
 	return 0;

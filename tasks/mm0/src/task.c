@@ -350,7 +350,6 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 		/* Set up a new utcb for new thread */
 		task_setup_utcb(task);
 
-
 		/* Set up parent-child relationship */
 		if ((share_flags & TCB_SHARED_PARENT) ||
 		    (share_flags & TCB_SHARED_TGROUP)) {

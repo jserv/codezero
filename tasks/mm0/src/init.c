@@ -57,8 +57,8 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 	task->parent = task;
 
 	/*
-	 * The first UTCB address is already assigned
-	 * by the microkernel for this pager. Ensure that we also got
+	 * The first UTCB address is already assigned by the
+	 * microkernel for this pager. Ensure that we also get
 	 * the same from our internal utcb bookkeeping.
 	 */
 	BUG_ON(task->utcb_address != UTCB_AREA_START);
