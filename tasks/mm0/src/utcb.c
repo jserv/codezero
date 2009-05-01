@@ -9,6 +9,7 @@
 #include <mmap.h>
 #include <utcb.h>
 #include <lib/malloc.h>
+#include <vm_area.h>
 
 /*
  * UTCB management in Codezero
@@ -108,13 +109,17 @@ int task_setup_utcb(struct tcb *task)
 	slot = task_new_utcb_desc(task);
 out:
 
-	/* Map this region as private to current task */
-	if (IS_ERR(err = do_mmap(0, 0, task, slot,
-				 VMA_ANONYMOUS | VMA_PRIVATE | VMA_FIXED |
-				 VM_READ | VM_WRITE, 1))) {
-		printf("UTCB: mmapping failed with %d\n", err);
-		return (int)err;
-	}
+	/* Check if utcb is already mapped (in case of multiple threads) */
+	if (!find_vma(slot, &task->vm_area_head->list)) {
+		/* Map this region as private to current task */
+		if (IS_ERR(err = do_mmap(0, 0, task, slot,
+					 VMA_ANONYMOUS | VMA_PRIVATE |
+					 VMA_FIXED | VM_READ | VM_WRITE, 1))) {
+			printf("UTCB: mmapping failed with %d\n", err);
+			return (int)err;
+		}
+	} else
+		printf("UTCB at 0x%x already mapped.\n", slot);
 
 	/* Assign task's utcb address */
 	task->utcb_address = slot;
