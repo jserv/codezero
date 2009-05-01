@@ -463,10 +463,12 @@ out_error:
 	/* Find all allocated pmds and free them */
 	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
 		if ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
-			/* Clear coarse indicator from address */
-			pgd->entry[i] &= ~PGD_TYPE_COARSE;
-			/* Free pmd by converting to its virtual value first */
-			free_pmd((void *)phys_to_virt(pgd->entry[i]));
+			/* Obtain the pmd handle */
+			pmd = (pmd_table_t *)
+			      phys_to_virt((pgd->entry[i] &
+					    PGD_COARSE_ALIGN_MASK));
+			/* Free pmd  */
+			free_pmd(pmd);
 		}
 	}
 	/* Free the pgd */
