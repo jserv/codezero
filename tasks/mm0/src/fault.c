@@ -550,10 +550,22 @@ struct page *copy_on_write(struct fault_data *fault)
 		global_add_vm_object(shadow);
 
 	} else {
+		/* We ought to copy the missing RW page to top shadow */
 		dprintf("No new shadows. Going to add to "
 			"topmost r/w shadow object\n");
-		/* No new shadows, the topmost r/w vmo is the copier object */
 		shadow_link = vmo_link;
+
+		/*
+		 * FIXME: Here we check for the case that a cloned thread is
+		 * doing a duplicate write request on an existing RW shadow
+		 * page. If so, we return the existing writable page in the top
+		 * shadow. We should find a generic way to detect duplicate
+		 * requests and cease IPC at an earlier stage.
+		 */
+		page = shadow_link->obj->pager->ops.page_in(shadow_link->obj,
+							    file_offset);
+		if (!IS_ERR(page))
+			return page;
 
 		/*
 		 * We start page search on read-only objects. If the first
