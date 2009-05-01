@@ -181,7 +181,11 @@ int free_pgd(void *v)
 
 void *zalloc_page(void)
 {
-	void *p = alloc_page();
+	void *p;
+
+	if (!(p	= alloc_page()))
+		return 0;
+
 	memset(p, 0, PAGE_SIZE);
 	return p;
 }

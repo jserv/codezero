@@ -33,7 +33,7 @@ void main(void)
 
 	dirtest();
 
-	// exectest();
+	exectest();
 
 	/* Check mmap/munmap */
 	mmaptest();

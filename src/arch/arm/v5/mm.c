@@ -6,6 +6,7 @@
 #include <l4/lib/string.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
+#include <l4/api/errno.h>
 #include INC_SUBARCH(mm.h)
 #include INC_SUBARCH(mmu_ops.h)
 #include INC_GLUE(memory.h)
@@ -428,7 +429,9 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 	pgd_table_t *pgd;
 
 	/* Allocate and copy pgd. This includes all kernel entries */
-	pgd = alloc_pgd();
+	if (!(pgd = alloc_pgd()))
+		return PTR_ERR(-ENOMEM);
+
 	memcpy(pgd, from, sizeof(pgd_table_t));
 
 	/* Allocate and copy all pmds that will be exclusive to new task. */
@@ -437,7 +440,8 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 		if (!is_kern_pgdi(i) &&
 		    ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE)) {
 			/* Allocate new pmd */
-			pmd = alloc_pmd();
+			if (!(pmd = alloc_pmd()))
+				goto out_error;
 
 			/* Find original pmd */
 			orig = (pmd_table_t *)
@@ -454,6 +458,20 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 	}
 
 	return pgd;
+
+out_error:
+	/* Find all allocated pmds and free them */
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
+		if ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
+			/* Clear coarse indicator from address */
+			pgd->entry[i] &= ~PGD_TYPE_COARSE;
+			/* Free pmd by converting to its virtual value first */
+			free_pmd((void *)phys_to_virt(pgd->entry[i]));
+		}
+	}
+	/* Free the pgd */
+	free_pgd(pgd);
+	return PTR_ERR(-ENOMEM);
 }
 
 extern pmd_table_t *pmd_array;

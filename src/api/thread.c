@@ -265,23 +265,36 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
  */
 int thread_create(struct task_ids *ids, unsigned int flags)
 {
-	struct ktcb *task = 0, *new = (struct ktcb *)zalloc_page();
+	struct ktcb *task = 0;
+ 	struct ktcb *new = (struct ktcb *)zalloc_page();
 	unsigned int create_flags = flags & THREAD_CREATE_MASK;
+
+	if (!new)
+		return -ENOMEM;
 
 	/* Determine space allocation */
 	if (create_flags == THREAD_NEW_SPACE) {
 		/* Allocate new pgd and copy all kernel areas */
-		new->pgd = alloc_pgd();
+		if (!(new->pgd = alloc_pgd())) {
+			free_page(new);
+			return -ENOMEM;
+		}
+
 		copy_pgd_kern_all(new->pgd);
 	} else {
 		/* Existing space will be used, find it from all tasks */
 		list_for_each_entry(task, &global_task_list, task_list) {
 			/* Space ids match, can use existing space */
 			if (task->spid == ids->spid) {
-				if (flags == THREAD_SAME_SPACE)
+				if (flags == THREAD_SAME_SPACE) {
 					new->pgd = task->pgd;
-				else
+				} else {
 					new->pgd = copy_page_tables(task->pgd);
+					if (IS_ERR(new->pgd)) {
+						free_page(new);
+						return (int)new->pgd;
+					}
+				}
 				goto out;
 			}
 		}
