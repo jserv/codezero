@@ -8,6 +8,7 @@
 #include <file.h>
 #include <exit.h>
 #include <test.h>
+#include <utcb.h>
 #include <vm_area.h>
 #include <syscalls.h>
 #include <l4lib/arch/syslib.h>
@@ -92,10 +93,6 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 	/* Copy shared page */
 	new->shared_page = orig->shared_page;
 
-	/* Copy utcb descriptors and unique utcb */
-	new->utcb_head = orig->utcb_head;
-	new->utcb_address = orig->utcb_address;
-
 	/* Copy parent relationship */
 	BUG_ON(new->parent);
 	new->parent = orig->parent;
@@ -103,6 +100,9 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 
 	/* Flush all IO on task's files and close fds */
 	task_close_files(orig);
+
+	/* Destroy task's utcb slot */
+	task_destroy_utcb(orig);
 
 	/* Vfs still knows the thread */
 
@@ -131,6 +131,9 @@ void do_exit(struct tcb *task, int status)
 
 	/* Flush all IO on task's files and close fds */
 	task_close_files(task);
+
+	/* Destroy task's utcb slot */
+	task_destroy_utcb(task);
 
 	/* Tell vfs that task is exiting */
 	vfs_notify_exit(task, status);

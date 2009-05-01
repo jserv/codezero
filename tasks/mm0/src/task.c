@@ -7,29 +7,32 @@
 #include <l4/config.h>
 #include <l4/types.h>
 #include <l4/lib/list.h>
+#include <l4/lib/math.h>
 #include <l4/api/thread.h>
 #include <l4/api/kip.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
+
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/arch/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
-#include <l4/lib/math.h>
+
 #include <lib/addr.h>
 #include <lib/malloc.h>
+
 #include <init.h>
 #include <string.h>
 #include <vm_area.h>
 #include <memory.h>
+#include <globals.h>
 #include <file.h>
 #include <task.h>
 #include <exec.h>
 #include <shm.h>
 #include <mmap.h>
 #include <boot.h>
-#include <globals.h>
 #include <test.h>
 #include <utcb.h>
 
@@ -148,6 +151,17 @@ int task_free_resources(struct tcb *task)
 
 		/* Free the head */
 		kfree(task->vm_area_head);
+	}
+
+	/*
+	 * Threads may share utcb chain
+	 */
+	if (!(--task->utcb_head->tcb_refs)) {
+		/* UTCBs must have been deleted explicitly */
+		BUG_ON(!list_empty(&task->utcb_head->list));
+
+		/* Free the head */
+		kfree(task->utcb_head);
 	}
 
 	return 0;
@@ -269,9 +283,6 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 		 */
 	}
 
-	/* Set up a new utcb for new thread */
-	task_setup_utcb(to);
-
 	/* Copy all file descriptors */
 	if (flags & TCB_SHARED_FILES) {
 		to->files = from->files;
@@ -335,6 +346,10 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 	 */
 	if (parent) {
 		copy_tcb(task, parent, share_flags);
+
+		/* Set up a new utcb for new thread */
+		task_setup_utcb(task);
+
 
 		/* Set up parent-child relationship */
 		if ((share_flags & TCB_SHARED_PARENT) ||
@@ -557,10 +572,12 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 		return err;
 	}
 
+	/* Get a new utcb slot for new task */
+	task_setup_utcb(task);
+
 	/*
-	 * Task already has recycled task's shared page. It will attach to it
-	 * when it starts in userspace. Task also already utilizes recycled
-	 * task's utcb.
+	 * Recycled task's shared page shm still exists. Current task will
+	 * attach to it when it starts in userspace.
 	 */
 	//if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
 	//	return (int)shm;

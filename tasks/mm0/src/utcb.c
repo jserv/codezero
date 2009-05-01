@@ -42,7 +42,7 @@ int utcb_delete_address(void *utcb_address, int npages)
 }
 
 /* Return an empty utcb slot in this descriptor */
-unsigned long utcb_slot(struct utcb_desc *desc)
+unsigned long utcb_new_slot(struct utcb_desc *desc)
 {
 	int slot;
 
@@ -50,6 +50,13 @@ unsigned long utcb_slot(struct utcb_desc *desc)
 		return 0;
 	else
 		return desc->utcb_base + (unsigned long)slot * UTCB_SIZE;
+}
+
+int utcb_delete_slot(struct utcb_desc *desc, unsigned long address)
+{
+	BUG_ON(id_del(desc->slots, (address - desc->utcb_base)
+		      / UTCB_SIZE) < 0);
+	return 0;
 }
 
 unsigned long task_new_utcb_desc(struct tcb *task)
@@ -69,13 +76,31 @@ unsigned long task_new_utcb_desc(struct tcb *task)
        d->slots = id_pool_new_init(PAGE_SIZE / UTCB_SIZE);
 
        /* Obtain a new and unique utcb base */
+	/* FIXME: Use variable size than a page */
        d->utcb_base = (unsigned long)utcb_new_address(1);
 
        /* Add descriptor to tcb's chain */
        list_add(&d->list, &task->utcb_head->list);
 
        /* Obtain and return first slot */
-       return d->utcb_base + UTCB_SIZE * id_new(d->slots);
+       return utcb_new_slot(d);
+}
+
+int task_delete_utcb_desc(struct tcb *task, struct utcb_desc *d)
+{
+	/* Unlink desc from its list */
+	list_del_init(&d->list);
+
+	/* Unmap the descriptor region */
+	do_munmap(task, d->utcb_base, 1);
+
+	/* Return descriptor address */
+	utcb_delete_address((void *)d->utcb_base, 1);
+
+	/* Free the descriptor */
+	kfree(d);
+
+	return 0;
 }
 
 /*
@@ -102,7 +127,7 @@ int task_setup_utcb(struct tcb *task)
 
 	/* Search for an empty utcb slot already allocated to this space */
 	list_for_each_entry(udesc, &task->utcb_head->list, list)
-		if ((slot = utcb_slot(udesc)))
+		if ((slot = utcb_new_slot(udesc)))
 			goto out;
 
 	/* Allocate a new utcb memory region and return its base */
@@ -118,12 +143,42 @@ out:
 			printf("UTCB: mmapping failed with %d\n", err);
 			return (int)err;
 		}
-	} else
-		printf("UTCB at 0x%x already mapped.\n", slot);
+	}
 
 	/* Assign task's utcb address */
 	task->utcb_address = slot;
+	printf("UTCB at 0x%x.\n", slot);
 
 	return 0;
 }
+
+/*
+ * Deletes a utcb slot by first deleting the slot entry, the descriptor
+ * address if emptied, the mapping of the descriptor, and the descriptor itself
+ */
+int task_destroy_utcb(struct tcb *task)
+{
+	struct utcb_desc *udesc;
+
+	printf("UTCB: Destroying 0x%x\n", task->utcb_address);
+
+	/* Find the utcb descriptor slot first */
+	list_for_each_entry(udesc, &task->utcb_head->list, list) {
+		/* FIXME: Use variable alignment than a page */
+		/* Detect matching slot */
+		if (page_align(task->utcb_address) == udesc->utcb_base) {
+
+			/* Delete slot from the descriptor */
+			utcb_delete_slot(udesc, task->utcb_address);
+
+			/* Is the desc completely empty now? */
+			if (id_is_empty(udesc->slots))
+				/* Delete the descriptor */
+				task_delete_utcb_desc(task, udesc);
+			return 0; /* Finished */
+		}
+	}
+	BUG();
+}
+
 

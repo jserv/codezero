@@ -78,3 +78,11 @@ int id_get(struct id_pool *pool, int id)
 		return id;
 }
 
+int id_is_empty(struct id_pool *pool)
+{
+	for (int i = 0; i < pool->nwords; i++)
+		if (pool->bitmap[i])
+			return 0;
+	return 1;
+}
+
