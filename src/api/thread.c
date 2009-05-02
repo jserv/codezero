@@ -268,6 +268,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	struct ktcb *task = 0;
  	struct ktcb *new = (struct ktcb *)zalloc_page();
 	unsigned int create_flags = flags & THREAD_CREATE_MASK;
+	int err;
 
 	if (!new)
 		return -ENOMEM;
@@ -291,8 +292,9 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 				} else {
 					new->pgd = copy_page_tables(task->pgd);
 					if (IS_ERR(new->pgd)) {
+						err = (int)new->pgd;
 						free_page(new);
-						return (int)new->pgd;
+						return err;
 					}
 				}
 				goto out;
