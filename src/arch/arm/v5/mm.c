@@ -460,9 +460,11 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 	return pgd;
 
 out_error:
-	/* Find all allocated pmds and free them */
+	/* Find all allocated non-kernel pmds and free them */
 	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
-		if ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
+		/* Non-kernel pmd that has just been allocated. */
+		if (!is_kern_pgdi(i) &&
+		    (pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
 			/* Obtain the pmd handle */
 			pmd = (pmd_table_t *)
 			      phys_to_virt((pgd->entry[i] &

@@ -256,6 +256,12 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	return 0;
 }
 
+#define KTCB_CREATE_PAGE_TABLES		(1 << 0)
+/* Allocates a ktcb and page tables depending on flags */
+struct ktcb *ktcb_create(unsigned int flags)
+{
+
+}
 /*
  * Creates a thread, with a new thread id, and depending on the flags,
  * either creates a new space, uses the same space as another thread,

@@ -39,6 +39,12 @@ struct task_ids {
 	l4id_t tgid;
 };
 
+/* A simple page table with a reference count */
+struct address_space {
+	struct pgd_table_t *pgd;
+	int ktcb_refs;
+};
+
 struct ktcb {
 	/* User context */
 	task_context_t context;
@@ -86,7 +92,7 @@ struct ktcb {
 	int nlocks;
 
 	/* Page table information */
-	pgd_table_t *pgd;
+	struct address_space *space;
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;
