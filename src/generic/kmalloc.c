@@ -24,6 +24,8 @@ void init_kmalloc()
 }
 
 /*
+ * KMALLOC implementation:
+ *
  * Allocates memory from mem_caches that it generates on-the-fly,
  * for up to KMALLOC_POOLS_MAX different sizes.
  */
