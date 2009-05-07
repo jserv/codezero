@@ -10,6 +10,7 @@
 #include <l4/lib/mutex.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/pgalloc.h>
+#include <l4/generic/space.h>
 #include INC_GLUE(memory.h)
 #include INC_GLUE(syscall.h)
 #include INC_GLUE(message.h)
@@ -37,12 +38,6 @@ struct task_ids {
 	l4id_t tid;
 	l4id_t spid;
 	l4id_t tgid;
-};
-
-/* A simple page table with a reference count */
-struct address_space {
-	struct pgd_table_t *pgd;
-	int ktcb_refs;
 };
 
 struct ktcb {

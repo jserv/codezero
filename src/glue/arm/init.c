@@ -33,6 +33,8 @@ void init_locks(void)
 {
 }
 
+struct address_space pager_space;
+
 /* Maps the early memory regions needed to bootstrap the system */
 void init_kernel_mappings(void)
 {
@@ -60,7 +62,8 @@ void init_kernel_mappings(void)
 	 * Setup a dummy current ktcb over the bootstack, so that generic
 	 * mapping functions can use this as the pgd source.
 	 */
-	current->pgd = &kspace;
+	current->space = &pager_space;
+	TASK_PGD(current) = &kspace;
 }
 
 void print_sections(void)
@@ -245,7 +248,7 @@ void switch_to_user(struct ktcb *task)
 {
 	arm_clean_invalidate_cache();
 	arm_invalidate_tlb();
-	arm_set_ttb(virt_to_phys(task->pgd));
+	arm_set_ttb(virt_to_phys(TASK_PGD(task)));
 	arm_invalidate_tlb();
 	jump(task);
 }
@@ -297,12 +300,7 @@ void init_pager(char *name, struct task_ids *ids)
 	/* Pager gets first UTCB area available by default */
 	task->utcb_address = UTCB_AREA_START;
 
-	if (!task->pgd) {
-		BUG();	/* Inittask won't come here */
-		task->pgd = alloc_pgd();
-		/* Tasks with no pgd copy from the inittask's pgd. */
-		memcpy(task->pgd, current->pgd, sizeof(pgd_table_t));
-	}
+	BUG_ON(!TASK_PGD(task));
 
 	/*
 	 * This task's userspace mapping. This should allocate a new pmd, if not
@@ -310,7 +308,7 @@ void init_pager(char *name, struct task_ids *ids)
 	 */
 	add_mapping_pgd(taskimg->phys_start, INITTASK_AREA_START,
 			task_pages * PAGE_SIZE, MAP_USR_DEFAULT_FLAGS,
-			task->pgd);
+			TASK_PGD(task));
 	printk("Mapping %d pages from 0x%x to 0x%x for %s\n", task_pages,
 	       taskimg->phys_start, INITTASK_AREA_START, name);
 
@@ -359,9 +357,11 @@ void start_kernel(void)
 	/* Initialise section mappings for the kernel area */
 	init_kernel_mappings();
 
+	printascii("\nStarting virtual memory...\n");
 	/* Enable virtual memory and jump to virtual addresses */
 	start_vm();
 
+	printascii("\nStarted virtual memory...\n");
 	/* PMD tables initialised */
 	init_pmd_tables();
 

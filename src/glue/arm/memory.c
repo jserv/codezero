@@ -117,7 +117,7 @@ void copy_pgd_kern_by_vrange(pgd_table_t *to, pgd_table_t *from,
 /* Copies all standard bits that a user process should have in its pgd */
 void copy_pgd_kern_all(pgd_table_t *to)
 {
-	pgd_table_t *from = current->pgd;
+	pgd_table_t *from = TASK_PGD(current);
 
 	copy_pgd_kern_by_vrange(to, from, KERNEL_AREA_START, KERNEL_AREA_END);
 	copy_pgd_kern_by_vrange(to, from, IO_AREA_START, IO_AREA_END);

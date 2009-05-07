@@ -36,7 +36,7 @@ int sys_map(syscall_context_t *regs)
 	return -EINVAL;
 
 found:
-	add_mapping_pgd(phys, virt, npages << PAGE_BITS, flags, target->pgd);
+	add_mapping_pgd(phys, virt, npages << PAGE_BITS, flags, TASK_PGD(target));
 
 	return 0;
 }
@@ -60,7 +60,7 @@ int sys_unmap(syscall_context_t *regs)
 		return -ESRCH;
 
 	for (int i = 0; i < npages; i++) {
-		ret = remove_mapping_pgd(virtual + i * PAGE_SIZE, target->pgd);
+		ret = remove_mapping_pgd(virtual + i * PAGE_SIZE, TASK_PGD(target));
 		if (ret)
 			retval = ret;
 	}

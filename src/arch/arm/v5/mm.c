@@ -29,7 +29,7 @@
  */
 void remove_section_mapping(unsigned long vaddr)
 {
-	pgd_table_t *pgd = current->pgd;
+	pgd_table_t *pgd = TASK_PGD(current);
 	pgd_t pgd_i = PGD_INDEX(vaddr);
 	if (!((pgd->entry[pgd_i] & PGD_TYPE_MASK)
 	      & PGD_TYPE_SECTION))
@@ -174,7 +174,7 @@ pte_t virt_to_pte_from_pgd(unsigned long virtual, pgd_table_t *pgd)
 /* Convert a virtual address to a pte if it exists in the page tables. */
 pte_t virt_to_pte(unsigned long virtual)
 {
-	return virt_to_pte_from_pgd(virtual, current->pgd);
+	return virt_to_pte_from_pgd(virtual, TASK_PGD(current));
 }
 
 void attach_pmd(pgd_table_t *pgd, pmd_table_t *pmd, unsigned int vaddr)
@@ -238,7 +238,7 @@ void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
 void add_mapping(unsigned int paddr, unsigned int vaddr,
 		 unsigned int size, unsigned int flags)
 {
-	add_mapping_pgd(paddr, vaddr, size, flags, current->pgd);
+	add_mapping_pgd(paddr, vaddr, size, flags, TASK_PGD(current));
 }
 
 /*
@@ -271,7 +271,7 @@ int check_mapping_pgd(unsigned long vaddr, unsigned long size,
 int check_mapping(unsigned long vaddr, unsigned long size,
 		  unsigned int flags)
 {
-	return check_mapping_pgd(vaddr, size, flags, current->pgd);
+	return check_mapping_pgd(vaddr, size, flags, TASK_PGD(current));
 }
 
 /* FIXME: Empty PMDs should be returned here !!! */
@@ -416,7 +416,7 @@ int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 
 int remove_mapping(unsigned long vaddr)
 {
-	return remove_mapping_pgd(vaddr, current->pgd);
+	return remove_mapping_pgd(vaddr, TASK_PGD(current));
 }
 
 /*
@@ -503,7 +503,7 @@ void relocate_page_tables(void)
 	memcpy((void *)pt_new, _start_kspace, pt_area_size);
 
 	/* Update the only reference to current pgd table */
-	current->pgd = (pgd_table_t *)pt_new;
+	TASK_PGD(current) = (pgd_table_t *)pt_new;
 
 	/*
 	 * Since pmd's are also moved, update the pmd references in pgd by
@@ -512,9 +512,9 @@ void relocate_page_tables(void)
 	 */
 	for (int i = 0; i < PGD_ENTRY_TOTAL; i++)
 		/* If there's a coarse 2nd level entry */
-		if ((current->pgd->entry[i] & PGD_TYPE_MASK)
+		if ((TASK_PGD(current)->entry[i] & PGD_TYPE_MASK)
 		    == PGD_TYPE_COARSE)
-			current->pgd->entry[i] -= reloc_offset;
+			TASK_PGD(current)->entry[i] -= reloc_offset;
 
 	/* Update the pmd array pointer. */
 	pmd_array = (pmd_table_t *)((unsigned long)_start_pmd - reloc_offset);
@@ -523,7 +523,7 @@ void relocate_page_tables(void)
 	arm_clean_invalidate_cache();
 	arm_drain_writebuffer();
 	arm_invalidate_tlb();
-	arm_set_ttb(virt_to_phys(current->pgd));
+	arm_set_ttb(virt_to_phys(TASK_PGD(current)));
 	arm_invalidate_tlb();
 
 	/* Unmap the old page table area */
@@ -535,7 +535,7 @@ void relocate_page_tables(void)
 	__pt_end = pt_new + pt_area_size;
 
 	printk("Initial page table area relocated from phys 0x%x to 0x%x\n",
-	       virt_to_phys(&kspace), virt_to_phys(current->pgd));
+	       virt_to_phys(&kspace), virt_to_phys(TASK_PGD(current)));
 }
 
 /*
@@ -552,7 +552,7 @@ void remap_as_pages(void *vstart, void *vend)
 	unsigned long paddr = pstart;
 	pgd_t pgd_i = PGD_INDEX(vstart);
 	pmd_t pmd_i = PMD_INDEX(vstart);
-	pgd_table_t *pgd = (pgd_table_t *)current->pgd;
+	pgd_table_t *pgd = (pgd_table_t *)TASK_PGD(current);
 	pmd_table_t *pmd = alloc_pmd();
 	u32 pmd_phys = virt_to_phys(pmd);
 	int numpages = __pfn(page_align_up(pend) - pstart);

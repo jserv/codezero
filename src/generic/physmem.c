@@ -76,7 +76,7 @@ void physmem_init()
 	/* Map initial pgd area as used */
 	start = (unsigned long)__pt_start;
 	end = (unsigned long)__pt_end;
-	set_page_map(virt_to_phys(current->pgd), __pfn(end - start), 1);
+	set_page_map(virt_to_phys(TASK_PGD(current)), __pfn(end - start), 1);
 
 	physmem.start = PHYS_MEM_START;
 	physmem.end = PHYS_MEM_END;

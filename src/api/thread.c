@@ -55,7 +55,7 @@ int arch_clear_thread(struct ktcb *task)
 	task->context.spsr = ARM_MODE_USR;
 
 	/* Clear the page tables */
-	remove_mapping_pgd_all_user(task->pgd);
+	remove_mapping_pgd_all_user(TASK_PGD(task));
 
 	return 0;
 }
@@ -256,12 +256,6 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	return 0;
 }
 
-#define KTCB_CREATE_PAGE_TABLES		(1 << 0)
-/* Allocates a ktcb and page tables depending on flags */
-struct ktcb *ktcb_create(unsigned int flags)
-{
-
-}
 /*
  * Creates a thread, with a new thread id, and depending on the flags,
  * either creates a new space, uses the same space as another thread,
@@ -282,23 +276,23 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	/* Determine space allocation */
 	if (create_flags == THREAD_NEW_SPACE) {
 		/* Allocate new pgd and copy all kernel areas */
-		if (!(new->pgd = alloc_pgd())) {
+		if (!(TASK_PGD(new) = alloc_pgd())) {
 			free_page(new);
 			return -ENOMEM;
 		}
 
-		copy_pgd_kern_all(new->pgd);
+		copy_pgd_kern_all(TASK_PGD(new));
 	} else {
 		/* Existing space will be used, find it from all tasks */
 		list_for_each_entry(task, &global_task_list, task_list) {
 			/* Space ids match, can use existing space */
 			if (task->spid == ids->spid) {
 				if (flags == THREAD_SAME_SPACE) {
-					new->pgd = task->pgd;
+					TASK_PGD(new) = TASK_PGD(task);
 				} else {
-					new->pgd = copy_page_tables(task->pgd);
-					if (IS_ERR(new->pgd)) {
-						err = (int)new->pgd;
+					TASK_PGD(new) = copy_page_tables(TASK_PGD(task));
+					if (IS_ERR(TASK_PGD(new))) {
+						err = (int)TASK_PGD(new);
 						free_page(new);
 						return err;
 					}

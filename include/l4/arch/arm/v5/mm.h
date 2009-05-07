@@ -123,6 +123,7 @@ typedef struct pmd_table {
 #define DABT_EXT_NON_LFETCH_SECT		0x8
 #define DABT_EXT_NON_LFETCH_PAGE		0xA
 
+#define TASK_PGD(x)		(x)->space->pgd
 
 /* Kernel's data about the fault */
 typedef struct fault_kdata {

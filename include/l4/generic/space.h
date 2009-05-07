@@ -19,6 +19,17 @@
 #define MAP_IO_DEFAULT_FLAGS	MAP_SVC_IO_FLAGS
 
 #if defined (__KERNEL__)
+
+#include <l4/lib/list.h>
+#include INC_SUBARCH(mm.h)
+
+/* A simple page table with a reference count */
+struct address_space {
+	struct list_head list;
+	pgd_table_t *pgd;
+	int ktcb_refs;
+};
+
 int check_access(unsigned long vaddr, unsigned long size, unsigned int flags);
 #endif
 

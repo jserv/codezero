@@ -256,7 +256,7 @@ static inline void context_switch(struct ktcb *next)
 	// printk("(%d) to (%d)\n", cur->tid, next->tid);
 
 	/* Flush caches and everything */
-	arch_hardware_flush(next->pgd);
+	arch_hardware_flush(TASK_PGD(next));
 
 	/* Update utcb region for next task */
 	task_update_utcb(cur, next);
