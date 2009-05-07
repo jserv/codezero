@@ -59,11 +59,14 @@ void init_kernel_mappings(void)
 	memset(current, 0, sizeof(struct ktcb));
 
 	/*
-	 * Setup a dummy current ktcb over the bootstack, so that generic
-	 * mapping functions can use this as the pgd source.
+	 * We are currently on the bootstack. End of bootstack would
+	 * eventually become the ktcb of the first pager. We use a
+	 * statically allocated address_space structure for the pager.
 	 */
 	current->space = &pager_space;
-	TASK_PGD(current) = &kspace;
+
+	/* Access physical address of pager_space to assign with initial pgd */
+	((struct address_space *)virt_to_phys(current->space))->pgd = &kspace;
 }
 
 void print_sections(void)
@@ -357,11 +360,9 @@ void start_kernel(void)
 	/* Initialise section mappings for the kernel area */
 	init_kernel_mappings();
 
-	printascii("\nStarting virtual memory...\n");
 	/* Enable virtual memory and jump to virtual addresses */
 	start_vm();
 
-	printascii("\nStarted virtual memory...\n");
 	/* PMD tables initialised */
 	init_pmd_tables();
 
