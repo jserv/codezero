@@ -109,24 +109,6 @@ union ktcb_union {
 	char kstack[PAGE_SIZE];
 };
 
-/* For traversing global task list */
-extern struct list_head global_task_list;
-static inline struct ktcb *find_task(l4id_t tid)
-{
-	struct ktcb *task;
-
-	list_for_each_entry(task, &global_task_list, task_list)
-		if (task->tid == tid)
-			return task;
-	return 0;
-}
-
-static inline int add_task_global(struct ktcb *new)
-{
-	INIT_LIST_HEAD(&new->task_list);
-	list_add(&new->task_list, &global_task_list);
-	return 0;
-}
 
 /*
  * Each task is allocated a unique global id. A thread group can only belong to
@@ -151,6 +133,15 @@ extern struct id_pool *thread_id_pool;
 extern struct id_pool *space_id_pool;
 extern struct id_pool *tgroup_id_pool;
 
+struct ktcb *tcb_find(l4id_t tid);
+void tcb_add(struct ktcb *tcb);
+void tcb_remove(struct ktcb *tcb);
+
+void tcb_init(struct ktcb *tcb);
+struct ktcb *tcb_alloc_init(void);
+void tcb_delete(struct ktcb *tcb);
+
+void init_ktcb_list(void);
 void task_update_utcb(struct ktcb *cur, struct ktcb *next);
 
 #endif /* __TCB_H__ */

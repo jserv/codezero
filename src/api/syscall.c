@@ -106,7 +106,7 @@ int sys_exchange_registers(syscall_context_t *regs)
 	l4id_t tid = regs->r1;
 
 	/* Find tcb from its list */
-	if (!(task = find_task(tid)))
+	if (!(task = tcb_find(tid)))
 		return -ESRCH;
 
 	/*

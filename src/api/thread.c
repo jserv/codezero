@@ -30,7 +30,7 @@ int thread_suspend(struct task_ids *ids)
 	struct ktcb *task;
 	int ret = 0;
 
-	if (!(task = find_task(ids->tid)))
+	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
 
 	if (task->state == TASK_INACTIVE)
@@ -65,7 +65,7 @@ int thread_recycle(struct task_ids *ids)
 	struct ktcb *task;
 	int ret;
 
-	if (!(task = find_task(ids->tid)))
+	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
 
 	if ((ret = thread_suspend(ids)) < 0)
@@ -95,14 +95,14 @@ int thread_destroy(struct task_ids *ids)
 	struct ktcb *task;
 	int ret;
 
-	if (!(task = find_task(ids->tid)))
+	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
 
 	if ((ret = thread_suspend(ids)) < 0)
 		return ret;
 
-	/* Delete it from global list so any callers will get -ESRCH */
-	list_del(&task->task_list);
+	/* Remove tcb from global list so any callers will get -ESRCH */
+	tcb_remove(task);
 
 	/*
 	 * If there are any sleepers on any of the task's
@@ -111,18 +111,8 @@ int thread_destroy(struct task_ids *ids)
 	wake_up_all(&task->wqh_send, 0);
 	wake_up_all(&task->wqh_recv, 0);
 
-	/*
-	 * The thread cannot have a pager waiting for it
-	 * since we ought to be the pager.
-	 */
-	BUG_ON(task->wqh_pager.sleepers > 0);
-
-	/*
-	 * FIXME: We need to free the pgd and any thread specific pmds!!!
-	 */
-
 	/* We can now safely delete the task */
-	free_page(task);
+	tcb_delete(task);
 
 	return 0;
 }
@@ -131,7 +121,7 @@ int thread_resume(struct task_ids *ids)
 {
 	struct ktcb *task;
 
-	if (!(task = find_task(ids->tid)))
+	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
 
 	if (!mutex_trylock(&task->thread_control_lock))
@@ -150,7 +140,7 @@ int thread_start(struct task_ids *ids)
 {
 	struct ktcb *task;
 
-	if (!(task = find_task(ids->tid)))
+	if (!(task = tcb_find(ids->tid)))
        		return -ESRCH;
 
 	if (!mutex_trylock(&task->thread_control_lock))
@@ -256,6 +246,69 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	return 0;
 }
 
+int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flags)
+{
+	struct address_space *space, *new;
+
+	address_space_reference_lock();
+
+	if (flags == THREAD_SAME_SPACE) {
+		if (!(space = address_space_find(ids->spid)))
+			return -ESRCH;
+		address_space_attach(tcb, space);
+	}
+	if (flags == THREAD_COPY_SPACE) {
+		if (!(space = address_space_find(ids->spid)))
+			return -ESRCH;
+		if (IS_ERR(new = address_space_create(space)))
+			return (int)new;
+		address_space_attach(tcb, new);
+		address_space_add(new);
+	}
+	if (flags == THREAD_NEW_SPACE) {
+		if (IS_ERR(new = address_space_create(0)))
+			return (int)new;
+		address_space_attach(tcb, new);
+		address_space_add(new);
+	}
+
+	address_space_reference_unlock();
+	return 0;
+}
+
+int thread_create(struct task_ids *ids, unsigned int flags)
+{
+	struct ktcb *new, *orig_task;
+	int err;
+
+	flags &= THREAD_CREATE_MASK;
+
+	if (!(new = tcb_alloc_init()))
+		return -ENOMEM;
+
+	if ((err = thread_setup_space(new, ids, flags))) {
+		tcb_delete(new);
+		return err;
+	}
+
+	if (flags != THREAD_NEW_SPACE) {
+		BUG_ON(!(orig_task = tcb_find(ids->tid)));
+
+		/* Set up ids and context using original tcb */
+		thread_setup_new_ids(ids, flags, new, orig_task);
+		arch_setup_new_thread(new, orig_task, flags);
+	} else {
+		/* Set up ids and context from scratch */
+		thread_setup_new_ids(ids, flags, new, 0);
+		arch_setup_new_thread(new, 0, flags);
+	}
+
+	tcb_add(new);
+
+	return 0;
+}
+
+#if 0
 /*
  * Creates a thread, with a new thread id, and depending on the flags,
  * either creates a new space, uses the same space as another thread,
@@ -263,7 +316,7 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
  * are respectively used when creating a brand new task, creating a
  * new thread in an existing address space, or forking a task.
  */
-int thread_create(struct task_ids *ids, unsigned int flags)
+int thread_create_old(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *task = 0;
  	struct ktcb *new = (struct ktcb *)zalloc_page();
@@ -323,6 +376,7 @@ out:
 
 	return 0;
 }
+#endif
 
 /*
  * Creates, destroys and modifies threads. Also implicitly creates an address

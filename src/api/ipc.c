@@ -63,7 +63,7 @@ int sys_ipc_control(syscall_context_t *regs)
 /* Interruptible ipc */
 int ipc_send(l4id_t recv_tid)
 {
-	struct ktcb *receiver = find_task(recv_tid);
+	struct ktcb *receiver = tcb_find(recv_tid);
 	struct waitqueue_head *wqhs, *wqhr;
 
 	wqhs = &receiver->wqh_send;

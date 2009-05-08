@@ -256,26 +256,27 @@ void switch_to_user(struct ktcb *task)
 	jump(task);
 }
 
+/*
+ * Initialize the pager in the system.
+ *
+ * The pager uses the bootstack as its ktcb, the initial kspace as its pgd,
+ * (kernel pmds are shared among all tasks) and a statically allocated
+ * pager_space struct for its space structure.
+ */
 void init_pager(char *name, struct task_ids *ids)
 {
 	struct svc_image *taskimg = 0;
 	struct ktcb *task;
 	int task_pages;
 
-	/*
-	 * NOTE: Inittask uses the kernel bootstack as its PAGE_SIZE'd kernel
-	 * stack. There is no problem with this as the inittask always exists.
-	 * This also solves the problem of freeing the bootstack and making use
-	 * of the initial kspace pgd.
-	 */
-	if (!strcmp(name, __PAGERNAME__))
-		task = current;	/* mm0 is the mockup current during init */
-	else
-		task = (struct ktcb *)zalloc_page();
+	BUG_ON(strcmp(name, __PAGERNAME__));
+	task = current;
+
+	tcb_init(task);
 
 	/*
-	 * Search the compile-time generated boot descriptor for information on
-	 * available task images.
+	 * Search the compile-time generated boot descriptor for
+	 * information on available task images.
 	 */
 	for (int i = 0; i < bootdesc->total_images; i++) {
 		if (!strcmp(name, bootdesc->images[i].name)) {
@@ -324,7 +325,7 @@ void init_pager(char *name, struct task_ids *ids)
 	waitqueue_head_init(&task->wqh_pager);
 
 	/* Global hashlist that keeps all existing tasks */
-	add_task_global(task);
+	tcb_add(task);
 
 	/* Scheduler initialises the very first task itself */
 }
@@ -341,8 +342,9 @@ void init_tasks()
 	ids.spid = id_new(space_id_pool);
 	ids.tgid = id_new(tgroup_id_pool);
 
-	/* Initialise the global task list head */
-	INIT_LIST_HEAD(&global_task_list);
+	/* Initialise the global task and address space lists */
+	init_ktcb_list();
+	init_address_space_list();
 
 	/*
 	 * This must come last so that other tasks can copy its pgd before it

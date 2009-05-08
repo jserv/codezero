@@ -419,9 +419,64 @@ int remove_mapping(unsigned long vaddr)
 	return remove_mapping_pgd(vaddr, TASK_PGD(current));
 }
 
+
+/*
+ * Copies userspace entries of one task to another. In order to do that,
+ * it allocates new pmds and copies the original values into new ones.
+ */
+int copy_user_tables(struct address_space *new, struct address_space *orig_space)
+{
+	pgd_table_t *to = new->pgd, *from = orig_space->pgd;
+	pmd_table_t *pmd, *orig;
+
+	/* Allocate and copy all pmds that will be exclusive to new task. */
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
+		/* Detect a pmd entry that is not a kernel pmd? */
+		if (!is_kern_pgdi(i) &&
+		    ((from->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE)) {
+			/* Allocate new pmd */
+			if (!(pmd = alloc_pmd()))
+				goto out_error;
+
+			/* Find original pmd */
+			orig = (pmd_table_t *)
+				phys_to_virt((from->entry[i] &
+				PGD_COARSE_ALIGN_MASK));
+
+			/* Copy original to new */
+			memcpy(pmd, orig, sizeof(pmd_table_t));
+
+			/* Replace original pmd entry in pgd with new */
+			to->entry[i] = (pgd_t)virt_to_phys(pmd);
+			to->entry[i] |= PGD_TYPE_COARSE;
+		}
+	}
+
+	return 0;
+
+out_error:
+	/* Find all non-kernel pmds we have just allocated and free them */
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
+		/* Non-kernel pmd that has just been allocated. */
+		if (!is_kern_pgdi(i) &&
+		    (to->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
+			/* Obtain the pmd handle */
+			pmd = (pmd_table_t *)
+			      phys_to_virt((to->entry[i] &
+					    PGD_COARSE_ALIGN_MASK));
+			/* Free pmd  */
+			free_pmd(pmd);
+		}
+	}
+	return -ENOMEM;
+}
+
 /*
  * Allocates and copies all levels of page tables from one task to another.
  * Useful when forking.
+ *
+ * The copied page tables end up having shared pmds for kernel entries
+ * and private copies of same pmds for user entries.
  */
 pgd_table_t *copy_page_tables(pgd_table_t *from)
 {
@@ -432,6 +487,7 @@ pgd_table_t *copy_page_tables(pgd_table_t *from)
 	if (!(pgd = alloc_pgd()))
 		return PTR_ERR(-ENOMEM);
 
+	/* First copy whole pgd entries */
 	memcpy(pgd, from, sizeof(pgd_table_t));
 
 	/* Allocate and copy all pmds that will be exclusive to new task. */

@@ -8,9 +8,130 @@
 #include INC_ARCH(exception.h)
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
+#include <l4/generic/kmalloc.h>
 #include <l4/api/space.h>
 #include <l4/api/errno.h>
 #include <l4/api/kip.h>
+
+struct address_space_list {
+	struct list_head list;
+
+	/* Lock for list add/removal */
+	struct spinlock list_lock;
+
+	/* To manage refcounting of *all* spaces in the list */
+	struct mutex ref_lock;
+	int count;
+};
+
+static struct address_space_list address_space_list;
+
+void init_address_space_list(void)
+{
+	memset(&address_space_list, 0, sizeof(address_space_list));
+
+	mutex_init(&address_space_list.ref_lock);
+	spin_lock_init(&address_space_list.list_lock);
+	INIT_LIST_HEAD(&address_space_list.list);
+}
+
+void address_space_reference_lock()
+{
+	mutex_lock(&address_space_list.ref_lock);
+}
+
+void address_space_reference_unlock()
+{
+	mutex_unlock(&address_space_list.ref_lock);
+}
+
+void address_space_attach(struct ktcb *tcb, struct address_space *space)
+{
+	tcb->space = space;
+	space->ktcb_refs++;
+}
+
+struct address_space *address_space_find(l4id_t spid)
+{
+	struct address_space *space;
+
+	spin_lock(&address_space_list.list_lock);
+	list_for_each_entry(space, &address_space_list.list, list) {
+		if (space->spid == spid) {
+			spin_unlock(&address_space_list.list_lock);
+			return space;
+		}
+	}
+	spin_unlock(&address_space_list.list_lock);
+	return 0;
+}
+
+void address_space_add(struct address_space *space)
+{
+	spin_lock(&address_space_list.list_lock);
+	list_add(&space->list, &address_space_list.list);
+	spin_unlock(&address_space_list.list_lock);
+}
+
+void address_space_remove(struct address_space *space)
+{
+	spin_lock(&address_space_list.list_lock);
+	BUG_ON(list_empty(&space->list));
+	list_del_init(&space->list);
+	spin_unlock(&address_space_list.list_lock);
+}
+
+void address_space_delete(struct address_space *space)
+{
+	/* Address space refcount lock must be held */
+
+	/* Sanity checks ??? */
+
+	/* Traverse the page tables and delete private pmds */
+
+	/* Delete the top-level pgd */
+
+	/* Return the space id ??? */
+
+	/* Deallocate the space structure */
+}
+
+struct address_space *address_space_create(struct address_space *orig)
+{
+	struct address_space *space;
+	pgd_table_t *pgd;
+	int err;
+
+	/* Allocate space structure */
+	if (!(space = kzalloc(sizeof(*space))))
+		return PTR_ERR(-ENOMEM);
+
+	/* Allocate pgd */
+	if (!(pgd = alloc_pgd())) {
+		kfree(space);
+		return PTR_ERR(-ENOMEM);
+	}
+
+	/* Initialize space structure */
+	INIT_LIST_HEAD(&space->list);
+	mutex_init(&space->lock);
+	space->pgd = pgd;
+
+	/* Copy all kernel entries */
+	copy_pgd_kern_all(pgd);
+
+	/* If an original space is supplied */
+	if (orig) {
+		/* Copy its user entries/tables */
+		if ((err = copy_user_tables(space, orig)) < 0) {
+			free_pgd(pgd);
+			kfree(space);
+			return PTR_ERR(err);
+		}
+	}
+
+	return space;
+}
 
 /*
  * Checks whether the given user address is a valid userspace address.

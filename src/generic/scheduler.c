@@ -225,7 +225,7 @@ void sched_suspend_sync(void)
 	preempt_enable();
 
 	/* Async wake up any waiters */
-	wake_up_task(find_task(current->pagerid), 0);
+	wake_up_task(tcb_find(current->pagerid), 0);
 	schedule();
 }
 
@@ -242,7 +242,7 @@ void sched_suspend_async(void)
 	preempt_enable();
 
 	/* Async wake up any waiters */
-	wake_up_task(find_task(current->pagerid), 0);
+	wake_up_task(tcb_find(current->pagerid), 0);
 	need_resched = 1;
 }
 

@@ -29,7 +29,7 @@ int sys_map(syscall_context_t *regs)
 		target = current;
 		goto found;
 	} else 	/* else search the tcb from its hash list */
-		if ((target = find_task(tid)))
+		if ((target = tcb_find(tid)))
 			goto found;
 
 	BUG();
@@ -56,7 +56,7 @@ int sys_unmap(syscall_context_t *regs)
 
 	if (tid == current->tid)
 		target = current;
-	else if (!(target = find_task(tid)))
+	else if (!(target = tcb_find(tid)))
 		return -ESRCH;
 
 	for (int i = 0; i < npages; i++) {

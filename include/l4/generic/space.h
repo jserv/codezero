@@ -21,15 +21,27 @@
 #if defined (__KERNEL__)
 
 #include <l4/lib/list.h>
+#include <l4/lib/mutex.h>
 #include INC_SUBARCH(mm.h)
 
 /* A simple page table with a reference count */
 struct address_space {
+	l4id_t spid;
 	struct list_head list;
+	struct mutex lock;
 	pgd_table_t *pgd;
 	int ktcb_refs;
 };
 
+struct address_space *address_space_create(struct address_space *orig);
+void address_space_delete(struct address_space *space);
+void address_space_attach(struct ktcb *tcb, struct address_space *space);
+struct address_space *address_space_find(l4id_t spid);
+void address_space_add(struct address_space *space);
+void address_space_remove(struct address_space *space);
+void address_space_reference_lock();
+void address_space_reference_unlock();
+void init_address_space_list(void);
 int check_access(unsigned long vaddr, unsigned long size, unsigned int flags);
 #endif
 
