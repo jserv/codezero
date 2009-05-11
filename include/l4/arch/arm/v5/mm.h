@@ -138,6 +138,7 @@ void add_section_mapping_init(unsigned int paddr, unsigned int vaddr,
 			      unsigned int size, unsigned int flags);
 
 struct address_space;
+int delete_page_tables(struct address_space *space);
 int copy_user_tables(struct address_space *new, struct address_space *orig);
 pgd_table_t *copy_page_tables(pgd_table_t *from);
 void remap_as_pages(void *vstart, void *vend);

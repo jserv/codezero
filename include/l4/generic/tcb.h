@@ -56,8 +56,8 @@ struct ktcb {
 
 	/* Thread information */
 	l4id_t tid;		/* Global thread id */
-	l4id_t spid;		/* Global space id */
 	l4id_t tgid;		/* Global thread group id */
+	/* See space for space id */
 
 	/* Flags to indicate various task status */
 	unsigned int flags;
@@ -120,7 +120,6 @@ union ktcb_union {
 static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 {
 	task->tid = ids->tid;
-	task->spid = ids->spid;
 	task->tgid = ids->tgid;
 }
 
@@ -134,6 +133,7 @@ extern struct id_pool *space_id_pool;
 extern struct id_pool *tgroup_id_pool;
 
 struct ktcb *tcb_find(l4id_t tid);
+struct ktcb *tcb_find_by_space(l4id_t tid);
 void tcb_add(struct ktcb *tcb);
 void tcb_remove(struct ktcb *tcb);
 

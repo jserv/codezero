@@ -6,12 +6,14 @@
 #include INC_GLUE(memory.h)
 #include INC_GLUE(memlayout.h)
 #include INC_ARCH(exception.h)
+#include INC_SUBARCH(mm.h)
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/kmalloc.h>
 #include <l4/api/space.h>
 #include <l4/api/errno.h>
 #include <l4/api/kip.h>
+#include <l4/lib/idpool.h>
 
 struct address_space_list {
 	struct list_head list;
@@ -69,7 +71,9 @@ struct address_space *address_space_find(l4id_t spid)
 void address_space_add(struct address_space *space)
 {
 	spin_lock(&address_space_list.list_lock);
+	BUG_ON(!list_empty(&space->list));
 	list_add(&space->list, &address_space_list.list);
+	BUG_ON(!++address_space_list.count);
 	spin_unlock(&address_space_list.list_lock);
 }
 
@@ -77,23 +81,24 @@ void address_space_remove(struct address_space *space)
 {
 	spin_lock(&address_space_list.list_lock);
 	BUG_ON(list_empty(&space->list));
+	BUG_ON(--address_space_list.count < 0);
 	list_del_init(&space->list);
 	spin_unlock(&address_space_list.list_lock);
 }
 
+/* Assumes address space reflock is already held */
 void address_space_delete(struct address_space *space)
 {
-	/* Address space refcount lock must be held */
-
-	/* Sanity checks ??? */
+	BUG_ON(space->ktcb_refs);
 
 	/* Traverse the page tables and delete private pmds */
+	delete_page_tables(space);
 
-	/* Delete the top-level pgd */
-
-	/* Return the space id ??? */
+	/* Return the space id */
+	id_del(space_id_pool, space->spid);
 
 	/* Deallocate the space structure */
+	kfree(space);
 }
 
 struct address_space *address_space_create(struct address_space *orig)
@@ -119,6 +124,13 @@ struct address_space *address_space_create(struct address_space *orig)
 
 	/* Copy all kernel entries */
 	copy_pgd_kern_all(pgd);
+
+	/*
+	 * Set up space id: Always allocate a new one. Specifying a space id
+	 * is not allowed since spid field is used to indicate the space to
+	 * copy from.
+	 */
+	space->spid = id_new(space_id_pool);
 
 	/* If an original space is supplied */
 	if (orig) {

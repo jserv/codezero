@@ -167,7 +167,7 @@ int sys_getid(syscall_context_t *regs)
 	struct ktcb *this = current;
 
 	ids->tid = this->tid;
-	ids->spid = this->spid;
+	ids->spid = this->space->spid;
 	ids->tgid = this->tgid;
 
 	return 0;

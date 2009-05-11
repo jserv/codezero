@@ -172,7 +172,7 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 	 * We don't lock for context modification because the
 	 * thread is not known to the system yet.
 	 */
-	new->context.spsr = orig->syscall_regs->spsr; /* User mode */
+	BUG_ON(!(new->context.spsr = orig->syscall_regs->spsr)); /* User mode */
 	new->context.r0 = orig->syscall_regs->r0;
 	new->context.r1 = orig->syscall_regs->r1;
 	new->context.r2 = orig->syscall_regs->r2;
@@ -213,32 +213,20 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 
 	/*
 	 * If thread space is new or copied,
-	 * allocate a new space id and tgid
+	 * thread gets same group id as its thread id
 	 */
 	if (flags == THREAD_NEW_SPACE ||
-	    flags == THREAD_COPY_SPACE) {
-		/*
-		 * Allocate requested id if
-		 * it's available, else a new one
-		 */
-		if ((ids->spid = id_get(space_id_pool,
-					ids->spid)) < 0)
-			ids->spid = id_new(space_id_pool);
-
-		/* Thread gets same group id as its thread id */
+	    flags == THREAD_COPY_SPACE)
 		ids->tgid = ids->tid;
-	}
 
-	if (flags == THREAD_SAME_SPACE) {
-		/*
-		 * If the tgid of original thread is supplied, that
-		 * implies the new thread wants to be in the same group,
-		 * and we leave it as it is. Otherwise the thread gets
-		 * the same group id as its unique thread id.
-		 */
-		if (ids->tgid != orig->tgid)
-			ids->tgid = ids->tid;
-	}
+	/*
+	 * If the tgid of original thread is supplied, that implies the
+	 * new thread wants to be in the same group, and we leave it as
+	 * it is. Otherwise the thread gets the same group id as its
+	 * unique thread id.
+	 */
+	if (flags == THREAD_SAME_SPACE && ids->tgid != orig->tgid)
+		ids->tgid = ids->tid;
 
 	/* Set all ids */
 	set_task_ids(new, ids);
@@ -249,31 +237,43 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flags)
 {
 	struct address_space *space, *new;
+	int ret = 0;
 
 	address_space_reference_lock();
 
 	if (flags == THREAD_SAME_SPACE) {
-		if (!(space = address_space_find(ids->spid)))
-			return -ESRCH;
+		if (!(space = address_space_find(ids->spid))) {
+			ret = -ESRCH;
+			goto out;
+		}
 		address_space_attach(tcb, space);
 	}
 	if (flags == THREAD_COPY_SPACE) {
-		if (!(space = address_space_find(ids->spid)))
-			return -ESRCH;
-		if (IS_ERR(new = address_space_create(space)))
-			return (int)new;
+		if (!(space = address_space_find(ids->spid))) {
+			ret = -ESRCH;
+			goto out;
+		}
+		if (IS_ERR(new = address_space_create(space))) {
+			ret = (int)new;
+			goto out;
+		}
+		ids->spid = new->spid;	/* Returned back to caller */
 		address_space_attach(tcb, new);
 		address_space_add(new);
 	}
 	if (flags == THREAD_NEW_SPACE) {
-		if (IS_ERR(new = address_space_create(0)))
-			return (int)new;
+		if (IS_ERR(new = address_space_create(0))) {
+			ret = (int)new;
+			goto out;
+		}
+		ids->spid = new->spid;	/* Returned back to caller */
 		address_space_attach(tcb, new);
 		address_space_add(new);
 	}
 
+out:
 	address_space_reference_unlock();
-	return 0;
+	return ret;
 }
 
 int thread_create(struct task_ids *ids, unsigned int flags)
@@ -286,22 +286,20 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	if (!(new = tcb_alloc_init()))
 		return -ENOMEM;
 
-	if ((err = thread_setup_space(new, ids, flags))) {
-		tcb_delete(new);
+	if (flags != THREAD_NEW_SPACE) {
+		BUG_ON(!(orig_task = tcb_find_by_space(ids->spid)));
+	} else
+		orig_task = 0;
+
+	if ((err = thread_setup_space(new, ids, flags)) < 0) {
+		/* Since it hasn't initialised maturely, we delete it this way */
+		free_page(new);	
 		return err;
 	}
 
-	if (flags != THREAD_NEW_SPACE) {
-		BUG_ON(!(orig_task = tcb_find(ids->tid)));
-
-		/* Set up ids and context using original tcb */
-		thread_setup_new_ids(ids, flags, new, orig_task);
-		arch_setup_new_thread(new, orig_task, flags);
-	} else {
-		/* Set up ids and context from scratch */
-		thread_setup_new_ids(ids, flags, new, 0);
-		arch_setup_new_thread(new, 0, flags);
-	}
+	/* Set up ids and context using original tcb or from scratch */
+	thread_setup_new_ids(ids, flags, new, (orig_task) ? orig_task : 0);
+	arch_setup_new_thread(new, (orig_task) ? orig_task : 0, flags);
 
 	tcb_add(new);
 

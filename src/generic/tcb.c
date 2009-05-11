@@ -75,6 +75,7 @@ void tcb_delete(struct ktcb *tcb)
 	BUG_ON(tcb->wqh_recv.sleepers > 0);
 	BUG_ON(!list_empty(&tcb->task_list));
 	BUG_ON(!list_empty(&tcb->rq_list));
+	BUG_ON(tcb->rq);
 	BUG_ON(tcb->nlocks);
 	BUG_ON(tcb->waiting_on);
 	BUG_ON(tcb->wq);
@@ -87,13 +88,33 @@ void tcb_delete(struct ktcb *tcb)
 	BUG_ON(--tcb->space->ktcb_refs < 0);
 
 	/* No refs left for the space, delete it */
-	if (tcb->space->ktcb_refs == 0)
+	if (tcb->space->ktcb_refs == 0) {
+		address_space_remove(tcb->space);
 		address_space_delete(tcb->space);
+	}
 
 	address_space_reference_unlock();
 
+	/* Deallocate tcb ids */
+	id_del(thread_id_pool, tcb->tid);
+
 	/* Free the tcb */
 	free_page(tcb);
+}
+
+struct ktcb *tcb_find_by_space(l4id_t spid)
+{
+	struct ktcb *task;
+
+	spin_lock(&ktcb_list.list_lock);
+	list_for_each_entry(task, &ktcb_list.list, task_list) {
+		if (task->space->spid == spid) {
+			spin_unlock(&ktcb_list.list_lock);
+			return task;
+		}
+	}
+	spin_unlock(&ktcb_list.list_lock);
+	return 0;
 }
 
 struct ktcb *tcb_find(l4id_t tid)
@@ -115,6 +136,7 @@ void tcb_add(struct ktcb *new)
 {
 	spin_lock(&ktcb_list.list_lock);
 	BUG_ON(!list_empty(&new->task_list));
+	BUG_ON(!++ktcb_list.count);
 	list_add(&new->task_list, &ktcb_list.list);
 	spin_unlock(&ktcb_list.list_lock);
 }
@@ -123,6 +145,7 @@ void tcb_remove(struct ktcb *new)
 {
 	spin_lock(&ktcb_list.list_lock);
 	BUG_ON(list_empty(&new->task_list));
+	BUG_ON(--ktcb_list.count < 0);
 	list_del_init(&new->task_list);
 	spin_unlock(&ktcb_list.list_lock);
 }

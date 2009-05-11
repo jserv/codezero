@@ -419,6 +419,12 @@ int remove_mapping(unsigned long vaddr)
 	return remove_mapping_pgd(vaddr, TASK_PGD(current));
 }
 
+int delete_page_tables(struct address_space *space)
+{
+	remove_mapping_pgd_all_user(space->pgd);
+	free_pgd(space->pgd);
+	return 0;
+}
 
 /*
  * Copies userspace entries of one task to another. In order to do that,
