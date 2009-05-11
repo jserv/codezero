@@ -130,7 +130,6 @@ static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 
 extern struct id_pool *thread_id_pool;
 extern struct id_pool *space_id_pool;
-extern struct id_pool *tgroup_id_pool;
 
 struct ktcb *tcb_find(l4id_t tid);
 struct ktcb *tcb_find_by_space(l4id_t tid);

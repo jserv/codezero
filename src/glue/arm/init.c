@@ -337,10 +337,9 @@ void init_tasks()
 	/* Initialise thread and space id pools */
 	thread_id_pool = id_pool_new_init(THREAD_IDS_MAX);
 	space_id_pool = id_pool_new_init(SPACE_IDS_MAX);
-	tgroup_id_pool = id_pool_new_init(TGROUP_IDS_MAX);
 	ids.tid = id_new(thread_id_pool);
 	ids.spid = id_new(space_id_pool);
-	ids.tgid = id_new(tgroup_id_pool);
+	ids.tgid = ids.tid;
 
 	/* Initialise the global task and address space lists */
 	init_ktcb_list();

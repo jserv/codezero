@@ -17,7 +17,6 @@
 /* ID pools for threads and spaces. */
 struct id_pool *thread_id_pool;
 struct id_pool *space_id_pool;
-struct id_pool *tgroup_id_pool;
 
 /* Hash table for all existing tasks */
 struct ktcb_list {
