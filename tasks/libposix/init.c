@@ -5,6 +5,7 @@
  */
 #include <shpage.h>
 #include <posix_init.h>
+#include <libposix.h>
 
 void posix_service_init(void)
 {

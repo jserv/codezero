@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <tests.h>
+#include <unistd.h>
 
 int shmtest(void)
 {
@@ -17,35 +18,53 @@ int shmtest(void)
 	void *bases[2] = { 0 , 0 };
 	int shmids[2];
 
-	printf("Initiating shmget()\n");
+	test_printf("Initiating shmget()\n");
 	for (int i = 0; i < 2; i++) {
 		if ((shmids[i] = shmget(keys[i], 27, IPC_CREAT | 0666)) < 0) {
-			printf("Call failed.\n");
-			perror("SHMGET");
+			test_printf("SHMGET", errno);
+			goto out_err;
 		} else
-			printf("SHMID returned: %d\n", shmids[i]);
+			test_printf("SHMID returned: %d\n", shmids[i]);
 	}
-	printf("Now shmat()\n");
+	test_printf("Now shmat()\n");
 	for (int i = 0; i < 2; i++) {
-		if ((int)(bases[i] = shmat(shmids[i], NULL, 0)) == -1)
-			perror("SHMAT");
-		else
-			printf("SHM base address returned: %p\n", bases[i]);
+		if ((int)(bases[i] = shmat(shmids[i], NULL, 0)) == -1) {
+			test_printf("SHMAT", errno);
+			goto out_err;
+		} else
+			test_printf("SHM base address returned: %p\n", bases[i]);
 	}
-	printf("Now shmdt()\n");
+	/* Write to the bases */
+	*((unsigned int *)bases[0]) = 0xDEADBEEF;
+	*((unsigned int *)bases[1]) = 0xFEEDBEEF;
+
+	test_printf("Now shmdt()\n");
 	for (int i = 0; i < 2; i++) {
-		if (shmdt(bases[i]) < 0)
-			perror("SHMDT");
-		else
-			printf("SHM detached OK.\n");
+		if (shmdt(bases[i]) < 0) {
+			test_printf("SHMDT", errno);
+			goto out_err;
+		} else
+			test_printf("SHM detached OK.\n");
 	}
-	printf("Now shmat() again\n");
+	test_printf("Now shmat() again\n");
 	for (int i = 0; i < 2; i++) {
-		if ((int)(bases[i] = shmat(shmids[i], NULL, 0)) == -1)
-			perror("SHMAT");
-		else
-			printf("SHM base address returned: %p\n", bases[i]);
+		bases[i] = shmat(shmids[i], NULL, 0);
+
+		/* SHMAT should fail since no refs were left in last detach */
+		if ((int)bases[i] != -1) {
+			test_printf("SHM base address returned: %p, "
+				    "but it should have failed\n", bases[i]);
+			goto out_err;
+		}
 	}
 
+	if (getpid() == parent_of_all)
+		printf("SHM TEST       -- PASSED --\n");
+
 	return 0;
+
+out_err:
+	printf("SHM TEST       -- FAILED --\n");
+	return 0;
+
 }

@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
+#include <libposix.h>
 
 static inline int l4_mkdir(const char *pathname, mode_t mode)
 {
@@ -30,12 +31,12 @@ static inline int l4_mkdir(const char *pathname, mode_t mode)
 
 	/* Call pager with shmget() request. Check ipc error. */
 	if ((fd = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_MKDIR)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	/* Check if syscall itself was successful */
 	if ((fd = l4_get_retval()) < 0) {
-		printf("%s: MKDIR Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: MKDIR Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	return fd;

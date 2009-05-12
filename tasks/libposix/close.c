@@ -12,6 +12,7 @@
 #include <l4lib/utcb.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
+#include <libposix.h>
 
 static inline int l4_close(int fd)
 {
@@ -19,12 +20,12 @@ static inline int l4_close(int fd)
 
 	/* Call pager with close() request. Check ipc error. */
 	if ((fd = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_CLOSE)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	/* Check if syscall itself was successful */
 	if ((fd = l4_get_retval()) < 0) {
-		printf("%s: CLOSE Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: CLOSE Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	return fd;
@@ -50,12 +51,12 @@ static inline int l4_fsync(int fd)
 
 	/* Call pager with close() request. Check ipc error. */
 	if ((fd = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_FSYNC)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	/* Check if syscall itself was successful */
 	if ((fd = l4_get_retval()) < 0) {
-		printf("%s: CLOSE Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: CLOSE Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	return fd;

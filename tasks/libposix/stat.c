@@ -19,6 +19,7 @@
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <shpage.h>
+#include <libposix.h>
 
 static inline int l4_fstat(int fd, void *buffer)
 {
@@ -30,12 +31,12 @@ static inline int l4_fstat(int fd, void *buffer)
 
 	/* Call pager with open() request. Check ipc error. */
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_FSTAT)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 	/* Check if syscall itself was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: FSTAT Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: FSTAT Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 	return err;
@@ -73,13 +74,13 @@ static inline int l4_stat(const char *pathname, void *buffer)
 
 	/* Call vfs with stat() request. Check ipc error. */
 	if ((err = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_STAT)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 
 	/* Check if syscall itself was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: STAT Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: STAT Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 

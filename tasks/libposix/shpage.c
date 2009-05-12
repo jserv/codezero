@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <shpage.h>
+#include <libposix.h>
 
 /*
  * Shared page initialisation of posix-like tasks.
@@ -47,13 +48,13 @@ static void *shared_page_address(void)
 	/* Call pager with utcb address request. Check ipc error. */
 	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID,
 			       L4_IPC_TAG_SHPAGE)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return PTR_ERR(err);
 	}
 
 	/* Check if syscall itself was successful */
 	if (IS_ERR(addr = (void *)l4_get_retval())) {
-		printf("%s: Request UTCB Address Error: %d.\n",
+		print_err("%s: Request UTCB Address Error: %d.\n",
 		       __FUNCTION__, (int)addr);
 		return addr;
 	}
@@ -80,7 +81,7 @@ int shared_page_init(void)
 	/* Obtain our shared page address */
 	shared_page = shared_page_address();
 
-	//printf("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
+	//print_err("%s: UTCB Read from mm0 as: 0x%x\n", __FUNCTION__,
 	//       (unsigned long)shared_page);
 
 	/* Use it as a key to create a shared memory region */

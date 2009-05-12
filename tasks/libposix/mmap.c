@@ -11,6 +11,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
+#include <libposix.h>
 
 /* FIXME: Implement the same separation that is in read.c write.c etc. such that
  * l4_syscall returns negative value and then the actual posix glue sets the errno
@@ -43,12 +44,12 @@ static inline void *l4_mmap(void *start, size_t length, int prot, int flags, int
 
 	/* Call pager with MMAP request. Check ipc error. */
 	if ((ret = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MMAP)) < 0) {
-		printf("%s: IPC Error: %d.\n", __FUNCTION__, ret);
+		print_err("%s: IPC Error: %d.\n", __FUNCTION__, ret);
 		return PTR_ERR(ret);
 	}
 
 	if (IS_ERR(ret = l4_get_retval()))
-		printf("%s: MMAP Error: %d.\n", __FUNCTION__, ret);
+		print_err("%s: MMAP Error: %d.\n", __FUNCTION__, ret);
 
 	return (void *)ret;
 }
@@ -79,13 +80,13 @@ int l4_munmap(void *start, size_t length)
 
 	/* Call pager with MMAP request. */
 	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MUNMAP)) < 0) {
-		printf("%s: IPC Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 
 	/* Check if syscall itself was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: MUNMAP Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: MUNMAP Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 	return 0;
@@ -111,12 +112,12 @@ int l4_msync(void *start, size_t length, int flags)
 
 	/* Call pager with MMAP request. */
 	if ((errno = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MSYNC)) < 0) {
-		printf("%s: IPC Error: %d.\n", __FUNCTION__, errno);
+		print_err("%s: IPC Error: %d.\n", __FUNCTION__, errno);
 		return -1;
 	}
 	/* Check if syscall itself was successful */
 	if ((errno = l4_get_retval()) < 0) {
-		printf("%s: MSYNC Error: %d.\n", __FUNCTION__, errno);
+		print_err("%s: MSYNC Error: %d.\n", __FUNCTION__, errno);
 		return -1;
 	}
 	return 0;

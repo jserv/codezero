@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
+#include <libposix.h>
 
 
 struct sys_execve_args {
@@ -36,12 +37,12 @@ static inline int l4_execve(const char *pathname, char *const argv[], char *cons
 
 	/* Call pager with open() request. Check ipc error. */
 	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_EXECVE)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 	/* Check if syscall itself was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: OPEN Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: OPEN Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 

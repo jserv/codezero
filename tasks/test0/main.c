@@ -22,9 +22,14 @@ void wait_pager(l4id_t partner)
 	// printf("Pager synced with us.\n");
 }
 
+pid_t parent_of_all;
+
 void main(void)
 {
-	printf("\n%s: Started with thread id %d\n", __TASKNAME__, self_tid());
+
+	printf("\n%s: Started with thread id %d\n", __TASKNAME__, getpid());
+
+	parent_of_all = getpid();
 
 	wait_pager(0);
 
@@ -33,6 +38,8 @@ void main(void)
 	dirtest();
 
 	mmaptest();
+
+	shmtest();
 
 	forktest();
 

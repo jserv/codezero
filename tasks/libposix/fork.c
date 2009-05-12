@@ -13,6 +13,7 @@
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <shpage.h>
+#include <libposix.h>
 
 static inline int l4_fork(void)
 {
@@ -20,12 +21,12 @@ static inline int l4_fork(void)
 
 	/* Call pager with open() request. Check ipc error. */
 	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_FORK)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 	/* Check if syscall itself was successful */
 	if ((err = l4_get_retval()) < 0) {
-		printf("%s: OPEN Error: %d.\n", __FUNCTION__, err);
+		print_err("%s: OPEN Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 	return err;
@@ -74,12 +75,12 @@ int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
 
 	/* Perform an ipc but with different return logic. See implementation. */
 	if ((ret = arch_clone(PAGER_TID, PAGER_TID)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
 		return ret;
 	}
 
 	if ((ret = l4_get_retval()) < 0) {
-		printf("%s: CLONE Error: %d.\n", __FUNCTION__, ret);
+		print_err("%s: CLONE Error: %d.\n", __FUNCTION__, ret);
 		return ret;
 	}
 	return ret;

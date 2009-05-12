@@ -5,6 +5,7 @@
  */
 #include <string.h>
 #include <stdlib.h>
+#include <libposix.h>
 
 char **__environ;
 

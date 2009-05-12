@@ -2,6 +2,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <libposix.h>
 
 int gettimeofday(struct timeval *tv, struct timezone *tz)
 {

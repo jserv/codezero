@@ -155,17 +155,11 @@ int do_shmdt(struct tcb *task, struct vm_file *shm)
 int sys_shmdt(struct tcb *task, const void *shmaddr)
 {
 	struct vm_file *shm_file, *n;
-	int err;
 
-	list_for_each_entry_safe(shm_file, n, &global_vm_files.list, list) {
+	list_for_each_entry_safe(shm_file, n, &global_vm_files.list, list)
 		if (shm_file->type == VM_FILE_SHM &&
-		    shm_file_to_desc(shm_file)->shm_addr == shmaddr) {
-			if ((err = do_shmdt(task, shm_file) < 0))
-				return err;
-			else
-				break;
-		}
-	}
+		    shm_file_to_desc(shm_file)->shm_addr == shmaddr)
+			return do_shmdt(task, shm_file);
 
 	return -EINVAL;
 }

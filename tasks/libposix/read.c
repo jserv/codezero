@@ -16,6 +16,7 @@
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <shpage.h>
+#include <libposix.h>
 
 static inline int l4_readdir(int fd, void *buf, size_t count)
 {
@@ -27,12 +28,12 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 
 	/* Call pager with readdir() request. Check ipc error. */
 	if ((cnt = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_READDIR)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
 	}
 	/* Check if syscall itself was successful */
 	if ((cnt = l4_get_retval()) < 0) {
-		printf("%s: READDIR Error: %d.\n", __FUNCTION__, (int)cnt);
+		print_err("%s: READDIR Error: %d.\n", __FUNCTION__, (int)cnt);
 		return cnt;
 
 	}
@@ -51,12 +52,12 @@ static inline int l4_read(int fd, void *buf, size_t count)
 
 	/* Call pager with read() request. Check ipc error. */
 	if ((cnt = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_READ)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
 	}
 	/* Check if syscall itself was successful */
 	if ((cnt = l4_get_retval()) < 0) {
-		printf("%s: READ Error: %d.\n", __FUNCTION__, (int)cnt);
+		print_err("%s: READ Error: %d.\n", __FUNCTION__, (int)cnt);
 		return cnt;
 
 	}

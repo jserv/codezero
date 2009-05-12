@@ -10,6 +10,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
+#include <libposix.h>
 
 static inline off_t l4_lseek(int fildes, off_t offset, int whence)
 {
@@ -21,12 +22,12 @@ static inline off_t l4_lseek(int fildes, off_t offset, int whence)
 
 	/* Call pager with shmget() request. Check ipc error. */
 	if ((offres = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_LSEEK)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, offres);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, offres);
 		return offres;
 	}
 	/* Check if syscall itself was successful */
 	if ((offres = l4_get_retval()) < 0) {
-		printf("%s: OPEN Error: %d.\n", __FUNCTION__, (int)offres);
+		print_err("%s: OPEN Error: %d.\n", __FUNCTION__, (int)offres);
 		return offres;
 
 	}

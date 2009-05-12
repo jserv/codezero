@@ -10,6 +10,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
+#include <libposix.h>
 
 static inline int l4_write(int fd, const void *buf, size_t count)
 {
@@ -21,12 +22,12 @@ static inline int l4_write(int fd, const void *buf, size_t count)
 
 	/* Call pager with write() request. Check ipc error. */
 	if ((wrcnt = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_WRITE)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, wrcnt);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, wrcnt);
 		return wrcnt;
 	}
 	/* Check if syscall itself was successful */
 	if ((wrcnt = l4_get_retval()) < 0) {
-		printf("%s: WRITE Error: %d.\n", __FUNCTION__, (int)wrcnt);
+		print_err("%s: WRITE Error: %d.\n", __FUNCTION__, (int)wrcnt);
 		return wrcnt;
 
 	}

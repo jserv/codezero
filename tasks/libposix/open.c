@@ -19,6 +19,7 @@
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <shpage.h>
+#include <libposix.h>
 
 static inline int l4_open(const char *pathname, int flags, mode_t mode)
 {
@@ -31,12 +32,12 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 
 	/* Call pager with open() request. Check ipc error. */
 	if ((fd = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_OPEN)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}
 	/* Check if syscall itself was successful */
 	if ((fd = l4_get_retval()) < 0) {
-		printf("%s: OPEN Error: %d, for path %s\n",
+		print_err("%s: OPEN Error: %d, for path %s\n",
 		       __FUNCTION__, fd, pathname);
 		return fd;
 	}

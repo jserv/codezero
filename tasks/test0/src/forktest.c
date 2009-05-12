@@ -10,13 +10,11 @@
 
 int global = 0;
 
-pid_t parent_of_all;
 
 int forktest(void)
 {
 	pid_t myid;
 
-	parent_of_all = getpid();
 
 	/* 16 forks */
 	for (int i = 0; i < 4; i++)
