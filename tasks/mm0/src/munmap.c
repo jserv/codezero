@@ -93,9 +93,13 @@ int vma_destroy_single(struct tcb *task, struct vm_area *vma)
 	if ((ret = vma_drop_merge_delete_all(vma)) < 0)
 		return ret;
 
-	/* Unmap the whole vma address range */
-	BUG_ON(l4_unmap((void *)__pfn_to_addr(vma->pfn_start),
-	       vma->pfn_end - vma->pfn_start, task->tid) < 0);
+	/*
+	 * Unmap the whole vma address range. Note that this
+	 * may return -1 if the area was already faulted, which
+	 * means the area was unmapped before being touched.
+	 */
+	l4_unmap((void *)__pfn_to_addr(vma->pfn_start),
+		 vma->pfn_end - vma->pfn_start, task->tid);
 
 	/* Unlink and delete vma */
 	list_del(&vma->list);
