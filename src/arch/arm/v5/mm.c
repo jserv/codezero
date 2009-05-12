@@ -14,6 +14,7 @@
 #include INC_GLUE(memlayout.h)
 #include INC_ARCH(linker.h)
 #include INC_ARCH(asm.h)
+#include INC_API(kip.h)
 
 /*
  * These are indices into arrays with pgd_t or pmd_t sized elements,
@@ -282,7 +283,7 @@ int __remove_mapping(pmd_table_t *pmd, unsigned long vaddr)
 
 	switch (pmd->entry[pmd_i] & PMD_TYPE_MASK) {
 		case PMD_TYPE_FAULT:
-			ret = -1;
+			ret = -ENOENT;
 			break;
 		case PMD_TYPE_LARGE:
 			pmd->entry[pmd_i] = 0;
@@ -596,8 +597,9 @@ void relocate_page_tables(void)
 	__pt_start = pt_new;
 	__pt_end = pt_new + pt_area_size;
 
-	printk("Initial page table area relocated from phys 0x%x to 0x%x\n",
-	       virt_to_phys(&kspace), virt_to_phys(TASK_PGD(current)));
+	printk("%s: Initial page tables moved from 0x%x to 0x%x physical\n",
+	       __KERNELNAME__, virt_to_phys(&kspace),
+	       virt_to_phys(TASK_PGD(current)));
 }
 
 /*
@@ -640,7 +642,7 @@ void remap_as_pages(void *vstart, void *vend)
 
 	/* Replace the direct section physical address with pmd's address */
 	pgd->entry[pgd_i] = (pgd_t)pmd_phys;
-	printk("Kernel area 0x%lx - 0x%lx remapped as %d pages\n",
+	printk("%s: Kernel area 0x%lx - 0x%lx remapped as %d pages\n", __KERNELNAME__,
 	       (unsigned long)vstart, (unsigned long)vend, numpages);
 }
 

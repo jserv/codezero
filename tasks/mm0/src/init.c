@@ -119,7 +119,7 @@ int start_boot_tasks(struct initdata *initdata)
 	} while (1);
 
 	/* MM0 needs partial initialisation since it's already running. */
-	printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
+	// printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
 	ids.tid = PAGER_TID;
 	ids.spid = PAGER_TID;
 	ids.tgid = PAGER_TID;
@@ -133,13 +133,13 @@ int start_boot_tasks(struct initdata *initdata)
 	ids.spid = VFS_TID;
 	ids.tgid = VFS_TID;
 
-	printf("%s: Initialising fs0\n",__TASKNAME__);
+	// printf("%s: Initialising fs0\n",__TASKNAME__);
 	BUG_ON((IS_ERR(fs0_task = boottask_exec(fs0_file, USER_AREA_START, USER_AREA_END, &ids))));
 	total++;
 
 	/* Initialise other tasks */
 	list_for_each_entry_safe(file, n, &other_files, list) {
-		printf("%s: Initialising new boot task.\n", __TASKNAME__);
+		// printf("%s: Initialising new boot task.\n", __TASKNAME__);
 		ids.tid = TASK_ID_INVALID;
 		ids.spid = TASK_ID_INVALID;
 		ids.tgid = TASK_ID_INVALID;
@@ -179,7 +179,7 @@ void init_mm(struct initdata *initdata)
 		printf("SHM initialisation failed.\n");
 		BUG();
 	}
-	printf("%s: Initialised shm structures.\n", __TASKNAME__);
+	// printf("%s: Initialised shm structures.\n", __TASKNAME__);
 
 	if (utcb_pool_init() < 0) {
 		printf("SHM initialisation failed.\n");
@@ -204,6 +204,5 @@ void initialise(void)
 	start_boot_tasks(&initdata);
 
 	mm0_test_global_vm_integrity();
-	printf("%s: Initialised the memory/process manager.\n", __TASKNAME__);
 }
 

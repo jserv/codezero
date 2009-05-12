@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <tests.h>
+#include <errno.h>
 
 #define PAGE_SIZE		0x1000
 
@@ -23,42 +24,33 @@ int mmaptest(void)
 	int x = 0x1000;
 
 	if ((fd = open("./newfile3.txt", O_CREAT | O_TRUNC | O_RDWR, S_IRWXU)) < 0)
-		perror("open:");
-	else
-		printf("open: Success.\n");
+		goto out_err;
 
 	/* Extend the file */
 	if ((int)lseek(fd, PAGE_SIZE*16, SEEK_SET) < 0)
-		perror("lseek");
-	else
-		printf("lseek: Success.\n");
+		goto out_err;
 
 	if (write(fd, &x, sizeof(x)) < 0)
-		perror("write");
-	else
-		printf("write: Success.\n");
+		goto out_err;
 
-	printf("%s: Calling mmap()\n", __TASKNAME__);
 	if ((int)(base = mmap(0, PAGE_SIZE*16, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
-		perror("mmap");
-	else
-		printf("mmap: Success: %p\n", base);
+		goto out_err;
 
 	*(unsigned int *)(base + PAGE_SIZE*2) = 0x1000;
-	printf("%s: Calling msync()\n", __TASKNAME__);
 	if (msync(base + PAGE_SIZE*2, PAGE_SIZE, MS_SYNC) < 0)
-		perror("msync");
-	else
-		printf("msync: Success: %p\n", base);
+		goto out_err;
 
-	printf("%s: Calling munmap()\n", __TASKNAME__);
 	if (munmap(base + PAGE_SIZE*2, PAGE_SIZE) < 0)
-		perror("munmap");
-	else
-		printf("munmap: Success: %p\n", base);
+		goto out_err;
+
 	*(unsigned int *)(base + PAGE_SIZE*3) = 0x1000;
 	*(unsigned int *)(base + PAGE_SIZE*1) = 0x1000;
 
+	printf("MMAP TEST      -- PASSED --\n");
+	return 0;
+
+out_err:
+	printf("MMAP TEST      -- FAILED --\n");
 	return 0;
 }
 

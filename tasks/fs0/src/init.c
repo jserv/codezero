@@ -78,6 +78,8 @@ int initialise(void)
 	/* Mount the filesystem on the root device */
 	vfs_mount_root(root_sb);
 
+	printf("%s: Mounted memfs root filesystem.\n", __TASKNAME__);
+
 	/* Learn about what tasks are running */
 	init_task_data();
 

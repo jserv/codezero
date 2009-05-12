@@ -7,9 +7,4 @@
  */
 #include <stdio.h>
 
-extern int errno;
 
-void perror(const char *str)
-{
-	printf("%s: %d\n", str, errno);
-}

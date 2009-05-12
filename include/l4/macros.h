@@ -2,6 +2,8 @@
 #define __MACROS_H__
 #include "config.h"
 
+#define __KERNELNAME__			"code0"
+
 /*
  * This file is automatically included before the first line of any
  * source file, using gcc's -imacro command line option.  Only macro

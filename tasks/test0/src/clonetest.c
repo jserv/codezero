@@ -7,15 +7,14 @@
 #include <sys/mman.h>
 #include <sched.h>
 #include <errno.h>
+#include <tests.h>
 
 int clone_global = 0;
 
 int my_thread_func(void *arg)
 {
-	printf("Cloned child %d running...\n", getpid());
 	for (int i = 0; i < 25; i++)
 		clone_global++;
-	printf("Cloned child exiting with global increased to: %d. (Should be just about 100 at final)\n", clone_global);
 	_exit(0);
 }
 
@@ -27,27 +26,30 @@ int clonetest(void)
 	/* Parent loops and calls clone() to clone new threads. Children don't come back from the clone() call */
 	for (int i = 0; i < 4; i++) {
 		if ((child_stack = mmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_GROWSDOWN, 0, 0)) == MAP_FAILED) {
-			printf("MMAP failed.\n");
-			_exit(1);
+			test_printf("MMAP failed.\n");
+			goto out_err;
 		} else {
-			printf("Mapped area starting at %p\n", child_stack);
+			test_printf("Mapped area starting at %p\n", child_stack);
 		}
 		((int *)child_stack)[-1] = 5; /* Test mapped area */
 
-		printf("Cloning...\n");
+		test_printf("Cloning...\n");
 
 		if ((childid = clone(my_thread_func, child_stack,
 		     CLONE_PARENT | CLONE_FS | CLONE_VM | CLONE_THREAD | CLONE_SIGHAND, 0)) < 0) {
-			perror("CLONE failed.\n");
+			test_printf("CLONE failed.\n");
+			goto out_err;
 		} else {
-			printf("Cloned a new thread with child pid %d\n", childid);
+			test_printf("Cloned a new thread with child pid %d\n", childid);
 		}
 	}
-	_exit(0);
+
+	/* TODO: Add wait() or something similar and check that global is 100 */
+
+	printf("CLONE TEST     -- PASSED --\n");
+	return 0;
+out_err:
+	printf("CLONE TEST     -- FAILED --\n");
 	return 0;
 }
-
-
-
-
 

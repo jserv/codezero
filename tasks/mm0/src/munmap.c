@@ -57,6 +57,7 @@ int vma_shrink(struct vm_area *vma, struct tcb *task,
 	       const unsigned long pfn_start, const unsigned long pfn_end)
 {
 	unsigned long diff, unmap_start, unmap_end;
+	int err;
 
 	/* Shrink from the end */
 	if (vma->pfn_start < pfn_start) {
@@ -77,8 +78,8 @@ int vma_shrink(struct vm_area *vma, struct tcb *task,
 		BUG();
 
 	/* Unmap the shrinked portion */
-	BUG_ON(l4_unmap((void *)__pfn_to_addr(unmap_start),
-	       unmap_end - unmap_start, task->tid) < 0);
+	BUG_ON((err = l4_unmap((void *)__pfn_to_addr(unmap_start),
+	       unmap_end - unmap_start, task->tid)) < 0);
 
 	return 0;
 }
@@ -110,6 +111,8 @@ int vma_destroy_single(struct tcb *task, struct vm_area *vma)
 int vma_unmap(struct vm_area *vma, struct tcb *task,
 	      const unsigned long pfn_start, const unsigned long pfn_end)
 {
+	// printf("Unmapping vma. Tid: %d, 0x%x-0x%x\n",task->tid, __pfn_to_addr(pfn_start), __pfn_to_addr(pfn_end));
+
 	/* Split needed? */
 	if (vma->pfn_start < pfn_start && vma->pfn_end > pfn_end)
 		return vma_split(vma, task, pfn_start, pfn_end);

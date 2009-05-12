@@ -82,7 +82,6 @@ struct kip {
 #define BLKDEV_TID			2
 
 #define __PAGERNAME__			"mm0"
-#define __KERNELNAME__			"code0"
 #define __VFSNAME__			"fs0"
 #define __BLKDEVNAME__			"blkdev0"
 

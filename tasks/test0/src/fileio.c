@@ -6,71 +6,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <tests.h>
-
-int fileio2(void)
-{
-	int fd;
-	ssize_t cnt;
-	int err;
-	char buf[128];
-	off_t offset;
-	int tid = getpid();
-	char *str = "I WROTE TO THIS FILE\n";
-
-	memset(buf, 0, 128);
-	if ((fd = open("/home/bahadir/newfile2.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
-		perror("OPEN");
-		return -1;
-	}
-	printf("%d: Created newfile2.txt\n", tid);
-
-	printf("%d: write.\n", tid);
-	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {
-		perror("WRITE");
-		return -1;
-	}
-	printf("%d: close.\n", tid);
-	if ((err = close(fd)) < 0) {
-		printf("Close failed.\n");
-		perror("CLOSE");
-		return -1;
-	}
-	printf("%d: re-open.\n", tid);
-	if ((fd = open("/home/bahadir/newfile2.txt", O_RDWR, S_IRWXU)) < 0) {
-		perror("OPEN");
-		return -1;
-	}
-
-	printf("%d: lseek.\n", tid);
-	if ((int)(offset = lseek(fd, 0, SEEK_SET)) < 0) {
-		perror("LSEEK");
-		return -1;
-	}
-	printf("%d: read.\n", tid);
-	if ((int)(cnt = read(fd, buf, strlen(str))) < 0) {
-		perror("READ");
-		return -1;
-	}
-
-	printf("%d: Read: %d bytes from file.\n", tid, cnt);
-	if (cnt) {
-		printf("%d: Read string: %s\n", tid, buf);
-		if (strcmp(buf, str)) {
-			printf("Error: strings not the same:\n");
-			printf("str: %s\n", str);
-			printf("buf: %s\n", buf);
-			return -1;
-		}
-	}
-
-	printf("%d: close.\n", tid);
-	if ((err = close(fd)) < 0) {
-		perror("CLOSE");
-		return -1;
-	}
-
-	return 0;
-}
+#include <errno.h>
 
 int fileio(void)
 {
@@ -81,64 +17,72 @@ int fileio(void)
 	off_t offset;
 	int tid = getpid();
 	char *str = "I WROTE TO THIS FILE\n";
+	char filename[128];
 
 	memset(buf, 0, 128);
-	if ((fd = open("/home/bahadir/newfile.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
-		perror("OPEN");
-		return -1;
+	memset(filename, 0, 128);
+	sprintf(filename, "/home/bahadir/newfile%d.txt", tid);
+	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
+		test_printf("OPEN: %d", errno);
+		goto out_err;
 	}
-	printf("%d: Created newfile.txt\n", tid);
+	test_printf("%d: Created %s\n", tid, filename);
 
-	printf("%d: write.\n", tid);
+	test_printf("%d: write.\n", tid);
 	if ((int)(cnt = write(fd, str, strlen(str))) < 0) {
-		perror("WRITE");
-		return -1;
+		test_printf("WRITE: %d", errno);
+		goto out_err;
 	}
 
-	printf("%d: lseek.\n", tid);
+	test_printf("%d: lseek.\n", tid);
 	if ((int)(offset = lseek(fd, 0, SEEK_SET)) < 0) {
-		perror("LSEEK");
-		return -1;
+		test_printf("LSEEK: %d", errno);
+		goto out_err;
 	}
-	printf("%d: read.\n", tid);
+	test_printf("%d: read.\n", tid);
 	if ((int)(cnt = read(fd, buf, strlen(str))) < 0) {
-		perror("READ");
-		return -1;
+		test_printf("READ: %d", errno);
+		goto out_err;
 	}
 
-	printf("%d: Read: %d bytes from file.\n", tid, cnt);
+	test_printf("%d: Read: %d bytes from file.\n", tid, cnt);
 	if (cnt) {
-		printf("%d: Read string: %s\n", tid, buf);
+		test_printf("%d: Read string: %s\n", tid, buf);
 		if (strcmp(buf, str)) {
-			printf("Strings not the same:\n");
-			printf("Str: %s\n", str);
-			printf("Buf: %s\n", buf);
-			return -1;
+			test_printf("Strings not the same:\n");
+			test_printf("Str: %s\n", str);
+			test_printf("Buf: %s\n", buf);
+			goto out_err;
 		}
 	}
 
-	printf("%d: close.\n", tid);
 	if ((err = close(fd)) < 0) {
-		perror("CLOSE");
-		return -1;
+		test_printf("CLOSE: %d", errno);
+		goto out_err;
 	}
+
+	printf("FILE IO TEST   -- PASSED --\n");
+	return 0;
+
+out_err:
+	printf("FILE IO TEST   -- FAILED --\n");
 	return 0;
 }
 
 #if defined(HOST_TESTS)
 int main(void)
 {
-	printf("File IO test 1:\n");
+	test_printf("File IO test 1:\n");
 	if (fileio() == 0)
-		printf("-- PASSED --\n");
+		test_printf("-- PASSED --\n");
 	else
-		printf("-- FAILED --\n");
+		test_printf("-- FAILED --\n");
 
-	printf("File IO test 2:\n");
+	test_printf("File IO test 2:\n");
 	if (fileio2() == 0)
-		printf("-- PASSED --\n");
+		test_printf("-- PASSED --\n");
 	else
-		printf("-- FAILED --\n");
+		test_printf("-- FAILED --\n");
 
 
 	return 0;

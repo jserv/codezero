@@ -88,7 +88,6 @@ void physmem_init()
 
 void memory_init()
 {
-	printascii("Initialising kernel memory allocator.\n");
 	init_pgalloc();
 }
 

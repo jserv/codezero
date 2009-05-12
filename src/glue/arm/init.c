@@ -146,6 +146,7 @@ void start_vm()
 		: "r" (KERNEL_OFFSET)
 		: "r0"
 	);
+
 	/* At this point, execution is on virtual addresses. */
 	remove_section_mapping(virt_to_phys(_start_kernel));
 
@@ -286,7 +287,6 @@ void init_pager(char *name, struct task_ids *ids)
 	}
 	BUG_ON(!taskimg);
 
-	printk("\nInitialising %s.\n", name);
 	if (taskimg->phys_start & PAGE_MASK)
 		printk("Warning, image start address not page aligned.\n");
 
@@ -313,8 +313,8 @@ void init_pager(char *name, struct task_ids *ids)
 	add_mapping_pgd(taskimg->phys_start, INITTASK_AREA_START,
 			task_pages * PAGE_SIZE, MAP_USR_DEFAULT_FLAGS,
 			TASK_PGD(task));
-	printk("Mapping %d pages from 0x%x to 0x%x for %s\n", task_pages,
-	       taskimg->phys_start, INITTASK_AREA_START, name);
+	//printk("Mapping %d pages from 0x%x to 0x%x for %s\n", task_pages,
+	//       taskimg->phys_start, INITTASK_AREA_START, name);
 
 	/* Add the physical pages used by the task to the page map */
 	set_page_map(taskimg->phys_start, task_pages, 1);
@@ -345,6 +345,8 @@ void init_tasks()
 	init_ktcb_list();
 	init_address_space_list();
 
+	printk("%s: Initialized. Starting %s as pager.\n",
+	       __KERNELNAME__, __PAGERNAME__);
 	/*
 	 * This must come last so that other tasks can copy its pgd before it
 	 * modifies it for its own specifics.
@@ -354,7 +356,7 @@ void init_tasks()
 
 void start_kernel(void)
 {
-	printascii("\nstart_kernel...\n");
+	printascii("\n"__KERNELNAME__": start kernel...\n");
 	/* Print section boundaries for kernel image */
 	//print_sections();
 
@@ -369,6 +371,8 @@ void start_kernel(void)
 
 	/* Initialise platform-specific page mappings, and peripherals */
 	platform_init();
+
+	printk("%s: Virtual memory enabled.\n", __KERNELNAME__);
 
 	/* Map and enable high vector page. Faults can be handled after here. */
 	vectors_init();

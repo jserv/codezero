@@ -38,9 +38,7 @@ void print_page_map(struct page_bitmap *map)
 	unsigned int total_used = 0;
 	int numpages = 0;
 
-	printf("Pages start at address 0x%x\n", map->pfn_start << PAGE_BITS);
-	printf("Pages end at address 0x%x\n", map->pfn_end << PAGE_BITS);
-	printf("The used page areas are:\n");
+	// printf("Page map: 0x%x-0x%x\n", map->pfn_start << PAGE_BITS, map->pfn_end << PAGE_BITS);
 	for (int i = 0; i < (PHYSMEM_TOTAL_PAGES >> 5); i++) {
 		for (int x = 0; x < WORD_BITS; x++) {
 			if (map->map[i] & (1 << x)) { /* A used page found? */
@@ -52,14 +50,14 @@ void print_page_map(struct page_bitmap *map)
 				if (start_pfn) { /* We had a used page */
 					/* Finished end of used range.
 					 * Print and reset. */
-					print_pfn_range(start_pfn, numpages);
+					//print_pfn_range(start_pfn, numpages);
 					start_pfn = 0;
 					numpages = 0;
 				}
 			}
 		}
 	}
-	printf("Total of %d pages. %d Kbytes.\n", total_used, total_used << 2);
+	printf("%s: Pagemap: Total of %d used physical pages. %d Kbytes used.\n", __TASKNAME__, total_used, total_used << 2);
 }
 
 

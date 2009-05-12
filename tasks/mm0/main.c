@@ -239,15 +239,12 @@ int self_spawn(void)
 
 void main(void)
 {
+	printf("\n%s: Started with thread id: %d\n", __TASKNAME__, self_tid());
+
 	/* Initialise the memory, server tasks, mmap and start them. */
 	initialise();
 
-/*
-	if (self_spawn())
-		while (1)
-			;
-*/
-
+	printf("%s: Memory/Process manager initialized. Listening requests.\n", __TASKNAME__);
 	while (1) {
 		handle_requests();
 	}

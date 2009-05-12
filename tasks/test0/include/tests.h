@@ -3,12 +3,19 @@
 
 #define __TASKNAME__			"test0"
 
+// #define TEST_VERBOSE_PRINT
+#if defined (TEST_VERBOSE_PRINT)
+#define test_printf(...)	printf(__VA_ARGS__)
+#else
+#define test_printf(...)
+#endif
+
+
 int shmtest(void);
 int forktest(void);
 int mmaptest(void);
 int dirtest(void);
 int fileio(void);
-int fileio2(void);
 int clonetest(void);
 int exectest(void);
 

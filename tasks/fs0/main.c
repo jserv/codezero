@@ -43,7 +43,7 @@
 void wait_pager(l4id_t partner)
 {
 	l4_send(partner, L4_IPC_TAG_SYNC);
-	printf("%s: Pager synced with us.\n", __TASKNAME__);
+	// printf("%s: Pager synced with us.\n", __TASKNAME__);
 }
 
 void handle_fs_requests(void)
@@ -135,13 +135,13 @@ void handle_fs_requests(void)
 
 void main(void)
 {
-	printf("\n%s: Started with tid: %d\n", __TASKNAME__, self_tid());
+	printf("\n%s: Started with thread id: %d\n", __TASKNAME__, self_tid());
 
 	initialise();
 
 	wait_pager(PAGER_TID);
 
-	printf("%s: Listening requests.\n", __TASKNAME__);
+	printf("%s: VFS service initialized. Listening requests.\n", __TASKNAME__);
 	while (1) {
 		handle_fs_requests();
 	}

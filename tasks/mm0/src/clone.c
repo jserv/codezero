@@ -157,7 +157,7 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 	global_add_task(child);
 
 	/* Start cloned child. */
-	printf("%s/%s: Starting cloned child.\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s/%s: Starting cloned child.\n", __TASKNAME__, __FUNCTION__);
 	l4_thread_control(THREAD_RUN, &ids);
 
 	/* Return child tid to parent */

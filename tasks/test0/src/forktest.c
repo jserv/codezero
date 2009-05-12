@@ -9,37 +9,45 @@
 #include <l4/macros.h>
 
 int global = 0;
-extern pid_t pid;
+
+static pid_t pid;
 
 int forktest(void)
 {
 	pid_t myid;
+	pid_t parent = getpid();
 
 	/* 16 forks */
 	for (int i = 0; i < 4; i++)
-		fork();
+		if (fork() < 0)
+			goto out_err;
 
 	myid = getpid();
 	pid = myid;
 	if (global != 0) {
-		printf("Global not zero.\n");
-		printf("-- FAILED --\n");
-		goto out;
+		test_printf("Global not zero.\n");
+		test_printf("-- FAILED --\n");
+		goto out_err;
 	}
-	global = myid;
+	global += myid;
 
-	if (global != myid) {
-		printf("Global has not changed to myid.\n");
-		printf("-- FAILED --\n");
-		goto out;
+	if (global != myid)
+		goto out_err;
+
+
+	if (getpid() != parent) {
+		/* Successful childs return here */
+		_exit(0);
+		BUG();
 	}
 
-	/* Print only when failed, otherwise too many pass messages */
-	printf("PID: %d, my global: %d\n", myid, global);
-	printf("-- PASSED --\n");
-out:
-	printf("PID: %d exiting...\n", myid);
-	_exit(0);
-	BUG();
+	/* Parent of all comes here if successful */
+	printf("FORK TEST      -- PASSED --\n");
+	return 0;
+
+	/* Any erroneous child or parent comes here */
+out_err:
+	printf("FORK TEST      -- FAILED --\n");
+	return 0;
 }
 

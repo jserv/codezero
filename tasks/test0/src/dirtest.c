@@ -95,7 +95,7 @@ void print_dirents(char *path, void *buf, int cnt)
 		//if (stat(pathbuf, &statbuf) < 0)
 		//	perror("STAT");
 		// print_fstat(&statbuf);
-		printf("%s\n", dp->d_name);
+		test_printf("%s\n", dp->d_name);
 		cnt -= dp->d_reclen;
 		dp = (struct dirent *)((void *)dp + dp->d_reclen);
 		i++;
@@ -111,13 +111,13 @@ int lsdir(char *path)
 	memset(dents, 0, sizeof(struct dirent) * DENTS_TOTAL);
 
 	if ((fd = open(path, O_RDONLY)) < 0) {
-		printf("OPEN failed.\n");
+		test_printf("OPEN failed.\n");
 		return -1;
 	} else
-		printf("Got fd: %d for opening %s\n", fd, path);
+		test_printf("Got fd: %d for opening %s\n", fd, path);
 
 	if ((bytes = os_readdir(fd, dents, sizeof(struct dirent) * DENTS_TOTAL)) < 0) {
-		printf("GETDENTS error: %d\n", bytes);
+		test_printf("GETDENTS error: %d\n", bytes);
 		return -1;
 	} else {
 		print_dirents(path, dents, bytes);
@@ -126,61 +126,88 @@ int lsdir(char *path)
 	return 0;
 }
 
-
 int dirtest(void)
 {
-	printf("\nlsdir current directory:\n");
 	if (lsdir(".") < 0) {
-		printf("lsdir failed.\n");
+		test_printf("lsdir failed.\n");
 		goto out_err;
 	}
-	printf("\nlsdir root directory:\n");
 	if (lsdir("/") < 0) {
-		printf("lsdir failed.\n");
+		test_printf("lsdir failed.\n");
 		goto out_err;
 	}
 
-	printf("\nCreating directories: usr, etc, tmp, var, home, opt, bin, boot, lib, dev\n");
-	if (mkdir("/usr", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/etc", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/tmp", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/var", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/bin", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/boot", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/lib", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/dev", 0) < 0)
-		perror("MKDIR");
+	test_printf("\nCreating directories: usr, etc, tmp, var, home, opt, bin, boot, lib, dev\n");
+	if (mkdir("/usr", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/etc", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/tmp", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/var", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/bin", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/boot", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/lib", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/dev", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/usr/bin", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/home/", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (mkdir("/home/bahadir", 0) < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	if (chdir("/home/bahadir") < 0) {
+		test_printf("MKDIR: %d\n", errno);
+		goto out_err;
+	}
+	test_printf("Changed curdir to /home/bahadir\n");
 
-	if (mkdir("/usr/bin", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/home/", 0) < 0)
-		perror("MKDIR");
-	if (mkdir("/home/bahadir", 0) < 0)
-		perror("MKDIR");
-	if (chdir("/home/bahadir") < 0)
-		perror("CHDIR");
-	printf("Changed curdir to /home/bahadir\n");
+	test_printf("\nlsdir root directory:\n");
+	if (lsdir("/") < 0)
+		goto out_err;
 
-	printf("\nlsdir root directory:\n");
-	lsdir("/");
+	test_printf("\nlsdir /usr:\n");
+	if (lsdir("/usr") < 0)
+		goto out_err;
 
-	printf("\nlsdir /usr:\n");
-	lsdir("/usr");
+	test_printf("\nlsdir current directory:\n");
+	if (lsdir(".") < 0)
+		goto out_err;
+	test_printf("\nlsdir /usr/./././bin//\n");
+	if (lsdir("/usr/./././bin//") < 0)
+		goto out_err;
 
-	printf("\nlsdir current directory:\n");
-	lsdir(".");
-	printf("\nlsdir /usr/./././bin//\n");
-	lsdir("/usr/./././bin//");
+	printf("DIR TEST       -- PASSED --\n");
 	return 0;
 
 out_err:
+	printf("DIR TEST       -- FAILED --\n");
 	return 0;
 }
 

@@ -41,8 +41,9 @@ void pgalloc_add_new_cache(struct mem_cache *cache, int cidx)
 
 void print_kmem_grant_params(grant_kmem_usage_t *params)
 {
-	printk("Possible kmem usage on this memory grant:\n");
-	printk("PGDs: %lu, PMDs: %lu, TCBs: %lu, Extra: %lu bytes.\n",
+	printk("%s: %lu bytes physical memory granted.\n", __KERNELNAME__, params->total_size);
+	printk("%s: Possible kmem usage on this memory grant:\n", __KERNELNAME__);
+	printk("%s: PGDs: %lu, PMDs: %lu, TCBs: %lu, Extra: %lu bytes.\n", __KERNELNAME__,
 	       params->total_pgds, params->total_pmds, params->total_tcbs,
 	       params->extra);
 }

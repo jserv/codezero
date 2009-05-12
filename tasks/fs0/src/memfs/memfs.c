@@ -185,7 +185,7 @@ struct superblock *memfs_get_superblock(void *block)
 	struct memfs_superblock *sb = block;
 	struct superblock *vfs_sb;
 
-	printf("%s: %s: Reading superblock.\n", __TASKNAME__, __FUNCTION__);
+	// printf("%s: %s: Reading superblock.\n", __TASKNAME__, __FUNCTION__);
 	/* We don't do sanity checks here, just confirm id. */
 	if (strcmp(sb->name, "memfs")) {
 		printf("%s: Name does not match: %s\n", __FUNCTION__, sb->name);

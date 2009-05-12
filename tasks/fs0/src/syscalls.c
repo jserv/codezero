@@ -416,8 +416,8 @@ int pager_sys_write(struct tcb *pager, unsigned long vnum, unsigned long f_offse
 	if (vfs_isdir(v))
 		return -EISDIR;
 
-	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%x, %d pages, buf at 0x%x\n",
-		__TASKNAME__, __FUNCTION__, vnum, f_offset, npages, pagebuf);
+	//printf("%s/%s: Writing to vnode %lu, at pgoff 0x%x, %d pages, buf at 0x%x\n",
+	//	__TASKNAME__, __FUNCTION__, vnum, f_offset, npages, pagebuf);
 
 	if ((ret = v->fops.write(v, f_offset, npages, pagebuf)) < 0)
 		return ret;
