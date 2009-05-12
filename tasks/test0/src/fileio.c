@@ -61,7 +61,8 @@ int fileio(void)
 		goto out_err;
 	}
 
-	printf("FILE IO TEST   -- PASSED --\n");
+	if (getpid() == parent_of_all)
+		printf("FILE IO TEST   -- PASSED --\n");
 	return 0;
 
 out_err:

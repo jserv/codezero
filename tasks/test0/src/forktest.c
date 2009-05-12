@@ -10,12 +10,13 @@
 
 int global = 0;
 
-static pid_t pid;
+pid_t parent_of_all;
 
 int forktest(void)
 {
 	pid_t myid;
-	pid_t parent = getpid();
+
+	parent_of_all = getpid();
 
 	/* 16 forks */
 	for (int i = 0; i < 4; i++)
@@ -23,7 +24,7 @@ int forktest(void)
 			goto out_err;
 
 	myid = getpid();
-	pid = myid;
+
 	if (global != 0) {
 		test_printf("Global not zero.\n");
 		test_printf("-- FAILED --\n");
@@ -35,14 +36,15 @@ int forktest(void)
 		goto out_err;
 
 
-	if (getpid() != parent) {
-		/* Successful childs return here */
-		_exit(0);
-		BUG();
+	if (getpid() != parent_of_all) {
+		/* Exit here to exit successful children */
+		//_exit(0);
+		//BUG();
 	}
 
-	/* Parent of all comes here if successful */
-	printf("FORK TEST      -- PASSED --\n");
+	if (getpid() == parent_of_all)
+		printf("FORK TEST      -- PASSED --\n");
+
 	return 0;
 
 	/* Any erroneous child or parent comes here */

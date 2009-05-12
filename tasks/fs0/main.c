@@ -135,7 +135,7 @@ void handle_fs_requests(void)
 
 void main(void)
 {
-	printf("\n%s: Started with thread id: %d\n", __TASKNAME__, self_tid());
+	printf("\n%s: Started with thread id %d\n", __TASKNAME__, self_tid());
 
 	initialise();
 

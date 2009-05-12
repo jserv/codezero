@@ -239,7 +239,7 @@ int self_spawn(void)
 
 void main(void)
 {
-	printf("\n%s: Started with thread id: %d\n", __TASKNAME__, self_tid());
+	printf("\n%s: Started with thread id %d\n", __TASKNAME__, self_tid());
 
 	/* Initialise the memory, server tasks, mmap and start them. */
 	initialise();

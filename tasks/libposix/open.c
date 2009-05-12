@@ -36,7 +36,8 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 	}
 	/* Check if syscall itself was successful */
 	if ((fd = l4_get_retval()) < 0) {
-		printf("%s: OPEN Error: %d.\n", __FUNCTION__, fd);
+		printf("%s: OPEN Error: %d, for path %s\n",
+		       __FUNCTION__, fd, pathname);
 		return fd;
 	}
 	return fd;

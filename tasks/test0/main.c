@@ -24,21 +24,23 @@ void wait_pager(l4id_t partner)
 
 void main(void)
 {
-	printf("\n%s: Started with tid %d.\n", __TASKNAME__, self_tid());
+	printf("\n%s: Started with thread id %d\n", __TASKNAME__, self_tid());
 
 	wait_pager(0);
 
-	dirtest();
+	printf("%s: Running POSIX API tests.\n", __TASKNAME__);
 
-	// exectest();
+	dirtest();
 
 	mmaptest();
 
-	fileio();
-
 	forktest();
 
+	fileio();
+
 	clonetest();
+
+	// exectest();
 
 	while (1)
 		wait_pager(0);

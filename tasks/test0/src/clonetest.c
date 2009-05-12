@@ -11,6 +11,8 @@
 
 int clone_global = 0;
 
+extern pid_t parent_of_all;
+
 int my_thread_func(void *arg)
 {
 	for (int i = 0; i < 25; i++)
@@ -46,7 +48,9 @@ int clonetest(void)
 
 	/* TODO: Add wait() or something similar and check that global is 100 */
 
-	printf("CLONE TEST     -- PASSED --\n");
+	if (getpid() == parent_of_all)
+		printf("CLONE TEST     -- PASSED --\n");
+
 	return 0;
 out_err:
 	printf("CLONE TEST     -- FAILED --\n");

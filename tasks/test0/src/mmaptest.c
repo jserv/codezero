@@ -23,7 +23,7 @@ int mmaptest(void)
 	void *base;
 	int x = 0x1000;
 
-	if ((fd = open("./newfile3.txt", O_CREAT | O_TRUNC | O_RDWR, S_IRWXU)) < 0)
+	if ((fd = open("./mmapfile.txt", O_CREAT | O_TRUNC | O_RDWR, S_IRWXU)) < 0)
 		goto out_err;
 
 	/* Extend the file */
