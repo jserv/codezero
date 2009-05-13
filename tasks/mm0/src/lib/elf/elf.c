@@ -97,7 +97,10 @@ int elf_mark_segments(struct elf_section_header *sect_header, int nsections,
 		       "bss segment in ELF file.\n", __FUNCTION__);
 	}
 
-	/* Data and text are less than page apart and unaligned */
+	/* Data and text are on the same page and not on a page boundary */
+	if (!((is_page_aligned(task->data_start) &&
+	      task->data_start == task->text_end) ||
+	      (page_align(task->data_start) > page_align(task->text_end))))
 	if ((task->data_start - task->text_end) < PAGE_SIZE &&
 	    !is_page_aligned(task->text_end)) {
 		printf("%s: Error: Distance between data and text"

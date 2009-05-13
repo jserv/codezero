@@ -24,7 +24,7 @@ int exectest(void)
 	char filename[128];
 
 	memset(filename, 0, 128);
-	sprintf(filename, "/home/bahadir/execfile%d.txt", getpid());
+	sprintf(filename, "/home/bahadir/execfile%d", getpid());
 
 	/* First create a new file and write the executable data to that file */
 	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
@@ -33,7 +33,7 @@ int exectest(void)
 	}
 
 	left = size;
-	printf("Writing %d bytes to %s\n", left, filename);
+	test_printf("Writing %d bytes to %s\n", left, filename);
 	while (left != 0) {
 		if ((cnt = write(fd, exec_start, left)) < 0)
 			goto out_err;
@@ -51,7 +51,7 @@ int exectest(void)
 	argv[4] = 0;
 
 	/* Execute the file */
-	execve("/home/bahadir/test1.axf", argv, 0);
+	execve(filename, argv, 0);
 
 out_err:
 	printf("EXECVE TEST -- FAILED --\n");

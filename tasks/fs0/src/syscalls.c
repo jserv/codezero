@@ -71,7 +71,7 @@ int pager_open_bypath(struct tcb *pager, char *pathname)
 	struct vnode *v;
 	int retval;
 
-	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
+	//printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (pager->tid != PAGER_TID)
 		return -EINVAL;
 
