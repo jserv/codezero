@@ -50,14 +50,56 @@ static inline void l4_set_sender(l4id_t sender)
 	write_mr(MR_SENDER, sender);
 }
 
+#define L4_IPC_FLAGS_FULL		0x00001000	/* Full IPC involves full UTCB copy */
+#define L4_IPC_FLAGS_EXTENDED		0x00002000	/* Extended IPC can page-fault and copy up to 2KB */
+#define L4_IPC_FLAGS_MASK		0x0000F000
+#define L4_IPC_TAG_MASK			0x00000FFF
+#define L4_IPC_SIZE_MASK		0x0FFF0000
+#define L4_IPC_SIZE_SHIFT		16
+
+static inline void l4_set_ipc_size(unsigned int size)
+{
+	unsigned int tag_flags = read_mr(MR_TAG);
+
+	tag_flags &= ~L4_IPC_SIZE_MASK;
+	tag_flags |= ((size << L4_IPC_SIZE_SHIFT) & L4_IPC_SIZE_MASK);
+
+	write_mr(MR_TAG, size);
+}
+
+static inline unsigned int l4_get_ipc_size(void)
+{
+	return (read_mr(MR_TAG) >> L4_IPC_SIZE_SHIFT) & L4_IPC_SIZE_MASK;
+}
+
+static inline void l4_set_ipc_flags(unsigned int flags)
+{
+	unsigned int tag_flags = read_mr(MR_TAG);
+
+	tag_flags &= ~L4_IPC_FLAGS_MASK;
+	tag_flags |= L4_IPC_FLAGS_MASK & flags;
+
+	write_mr(MR_TAG, tag_flags);
+}
+
+static inline unsigned int l4_get_ipc_flags(unsigned int flags)
+{
+	return read_mr(MR_TAG) & L4_IPC_FLAGS_MASK;
+}
+
 static inline unsigned int l4_get_tag(void)
 {
-	return read_mr(MR_TAG);
+	return read_mr(MR_TAG) & L4_IPC_TAG_MASK;
 }
 
 static inline void l4_set_tag(unsigned int tag)
 {
-	write_mr(MR_TAG, tag);
+	unsigned int tag_flags = read_mr(MR_TAG);
+
+	tag_flags &= ~L4_IPC_TAG_MASK;
+	tag_flags |= tag & L4_IPC_TAG_MASK;
+
+	write_mr(MR_TAG, tag_flags);
 }
 
 /*
