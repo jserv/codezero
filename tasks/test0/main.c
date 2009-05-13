@@ -47,7 +47,7 @@ void main(void)
 
 	clonetest();
 
-	// exectest();
+	exectest();
 
 	while (1)
 		wait_pager(0);

@@ -39,7 +39,7 @@
  * These fixed filesystem limits make it much easier to implement
  * filesystem space allocation.
  */
-#define MEMFS_TOTAL_SIZE		SZ_8MB
+#define MEMFS_TOTAL_SIZE		SZ_4MB
 #define MEMFS_TOTAL_INODES		128
 #define MEMFS_TOTAL_BLOCKS		2000
 #define MEMFS_FMAX_BLOCKS		40

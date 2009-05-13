@@ -97,11 +97,12 @@ int elf_mark_segments(struct elf_section_header *sect_header, int nsections,
 		       "bss segment in ELF file.\n", __FUNCTION__);
 	}
 
-	/* Data and text are less than page apart */
-	if ((task->data_start - task->text_start) < PAGE_SIZE) {
+	/* Data and text are less than page apart and unaligned */
+	if ((task->data_start - task->text_end) < PAGE_SIZE &&
+	    !is_page_aligned(task->text_end)) {
 		printf("%s: Error: Distance between data and text"
-		       " sections are less than page size (4K)\n",
-		      __FUNCTION__);
+		       " sections are less than page size (%d bytes)\n",
+		       __FUNCTION__, PAGE_SIZE);
 		return -ENOEXEC;
 	}
 

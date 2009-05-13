@@ -17,6 +17,8 @@ int sys_close(struct tcb *sender, int fd);
 int sys_fsync(struct tcb *sender, int fd);
 int file_open(struct tcb *opener, int fd);
 
+int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *length);
+
 struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned long length);
 int flush_file_pages(struct vm_file *f);
 int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,

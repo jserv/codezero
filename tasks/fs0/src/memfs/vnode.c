@@ -411,7 +411,6 @@ int memfs_vnode_filldir(void *userbuf, struct vnode *v, int count)
 	return 0;
 }
 
-
 struct vnode_ops memfs_vnode_operations = {
 	.readdir = memfs_vnode_readdir,
 	.filldir = memfs_vnode_filldir,

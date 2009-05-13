@@ -36,8 +36,7 @@ int pager_sys_open(struct tcb *pager, l4id_t opener, int fd)
 	struct tcb *task;
 	struct vnode *v;
 
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-	//
+	//printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (pager->tid != PAGER_TID)
 		return -EINVAL;
 
@@ -75,8 +74,6 @@ int pager_open_bypath(struct tcb *pager, char *pathname)
 	printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 	if (pager->tid != PAGER_TID)
 		return -EINVAL;
-
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
 	/* Parse path data */
 	if (IS_ERR(pdata = pathdata_parse(pathname,

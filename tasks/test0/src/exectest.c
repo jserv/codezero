@@ -21,14 +21,19 @@ int exectest(void)
 	unsigned long size = _end_test1 - _start_test1;
 	int left, cnt;
 	char *argv[5];
+	char filename[128];
+
+	memset(filename, 0, 128);
+	sprintf(filename, "/home/bahadir/execfile%d.txt", getpid());
 
 	/* First create a new file and write the executable data to that file */
-	if ((fd = open("/home/bahadir/test1.axf", O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
+	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
 		test_printf("OPEN: %d\n", errno);
 		goto out_err;
 	}
 
 	left = size;
+	printf("Writing %d bytes to %s\n", left, filename);
 	while (left != 0) {
 		if ((cnt = write(fd, exec_start, left)) < 0)
 			goto out_err;

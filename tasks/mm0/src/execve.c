@@ -20,55 +20,6 @@
 #include <exit.h>
 #include <lib/elf/elf.h>
 
-/*
- * Different from vfs_open(), which validates an already opened
- * file descriptor, this call opens a new vfs file by the pager
- * using the given path. The vnum handle and file length is returned
- * since the pager uses this information to access file pages.
- */
-int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *length)
-{
-	int err = 0;
-	struct tcb *vfs;
-
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-
-	if (!(vfs = find_task(VFS_TID)))
-		return -ESRCH;
-
-	/*
-	 * Copy string to vfs shared page.
-	 *
-	 * FIXME: There's a chance we're overwriting other tasks'
-	 * ipc information that is on the vfs shared page.
-	 */
-	strcpy(vfs->shared_page, pathname);
-
-	l4_save_ipcregs();
-
-	write_mr(L4SYS_ARG0, (unsigned long)vfs->shared_page);
-
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
-			       L4_IPC_TAG_PAGER_OPEN_BYPATH)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		goto out;
-	}
-
-	/* Check if syscall was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: VFS open error: %d.\n",
-		       __FUNCTION__, err);
-		goto out;
-	}
-
-	/* Read file information */
-	*vnum = read_mr(L4SYS_ARG0);
-	*length = read_mr(L4SYS_ARG1);
-
-out:
-	l4_restore_ipcregs();
-	return err;
-}
 
 /*
  * Probes and parses the low-level executable file format and creates a
