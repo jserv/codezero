@@ -127,6 +127,40 @@ static inline l4id_t self_tid(void)
 	return ids.tid;
 }
 
+static inline int l4_send_full(l4id_t to, unsigned int tag)
+{
+	l4_set_ipc_flags(L4_IPC_FLAGS_FULL);
+	l4_set_tag(tag);
+	return l4_ipc(to, L4_NILTHREAD);
+}
+
+static inline int l4_receive_full(l4id_t from)
+{
+	l4_set_ipc_flags(L4_IPC_FLAGS_FULL);
+	return l4_ipc(L4_NILTHREAD, from);
+}
+
+static inline int l4_send_extended(l4id_t to, unsigned int tag,
+				   unsigned int size, void *buf)
+{
+	l4_set_tag(tag);
+	l4_set_ipc_flags(L4_IPC_FLAGS_EXTENDED);
+	l4_set_ipc_size(size);
+
+	write_mr(L4SYS_ARG0, (unsigned long)buf);
+
+	return l4_ipc(to, L4_NILTHREAD);
+}
+
+static inline int l4_receive_extended(l4id_t from, unsigned int size, void *buf)
+{
+	l4_set_ipc_flags(L4_IPC_FLAGS_EXTENDED);/* Indicate extended receive */
+	l4_set_ipc_size(size);			/* How much data is accepted */
+	write_mr(L4SYS_ARG0, (unsigned long)buf);  /* Buffer to receive data */
+	return l4_ipc(L4_NILTHREAD, from);
+}
+
+
 static inline int l4_send(l4id_t to, unsigned int tag)
 {
 	l4_set_tag(tag);
