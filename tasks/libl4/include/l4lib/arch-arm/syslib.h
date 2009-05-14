@@ -1,7 +1,7 @@
 /*
  * Helper functions that wrap raw l4 syscalls.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
 
 #ifndef __L4LIB_SYSLIB_H__
@@ -30,6 +30,10 @@
 #define L4SYS_ARG2	(MR_UNUSED_START + 2)
 #define L4SYS_ARG3	(MR_UNUSED_START + 3)
 
+
+#define L4_IPC_TAG_MASK			0x00000FFF
+
+
 /*
  * Servers get sender.
  */
@@ -50,41 +54,45 @@ static inline void l4_set_sender(l4id_t sender)
 	write_mr(MR_SENDER, sender);
 }
 
-#define L4_IPC_FLAGS_FULL		0x00001000	/* Full IPC involves full UTCB copy */
-#define L4_IPC_FLAGS_EXTENDED		0x00002000	/* Extended IPC can page-fault and copy up to 2KB */
-#define L4_IPC_FLAGS_MASK		0x0000F000
-#define L4_IPC_TAG_MASK			0x00000FFF
-#define L4_IPC_SIZE_MASK		0x0FFF0000
-#define L4_IPC_SIZE_SHIFT		16
-
-static inline void l4_set_ipc_size(unsigned int size)
+static inline unsigned int l4_set_ipc_size(unsigned int word, unsigned int size)
 {
-	unsigned int tag_flags = read_mr(MR_TAG);
-
-	tag_flags &= ~L4_IPC_SIZE_MASK;
-	tag_flags |= ((size << L4_IPC_SIZE_SHIFT) & L4_IPC_SIZE_MASK);
-
-	write_mr(MR_TAG, size);
+	word &= ~L4_IPC_FLAGS_SIZE_MASK;
+	word |= ((size << L4_IPC_FLAGS_SIZE_SHIFT) & L4_IPC_FLAGS_SIZE_MASK);
+	return word;
 }
 
-static inline unsigned int l4_get_ipc_size(void)
+static inline unsigned int l4_get_ipc_size(unsigned int word)
 {
-	return (read_mr(MR_TAG) >> L4_IPC_SIZE_SHIFT) & L4_IPC_SIZE_MASK;
+	return (word & L4_IPC_FLAGS_SIZE_MASK) >> L4_IPC_FLAGS_SIZE_SHIFT;
 }
 
-static inline void l4_set_ipc_flags(unsigned int flags)
+static inline unsigned int l4_set_ipc_msg_index(unsigned int word, unsigned int index)
 {
-	unsigned int tag_flags = read_mr(MR_TAG);
+	/* FIXME: Define MR_PRIMARY_TOTAL, MR_TOTAL etc. and use MR_TOTAL HERE! */
+	BUG_ON(index > UTCB_SIZE);
 
-	tag_flags &= ~L4_IPC_FLAGS_MASK;
-	tag_flags |= L4_IPC_FLAGS_MASK & flags;
-
-	write_mr(MR_TAG, tag_flags);
+	word &= ~L4_IPC_FLAGS_MSG_INDEX_MASK;
+	word |= (index << L4_IPC_FLAGS_MSG_INDEX_SHIFT) &
+		 L4_IPC_FLAGS_MSG_INDEX_MASK;
+	return word;
 }
 
-static inline unsigned int l4_get_ipc_flags(unsigned int flags)
+static inline unsigned int l4_get_ipc_msg_index(unsigned int word)
 {
-	return read_mr(MR_TAG) & L4_IPC_FLAGS_MASK;
+	return (word & L4_IPC_FLAGS_MSG_INDEX_MASK)
+	       >> L4_IPC_FLAGS_MSG_INDEX_SHIFT;
+}
+
+static inline unsigned int l4_set_ipc_flags(unsigned int word, unsigned int flags)
+{
+	word &= ~L4_IPC_FLAGS_MASK;
+	word |= flags & L4_IPC_FLAGS_MASK;
+	return word;
+}
+
+static inline unsigned int l4_get_ipc_flags(unsigned int word)
+{
+	return word & L4_IPC_FLAGS_MASK;
 }
 
 static inline unsigned int l4_get_tag(void)
@@ -129,43 +137,64 @@ static inline l4id_t self_tid(void)
 
 static inline int l4_send_full(l4id_t to, unsigned int tag)
 {
-	l4_set_ipc_flags(L4_IPC_FLAGS_FULL);
 	l4_set_tag(tag);
-	return l4_ipc(to, L4_NILTHREAD);
+	return l4_ipc(to, L4_NILTHREAD, L4_IPC_FLAGS_FULL);
 }
 
 static inline int l4_receive_full(l4id_t from)
 {
-	l4_set_ipc_flags(L4_IPC_FLAGS_FULL);
-	return l4_ipc(L4_NILTHREAD, from);
+	return l4_ipc(L4_NILTHREAD, from, L4_IPC_FLAGS_FULL);
 }
 
 static inline int l4_send_extended(l4id_t to, unsigned int tag,
 				   unsigned int size, void *buf)
 {
-	l4_set_tag(tag);
-	l4_set_ipc_flags(L4_IPC_FLAGS_EXTENDED);
-	l4_set_ipc_size(size);
+	unsigned int flags = 0;
 
+	l4_set_tag(tag);
+
+	/* Set up flags word for extended ipc */
+	flags = l4_set_ipc_flags(flags, L4_IPC_FLAGS_EXTENDED);
+	flags = l4_set_ipc_size(flags, size);
+	flags = l4_set_ipc_msg_index(flags, L4SYS_ARG0);
+
+	/* Write buffer pointer to MR index that we specified */
 	write_mr(L4SYS_ARG0, (unsigned long)buf);
 
-	return l4_ipc(to, L4_NILTHREAD);
+	return l4_ipc(to, L4_NILTHREAD, flags);
 }
 
 static inline int l4_receive_extended(l4id_t from, unsigned int size, void *buf)
 {
-	l4_set_ipc_flags(L4_IPC_FLAGS_EXTENDED);/* Indicate extended receive */
-	l4_set_ipc_size(size);			/* How much data is accepted */
-	write_mr(L4SYS_ARG0, (unsigned long)buf);  /* Buffer to receive data */
-	return l4_ipc(L4_NILTHREAD, from);
+	unsigned int flags = 0;
+
+	/* Indicate extended receive */
+	flags = l4_set_ipc_flags(flags, L4_IPC_FLAGS_EXTENDED);
+
+	/* How much data is accepted */
+	flags = l4_set_ipc_size(flags, size);
+
+	/* Indicate which MR index buffer pointer is stored */
+	flags = l4_set_ipc_msg_index(flags, L4SYS_ARG0);
+
+	/* Set MR with buffer to receive data */
+	write_mr(L4SYS_ARG0, (unsigned long)buf);
+
+	return l4_ipc(L4_NILTHREAD, from, flags);
 }
 
+static inline int l4_sendrecv_extended(l4id_t to, l4id_t from,
+				       unsigned int tag, void *buf)
+{
+	/* Need to imitate sendrecv but with extended send/recv flags */
+	return 0;
+}
 
 static inline int l4_send(l4id_t to, unsigned int tag)
 {
 	l4_set_tag(tag);
 
-	return l4_ipc(to, L4_NILTHREAD);
+	return l4_ipc(to, L4_NILTHREAD, 0);
 }
 
 static inline int l4_sendrecv(l4id_t to, l4id_t from, unsigned int tag)
@@ -175,14 +204,14 @@ static inline int l4_sendrecv(l4id_t to, l4id_t from, unsigned int tag)
 	BUG_ON(to == L4_NILTHREAD || from == L4_NILTHREAD);
 	l4_set_tag(tag);
 
-	err = l4_ipc(to, from);
+	err = l4_ipc(to, from, 0);
 
 	return err;
 }
 
 static inline int l4_receive(l4id_t from)
 {
-	return l4_ipc(L4_NILTHREAD, from);
+	return l4_ipc(L4_NILTHREAD, from, 0);
 }
 
 /* Servers:
@@ -220,7 +249,7 @@ static inline int l4_ipc_return(int retval)
 	l4_set_retval(retval);
 
 	/* Setting the tag may overwrite retval so we l4_send without tagging */
-	return l4_ipc(sender, L4_NILTHREAD);
+	return l4_ipc(sender, L4_NILTHREAD, 0);
 }
 
 /* A helper that translates and maps a physical address to virtual */
