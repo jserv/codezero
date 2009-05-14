@@ -633,7 +633,8 @@ int task_start(struct tcb *task)
 	};
 
 	/* Start the thread */
-	printf("%s: Starting task with thread id: %d, space id: %d\n", __TASKNAME__, task->tid, task->spid);
+	// printf("%s: Starting task with thread id: %d, space id: %d\n",
+	// __TASKNAME__, task->tid, task->spid);
 	if ((err = l4_thread_control(THREAD_RUN, &ids)) < 0) {
 		printf("l4_thread_control failed with %d\n", err);
 		return err;

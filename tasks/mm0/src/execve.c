@@ -341,7 +341,7 @@ int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 	/* Copy the executable path string */
 	if ((ret = copy_user_string(sender, path, pathname, PATH_MAX)) < 0)
 		return ret;
-	printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
+	// printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
 
 	/* Copy the args */
 	if (argv && ((ret = copy_user_args(sender, &args, argv, ARGS_MAX)) < 0))
