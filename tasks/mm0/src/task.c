@@ -444,10 +444,13 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd, struct tcb *ta
 	}
 
 	/* Map the stack's part that will contain args and environment */
-	args_on_stack =
-		pager_validate_map_user_range2(task,
-					       (void *)task->args_start,
-					       stack_used, VM_READ | VM_WRITE);
+	if (IS_ERR(args_on_stack =
+		   pager_validate_map_user_range2(task,
+						  (void *)task->args_start,
+						  stack_used,
+						  VM_READ | VM_WRITE))) {
+		return (int)args_on_stack;
+	}
 
 	/* Copy arguments and env */
 	task_args_to_user(args_on_stack, args, env);
@@ -532,6 +535,7 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	void *mapped;
 	//struct vm_file *shm;
 	int err;
+	int text_size, data_size;
 
 	/* Set up task's user boundary regions */
 	task->start = USER_AREA_START;
@@ -539,49 +543,55 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	task->map_start = task->start;
 	task->map_end = task->end;
 
+	text_size = __pfn(page_align_up(task->text_end) -
+		    	  page_align(task->text_start));
+	data_size = __pfn(page_align_up(task->data_end) -
+			  page_align(task->text_start));
+
 	/* mmap task's text to task's address space. */
-	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task, task->text_start,
-				    VM_READ | VM_WRITE | VM_EXEC | VMA_PRIVATE,
-				    __pfn(page_align_up(task->text_end) -
-				    page_align(task->text_start))))) {
+	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task,
+				    task->text_start, VM_READ | VM_WRITE |
+				    VM_EXEC | VMA_PRIVATE, text_size))) {
 		printf("do_mmap: failed with %d.\n", (int)mapped);
-		return (int)mapped;
+		err = (int)mapped;
+		goto out_err;
 	}
 
 	/* mmap task's data to task's address space. */
-	if (IS_ERR(mapped = do_mmap(file, efd->data_offset, task, task->data_start,
-				    VM_READ | VM_WRITE | VMA_PRIVATE,
-				    __pfn(page_align_up(task->data_end) -
-				    page_align(task->data_start))))) {
+	if (IS_ERR(mapped = do_mmap(file, efd->data_offset, task,
+				    task->data_start,  VM_READ | VM_WRITE |
+				    VMA_PRIVATE, data_size))) {
 		printf("do_mmap: failed with %d.\n", (int)mapped);
-		return (int)mapped;
+		err = (int)mapped;
+		goto out_err;
 	}
 
 	/* mmap task's bss as anonymous memory. */
 	if ((err = task_map_bss(file, efd, task)) < 0) {
 		printf("%s: Mapping bss has failed.\n",
 		       __FUNCTION__);
-		return err;
+		goto out_err;
 	}
 
 	/* mmap task's stack, writing in the arguments and environment */
 	if ((err = task_map_stack(file, efd, task, args, env)) < 0) {
 		printf("%s: Mapping task's stack has failed.\n",
 		       __FUNCTION__);
-		return err;
+		goto out_err;
 	}
 
 	/* Get a new utcb slot for new task */
-	task_setup_utcb(task);
-
-	/*
-	 * Recycled task's shared page shm still exists. Current task will
-	 * attach to it when it starts in userspace.
-	 */
-	//if (IS_ERR(shm = shm_new((key_t)task->utcb, __pfn(DEFAULT_UTCB_SIZE))))
-	//	return (int)shm;
+	if ((err = task_setup_utcb(task)) < 0) {
+		printf("%s: Mapping task's utcb has failed.\n",
+		       __FUNCTION__);
+		goto out_err;
+	}
 
 	return 0;
+
+out_err:
+	task_free_resources(task);
+	return err;
 }
 
 int task_setup_registers(struct tcb *task, unsigned int pc,
