@@ -49,13 +49,35 @@ int thread_suspend(struct task_ids *ids)
 	return ret;
 }
 
-int arch_clear_thread(struct ktcb *task)
+int arch_clear_thread(struct ktcb *tcb)
 {
-	memset(&task->context, 0, sizeof(task->context));
-	task->context.spsr = ARM_MODE_USR;
+	/* Remove from the global list */
+	tcb_remove(tcb);
+
+	/* Sanity checks */
+	BUG_ON(!is_page_aligned(tcb));
+	BUG_ON(tcb->wqh_pager.sleepers > 0);
+	BUG_ON(tcb->wqh_send.sleepers > 0);
+	BUG_ON(tcb->wqh_recv.sleepers > 0);
+	BUG_ON(!list_empty(&tcb->task_list));
+	BUG_ON(!list_empty(&tcb->rq_list));
+	BUG_ON(tcb->rq);
+	BUG_ON(tcb->nlocks);
+	BUG_ON(tcb->waiting_on);
+	BUG_ON(tcb->wq);
+
+	/* Reinitialise the context */
+	memset(&tcb->context, 0, sizeof(tcb->context));
+	tcb->context.spsr = ARM_MODE_USR;
 
 	/* Clear the page tables */
-	remove_mapping_pgd_all_user(TASK_PGD(task));
+	remove_mapping_pgd_all_user(TASK_PGD(tcb));
+
+	/* Reinitialize all other fields */
+	tcb_init(tcb);
+
+	/* Add back to global list */
+	tcb_add(tcb);
 
 	return 0;
 }
@@ -293,7 +315,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 
 	if ((err = thread_setup_space(new, ids, flags)) < 0) {
 		/* Since it hasn't initialised maturely, we delete it this way */
-		free_page(new);	
+		free_page(new);
 		return err;
 	}
 
