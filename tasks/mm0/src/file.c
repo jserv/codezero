@@ -510,7 +510,7 @@ int fsync_common(struct tcb *task, int fd)
 void vm_file_put(struct vm_file *file)
 {
 	/* Reduce file's opener count */
-	if (!(file->openers))
+	if (!(file->openers--))
 		/* No openers left, check any mappers */
 		if (!file->vm_obj.nlinks)
 			/* No links or openers, delete the file */
