@@ -199,7 +199,7 @@ void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 {
 	unsigned long start = page_align(userptr);
 	unsigned long end = page_align_up(userptr + size);
-	unsigned long npages = end - start;
+	unsigned long npages = __pfn(end - start);
 	void *virt, *virt_start;
 	void *mapped = 0;
 
