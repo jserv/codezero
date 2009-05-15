@@ -23,19 +23,19 @@ int __sys_kread(int rd, void *dest)
 	switch(rd) {
 	case KDATA_PAGE_MAP:
 		// printk("Handling KDATA_PAGE_MAP request.\n");
-		if (check_access(vaddr, sizeof(page_map), MAP_USR_RW_FLAGS) < 0)
+		if (check_access(vaddr, sizeof(page_map), MAP_USR_RW_FLAGS, 1) < 0)
 			return -EINVAL;
 		memcpy(dest, &page_map, sizeof(page_map));
 		break;
 	case KDATA_BOOTDESC:
 		// printk("Handling KDATA_BOOTDESC request.\n");
-		if (check_access(vaddr, bootdesc->desc_size, MAP_USR_RW_FLAGS) < 0)
+		if (check_access(vaddr, bootdesc->desc_size, MAP_USR_RW_FLAGS, 1) < 0)
 			return -EINVAL;
 		memcpy(dest, bootdesc, bootdesc->desc_size);
 		break;
 	case KDATA_BOOTDESC_SIZE:
 		// printk("Handling KDATA_BOOTDESC_SIZE request.\n");
-		if (check_access(vaddr, sizeof(unsigned int), MAP_USR_RW_FLAGS) < 0)
+		if (check_access(vaddr, sizeof(unsigned int), MAP_USR_RW_FLAGS, 1) < 0)
 			return -EINVAL;
 		*(unsigned int *)dest = bootdesc->desc_size;
 		break;

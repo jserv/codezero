@@ -1,7 +1,7 @@
 /*
  * Inter-process communication
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
 #include <l4/generic/tcb.h>
 #include <l4/lib/mutex.h>
@@ -14,12 +14,45 @@
 #include INC_API(syscall.h)
 #include INC_GLUE(message.h)
 
+/*
+ * ipc syscall uses an ipc_type variable and flags and send/recv
+ * details are embedded in this variable.
+ */
+#define IPC_TYPE_FLAGS_SHIFT		2
 enum IPC_TYPE {
 	IPC_INVALID = 0,
 	IPC_SEND = 1,
 	IPC_RECV = 2,
-	IPC_SENDRECV = 3
+	IPC_SENDRECV = 3,
+	IPC_SEND_FULL = 5,
+	IPC_RECV_FULL = 6,
+	IPC_SENDRECV_FULL = 7,
+	IPC_SEND_EXTENDED = 9,
+	IPC_RECV_EXTENDED = 10,
+	IPC_SENDRECV_EXTENDED = 11,
 };
+
+/* Copy full utcb region from one task to another. */
+int ipc_full_copy(struct ktcb *to, struct ktcb *from)
+{
+	struct utcb *from_utcb = (struct utcb *)from->utcb_address;
+	struct utcb *to_utcb = (struct utcb *)to->utcb_address;
+	int ret;
+
+	/* Check that utcb memory accesses won't fault us */
+	if ((ret = check_access(to->utcb_address, UTCB_SIZE,
+				MAP_SVC_RW_FLAGS, 0)) < 0)
+		return ret;
+	if ((ret = check_access(to->utcb_address, UTCB_SIZE,
+				MAP_SVC_RW_FLAGS, 0)) < 0)
+		return ret;
+
+	/* Directly copy from one utcb to another */
+	memcpy(to_utcb->mr_rest, from_utcb->mr_rest,
+	       MR_REST * sizeof(unsigned int));
+
+	return 0;
+}
 
 /*
  * Copies message registers from one ktcb stack to another. During the return
@@ -30,10 +63,11 @@ enum IPC_TYPE {
  * L4_ANYTHREAD. This is done for security since the receiver cannot trust
  * the sender info provided by the sender task.
  */
-int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
+int ipc_msg_copy(struct ktcb *to, struct ktcb *from, int full)
 {
 	unsigned int *mr0_src = KTCB_REF_MR0(from);
 	unsigned int *mr0_dst = KTCB_REF_MR0(to);
+	int ret = 0;
 
 	/* NOTE:
 	 * Make sure MR_TOTAL matches the number of registers saved on stack.
@@ -44,7 +78,11 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 	if (to->expected_sender == L4_ANYTHREAD)
 		mr0_dst[MR_SENDER] = from->tid;
 
-	return 0;
+	/* Check if full utcb copying is requested and do it */
+	if (full)
+		ret = ipc_full_copy(to, from);
+
+	return ret;
 }
 
 int sys_ipc_control(syscall_context_t *regs)
@@ -61,10 +99,11 @@ int sys_ipc_control(syscall_context_t *regs)
  */
 
 /* Interruptible ipc */
-int ipc_send(l4id_t recv_tid)
+int ipc_send(l4id_t recv_tid, int full)
 {
 	struct ktcb *receiver = tcb_find(recv_tid);
 	struct waitqueue_head *wqhs, *wqhr;
+	int ret = 0;
 
 	wqhs = &receiver->wqh_send;
 	wqhr = &receiver->wqh_recv;
@@ -89,14 +128,18 @@ int ipc_send(l4id_t recv_tid)
 		spin_unlock(&wqhs->slock);
 
 		/* Copy message registers */
-		ipc_msg_copy(receiver, current);
+		if ((ret = ipc_msg_copy(receiver, current, full)) < 0) {
+			/* Set ipc error flag in receiver */
+			BUG_ON(ret != -EFAULT);
+			receiver->flags |= IPC_EFAULT;
+		}
 
 		// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
 		//       current->tid, receiver->tid);
 
 		/* Wake it up, we can yield here. */
 		sched_resume_sync(receiver);
-		return 0;
+		return ret;
 	}
 
 	/* The receiver is not ready and/or not expecting us */
@@ -116,12 +159,19 @@ int ipc_send(l4id_t recv_tid)
 		current->flags &= ~TASK_INTERRUPTED;
 		return -EINTR;
 	}
+
+	/* Did ipc fail with a fault error? */
+	if (current->flags & IPC_EFAULT) {
+		current->flags &= ~IPC_EFAULT;
+		return -EFAULT;
+	}
 	return 0;
 }
 
-int ipc_recv(l4id_t senderid)
+int ipc_recv(l4id_t senderid, int full)
 {
 	struct waitqueue_head *wqhs, *wqhr;
+	int ret = 0;
 
 	wqhs = &current->wqh_send;
 	wqhr = &current->wqh_recv;
@@ -154,12 +204,20 @@ int ipc_recv(l4id_t senderid)
 				task_unset_wqh(sleeper);
 				spin_unlock(&wqhr->slock);
 				spin_unlock(&wqhs->slock);
-				ipc_msg_copy(current, sleeper);
+
+				/* Copy message registers */
+				if ((ret = ipc_msg_copy(current, sleeper,
+							full)) < 0) {
+
+					/* Set ipc fault flag on sleeper */
+					BUG_ON(ret != -EFAULT);
+					sleeper->flags |= IPC_EFAULT;
+				}
 
 				// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
 				//       current->tid, sleeper->tid);
 				sched_resume_sync(sleeper);
-				return 0;
+				return ret;
 			}
 		}
 	}
@@ -181,6 +239,13 @@ int ipc_recv(l4id_t senderid)
 		current->flags &= ~TASK_INTERRUPTED;
 		return -EINTR;
 	}
+
+	/* Did ipc fail with a fault error? */
+	if (current->flags & IPC_EFAULT) {
+		current->flags &= ~IPC_EFAULT;
+		return -EFAULT;
+	}
+
 	return 0;
 }
 
@@ -198,20 +263,22 @@ int ipc_recv(l4id_t senderid)
  * (6) System task calls ipc_send() sending the return result.
  * (7) Rendezvous occurs. Both tasks exchange mrs and leave rendezvous.
  */
-int ipc_sendrecv(l4id_t to, l4id_t from)
+int ipc_sendrecv(l4id_t to, l4id_t from, int full)
 {
 	int ret = 0;
 
 	if (to == from) {
 		/* Send ipc request */
-		ipc_send(to);
+		if ((ret = ipc_send(to, full)) < 0)
+			return ret;
 
 		/*
 		 * Get reply.
 		 * A client would block its server only very briefly
 		 * between these calls.
 		 */
-		ipc_recv(from);
+		if ((ret = ipc_recv(from, full)) < 0)
+			return ret;
 	} else {
 		printk("%s: Unsupported ipc operation.\n", __FUNCTION__);
 		ret = -ENOSYS;
@@ -225,13 +292,28 @@ static inline int __sys_ipc(l4id_t to, l4id_t from, unsigned int ipc_type)
 
 	switch (ipc_type) {
 	case IPC_SEND:
-		ret = ipc_send(to);
+		ret = ipc_send(to, 0);
 		break;
 	case IPC_RECV:
-		ret = ipc_recv(from);
+		ret = ipc_recv(from, 0);
 		break;
 	case IPC_SENDRECV:
-		ret = ipc_sendrecv(to, from);
+		ret = ipc_sendrecv(to, from, 0);
+		break;
+	case IPC_SEND_FULL:
+		ret = ipc_send(to, 1);
+		break;
+	case IPC_RECV_FULL:
+		ret = ipc_recv(from, 1);
+		break;
+	case IPC_SENDRECV_FULL:
+		ret = ipc_sendrecv(to, from, 1);
+		break;
+	case IPC_SEND_EXTENDED:
+		break;
+	case IPC_RECV_EXTENDED:
+		break;
+	case IPC_SENDRECV_EXTENDED:
 		break;
 	case IPC_INVALID:
 	default:
@@ -267,6 +349,7 @@ int sys_ipc(syscall_context_t *regs)
 {
 	l4id_t to = (l4id_t)regs->r0;
 	l4id_t from = (l4id_t)regs->r1;
+	unsigned int flags = (unsigned int)regs->r2;
 	unsigned int ipc_type = 0;
 	int ret = 0;
 
@@ -292,6 +375,9 @@ int sys_ipc(syscall_context_t *regs)
 	/* [1] for Receive, [1:0] for both */
 	ipc_type |= ((from != L4_NILTHREAD) << 1);
 
+	/* Short, full or extended ipc set here. Bits [3:2] */
+	ipc_type |= (flags & L4_IPC_FLAGS_MASK) << IPC_TYPE_FLAGS_SHIFT;
+
 	if (ipc_type == IPC_INVALID) {
 		ret = -EINVAL;
 		goto error;
@@ -302,7 +388,7 @@ int sys_ipc(syscall_context_t *regs)
 	return ret;
 
 error:
-	printk("Erroneous ipc by: %d. Err: %d\n", current->tid, ret);
+	// printk("Erroneous ipc by: %d. Err: %d\n", current->tid, ret);
 	ipc_type = IPC_INVALID;
 	return ret;
 }

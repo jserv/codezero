@@ -26,6 +26,9 @@
 #define TASK_SUSPENDING			(1 << 1)
 #define TASK_RESUMING			(1 << 2)
 
+/* IPC resulted in a fault error (For ipcs that cannot page fault) */
+#define IPC_EFAULT			(1 << 3)
+
 /* Task states */
 enum task_state {
 	TASK_INACTIVE	= 0,

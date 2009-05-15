@@ -58,7 +58,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 				 offsetof(syscall_context_t, r3));
 
 	/* Send ipc to the task's pager */
-	ipc_sendrecv(current->pagerid, current->pagerid);
+	ipc_sendrecv(current->pagerid, current->pagerid, 0);
 
 	/*
 	 * FIXME: CHECK TASK KILL REPLY !!!

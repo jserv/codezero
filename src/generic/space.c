@@ -151,7 +151,7 @@ struct address_space *address_space_create(struct address_space *orig)
  * If its not mapped-in, it generates a page-in request to the thread's
  * pager. If fault hasn't cleared, aborts.
  */
-int check_access(unsigned long vaddr, unsigned long size, unsigned int flags)
+int check_access(unsigned long vaddr, unsigned long size, unsigned int flags, int page_in)
 {
 	int err;
 
@@ -159,19 +159,16 @@ int check_access(unsigned long vaddr, unsigned long size, unsigned int flags)
 	if (size >= USER_AREA_SIZE)
 		return -EINVAL;
 
-	/* Check if in user range, but this is more up to the pager to decide */
-	if (current->tid == PAGER_TID) {
-		if (!(vaddr >= INITTASK_AREA_START && vaddr < INITTASK_AREA_END))
-			return -EINVAL;
-	} else {
-		if (!(vaddr >= USER_AREA_START && vaddr < USER_AREA_END))
-			return -EINVAL;
+	/* Check if the address is mapped with given flags */
+	if (!check_mapping(vaddr, size, flags)) {
+		/* Is a page in requested? */
+		if (page_in) {
+			/* Ask pager if paging in is possible */
+			if((err = pager_pagein_request(vaddr, size, flags)) < 0)
+				return err;
+		} else
+			return -EFAULT;
 	}
-
-	/* If not mapped, ask pager whether this is possible */
-	if (!check_mapping(vaddr, size, flags))
-		if((err = pager_pagein_request(vaddr, size, flags)) < 0)
-			return err;
 
 	return 0;
 }

@@ -83,4 +83,13 @@
 
 #include INC_GLUE(memlayout.h)
 
+#if defined (__KERNEL__)
+struct utcb {
+	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
+	u32 saved_tag;		/* Saved tag field for stacked ipcs */
+	u32 saved_sender;	/* Saved sender field for stacked ipcs */
+	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
+};
+#endif
+
 #endif /* __GLUE_ARM_MESSAGE_H__ */

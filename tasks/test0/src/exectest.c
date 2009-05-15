@@ -11,14 +11,14 @@
 #include <string.h>
 #include <errno.h>
 
-extern char _start_test1[];
-extern char _end_test1[];
+extern char _start_test_exec[];
+extern char _end_test_exec[];
 
 int exectest(void)
 {
 	int fd;
-	void *exec_start = (void *)_start_test1;
-	unsigned long size = _end_test1 - _start_test1;
+	void *exec_start = (void *)_start_test_exec;
+	unsigned long size = _end_test_exec - _start_test_exec;
 	int left, cnt;
 	char *argv[5];
 	char filename[128];

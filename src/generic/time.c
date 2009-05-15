@@ -77,7 +77,7 @@ int sys_time(syscall_context_t *args)
 	int set = (int)args->r1;
 	int retries = 20;
 
-	if (check_access((unsigned long)tv, sizeof(*tv), MAP_USR_RW_FLAGS) < 0)
+	if (check_access((unsigned long)tv, sizeof(*tv), MAP_USR_RW_FLAGS, 1) < 0)
 		return -EINVAL;
 
 	/* Get time */

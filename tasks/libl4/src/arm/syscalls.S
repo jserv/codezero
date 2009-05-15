@@ -53,7 +53,7 @@ END_PROC(l4_kread)
 
 /*
  * For clone() we need special assembler handling
- * Same signature as ipc(): @r0 = to, @r1 = from
+ * Same signature as ipc(): @r0 = to, @r1 = from @r2 = flags
  *
  * NOTE: Note that this breaks l4 system call interface,
  * this should be moved elsewhere and modified using existing l4 mechanisms.
@@ -62,6 +62,11 @@ BEGIN_PROC(arch_clone)
 	stmfd	sp!, {r4-r8,lr}		@ Save context.
 	utcb_address r12		@ Get utcb address.
 	ldmia	r12!, {r3-r8}		@ Load 6 Message registers from utcb. MR0-MR5
+
+	cmp	r2, #0
+1:
+	bne	1b
+
 	ldr	r12, =__l4_ipc
 	mov	lr, pc
 	ldr	pc, [r12]		@ Perform the ipc()
@@ -101,6 +106,11 @@ BEGIN_PROC(l4_ipc)
 	stmfd	sp!, {r4-r8,lr}		@ Save context.
 	utcb_address r12		@ Get utcb address.
 	ldmia	r12!, {r3-r8}		@ Load 6 Message registers from utcb. MR0-MR5
+
+	cmp	r2, #0
+1:
+	bne	1b
+
 	ldr	r12, =__l4_ipc
 	mov	lr, pc
 	ldr	pc, [r12]

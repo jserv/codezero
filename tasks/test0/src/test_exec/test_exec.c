@@ -19,37 +19,18 @@ void wait_pager(l4id_t partner)
 	for (int i = 0; i < 6; i++)
 		write_mr(i, i);
 	l4_send(partner, L4_IPC_TAG_SYNC);
-	printf("Pager synced with us.\n");
+	// printf("Pager synced with us.\n");
 }
-
-pid_t parent_of_all;
 
 void main(void)
 {
-
-	printf("\n%s: Started with thread id %d\n", __TASKNAME__, getpid());
-
-	parent_of_all = getpid();
-
 	wait_pager(0);
-
-	printf("%s: Running POSIX API tests.\n", __TASKNAME__);
-
-	dirtest();
-
-	mmaptest();
-
-	shmtest();
-
-	forktest();
-
-	fileio();
-
-	clonetest();
-
-	exectest();
-
-	while (1)
-		wait_pager(0);
+	if (getpid() == 2) {
+		printf("EXECVE TEST    -- PASSED --\n", getpid());
+		printf("\n(Thread %d): Continues to sync with the pager...\n", getpid());
+		while (1)
+			wait_pager(0);
+	}
+	_exit(0);
 }
 

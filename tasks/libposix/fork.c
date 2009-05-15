@@ -52,7 +52,7 @@ int fork(void)
 	return ret;
 }
 
-extern int arch_clone(l4id_t to, l4id_t from);
+extern int arch_clone(l4id_t to, l4id_t from, unsigned int flags);
 
 int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
 {
@@ -74,7 +74,7 @@ int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
 	write_mr(L4SYS_ARG1, flags);
 
 	/* Perform an ipc but with different return logic. See implementation. */
-	if ((ret = arch_clone(PAGER_TID, PAGER_TID)) < 0) {
+	if ((ret = arch_clone(PAGER_TID, PAGER_TID, 0)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
 		return ret;
 	}

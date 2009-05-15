@@ -68,11 +68,42 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  CPPFLAGS = "-D__USERSPACE__",
 		  CPPPATH = ['#include', libl4_incpath, libposix_incpath, kernel_incpath])
 
+
+test_exec_ld_script = "include/test_exec_linker.lds"
+# The kernel build environment:
+test_exec_env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+		  # We don't use -nostdinc because sometimes we need standard headers,
+		  # such as stdarg.h e.g. for variable args, as in printk().
+		  CCFLAGS = ['-O3', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
+		  LINKFLAGS = ['-nostdlib', '-T' + test_exec_ld_script, "-L" + libc_libpath, "-L" + libl4_path, \
+				  '-L' + libposix_libpath],
+		  ASFLAGS = ['-D__ASSEMBLY__'],
+		  PROGSUFFIX = '.axf',			# The suffix to use for final executable
+		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
+		  LIBS = [libc_name, 'gcc', libc_name, 'libl4', 'libposix', libc_name],
+		  CPPFLAGS = "-D__USERSPACE__",
+		  CPPPATH = ['#include', libl4_incpath, libposix_incpath, kernel_incpath])
+
 src = [glob("src/*.c"), glob("*.c"), glob("*.S"), glob("src/arch/arm/*.c"), glob("../libcont/*.c")]
 objs = env.Object(src)
 physical_base = env.Command(physical_base_ld_script, prev_image, get_physical_base)
 crt0_copied = env.Command("crt0.o", libc_crt0, copy_crt0)
 
+test_exec_src = [glob("src/test_exec/*.c")]
+test_exec_objs = test_exec_env.Object(test_exec_src)
+test_exec_name = "test_exec"
+test_exec = test_exec_env.Program(test_exec_name, test_exec_objs + [crt0_copied])
+test_exec_env.Alias(test_exec_name, test_exec)
+
+env.Depends(objs, test_exec)
 task = env.Program(task_name, objs + [crt0_copied])
 env.Alias(task_name, task)
+
+# I find this to be a BUG related to SCons. SCons is still good compared to
+# notoriously horrible makefiles, but it could have been better.
+# if test_exec doesn't depend on physical_base, test_exec is compiled but
+# task complains that physical_base is not there. However we already declared
+# its dependency below.
+
+env.Depends(test_exec, physical_base)
 env.Depends(task, physical_base)
