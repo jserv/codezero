@@ -6,13 +6,13 @@
 #ifndef __GLUE_ARM_MESSAGE_H__
 #define __GLUE_ARM_MESSAGE_H__
 
-/* 
+/*
  * Here's a summary of how ARM registers are used during IPC:
  *
  * System registers:
  * r0 - r2: Passed as arguments to ipc() call. They are the registers
  * the microkernel will read and they have system-wide meaning.
- * 
+ *
  * Primary message registers:
  * r3 - r8: These 6 registers are the primary message registers MR0-MR6
  * Their format is application-specific, i.e. the microkernel imposes no
@@ -58,7 +58,7 @@
  * Complicated for you? Suggest a simpler design and it shall be implemented!
  */
 
-#define MR_REST			(UTCB_SIZE - MR_TOTAL - 2)	/* -2 is for fields on utcb */
+#define MR_REST			((UTCB_SIZE >> 2) - MR_TOTAL - 2)	/* -2 is for fields on utcb */
 #define MR_TOTAL		6
 #define MR_TAG			0	/* Contains the purpose of message */
 #define MR_SENDER		1	/* For anythread receivers to discover sender */

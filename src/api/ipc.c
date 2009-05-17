@@ -353,6 +353,11 @@ int sys_ipc(syscall_context_t *regs)
 	unsigned int ipc_type = 0;
 	int ret = 0;
 
+	if (regs->r2)
+		__asm__ __volatile__ (
+				"1:\n"
+				"b 1b\n");
+
 	/* Check arguments */
 	if (from < L4_ANYTHREAD) {
 		ret = -EINVAL;

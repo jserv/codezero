@@ -52,12 +52,18 @@ static inline struct utcb *l4_get_utcb()
 /* Functions to read/write utcb registers */
 static inline unsigned int read_mr(int offset)
 {
-	return l4_get_utcb()->mr[offset];
+	if (offset < MR_TOTAL)
+		return l4_get_utcb()->mr[offset];
+	else
+		return l4_get_utcb()->mr_rest[offset - MR_TOTAL];
 }
 
 static inline void write_mr(unsigned int offset, unsigned int val)
 {
-	l4_get_utcb()->mr[offset] = val;
+	if (offset < MR_TOTAL)
+		l4_get_utcb()->mr[offset] = val;
+	else
+		l4_get_utcb()->mr[offset - MR_TOTAL] = val;
 }
 
 #endif /* !__ASSEMBLY__ */

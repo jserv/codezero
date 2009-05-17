@@ -146,6 +146,19 @@ static inline int l4_receive_full(l4id_t from)
 	return l4_ipc(L4_NILTHREAD, from, L4_IPC_FLAGS_FULL);
 }
 
+static inline int l4_sendrecv_full(l4id_t to, l4id_t from, unsigned int tag)
+{
+	int err;
+
+	BUG_ON(to == L4_NILTHREAD || from == L4_NILTHREAD);
+	l4_set_tag(tag);
+
+	printf("%s: to %d from %d tag %u\n", __FUNCTION__, to, from, tag);
+	err = l4_ipc(to, from, L4_IPC_FLAGS_FULL);
+
+	return err;
+}
+
 static inline int l4_send_extended(l4id_t to, unsigned int tag,
 				   unsigned int size, void *buf)
 {

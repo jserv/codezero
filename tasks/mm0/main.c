@@ -24,6 +24,19 @@
 #include <test.h>
 #include <boot.h>
 
+
+
+int ipc_test_full_sync(void)
+{
+	for (int i = 0; i < MR_TOTAL + MR_REST; i++) {
+		printf("%s/%s: MR%d: %d\n", __TASKNAME__, __FUNCTION__,
+		       i, read_mr(i));
+		/* Reset it to 0 */
+		write_mr(i, 0);
+	}
+	return 0;
+}
+
 void handle_requests(void)
 {
 	/* Generic ipc data */
@@ -54,6 +67,9 @@ void handle_requests(void)
 		mr[i] = read_mr(MR_UNUSED_START + i);
 
 	switch(tag) {
+	case L4_IPC_TAG_SYNC_FULL:
+		ret = ipc_test_full_sync();
+		break;
 	case L4_IPC_TAG_SYNC:
 		mm0_test_global_vm_integrity();
 		// printf("%s: Synced with waiting thread.\n", __TASKNAME__);

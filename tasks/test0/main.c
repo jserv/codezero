@@ -33,6 +33,10 @@ void main(void)
 
 	wait_pager(0);
 
+	printf("%s: Full IPC test.\n", __TASKNAME__);
+
+	ipc_full_test();
+
 	printf("%s: Running POSIX API tests.\n", __TASKNAME__);
 
 	dirtest();

@@ -13,6 +13,8 @@
 #include <sys/types.h>
 extern pid_t parent_of_all;
 
+void ipc_full_test(void);
+
 int shmtest(void);
 int forktest(void);
 int mmaptest(void);
