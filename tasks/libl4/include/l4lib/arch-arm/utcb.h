@@ -63,7 +63,7 @@ static inline void write_mr(unsigned int offset, unsigned int val)
 	if (offset < MR_TOTAL)
 		l4_get_utcb()->mr[offset] = val;
 	else
-		l4_get_utcb()->mr[offset - MR_TOTAL] = val;
+		l4_get_utcb()->mr_rest[offset - MR_TOTAL] = val;
 }
 
 #endif /* !__ASSEMBLY__ */

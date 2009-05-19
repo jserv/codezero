@@ -351,11 +351,12 @@ int sys_ipc(syscall_context_t *regs)
 	unsigned int ipc_type = 0;
 	int ret = 0;
 
+#if 0
 	if (regs->r2)
 		__asm__ __volatile__ (
 				"1:\n"
 				"b 1b\n");
-
+#endif
 	/* Check arguments */
 	if (from < L4_ANYTHREAD) {
 		ret = -EINVAL;
@@ -391,7 +392,12 @@ int sys_ipc(syscall_context_t *regs)
 	return ret;
 
 error:
-	// printk("Erroneous ipc by: %d. Err: %d\n", current->tid, ret);
+	/*
+	 * This is not always an error. For example a send/recv
+	 * thread may go to suspension before receive phase.
+	 */
+	//printk("Erroneous ipc by: %d. from: %d, to: %d, Err: %d\n",
+	//	 current->tid, from, to, ret);
 	ipc_type = IPC_INVALID;
 	return ret;
 }

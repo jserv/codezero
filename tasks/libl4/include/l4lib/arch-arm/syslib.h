@@ -153,7 +153,6 @@ static inline int l4_sendrecv_full(l4id_t to, l4id_t from, unsigned int tag)
 	BUG_ON(to == L4_NILTHREAD || from == L4_NILTHREAD);
 	l4_set_tag(tag);
 
-	printf("%s: to %d from %d tag %u\n", __FUNCTION__, to, from, tag);
 	err = l4_ipc(to, from, L4_IPC_FLAGS_FULL);
 
 	return err;
@@ -256,7 +255,6 @@ static inline void l4_print_mrs()
  */
 static inline int l4_ipc_return(int retval)
 {
-	// unsigned int tag = l4_get_tag();
 	l4id_t sender = l4_get_sender();
 
 	l4_set_retval(retval);

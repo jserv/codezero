@@ -6,11 +6,11 @@
  */
 void ipc_full_test(void)
 {
-	int ret;
+	int ret = 0;
 
 	/* Fill in all of the utcb locations */
-	for (int i = 0; i < MR_TOTAL + MR_REST; i++) {
-		printf("Writing: MR%d: %d\n", i, i);
+	for (int i = MR_UNUSED_START; i < MR_TOTAL + MR_REST; i++) {
+		//printf("Writing: MR%d: %d\n", i, i);
 		write_mr(i, i);
 	}
 
@@ -21,13 +21,16 @@ void ipc_full_test(void)
 	}
 	/* Read back updated utcb */
 	for (int i = MR_UNUSED_START; i < MR_TOTAL + MR_REST; i++) {
-		printf("Read MR%d: %d\n", i, read_mr(i));
+		//printf("Read MR%d: %d\n", i, read_mr(i));
 		if (read_mr(i) != 0) {
 			printf("Expected 0 on all mrs. Failed.\n");
 			BUG();
 		}
 	}
-	while (1)
-		;
+
+	if (!ret)
+		printf("FULL IPC TEST: -- PASSED --\n");
+	else
+		printf("FULL IPC TEST: -- FAILED --\n");
 }
 

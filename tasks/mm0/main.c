@@ -25,15 +25,18 @@
 #include <boot.h>
 
 
-
-int ipc_test_full_sync(void)
+/* Receives all registers and replies back */
+int ipc_test_full_sync(l4id_t senderid)
 {
-	for (int i = 0; i < MR_TOTAL + MR_REST; i++) {
-		printf("%s/%s: MR%d: %d\n", __TASKNAME__, __FUNCTION__,
-		       i, read_mr(i));
+	for (int i = MR_UNUSED_START; i < MR_TOTAL + MR_REST; i++) {
+	//	printf("%s/%s: MR%d: %d\n", __TASKNAME__, __FUNCTION__,
+	//	       i, read_mr(i));
 		/* Reset it to 0 */
 		write_mr(i, 0);
 	}
+
+	/* Send a full reply */
+	l4_send_full(senderid, 0);
 	return 0;
 }
 
@@ -68,8 +71,8 @@ void handle_requests(void)
 
 	switch(tag) {
 	case L4_IPC_TAG_SYNC_FULL:
-		ret = ipc_test_full_sync();
-		break;
+		ret = ipc_test_full_sync(senderid);
+		return;
 	case L4_IPC_TAG_SYNC:
 		mm0_test_global_vm_integrity();
 		// printf("%s: Synced with waiting thread.\n", __TASKNAME__);
