@@ -10,6 +10,7 @@
 #include <l4/generic/space.h>
 #include <l4/lib/idpool.h>
 #include <l4/api/kip.h>
+#include <l4/api/errno.h>
 #include INC_ARCH(exception.h)
 #include INC_SUBARCH(mm.h)
 #include INC_GLUE(memory.h)
@@ -163,4 +164,42 @@ void task_update_utcb(struct ktcb *cur, struct ktcb *next)
 	/* Update the KIP pointer */
 	kip.utcb = next->utcb_address;
 }
+
+/*
+ * Checks whether a task's utcb is currently accessible by the kernel
+ * It returns an error if its not paged in yet, and also maps a non-current
+ * task's utcb to current task with kernel-access privileges.
+ */
+int tcb_check_and_lazy_map_utcb(struct ktcb *task)
+{
+	unsigned int phys;
+	int ret;
+
+	BUG_ON(!task->utcb_address);
+
+	if ((ret = check_access(task->utcb_address, UTCB_SIZE,
+				MAP_SVC_RW_FLAGS, 0)) < 0) {
+		/* Current task simply hasn't mapped its utcb */
+		if (task == current) {
+			return -EFAULT;
+		} else {
+			if (!(phys = virt_to_phys_by_pgd(task->utcb_address,
+							 TASK_PGD(task)))) {
+				/* Task hasn't mapped its utcb */
+				return -EFAULT;
+			} else {
+				/*
+				 * Task has utcb but it hasn't yet been mapped
+				 * to current task with kernel access. Do it.
+				 */
+				add_mapping_pgd(phys, task->utcb_address,
+						page_align_up(UTCB_SIZE),
+						MAP_SVC_RW_FLAGS,
+						TASK_PGD(current));
+			}
+		}
+	}
+	return 0;
+}
+
 

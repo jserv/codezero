@@ -130,6 +130,7 @@ int check_mapping(unsigned long vaddr, unsigned long size,
 void copy_pgd_kern_all(pgd_table_t *);
 pte_t virt_to_pte(unsigned long virtual);
 pte_t virt_to_pte_from_pgd(unsigned long virtual, pgd_table_t *pgd);
+unsigned long virt_to_phys_by_pgd(unsigned long vaddr, pgd_table_t *pgd);
 
 #endif /* __GLUE_ARM_MEMORY_H__ */
 

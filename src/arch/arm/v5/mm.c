@@ -256,7 +256,7 @@ int check_mapping_pgd(unsigned long vaddr, unsigned long size,
 	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
 
 	for (int i = 0; i < npages; i++) {
-		pte = virt_to_pte(vaddr + i * PAGE_SIZE);
+		pte = virt_to_pte_from_pgd(vaddr + i * PAGE_SIZE, pgd);
 
 		/* Check if pte perms are equal or gt given flags */
 		if ((pte & PTE_PROT_MASK) >= (flags & PTE_PROT_MASK))
@@ -268,6 +268,11 @@ int check_mapping_pgd(unsigned long vaddr, unsigned long size,
 	return 1;
 }
 
+unsigned long virt_to_phys_by_pgd(unsigned long vaddr, pgd_table_t *pgd)
+{
+	pte_t pte = virt_to_pte_from_pgd(vaddr, pgd);
+	return pte & ~PAGE_MASK;
+}
 
 int check_mapping(unsigned long vaddr, unsigned long size,
 		  unsigned int flags)

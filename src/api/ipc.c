@@ -40,11 +40,9 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from)
 	int ret;
 
 	/* Check that utcb memory accesses won't fault us */
-	if ((ret = check_access(to->utcb_address, UTCB_SIZE,
-				MAP_SVC_RW_FLAGS, 0)) < 0)
+	if ((ret = tcb_check_and_lazy_map_utcb(to)) < 0)
 		return ret;
-	if ((ret = check_access(to->utcb_address, UTCB_SIZE,
-				MAP_SVC_RW_FLAGS, 0)) < 0)
+	if ((ret = tcb_check_and_lazy_map_utcb(from)) < 0)
 		return ret;
 
 	/* Directly copy from one utcb to another */
