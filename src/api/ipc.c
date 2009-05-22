@@ -89,6 +89,43 @@ int sys_ipc_control(syscall_context_t *regs)
 }
 
 /*
+ * Upon an ipc error or exception, the sleeper task is
+ * notified of it via flags set by this function.
+ */
+void ipc_signal_error(struct ktcb *sleeper, int retval)
+{
+	/*
+	 * Set ipc error flag in receiver.
+	 * Only EFAULT is expected for now
+	 */
+	BUG_ON(retval != -EFAULT);
+	sleeper->flags |= IPC_EFAULT;
+}
+
+/*
+ * After an ipc, if current task was the sleeping party,
+ * this checks whether errors were signalled, clears
+ * the ipc flags and returns the appropriate error code.
+ */
+int ipc_handle_errors(void)
+{
+	/* Did we wake up normally or get interrupted */
+	if (current->flags & TASK_INTERRUPTED) {
+		current->flags &= ~TASK_INTERRUPTED;
+		return -EINTR;
+	}
+
+	/* Did ipc fail with a fault error? */
+	if (current->flags & IPC_EFAULT) {
+		current->flags &= ~IPC_EFAULT;
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+/*
+ * NOTE:
  * Why can we safely copy registers and resume task
  * after we release the locks? Because even if someone
  * tried to interrupt and wake up the other party, they
@@ -126,11 +163,8 @@ int ipc_send(l4id_t recv_tid, int full)
 		spin_unlock(&wqhs->slock);
 
 		/* Copy message registers */
-		if ((ret = ipc_msg_copy(receiver, current, full)) < 0) {
-			/* Set ipc error flag in receiver */
-			BUG_ON(ret != -EFAULT);
-			receiver->flags |= IPC_EFAULT;
-		}
+		if ((ret = ipc_msg_copy(receiver, current, full)) < 0)
+			ipc_signal_error(receiver, ret);
 
 		// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
 		//       current->tid, receiver->tid);
@@ -152,18 +186,7 @@ int ipc_send(l4id_t recv_tid, int full)
 	//       current->tid, recv_tid);
 	schedule();
 
-	/* Did we wake up normally or get interrupted */
-	if (current->flags & TASK_INTERRUPTED) {
-		current->flags &= ~TASK_INTERRUPTED;
-		return -EINTR;
-	}
-
-	/* Did ipc fail with a fault error? */
-	if (current->flags & IPC_EFAULT) {
-		current->flags &= ~IPC_EFAULT;
-		return -EFAULT;
-	}
-	return 0;
+	return ipc_handle_errors();
 }
 
 int ipc_recv(l4id_t senderid, int full)
@@ -205,14 +228,11 @@ int ipc_recv(l4id_t senderid, int full)
 
 				/* Copy message registers */
 				if ((ret = ipc_msg_copy(current, sleeper,
-							full)) < 0) {
+							full)) < 0)
+					ipc_signal_error(sleeper, ret);
 
-					/* Set ipc fault flag on sleeper */
-					BUG_ON(ret != -EFAULT);
-					sleeper->flags |= IPC_EFAULT;
-				}
-
-				// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
+				// printk("%s: (%d) Waking up (%d)\n",
+				// __FUNCTION__,
 				//       current->tid, sleeper->tid);
 				sched_resume_sync(sleeper);
 				return ret;
@@ -232,19 +252,7 @@ int ipc_recv(l4id_t senderid, int full)
 	spin_unlock(&wqhs->slock);
 	schedule();
 
-	/* Did we wake up normally or get interrupted */
-	if (current->flags & TASK_INTERRUPTED) {
-		current->flags &= ~TASK_INTERRUPTED;
-		return -EINTR;
-	}
-
-	/* Did ipc fail with a fault error? */
-	if (current->flags & IPC_EFAULT) {
-		current->flags &= ~IPC_EFAULT;
-		return -EFAULT;
-	}
-
-	return 0;
+	return ipc_handle_errors();
 }
 
 /*
