@@ -166,9 +166,14 @@ void task_update_utcb(struct ktcb *cur, struct ktcb *next)
 }
 
 /*
- * Checks whether a task's utcb is currently accessible by the kernel
- * It returns an error if its not paged in yet, and also maps a non-current
- * task's utcb to current task with kernel-access privileges.
+ * Checks whether a task's utcb is currently accessible by the kernel.
+ * Returns an error if its not paged in yet, maps a non-current task's
+ * utcb to current task for kernel-only access if it is unmapped.
+ *
+ * UTCB Mappings: The design is that each task maps its utcb with user
+ * access, and any other utcb is mapped with kernel-only access privileges
+ * upon an ipc that requires the kernel to access that utcb, in other
+ * words foreign utcbs are mapped lazily.
  */
 int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 {
