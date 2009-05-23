@@ -85,14 +85,14 @@ static inline unsigned int l4_get_ipc_msg_index(unsigned int word)
 
 static inline unsigned int l4_set_ipc_flags(unsigned int word, unsigned int flags)
 {
-	word &= ~L4_IPC_FLAGS_MASK;
-	word |= flags & L4_IPC_FLAGS_MASK;
+	word &= ~L4_IPC_FLAGS_TYPE_MASK;
+	word |= flags & L4_IPC_FLAGS_TYPE_MASK;
 	return word;
 }
 
 static inline unsigned int l4_get_ipc_flags(unsigned int word)
 {
-	return word & L4_IPC_FLAGS_MASK;
+	return word & L4_IPC_FLAGS_TYPE_MASK;
 }
 
 static inline unsigned int l4_get_tag(void)

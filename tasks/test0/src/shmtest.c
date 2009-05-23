@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <tests.h>
 #include <unistd.h>
+#include <errno.h>
 
 int shmtest(void)
 {

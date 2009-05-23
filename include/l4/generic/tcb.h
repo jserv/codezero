@@ -104,6 +104,9 @@ struct ktcb {
 	struct spinlock waitlock;
 	struct waitqueue_head *waiting_on;
 	struct waitqueue *wq;
+
+	/* Extended ipc buffer, points to the space after ktcb */
+	char extended_ipc_buffer[];
 };
 
 /* Per thread kernel stack unified on a single page. */

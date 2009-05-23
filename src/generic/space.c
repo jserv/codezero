@@ -146,6 +146,14 @@ struct address_space *address_space_create(struct address_space *orig)
 }
 
 /*
+ * FIXME: This does not guarantee that a kernel can access a user pointer.
+ * A pager could map an address as requested by the kernel, and unmap it
+ * before the kernel has accessed that user address. In order to fix this,
+ * per-pte locks (via a bitmap) should be introduced, and map syscalls can
+ * check if a pte is locked before going forward with a request.
+ */
+
+/*
  * Checks whether the given user address is a valid userspace address.
  * If so, whether it is currently mapped into its own address space.
  * If its not mapped-in, it generates a page-in request to the thread's

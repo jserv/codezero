@@ -73,13 +73,16 @@
 #define MR0_REGISTER		r3
 #define MR_RETURN_REGISTER	r3
 
+#define L4_IPC_FLAGS_SHORT		0x00000000	/* Short IPC involves just primary message registers */
 #define L4_IPC_FLAGS_FULL		0x00000001	/* Full IPC involves full UTCB copy */
 #define L4_IPC_FLAGS_EXTENDED		0x00000002	/* Extended IPC can page-fault and copy up to 2KB */
 #define L4_IPC_FLAGS_MSG_INDEX_MASK	0x00000FF0	/* Index of message register with buffer pointer */
-#define L4_IPC_FLAGS_MASK		0x0000000F
+#define L4_IPC_FLAGS_TYPE_MASK		0x0000000F
 #define L4_IPC_FLAGS_SIZE_MASK		0x0FFF0000
 #define L4_IPC_FLAGS_SIZE_SHIFT		16
 #define L4_IPC_FLAGS_MSG_INDEX_SHIFT	4
+
+#define L4_IPC_EXTENDED_MAX_SIZE	(SZ_1K*2)
 
 #include INC_GLUE(memlayout.h)
 

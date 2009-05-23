@@ -25,12 +25,30 @@ enum IPC_TYPE {
 	IPC_SENDRECV = 3,
 };
 
+int ipc_short_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
+{
+	unsigned int *mr0_src = KTCB_REF_MR0(from);
+	unsigned int *mr0_dst = KTCB_REF_MR0(to);
+
+	/* NOTE:
+	 * Make sure MR_TOTAL matches the number of registers saved on stack.
+	 */
+	memcpy(mr0_dst, mr0_src, MR_TOTAL * sizeof(unsigned int));
+
+	return 0;
+}
+
+
 /* Copy full utcb region from one task to another. */
-int ipc_full_copy(struct ktcb *to, struct ktcb *from)
+int ipc_full_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
 {
 	struct utcb *from_utcb = (struct utcb *)from->utcb_address;
 	struct utcb *to_utcb = (struct utcb *)to->utcb_address;
 	int ret;
+
+	/* First do the short copy of primary mrs */
+	if ((ret = ipc_short_copy(to, from, flags)) < 0)
+		return ret;
 
 	/* Check that utcb memory accesses won't fault us */
 	if ((ret = tcb_check_and_lazy_map_utcb(to)) < 0)
@@ -41,6 +59,54 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from)
 	/* Directly copy from one utcb to another */
 	memcpy(to_utcb->mr_rest, from_utcb->mr_rest,
 	       MR_REST * sizeof(unsigned int));
+
+	return 0;
+}
+
+static inline int extended_ipc_msg_index(unsigned int flags)
+{
+	return (flags >> L4_IPC_FLAGS_MSG_INDEX_SHIFT) & L4_IPC_FLAGS_MSG_INDEX_MASK;
+}
+
+static inline int extended_ipc_msg_size(unsigned int flags)
+{
+	return (flags >> L4_IPC_FLAGS_SIZE_SHIFT) & L4_IPC_FLAGS_SIZE_MASK;
+}
+
+/*
+ * Extended copy is asymmetric in that the copying always occurs from
+ * the sender's kernel stack to receivers userspace buffers.
+ */
+int ipc_extended_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
+{
+	unsigned long msg_index;
+	unsigned long ipc_address;
+	unsigned int size;
+	unsigned int *mr0_receiver;
+
+	/*
+	 * Obtain primary message register index
+	 * containing extended ipc buffer address
+	 */
+	msg_index = extended_ipc_msg_index(flags);
+
+	/* Get the pointer to primary message registers */
+       	mr0_receiver = KTCB_REF_MR0(to);
+
+	/* Obtain extended ipc address */
+	ipc_address = (unsigned long)mr0_receiver[msg_index];
+
+	/* Obtain extended ipc size */
+	size = extended_ipc_msg_size(flags);
+
+	/* This ought to be checked before coming here */
+	BUG_ON(size > L4_IPC_EXTENDED_MAX_SIZE);
+
+	/*
+	 * Copy from sender's kernel stack buffer
+	 * to receiver's paged-in userspace buffer
+	 */
+	memcpy((void *)ipc_address, from->extended_ipc_buffer, size);
 
 	return 0;
 }
@@ -56,22 +122,26 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from)
  */
 int ipc_msg_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
 {
-	unsigned int *mr0_src = KTCB_REF_MR0(from);
-	unsigned int *mr0_dst = KTCB_REF_MR0(to);
 	int ret = 0;
+	unsigned int *mr0_dst;
 
-	/* NOTE:
-	 * Make sure MR_TOTAL matches the number of registers saved on stack.
-	 */
-	memcpy(mr0_dst, mr0_src, MR_TOTAL * sizeof(unsigned int));
+	/* Check type of utcb copying and do it */
+	switch (flags & L4_IPC_FLAGS_TYPE_MASK) {
+	case L4_IPC_FLAGS_SHORT:
+		ret = ipc_short_copy(to, from, flags);
+		break;
+	case L4_IPC_FLAGS_FULL:
+		ret = ipc_full_copy(to, from, flags);
+		break;
+	case L4_IPC_FLAGS_EXTENDED:
+		ret = ipc_extended_copy(to, from, flags);
+		break;
+	}
 
 	/* Save the sender id in case of ANYTHREAD receiver */
 	if (to->expected_sender == L4_ANYTHREAD)
+       		mr0_dst = KTCB_REF_MR0(to);
 		mr0_dst[MR_SENDER] = from->tid;
-
-	/* Check if full utcb copying is requested and do it */
-	if (flags & L4_IPC_FLAGS_FULL)
-		ret = ipc_full_copy(to, from);
 
 	return ret;
 }
@@ -125,28 +195,6 @@ int ipc_handle_errors(void)
  * won't be able to, because the task's all hooks to its
  * waitqueue have been removed at that stage.
  */
-
-int ipc_recv_extended(l4id_t recv_tid, unsigned int flags)
-{
-	return 0;
-}
-
-int ipc_sendrecv_extended(l4id_t to, l4id_t from, unsigned int flags)
-{
-	return 0;
-}
-
-int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
-{
-	//struct ktcb *receiver = tcb_find(recv_tid);
-
-	/*
-	 * First we copy userspace buffer to process kernel stack.
-	 * If we page fault, we only punish current process time.
-	 */
-	return 0;
-}
-
 
 /* Interruptible ipc */
 int ipc_send(l4id_t recv_tid, unsigned int flags)
@@ -307,6 +355,103 @@ int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags)
 	return ret;
 }
 
+int ipc_sendrecv_extended(l4id_t to, l4id_t from, unsigned int flags)
+{
+	return 0;
+}
+
+/*
+ * In extended receive, receive buffers are page faulted before engaging
+ * in real ipc.
+ */
+int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
+{
+	unsigned long msg_index;
+	unsigned long ipc_address;
+	unsigned int size;
+	unsigned int *mr0_current;
+	int err;
+
+	/*
+	 * Obtain primary message register index
+	 * containing extended ipc buffer address
+	 */
+	msg_index = extended_ipc_msg_index(flags);
+
+	/* Get the pointer to primary message registers */
+       	mr0_current = KTCB_REF_MR0(current);
+
+	/* Obtain extended ipc address */
+	ipc_address = (unsigned long)mr0_current[msg_index];
+
+	/* Obtain extended ipc size */
+	size = extended_ipc_msg_size(flags);
+
+	/* Check size is good */
+	if (size > L4_IPC_EXTENDED_MAX_SIZE)
+		return -EINVAL;
+
+	/* Page fault those pages on the current task if needed */
+	if ((err = check_access(ipc_address, size,
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
+
+	/*
+	 * Now we can engage in the real ipc, copying of ipc data
+	 * shall occur during the message copying.
+	 */
+	return ipc_recv(sendertid, flags);
+}
+
+
+/*
+ * In extended IPC, userspace buffers are copied to process
+ * kernel stack before engaging in real calls ipc. If page fault
+ * occurs, only the current process time is consumed.
+ */
+int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
+{
+	unsigned long msg_index;
+	unsigned long ipc_address;
+	unsigned int size;
+	unsigned int *mr0_current;
+	int err;
+
+	/*
+	 * Obtain primary message register index
+	 * containing extended ipc buffer address
+	 */
+	msg_index = extended_ipc_msg_index(flags);
+
+	/* Get the pointer to primary message registers */
+       	mr0_current = KTCB_REF_MR0(current);
+
+	/* Obtain extended ipc address */
+	ipc_address = (unsigned long)mr0_current[msg_index];
+
+	/* Obtain extended ipc size */
+	size = extended_ipc_msg_size(flags);
+
+	/* Check size is good */
+	if (size > L4_IPC_EXTENDED_MAX_SIZE)
+		return -EINVAL;
+
+	/* Page fault those pages on the current task if needed */
+	if ((err = check_access(ipc_address, size,
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
+
+	/*
+	 * It is now safe to access user pages.
+	 * Copy message from user buffer into kernel stack
+	 */
+	memcpy(current->extended_ipc_buffer,
+	       (void *)ipc_address, size);
+
+	/* Now we can engage in the real ipc */
+	return ipc_send(recv_tid, flags);
+}
+
 static inline int __sys_ipc(l4id_t to, l4id_t from,
 			    unsigned int ipc_type, unsigned int flags)
 {
@@ -369,12 +514,13 @@ int sys_ipc(syscall_context_t *regs)
 	unsigned int ipc_type = 0;
 	int ret = 0;
 
-#if 0
-	if (regs->r2)
+/*
+	if (flags)
 		__asm__ __volatile__ (
 				"1:\n"
 				"b 1b\n");
-#endif
+*/
+
 	/* Check arguments */
 	if (from < L4_ANYTHREAD) {
 		ret = -EINVAL;
