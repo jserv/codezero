@@ -13,8 +13,8 @@
 #if defined (__KERNEL__)
 
 /* These are for internally created ipc paths. */
-int ipc_send(l4id_t to, int full);
-int ipc_sendrecv(l4id_t to, l4id_t from, int full);
+int ipc_send(l4id_t to, unsigned int flags);
+int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags);
 
 #endif
 
