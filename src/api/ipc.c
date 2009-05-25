@@ -139,9 +139,10 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
 	}
 
 	/* Save the sender id in case of ANYTHREAD receiver */
-	if (to->expected_sender == L4_ANYTHREAD)
+	if (to->expected_sender == L4_ANYTHREAD) {
        		mr0_dst = KTCB_REF_MR0(to);
 		mr0_dst[MR_SENDER] = from->tid;
+	}
 
 	return ret;
 }

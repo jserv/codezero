@@ -17,10 +17,11 @@ int forktest(void)
 
 
 	/* 16 forks */
-	for (int i = 0; i < 4; i++)
+	for (int i = 0; i < 4; i++) {
 		test_printf("%d: Forking...\n", getpid());
 		if (fork() < 0)
 			goto out_err;
+	}
 
 	myid = getpid();
 
