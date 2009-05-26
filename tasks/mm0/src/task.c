@@ -308,7 +308,7 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 
 	/* Set task ids if a parent is supplied */
 	if (parent) {
-		ids->tid = TASK_ID_INVALID;
+		ids->tid = parent->tid;
 		ids->spid = parent->spid;
 
 		/*

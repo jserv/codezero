@@ -309,7 +309,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		return -ENOMEM;
 
 	if (flags == THREAD_SAME_SPACE || flags == THREAD_COPY_SPACE) {
-		if (!(orig_task = tcb_find_by_space(ids->spid))) {
+		if (!(orig_task = tcb_find(ids->tid))) {
 			/* Pre-mature tcb needs freeing by free_page */
 			free_page(new);
 			return -EINVAL;
