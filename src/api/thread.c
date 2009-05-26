@@ -300,7 +300,7 @@ out:
 
 int thread_create(struct task_ids *ids, unsigned int flags)
 {
-	struct ktcb *new, *orig_task;
+	struct ktcb *new, *orig_task = 0;
 	int err;
 
 	flags &= THREAD_CREATE_MASK;
@@ -308,20 +308,23 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	if (!(new = tcb_alloc_init()))
 		return -ENOMEM;
 
-	if (flags != THREAD_NEW_SPACE) {
-		BUG_ON(!(orig_task = tcb_find_by_space(ids->spid)));
-	} else
-		orig_task = 0;
+	if (flags == THREAD_SAME_SPACE || flags == THREAD_COPY_SPACE) {
+		if (!(orig_task = tcb_find_by_space(ids->spid))) {
+			/* Pre-mature tcb needs freeing by free_page */
+			free_page(new);
+			return -EINVAL;
+		}
+	}
 
 	if ((err = thread_setup_space(new, ids, flags)) < 0) {
-		/* Since it hasn't initialised maturely, we delete it this way */
+		/* Pre-mature tcb needs freeing by free_page */
 		free_page(new);
 		return err;
 	}
 
 	/* Set up ids and context using original tcb or from scratch */
-	thread_setup_new_ids(ids, flags, new, (orig_task) ? orig_task : 0);
-	arch_setup_new_thread(new, (orig_task) ? orig_task : 0, flags);
+	thread_setup_new_ids(ids, flags, new, orig_task);
+	arch_setup_new_thread(new, orig_task, flags);
 
 	tcb_add(new);
 
