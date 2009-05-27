@@ -17,6 +17,7 @@
 /*** IPC Tags used between server tasks ***/
 
 /* For ping ponging */
+#define L4_IPC_TAG_SYNC_EXTENDED	1
 #define L4_IPC_TAG_SYNC_FULL		2
 #define L4_IPC_TAG_SYNC			3
 

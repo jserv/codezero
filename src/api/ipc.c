@@ -10,6 +10,7 @@
 #include <l4/api/kip.h>
 #include <l4/api/errno.h>
 #include <l4/lib/bit.h>
+#include <l4/lib/math.h>
 #include <l4/generic/kmalloc.h>
 #include INC_API(syscall.h)
 #include INC_GLUE(message.h)
@@ -25,7 +26,7 @@ enum IPC_TYPE {
 	IPC_SENDRECV = 3,
 };
 
-int ipc_short_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
+int ipc_short_copy(struct ktcb *to, struct ktcb *from)
 {
 	unsigned int *mr0_src = KTCB_REF_MR0(from);
 	unsigned int *mr0_dst = KTCB_REF_MR0(to);
@@ -40,14 +41,14 @@ int ipc_short_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
 
 
 /* Copy full utcb region from one task to another. */
-int ipc_full_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
+int ipc_full_copy(struct ktcb *to, struct ktcb *from)
 {
 	struct utcb *from_utcb = (struct utcb *)from->utcb_address;
 	struct utcb *to_utcb = (struct utcb *)to->utcb_address;
 	int ret;
 
 	/* First do the short copy of primary mrs */
-	if ((ret = ipc_short_copy(to, from, flags)) < 0)
+	if ((ret = ipc_short_copy(to, from)) < 0)
 		return ret;
 
 	/* Check that utcb memory accesses won't fault us */
@@ -65,48 +66,31 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
 
 static inline int extended_ipc_msg_index(unsigned int flags)
 {
-	return (flags >> L4_IPC_FLAGS_MSG_INDEX_SHIFT) & L4_IPC_FLAGS_MSG_INDEX_MASK;
+	return (flags & L4_IPC_FLAGS_MSG_INDEX_MASK)
+	       >> L4_IPC_FLAGS_MSG_INDEX_SHIFT;
 }
 
 static inline int extended_ipc_msg_size(unsigned int flags)
 {
-	return (flags >> L4_IPC_FLAGS_SIZE_SHIFT) & L4_IPC_FLAGS_SIZE_MASK;
+	return (flags & L4_IPC_FLAGS_SIZE_MASK)
+	       >> L4_IPC_FLAGS_SIZE_SHIFT;
 }
 
 /*
  * Extended copy is asymmetric in that the copying always occurs from
  * the sender's kernel stack to receivers userspace buffers.
  */
-int ipc_extended_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
+int ipc_extended_copy(struct ktcb *to, struct ktcb *from)
 {
-	unsigned long msg_index;
-	unsigned long ipc_address;
-	unsigned int size;
-	unsigned int *mr0_receiver;
-
-	/*
-	 * Obtain primary message register index
-	 * containing extended ipc buffer address
-	 */
-	msg_index = extended_ipc_msg_index(flags);
-
-	/* Get the pointer to primary message registers */
-       	mr0_receiver = KTCB_REF_MR0(to);
-
-	/* Obtain extended ipc address */
-	ipc_address = (unsigned long)mr0_receiver[msg_index];
-
-	/* Obtain extended ipc size */
-	size = extended_ipc_msg_size(flags);
-
-	/* This ought to be checked before coming here */
-	BUG_ON(size > L4_IPC_EXTENDED_MAX_SIZE);
+	unsigned long size = min(from->extended_ipc_size,
+				 to->extended_ipc_size);
 
 	/*
 	 * Copy from sender's kernel stack buffer
 	 * to receiver's paged-in userspace buffer
 	 */
-	memcpy((void *)ipc_address, from->extended_ipc_buffer, size);
+	memcpy(to->extended_ipc_buffer,
+	       from->extended_ipc_buffer, size);
 
 	return 0;
 }
@@ -120,21 +104,41 @@ int ipc_extended_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
  * L4_ANYTHREAD. This is done for security since the receiver cannot trust
  * the sender info provided by the sender task.
  */
-int ipc_msg_copy(struct ktcb *to, struct ktcb *from, unsigned int flags)
+int ipc_msg_copy(struct ktcb *to, struct ktcb *from,
+		 unsigned int current_flags)
 {
 	int ret = 0;
 	unsigned int *mr0_dst;
 
+#if 0
+	unsigned int recv_ipc_type = tcb_get_ipc_flags(to);
+	unsigned int send_ipc_type = tcb_get_ipc_flags(from);
+
+	if (recv_ipc_type == L4_IPC_FLAGS_FULL ||
+	    send_ipc_type == L4_IPC_FLAGS_FULL) {
+		ret = ipc_full_copy(to, from);
+	}
+	if (recv_ipc_type == L4_IPC_FLAGS_SHORT)
+	/*
+	 * Check ipc type flags of both parties and use the following rules:
+	 *
+	 * SHORT	SHORT	-> SHORT IPC
+	 * FULL		X	-> FULL IPC
+	 * EXTENDED	EXTENDED-> EXTENDED IPC
+	 * EXTENDED	X	-> X IPC
+	 */
+#endif
+
 	/* Check type of utcb copying and do it */
-	switch (flags & L4_IPC_FLAGS_TYPE_MASK) {
+	switch (current_flags & L4_IPC_FLAGS_TYPE_MASK) {
 	case L4_IPC_FLAGS_SHORT:
-		ret = ipc_short_copy(to, from, flags);
+		ret = ipc_short_copy(to, from);
 		break;
 	case L4_IPC_FLAGS_FULL:
-		ret = ipc_full_copy(to, from, flags);
+		ret = ipc_full_copy(to, from);
 		break;
 	case L4_IPC_FLAGS_EXTENDED:
-		ret = ipc_extended_copy(to, from, flags);
+		ret = ipc_extended_copy(to, from);
 		break;
 	}
 
@@ -385,12 +389,23 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 	/* Obtain extended ipc address */
 	ipc_address = (unsigned long)mr0_current[msg_index];
 
+	/* Set extended ipc buffer as the user buffer address */
+	current->extended_ipc_buffer = (char *)ipc_address;
+
 	/* Obtain extended ipc size */
 	size = extended_ipc_msg_size(flags);
 
 	/* Check size is good */
 	if (size > L4_IPC_EXTENDED_MAX_SIZE)
 		return -EINVAL;
+	current->extended_ipc_size = size;
+
+	/*
+	 * TODO: We may need to save primary mrs before engaging
+	 * in page fault ipc. Currently after extended ipc address
+	 * is obtained, primaries are not used during the ipc.
+	 * In the future if needed, we should save them.
+	 */
 
 	/* Page fault those pages on the current task if needed */
 	if ((err = check_access(ipc_address, size,
@@ -436,11 +451,23 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	/* Check size is good */
 	if (size > L4_IPC_EXTENDED_MAX_SIZE)
 		return -EINVAL;
+	current->extended_ipc_size = size;
+
+	/*
+	 * TODO: We may need to save primary mrs before engaging
+	 * in page fault ipc. Currently after extended ipc address
+	 * is obtained, primaries are not used during the ipc.
+	 * In the future if needed, we should save them.
+	 */
 
 	/* Page fault those pages on the current task if needed */
 	if ((err = check_access(ipc_address, size,
 				MAP_USR_RW_FLAGS, 1)) < 0)
 		return err;
+
+	/* Set extended ipc buffer as the end of ktcb */
+	current->extended_ipc_buffer =
+		(void *)current + sizeof(struct ktcb);
 
 	/*
 	 * It is now safe to access user pages.
@@ -516,7 +543,7 @@ int sys_ipc(syscall_context_t *regs)
 	int ret = 0;
 
 /*
-	if (flags)
+	if ((flags & L4_IPC_FLAGS_TYPE_MASK) == L4_IPC_FLAGS_EXTENDED)
 		__asm__ __volatile__ (
 				"1:\n"
 				"b 1b\n");
@@ -548,6 +575,9 @@ int sys_ipc(syscall_context_t *regs)
 		ret = -EINVAL;
 		goto error;
 	}
+
+	/* Encode ipc type in task flags */
+	tcb_set_ipc_flags(current, flags);
 
 	if ((ret = __sys_ipc(to, from, ipc_type, flags)) < 0)
 		goto error;

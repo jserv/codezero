@@ -49,6 +49,9 @@ void main(void)
 
 	clonetest();
 
+	if (parent_of_all == getpid())
+		ipc_extended_test();
+
 	exectest();
 
 	while (1)

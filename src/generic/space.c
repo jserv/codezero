@@ -162,17 +162,24 @@ struct address_space *address_space_create(struct address_space *orig)
 int check_access(unsigned long vaddr, unsigned long size, unsigned int flags, int page_in)
 {
 	int err;
+	unsigned long start, end, mapsize;
 
 	/* Do not allow ridiculously big sizes */
 	if (size >= USER_AREA_SIZE)
 		return -EINVAL;
 
+	/* Get lower and upper page boundaries */
+	start = page_align(vaddr);
+	end = page_align_up(vaddr + size);
+	mapsize = end - start;
+
 	/* Check if the address is mapped with given flags */
-	if (!check_mapping(vaddr, size, flags)) {
+	if (!check_mapping(start, mapsize, flags)) {
 		/* Is a page in requested? */
 		if (page_in) {
 			/* Ask pager if paging in is possible */
-			if((err = pager_pagein_request(vaddr, size, flags)) < 0)
+			if((err = pager_pagein_request(start, mapsize,
+						       flags)) < 0)
 				return err;
 		} else
 			return -EFAULT;

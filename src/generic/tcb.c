@@ -182,6 +182,14 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 
 	BUG_ON(!task->utcb_address);
 
+	/*
+	 * FIXME:
+	 *
+	 * A task may have the utcb mapping of a destroyed thread
+	 * at the given virtual address. This would silently be accepted
+	 * as *mapped*. We need to ensure utcbs of destroyed tasks
+	 * are cleared from all other task's page tables.
+	 */
 	if ((ret = check_access(task->utcb_address, UTCB_SIZE,
 				MAP_SVC_RW_FLAGS, 0)) < 0) {
 		/* Current task simply hasn't mapped its utcb */

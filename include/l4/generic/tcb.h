@@ -1,7 +1,7 @@
 /*
  * Thread Control Block, kernel portion.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
 #ifndef __TCB_H__
 #define __TCB_H__
@@ -18,6 +18,10 @@
 #include INC_SUBARCH(mm.h)
 
 /*
+ * Bit mappings for the ktcb flags field
+ */
+
+/*
  * These are a mixture of flags that indicate the task is
  * in a transitional state that could include one or more
  * scheduling states.
@@ -28,6 +32,10 @@
 
 /* IPC resulted in a fault error (For ipcs that cannot page fault) */
 #define IPC_EFAULT			(1 << 3)
+
+/* IPC type is encoded in task flags in bits [7:4] */
+#define TASK_FLAGS_IPC_TYPE_MASK	0xF0
+#define TASK_FLAGS_IPC_TYPE_SHIFT	4
 
 /* Task states */
 enum task_state {
@@ -106,7 +114,8 @@ struct ktcb {
 	struct waitqueue *wq;
 
 	/* Extended ipc buffer, points to the space after ktcb */
-	char extended_ipc_buffer[];
+	char *extended_ipc_buffer;
+	unsigned long extended_ipc_size;
 };
 
 /* Per thread kernel stack unified on a single page. */
@@ -129,6 +138,21 @@ static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 	task->tgid = ids->tgid;
 }
 
+static inline void tcb_set_ipc_flags(struct ktcb *task,
+				     unsigned int flags)
+{
+	task->flags |= ((flags & L4_IPC_FLAGS_TYPE_MASK)
+			<< TASK_FLAGS_IPC_TYPE_SHIFT) &
+		       TASK_FLAGS_IPC_TYPE_MASK;
+}
+
+static inline unsigned int tcb_get_ipc_flags(struct ktcb *task)
+{
+	return ((task->flags & TASK_FLAGS_IPC_TYPE_MASK)
+		>> TASK_FLAGS_IPC_TYPE_SHIFT)
+	       & L4_IPC_FLAGS_TYPE_MASK;
+}
+
 #define THREAD_IDS_MAX		1024
 #define SPACE_IDS_MAX		1024
 #define TGROUP_IDS_MAX		1024
@@ -138,7 +162,6 @@ extern struct id_pool *thread_id_pool;
 extern struct id_pool *space_id_pool;
 
 struct ktcb *tcb_find(l4id_t tid);
-struct ktcb *tcb_find_by_space(l4id_t tid);
 void tcb_add(struct ktcb *tcb);
 void tcb_remove(struct ktcb *tcb);
 
