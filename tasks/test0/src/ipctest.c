@@ -89,7 +89,8 @@ void ipc_extended_test(void)
 	 */
 	ipcbuf = base + PAGE_SIZE - L4_IPC_EXTENDED_MAX_SIZE / 2;
 
-	if (!child) {
+	/* Child sending message */
+	if (child == 0) {
 		/* Child creates a string of maximum extended ipc size */
 		for (int i = 0; i < L4_IPC_EXTENDED_MAX_SIZE; i++) {
 			ipcbuf[i] = 'A' + i % 20;
@@ -107,6 +108,7 @@ void ipc_extended_test(void)
 			goto out_err;
 		}
 
+	/* Parent receiving message */
 	} else {
 		/*
 		 * Parent receives on the buffer - we are sure that the
@@ -125,11 +127,16 @@ void ipc_extended_test(void)
 		printf("(%d): Message received from child: %s\n",
 		       getpid(), ipcbuf);
 
-		/* Check that child string is there */
-		for (int i = 0; i < L4_IPC_EXTENDED_MAX_SIZE; i++) {
+		/* Check that string received from child is an exact match */
+		for (int i = 0; i < L4_IPC_EXTENDED_MAX_SIZE - 2; i++) {
 			if (ipcbuf[i] != ('A' + i % 20))
 				goto out_err;
 		}
+		if (ipcbuf[L4_IPC_EXTENDED_MAX_SIZE - 2] != '\n')
+			goto out_err;
+		if (ipcbuf[L4_IPC_EXTENDED_MAX_SIZE - 1] != '\0')
+			goto out_err;
+
 		printf("EXTENDED IPC TEST: -- PASSED --\n");
 	}
 	return;

@@ -389,34 +389,39 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 	/* Obtain extended ipc address */
 	ipc_address = (unsigned long)mr0_current[msg_index];
 
-	/* Set extended ipc buffer as the user buffer address */
-	current->extended_ipc_buffer = (char *)ipc_address;
-
 	/* Obtain extended ipc size */
 	size = extended_ipc_msg_size(flags);
 
 	/* Check size is good */
 	if (size > L4_IPC_EXTENDED_MAX_SIZE)
 		return -EINVAL;
+
+	/* Set extended ipc copy size */
 	current->extended_ipc_size = size;
 
+	/* Engage in real ipc to copy to ktcb buffer */
+	if ((err = ipc_recv(sendertid, flags)) < 0)
+		return err;
+
 	/*
-	 * TODO: We may need to save primary mrs before engaging
-	 * in page fault ipc. Currently after extended ipc address
-	 * is obtained, primaries are not used during the ipc.
-	 * In the future if needed, we should save them.
+	 * NOTE: After this point primary mrs may be trashed.
+	 * We need to save them here if we want to retain their values
+	 * after a page fault ipc. Currently they're not needed.
 	 */
 
-	/* Page fault those pages on the current task if needed */
+	/* Page fault user pages if needed */
 	if ((err = check_access(ipc_address, size,
 				MAP_USR_RW_FLAGS, 1)) < 0)
 		return err;
 
 	/*
-	 * Now we can engage in the real ipc, copying of ipc data
-	 * shall occur during the message copying.
+	 * Now copy from ktcb to user buffers
 	 */
-	return ipc_recv(sendertid, flags);
+	memcpy((void *)ipc_address,
+	       current->extended_ipc_buffer,
+	       current->extended_ipc_size);
+
+	return 0;
 }
 
 
@@ -454,10 +459,9 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	current->extended_ipc_size = size;
 
 	/*
-	 * TODO: We may need to save primary mrs before engaging
-	 * in page fault ipc. Currently after extended ipc address
-	 * is obtained, primaries are not used during the ipc.
-	 * In the future if needed, we should save them.
+	 * NOTE: After this point primary mrs may be trashed.
+	 * We need to save them here if we want to retain their values
+	 * after a page fault ipc. Currently they're not needed.
 	 */
 
 	/* Page fault those pages on the current task if needed */
@@ -465,13 +469,9 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 				MAP_USR_RW_FLAGS, 1)) < 0)
 		return err;
 
-	/* Set extended ipc buffer as the end of ktcb */
-	current->extended_ipc_buffer =
-		(void *)current + sizeof(struct ktcb);
-
 	/*
 	 * It is now safe to access user pages.
-	 * Copy message from user buffer into kernel stack
+	 * Copy message from user buffer into current kernel stack
 	 */
 	memcpy(current->extended_ipc_buffer,
 	       (void *)ipc_address, size);

@@ -113,9 +113,12 @@ struct ktcb {
 	struct waitqueue_head *waiting_on;
 	struct waitqueue *wq;
 
-	/* Extended ipc buffer, points to the space after ktcb */
-	char *extended_ipc_buffer;
+	/*
+	 * Extended ipc size and buffer that
+	 * points to the space after ktcb
+	 */
 	unsigned long extended_ipc_size;
+	char extended_ipc_buffer[];
 };
 
 /* Per thread kernel stack unified on a single page. */
