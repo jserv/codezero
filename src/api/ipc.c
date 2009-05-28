@@ -506,29 +506,38 @@ static inline int __sys_ipc(l4id_t to, l4id_t from,
 {
 	int ret;
 
-	switch (ipc_type) {
-	case IPC_SEND:
-		if (flags & IPC_FLAGS_EXTENDED)
+	if (ipc_flags_get_type(flags) == IPC_FLAGS_EXTENDED) {
+		switch (ipc_type) {
+		case IPC_SEND:
 			ret = ipc_send_extended(to, flags);
-		else
-			ret = ipc_send(to, flags);
-		break;
-	case IPC_RECV:
-		if (flags & IPC_FLAGS_EXTENDED)
+			break;
+		case IPC_RECV:
 			ret = ipc_recv_extended(from, flags);
-		else
-			ret = ipc_recv(from, flags);
-		break;
-	case IPC_SENDRECV:
-		if (flags & IPC_FLAGS_EXTENDED)
+			break;
+		case IPC_SENDRECV:
 			ret = ipc_sendrecv_extended(to, from, flags);
-		else
+			break;
+		case IPC_INVALID:
+		default:
+			printk("Unsupported ipc operation.\n");
+			ret = -ENOSYS;
+		}
+	} else {
+		switch (ipc_type) {
+		case IPC_SEND:
+			ret = ipc_send(to, flags);
+			break;
+		case IPC_RECV:
+			ret = ipc_recv(from, flags);
+			break;
+		case IPC_SENDRECV:
 			ret = ipc_sendrecv(to, from, flags);
-		break;
-	case IPC_INVALID:
-	default:
-		printk("Unsupported ipc operation.\n");
-		ret = -ENOSYS;
+			break;
+		case IPC_INVALID:
+		default:
+			printk("Unsupported ipc operation.\n");
+			ret = -ENOSYS;
+		}
 	}
 	return ret;
 }

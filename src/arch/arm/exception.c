@@ -25,6 +25,39 @@
 #define dbg_abort(...)
 #endif
 
+struct ipc_state {
+	u32 mr[MR_TOTAL];
+	unsigned int flags;
+};
+
+void ipc_save_state(struct ipc_state *state)
+{
+	unsigned int *mr0_current = KTCB_REF_MR0(current);
+
+	BUG_ON(!mr0_current);
+
+	/* Save primary message registers */
+	for (int i = 0; i < MR_TOTAL; i++)
+		state->mr[i] = mr0_current[i];
+
+	/* Save ipc flags */
+	state->flags = tcb_get_ipc_flags(current);
+}
+
+void ipc_restore_state(struct ipc_state *state)
+{
+	unsigned int *mr0_current = KTCB_REF_MR0(current);
+
+	BUG_ON(!mr0_current);
+
+	/* Restore primary message registers */
+	for (int i = 0; i < MR_TOTAL; i++)
+		mr0_current[i] = state->mr[i];
+
+	/* Restore ipc flags */
+	tcb_set_ipc_flags(current, state->flags);
+}
+
 /* Send data fault ipc to the faulty task's pager */
 void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 {
@@ -32,7 +65,6 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	u32 mr[MR_TOTAL] = { [MR_TAG] = L4_IPC_TAG_PFAULT,
 			     [MR_SENDER] = current->tid };
 	fault_kdata_t *fault = (fault_kdata_t *)&mr[MR_UNUSED_START];
-	unsigned int saved_flags;
 
 	/* Fill in fault information to pass over during ipc */
 	fault->faulty_pc = faulty_pc;
@@ -58,15 +90,11 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 				((unsigned long)&mr[0] -
 				 offsetof(syscall_context_t, r3));
 
-	/* Save current ipc flags and set current flags to short ipc */
-	saved_flags = tcb_get_ipc_flags(current);
+	/* Set current flags to short ipc */
 	tcb_set_ipc_flags(current, IPC_FLAGS_SHORT);
 
 	/* Send ipc to the task's pager */
 	ipc_sendrecv(current->pagerid, current->pagerid, 0);
-
-	/* Restore ipc flags */
-	tcb_set_ipc_flags(current, saved_flags);
 
 	/*
 	 * FIXME: CHECK TASK KILL REPLY !!!
@@ -87,14 +115,21 @@ int pager_pagein_request(unsigned long addr, unsigned long size, unsigned int fl
 {
 	u32 abort;
 	unsigned long npages = __pfn(align_up(size, PAGE_SIZE));
+	struct ipc_state ipc_state;
 
 	set_abort_type(abort, ARM_DABT);
 
-	printk("%s: Kernel initiating paging-in requests\n", __FUNCTION__);
+	// printk("%s: Kernel initiating paging-in requests\n", __FUNCTION__);
+
+	/* Save current ipc state */
+	ipc_save_state(&ipc_state);
 
 	/* For every page to be used by the kernel send a page-in request */
 	for (int i = 0; i < npages; i++)
 		fault_ipc_to_pager(0, abort, addr + (i * PAGE_SIZE));
+
+	/* Restore ipc state */
+	ipc_restore_state(&ipc_state);
 
 	return 0;
 }
