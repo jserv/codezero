@@ -64,6 +64,7 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from)
 
 	return 0;
 }
+
 /*
  * Extended copy is asymmetric in that the copying always occurs from
  * the sender's kernel stack to receivers userspace buffers.
@@ -353,11 +354,9 @@ int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags)
 		/* Send ipc request */
 		if ((ret = ipc_send(to, flags)) < 0)
 			return ret;
-
 		/*
-		 * Get reply.
-		 * A client would block its server only very briefly
-		 * between these calls.
+		 * Get reply. A client would block its server
+		 * only very briefly between these calls.
 		 */
 		if ((ret = ipc_recv(from, flags)) < 0)
 			return ret;
@@ -411,12 +410,6 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 	if ((err = ipc_recv(sendertid, flags)) < 0)
 		return err;
 
-	/*
-	 * NOTE: After this point primary mrs may be trashed.
-	 * We need to save them here if we want to retain their values
-	 * after a page fault ipc. Currently they're not needed.
-	 */
-
 	/* Page fault user pages if needed */
 	if ((err = check_access(ipc_address, size,
 				MAP_USR_RW_FLAGS, 1)) < 0)
@@ -467,12 +460,6 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	/* Set extended ipc copy size */
 	current->extended_ipc_size = size;
 
-	/*
-	 * NOTE: After this point primary mrs may be trashed.
-	 * We need to save them here if we want to retain their values
-	 * after a page fault ipc. Currently they're not needed.
-	 */
-
 	/* Page fault those pages on the current task if needed */
 	if ((err = check_access(ipc_address, size,
 				MAP_USR_RW_FLAGS, 1)) < 0)
@@ -488,6 +475,7 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	/* Now we can engage in the real ipc */
 	return ipc_send(recv_tid, flags);
 }
+
 
 static inline int __sys_ipc(l4id_t to, l4id_t from,
 			    unsigned int ipc_type, unsigned int flags)
@@ -547,7 +535,7 @@ void printk_sysregs(syscall_context_t *regs)
 /*
  * sys_ipc has multiple functions. In a nutshell:
  * - Copies message registers from one thread to another.
- * - Sends notification bits from one thread to another.
+ * - Sends notification bits from one thread to another. - Not there yet.
  * - Synchronises the threads involved in ipc. (i.e. a blocking rendez-vous)
  * - Can propagate messages from third party threads.
  * - A thread can both send and receive on the same call.
@@ -559,13 +547,6 @@ int sys_ipc(syscall_context_t *regs)
 	unsigned int flags = (unsigned int)regs->r2;
 	unsigned int ipc_type = 0;
 	int ret = 0;
-
-/*
-	if ((flags & L4_IPC_FLAGS_TYPE_MASK) == L4_IPC_FLAGS_EXTENDED)
-		__asm__ __volatile__ (
-				"1:\n"
-				"b 1b\n");
-*/
 
 	/* Check arguments */
 	if (from < L4_ANYTHREAD) {

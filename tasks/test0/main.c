@@ -33,7 +33,6 @@ void main(void)
 
 	wait_pager(0);
 
-	ipc_full_test();
 
 	printf("\n%s: Running POSIX API tests.\n", __TASKNAME__);
 
@@ -49,10 +48,11 @@ void main(void)
 
 	clonetest();
 
-	if (parent_of_all == getpid())
+	if (parent_of_all == getpid()) {
+		ipc_full_test();
 		ipc_extended_test();
-	else
-		exectest();
+	}
+	exectest();
 
 	while (1)
 		wait_pager(0);

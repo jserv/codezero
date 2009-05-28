@@ -46,11 +46,11 @@ int mmaptest(void)
 	*(unsigned int *)(base + PAGE_SIZE*3) = 0x1000;
 	*(unsigned int *)(base + PAGE_SIZE*1) = 0x1000;
 
-	printf("MMAP TEST      -- PASSED --\n");
+	printf("MMAP TEST           -- PASSED --\n");
 	return 0;
 
 out_err:
-	printf("MMAP TEST      -- FAILED --\n");
+	printf("MMAP TEST           -- FAILED --\n");
 	return 0;
 }
 

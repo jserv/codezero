@@ -203,11 +203,11 @@ int dirtest(void)
 	if (lsdir("/usr/./././bin//") < 0)
 		goto out_err;
 
-	printf("DIR TEST       -- PASSED --\n");
+	printf("DIR TEST            -- PASSED --\n");
 	return 0;
 
 out_err:
-	printf("DIR TEST       -- FAILED --\n");
+	printf("DIR TEST            -- FAILED --\n");
 	return 0;
 }
 

@@ -54,7 +54,7 @@ int exectest(void)
 	execve(filename, argv, 0);
 
 out_err:
-	printf("EXECVE TEST -- FAILED --\n");
+	printf("EXECVE TEST      -- FAILED --\n");
 	return 0;
 }
 

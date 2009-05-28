@@ -49,11 +49,11 @@ int clonetest(void)
 	/* TODO: Add wait() or something similar and check that global is 100 */
 
 	if (getpid() == parent_of_all)
-		printf("CLONE TEST     -- PASSED --\n");
+		printf("CLONE TEST          -- PASSED --\n");
 
 	return 0;
 out_err:
-	printf("CLONE TEST     -- FAILED --\n");
+	printf("CLONE TEST          -- FAILED --\n");
 	return 0;
 }
 

@@ -43,13 +43,13 @@ int forktest(void)
 	}
 
 	if (getpid() == parent_of_all)
-		printf("FORK TEST      -- PASSED --\n");
+		printf("FORK TEST           -- PASSED --\n");
 
 	return 0;
 
 	/* Any erroneous child or parent comes here */
 out_err:
-	printf("FORK TEST      -- FAILED --\n");
+	printf("FORK TEST           -- FAILED --\n");
 	return 0;
 }
 

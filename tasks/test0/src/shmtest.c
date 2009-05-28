@@ -60,12 +60,12 @@ int shmtest(void)
 	}
 
 	if (getpid() == parent_of_all)
-		printf("SHM TEST       -- PASSED --\n");
+		printf("SHM TEST            -- PASSED --\n");
 
 	return 0;
 
 out_err:
-	printf("SHM TEST       -- FAILED --\n");
+	printf("SHM TEST            -- FAILED --\n");
 	return 0;
 
 }

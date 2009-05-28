@@ -40,9 +40,9 @@ void ipc_full_test(void)
 	}
 
 	if (!ret)
-		printf("FULL IPC TEST: -- PASSED --\n");
+		printf("FULL IPC TEST:      -- PASSED --\n");
 	else
-		printf("FULL IPC TEST: -- FAILED --\n");
+		printf("FULL IPC TEST:      -- FAILED --\n");
 }
 
 /*
@@ -60,13 +60,13 @@ void ipc_extended_test(void)
 
 	/* Fork the current task */
 	if ((child = fork()) < 0) {
-		printf("%s: Fork failed with %d\n", __FUNCTION__, errno);
+		test_printf("%s: Fork failed with %d\n", __FUNCTION__, errno);
 		goto out_err;
 	}
 	if (child)
-		printf("%d: Created child with pid %d\n", getpid(), child);
+		test_printf("%d: Created child with pid %d\n", getpid(), child);
 	else
-		printf("Child %d running.\n", getpid());
+		test_printf("Child %d running.\n", getpid());
 
 	/* This test makes this assumption */
 	BUG_ON(L4_IPC_EXTENDED_MAX_SIZE > PAGE_SIZE);
@@ -81,7 +81,7 @@ void ipc_extended_test(void)
 			    __FUNCTION__, (int)base);
 		goto out_err;
 	} else
-		printf("mmap: Anonymous private buffer at %p\n", base);
+		test_printf("mmap: Anonymous private buffer at %p\n", base);
 
 	/*
 	 * Both tasks read/write both pages
@@ -100,7 +100,7 @@ void ipc_extended_test(void)
 		ipcbuf[L4_IPC_EXTENDED_MAX_SIZE - 1] = '\0';
 
 		/* Send message to parent */
-		printf("Child sending message: %s\n", ipcbuf);
+		test_printf("Child sending message: %s\n", ipcbuf);
 		if ((err = l4_send_extended(parent, L4_IPC_TAG_SYNC_EXTENDED,
 					    L4_IPC_EXTENDED_MAX_SIZE,
 					    ipcbuf)) < 0) {
@@ -116,7 +116,7 @@ void ipc_extended_test(void)
 		 * This should prove that page faults are handled during
 		 * the ipc.
 		 */
-		printf("Parent: extended receiving from child.\n");
+		test_printf("Parent: extended receiving from child.\n");
 		if ((err = l4_receive_extended(child, L4_IPC_EXTENDED_MAX_SIZE,
 					       ipcbuf)) < 0) {
 			printf("Extended ipc error: %d\n", err);
@@ -124,7 +124,7 @@ void ipc_extended_test(void)
 		}
 
 		/* We now print the message created by child. */
-		printf("(%d): Message received from child: %s\n",
+		test_printf("(%d): Message received from child: %s\n",
 		       getpid(), ipcbuf);
 
 		/* Check that string received from child is an exact match */
@@ -137,12 +137,12 @@ void ipc_extended_test(void)
 		if (ipcbuf[L4_IPC_EXTENDED_MAX_SIZE - 1] != '\0')
 			goto out_err;
 
-		printf("EXTENDED IPC TEST: -- PASSED --\n");
+		printf("EXTENDED IPC TEST:  -- PASSED --\n");
 	}
 	return;
 
 out_err:
-	printf("EXTENDED IPC TEST: -- FAILED --\n");
+	printf("EXTENDED IPC TEST:  -- FAILED --\n");
 }
 
 
