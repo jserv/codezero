@@ -14,6 +14,7 @@
 #include <l4/generic/kmalloc.h>
 #include INC_API(syscall.h)
 #include INC_GLUE(message.h)
+#include INC_GLUE(ipc.h)
 
 /*
  * ipc syscall uses an ipc_type variable and send/recv
@@ -63,19 +64,6 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from)
 
 	return 0;
 }
-
-static inline int extended_ipc_msg_index(unsigned int flags)
-{
-	return (flags & IPC_FLAGS_MSG_INDEX_MASK)
-	       >> IPC_FLAGS_MSG_INDEX_SHIFT;
-}
-
-static inline int extended_ipc_msg_size(unsigned int flags)
-{
-	return (flags & IPC_FLAGS_SIZE_MASK)
-	       >> IPC_FLAGS_SIZE_SHIFT;
-}
-
 /*
  * Extended copy is asymmetric in that the copying always occurs from
  * the sender's kernel stack to receivers userspace buffers.
