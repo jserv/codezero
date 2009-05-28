@@ -60,7 +60,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 
 	/* Save current ipc flags and set current flags to short ipc */
 	saved_flags = tcb_get_ipc_flags(current);
-	tcb_set_ipc_flags(current, L4_IPC_FLAGS_SHORT);
+	tcb_set_ipc_flags(current, IPC_FLAGS_SHORT);
 
 	/* Send ipc to the task's pager */
 	ipc_sendrecv(current->pagerid, current->pagerid, 0);

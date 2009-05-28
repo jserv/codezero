@@ -66,14 +66,14 @@ int ipc_full_copy(struct ktcb *to, struct ktcb *from)
 
 static inline int extended_ipc_msg_index(unsigned int flags)
 {
-	return (flags & L4_IPC_FLAGS_MSG_INDEX_MASK)
-	       >> L4_IPC_FLAGS_MSG_INDEX_SHIFT;
+	return (flags & IPC_FLAGS_MSG_INDEX_MASK)
+	       >> IPC_FLAGS_MSG_INDEX_SHIFT;
 }
 
 static inline int extended_ipc_msg_size(unsigned int flags)
 {
-	return (flags & L4_IPC_FLAGS_SIZE_MASK)
-	       >> L4_IPC_FLAGS_SIZE_SHIFT;
+	return (flags & IPC_FLAGS_SIZE_MASK)
+	       >> IPC_FLAGS_SIZE_SHIFT;
 }
 
 /*
@@ -125,28 +125,28 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 	 */
 
 	switch(recv_ipc_type) {
-	case L4_IPC_FLAGS_SHORT:
-		if (send_ipc_type == L4_IPC_FLAGS_SHORT)
+	case IPC_FLAGS_SHORT:
+		if (send_ipc_type == IPC_FLAGS_SHORT)
 			ret = ipc_short_copy(to, from);
-		if (send_ipc_type == L4_IPC_FLAGS_FULL)
+		if (send_ipc_type == IPC_FLAGS_FULL)
 			ret = ipc_full_copy(to, from);
-		if (send_ipc_type == L4_IPC_FLAGS_EXTENDED)
+		if (send_ipc_type == IPC_FLAGS_EXTENDED)
 			ret = -ENOIPC;
 		break;
-	case L4_IPC_FLAGS_FULL:
-		if (send_ipc_type == L4_IPC_FLAGS_SHORT)
+	case IPC_FLAGS_FULL:
+		if (send_ipc_type == IPC_FLAGS_SHORT)
 			ret = ipc_full_copy(to, from);
-		if (send_ipc_type == L4_IPC_FLAGS_FULL)
+		if (send_ipc_type == IPC_FLAGS_FULL)
 			ret = ipc_full_copy(to, from);
-		if (send_ipc_type == L4_IPC_FLAGS_EXTENDED)
+		if (send_ipc_type == IPC_FLAGS_EXTENDED)
 			ret = -ENOIPC;
 		break;
-	case L4_IPC_FLAGS_EXTENDED:
-		if (send_ipc_type == L4_IPC_FLAGS_EXTENDED)
+	case IPC_FLAGS_EXTENDED:
+		if (send_ipc_type == IPC_FLAGS_EXTENDED)
 			ret = ipc_extended_copy(to, from);
-		if (send_ipc_type == L4_IPC_FLAGS_SHORT)
+		if (send_ipc_type == IPC_FLAGS_SHORT)
 			ret = -ENOIPC;
-		if (send_ipc_type == L4_IPC_FLAGS_FULL)
+		if (send_ipc_type == IPC_FLAGS_FULL)
 			ret = -ENOIPC;
 		break;
 	}
@@ -180,9 +180,9 @@ void ipc_signal_error(struct ktcb *sleeper, int retval)
 	 * Set ipc error flag for sleeper.
 	 */
 	if (retval == -EFAULT)
-		sleeper->ipc_flags |= L4_IPC_EFAULT;
+		sleeper->ipc_flags |= IPC_EFAULT;
 	if (retval == -ENOIPC)
-		sleeper->ipc_flags |= L4_IPC_ENOIPC;
+		sleeper->ipc_flags |= IPC_ENOIPC;
 }
 
 /*
@@ -199,14 +199,14 @@ int ipc_handle_errors(void)
 	}
 
 	/* Did ipc fail with a fault error? */
-	if (current->ipc_flags & L4_IPC_EFAULT) {
-		current->ipc_flags &= ~L4_IPC_EFAULT;
+	if (current->ipc_flags & IPC_EFAULT) {
+		current->ipc_flags &= ~IPC_EFAULT;
 		return -EFAULT;
 	}
 
 	/* Did ipc fail with a general ipc error? */
-	if (current->ipc_flags & L4_IPC_ENOIPC) {
-		current->ipc_flags &= ~L4_IPC_ENOIPC;
+	if (current->ipc_flags & IPC_ENOIPC) {
+		current->ipc_flags &= ~IPC_ENOIPC;
 		return -ENOIPC;
 	}
 
@@ -413,7 +413,7 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 	size = extended_ipc_msg_size(flags);
 
 	/* Check size is good */
-	if (size > L4_IPC_EXTENDED_MAX_SIZE)
+	if (size > IPC_EXTENDED_MAX_SIZE)
 		return -EINVAL;
 
 	/* Set extended ipc copy size */
@@ -473,7 +473,7 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	size = extended_ipc_msg_size(flags);
 
 	/* Check size is good */
-	if (size > L4_IPC_EXTENDED_MAX_SIZE)
+	if (size > IPC_EXTENDED_MAX_SIZE)
 		return -EINVAL;
 
 	/* Set extended ipc copy size */
@@ -508,19 +508,19 @@ static inline int __sys_ipc(l4id_t to, l4id_t from,
 
 	switch (ipc_type) {
 	case IPC_SEND:
-		if (flags & L4_IPC_FLAGS_EXTENDED)
+		if (flags & IPC_FLAGS_EXTENDED)
 			ret = ipc_send_extended(to, flags);
 		else
 			ret = ipc_send(to, flags);
 		break;
 	case IPC_RECV:
-		if (flags & L4_IPC_FLAGS_EXTENDED)
+		if (flags & IPC_FLAGS_EXTENDED)
 			ret = ipc_recv_extended(from, flags);
 		else
 			ret = ipc_recv(from, flags);
 		break;
 	case IPC_SENDRECV:
-		if (flags & L4_IPC_FLAGS_EXTENDED)
+		if (flags & IPC_FLAGS_EXTENDED)
 			ret = ipc_sendrecv_extended(to, from, flags);
 		else
 			ret = ipc_sendrecv(to, from, flags);
