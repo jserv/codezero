@@ -17,9 +17,6 @@
 #include INC_GLUE(context.h)
 #include INC_SUBARCH(mm.h)
 
-/*
- * Bit mappings for the ktcb flags field
- */
 
 /*
  * These are a mixture of flags that indicate the task is
@@ -29,13 +26,6 @@
 #define TASK_INTERRUPTED		(1 << 0)
 #define TASK_SUSPENDING			(1 << 1)
 #define TASK_RESUMING			(1 << 2)
-
-/* IPC resulted in a fault error (For ipcs that cannot page fault) */
-#define IPC_EFAULT			(1 << 3)
-
-/* IPC type is encoded in task flags in bits [7:4] */
-#define TASK_FLAGS_IPC_TYPE_MASK	0xF0
-#define TASK_FLAGS_IPC_TYPE_SHIFT	4
 
 /* Task states */
 enum task_state {
@@ -72,6 +62,9 @@ struct ktcb {
 
 	/* Flags to indicate various task status */
 	unsigned int flags;
+
+	/* IPC flags */
+	unsigned int ipc_flags;
 
 	/* Lock for blocking thread state modifications via a syscall */
 	struct mutex thread_control_lock;
@@ -144,21 +137,27 @@ static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 static inline void tcb_set_ipc_flags(struct ktcb *task,
 				     unsigned int flags)
 {
-	task->flags |= ((flags & L4_IPC_FLAGS_TYPE_MASK)
-			<< TASK_FLAGS_IPC_TYPE_SHIFT) &
-		       TASK_FLAGS_IPC_TYPE_MASK;
+	task->ipc_flags = flags;
 }
 
 static inline unsigned int tcb_get_ipc_flags(struct ktcb *task)
 {
-	return ((task->flags & TASK_FLAGS_IPC_TYPE_MASK)
-		>> TASK_FLAGS_IPC_TYPE_SHIFT)
-	       & L4_IPC_FLAGS_TYPE_MASK;
+	return task->ipc_flags;
+}
+
+static inline void tcb_set_ipc_type(struct ktcb *task,
+				    unsigned int type)
+{
+	task->ipc_flags = type & L4_IPC_FLAGS_TYPE_MASK;
+}
+
+static inline unsigned int tcb_get_ipc_type(struct ktcb *task)
+{
+	return task->ipc_flags & L4_IPC_FLAGS_TYPE_MASK;
 }
 
 #define THREAD_IDS_MAX		1024
 #define SPACE_IDS_MAX		1024
-#define TGROUP_IDS_MAX		1024
 
 
 extern struct id_pool *thread_id_pool;

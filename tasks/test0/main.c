@@ -19,7 +19,7 @@ void wait_pager(l4id_t partner)
 	for (int i = 0; i < 6; i++)
 		write_mr(i, i);
 	l4_send(partner, L4_IPC_TAG_SYNC);
-	printf("Pager synced with us.\n");
+	// printf("Pager synced with us.\n");
 }
 
 pid_t parent_of_all;
@@ -51,8 +51,8 @@ void main(void)
 
 	if (parent_of_all == getpid())
 		ipc_extended_test();
-
-	exectest();
+	else
+		exectest();
 
 	while (1)
 		wait_pager(0);

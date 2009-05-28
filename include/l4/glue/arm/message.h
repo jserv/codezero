@@ -87,6 +87,13 @@
 #include INC_GLUE(memlayout.h)
 
 #if defined (__KERNEL__)
+
+/* Kernel-only flags */
+#define L4_IPC_FLAGS_ERROR_MASK		0xF0000000
+#define L4_IPC_FLAGS_ERROR_SHIFT	28
+#define L4_IPC_EFAULT			(1 << 28)
+#define L4_IPC_ENOIPC			(1 << 29)
+
 struct utcb {
 	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
 	u32 saved_tag;		/* Saved tag field for stacked ipcs */

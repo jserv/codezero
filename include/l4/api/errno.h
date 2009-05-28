@@ -146,6 +146,7 @@
 
 /* Codezero specific error codes */
 #define EACTIVE		132	/* Task active */
+#define ENOIPC		133	/* General IPC error */
 
 #ifdef __KERNEL__
 

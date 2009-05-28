@@ -104,41 +104,50 @@ int ipc_extended_copy(struct ktcb *to, struct ktcb *from)
  * L4_ANYTHREAD. This is done for security since the receiver cannot trust
  * the sender info provided by the sender task.
  */
-int ipc_msg_copy(struct ktcb *to, struct ktcb *from,
-		 unsigned int current_flags)
+int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 {
-	int ret = 0;
+	unsigned int recv_ipc_type;
+	unsigned int send_ipc_type;
 	unsigned int *mr0_dst;
+	int ret = 0;
 
-#if 0
-	unsigned int recv_ipc_type = tcb_get_ipc_flags(to);
-	unsigned int send_ipc_type = tcb_get_ipc_flags(from);
+       	recv_ipc_type = tcb_get_ipc_type(to);
+       	send_ipc_type = tcb_get_ipc_type(from);
 
-	if (recv_ipc_type == L4_IPC_FLAGS_FULL ||
-	    send_ipc_type == L4_IPC_FLAGS_FULL) {
-		ret = ipc_full_copy(to, from);
-	}
-	if (recv_ipc_type == L4_IPC_FLAGS_SHORT)
 	/*
-	 * Check ipc type flags of both parties and use the following rules:
+	 * Check ipc type flags of both parties and
+	 * use the following rules:
 	 *
-	 * SHORT	SHORT	-> SHORT IPC
-	 * FULL		X	-> FULL IPC
-	 * EXTENDED	EXTENDED-> EXTENDED IPC
-	 * EXTENDED	X	-> X IPC
+	 * SHORT	SHORT		-> SHORT IPC
+	 * FULL		FULL/SHORT	-> FULL IPC
+	 * EXTENDED	EXTENDED	-> EXTENDED IPC
+	 * EXTENDED	NON-EXTENDED	-> ENOIPC
 	 */
-#endif
 
-	/* Check type of utcb copying and do it */
-	switch (current_flags & L4_IPC_FLAGS_TYPE_MASK) {
+	switch(recv_ipc_type) {
 	case L4_IPC_FLAGS_SHORT:
-		ret = ipc_short_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_SHORT)
+			ret = ipc_short_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_FULL)
+			ret = ipc_full_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_EXTENDED)
+			ret = -ENOIPC;
 		break;
 	case L4_IPC_FLAGS_FULL:
-		ret = ipc_full_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_SHORT)
+			ret = ipc_full_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_FULL)
+			ret = ipc_full_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_EXTENDED)
+			ret = -ENOIPC;
 		break;
 	case L4_IPC_FLAGS_EXTENDED:
-		ret = ipc_extended_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_EXTENDED)
+			ret = ipc_extended_copy(to, from);
+		if (send_ipc_type == L4_IPC_FLAGS_SHORT)
+			ret = -ENOIPC;
+		if (send_ipc_type == L4_IPC_FLAGS_FULL)
+			ret = -ENOIPC;
 		break;
 	}
 
@@ -163,11 +172,17 @@ int sys_ipc_control(syscall_context_t *regs)
 void ipc_signal_error(struct ktcb *sleeper, int retval)
 {
 	/*
-	 * Set ipc error flag in receiver.
-	 * Only EFAULT is expected for now
+	 * Only EFAULT and ENOIPC is expected for now
 	 */
-	BUG_ON(retval != -EFAULT);
-	sleeper->flags |= IPC_EFAULT;
+	BUG_ON(retval != -EFAULT && retval != -ENOIPC);
+
+	/*
+	 * Set ipc error flag for sleeper.
+	 */
+	if (retval == -EFAULT)
+		sleeper->ipc_flags |= L4_IPC_EFAULT;
+	if (retval == -ENOIPC)
+		sleeper->ipc_flags |= L4_IPC_ENOIPC;
 }
 
 /*
@@ -184,9 +199,15 @@ int ipc_handle_errors(void)
 	}
 
 	/* Did ipc fail with a fault error? */
-	if (current->flags & IPC_EFAULT) {
-		current->flags &= ~IPC_EFAULT;
+	if (current->ipc_flags & L4_IPC_EFAULT) {
+		current->ipc_flags &= ~L4_IPC_EFAULT;
 		return -EFAULT;
+	}
+
+	/* Did ipc fail with a general ipc error? */
+	if (current->ipc_flags & L4_IPC_ENOIPC) {
+		current->ipc_flags &= ~L4_IPC_ENOIPC;
+		return -ENOIPC;
 	}
 
 	return 0;
@@ -231,7 +252,7 @@ int ipc_send(l4id_t recv_tid, unsigned int flags)
 		spin_unlock(&wqhs->slock);
 
 		/* Copy message registers */
-		if ((ret = ipc_msg_copy(receiver, current, flags)) < 0)
+		if ((ret = ipc_msg_copy(receiver, current)) < 0)
 			ipc_signal_error(receiver, ret);
 
 		// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
@@ -295,8 +316,7 @@ int ipc_recv(l4id_t senderid, unsigned int flags)
 				spin_unlock(&wqhs->slock);
 
 				/* Copy message registers */
-				if ((ret = ipc_msg_copy(current, sleeper,
-							flags)) < 0)
+				if ((ret = ipc_msg_copy(current, sleeper)) < 0)
 					ipc_signal_error(sleeper, ret);
 
 				// printk("%s: (%d) Waking up (%d)\n",
@@ -424,7 +444,6 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 	return 0;
 }
 
-
 /*
  * In extended IPC, userspace buffers are copied to process
  * kernel stack before engaging in real calls ipc. If page fault
@@ -456,6 +475,8 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	/* Check size is good */
 	if (size > L4_IPC_EXTENDED_MAX_SIZE)
 		return -EINVAL;
+
+	/* Set extended ipc copy size */
 	current->extended_ipc_size = size;
 
 	/*

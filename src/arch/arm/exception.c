@@ -32,6 +32,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	u32 mr[MR_TOTAL] = { [MR_TAG] = L4_IPC_TAG_PFAULT,
 			     [MR_SENDER] = current->tid };
 	fault_kdata_t *fault = (fault_kdata_t *)&mr[MR_UNUSED_START];
+	unsigned int saved_flags;
 
 	/* Fill in fault information to pass over during ipc */
 	fault->faulty_pc = faulty_pc;
@@ -57,8 +58,15 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 				((unsigned long)&mr[0] -
 				 offsetof(syscall_context_t, r3));
 
+	/* Save current ipc flags and set current flags to short ipc */
+	saved_flags = tcb_get_ipc_flags(current);
+	tcb_set_ipc_flags(current, L4_IPC_FLAGS_SHORT);
+
 	/* Send ipc to the task's pager */
 	ipc_sendrecv(current->pagerid, current->pagerid, 0);
+
+	/* Restore ipc flags */
+	tcb_set_ipc_flags(current, saved_flags);
 
 	/*
 	 * FIXME: CHECK TASK KILL REPLY !!!
