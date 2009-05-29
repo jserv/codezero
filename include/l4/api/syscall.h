@@ -23,7 +23,8 @@
 #define sys_kread_offset			0x28
 #define sys_kmem_control_offset			0x2C
 #define sys_time_offset				0x30
-#define syscalls_end_offset			sys_time_offset
+#define sys_mutex_control_offset		0x34
+#define syscalls_end_offset			sys_mutex_control_offset
 #define SYSCALLS_TOTAL				((syscalls_end_offset >> 2) + 1)
 
 void print_syscall_context(struct ktcb *t);
@@ -41,5 +42,6 @@ int sys_getid(struct syscall_context *);
 int sys_kread(struct syscall_context *);
 int sys_kmem_control(struct syscall_context *);
 int sys_time(struct syscall_context *);
+int sys_mutex_control(struct syscall_context *);
 
 #endif /* __SYSCALL_H__ */

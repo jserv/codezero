@@ -78,6 +78,10 @@ typedef int (*__l4_time_t)(void *timeval, int set);
 extern __l4_time_t __l4_time;
 int l4_time(void *timeval, int set);
 
+typedef int (*__l4_mutex_control_t)(void *mutex_word, int op);
+extern __l4_mutex_control_t __l4_mutex_control;
+int l4_mutex_control(void *mutex_word, int op);
+
 
 /* To be supplied by server tasks. */
 void *virt_to_phys(void *);

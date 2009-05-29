@@ -65,9 +65,12 @@
 #define virt_to_phys(addr)	((unsigned int)(addr) - KERNEL_OFFSET)
 #endif
 
+#define PAGER_ADDR(x)		((x >= INITTASK_AREA_START) && (x < INITTASK_AREA_END))
 #define KERN_ADDR(x)		((x >= KERNEL_AREA_START) && (x < KERNEL_AREA_END))
-#define USER_ADDR(x)		((x >= USER_AREA_START) && (x < USER_AREA_END))
-
+#define UTCB_ADDR(x)		((x >= UTCB_AREA_START) && (x < UTCB_AREA_END))
+#define SHM_ADDR(x)		((x >= SHM_AREA_START) && (x < SHM_AREA_END))
+#define USER_ADDR(x)		(((x >= USER_AREA_START) && (x < USER_AREA_END)) || \
+				 UTCB_ADDR(x) || SHM_ADDR(x) || PAGER_ADDR(x))
 #define PRIVILEGED_ADDR(x)	(KERN_ADDR(x) || (x >= ARM_HIGH_VECTOR) || \
 				 (x >= IO_AREA_START && x < IO_AREA_END))
 

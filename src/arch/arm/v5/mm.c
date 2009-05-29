@@ -178,6 +178,17 @@ pte_t virt_to_pte(unsigned long virtual)
 	return virt_to_pte_from_pgd(virtual, TASK_PGD(current));
 }
 
+unsigned long virt_to_phys_by_pgd(unsigned long vaddr, pgd_table_t *pgd)
+{
+	pte_t pte = virt_to_pte_from_pgd(vaddr, pgd);
+	return pte & ~PAGE_MASK;
+}
+
+unsigned long virt_to_phys_by_task(unsigned long vaddr, struct ktcb *task)
+{
+	return virt_to_phys_by_pgd(vaddr, TASK_PGD(task));
+}
+
 void attach_pmd(pgd_table_t *pgd, pmd_table_t *pmd, unsigned int vaddr)
 {
 	u32 pgd_i = PGD_INDEX(vaddr);
@@ -266,12 +277,6 @@ int check_mapping_pgd(unsigned long vaddr, unsigned long size,
 	}
 
 	return 1;
-}
-
-unsigned long virt_to_phys_by_pgd(unsigned long vaddr, pgd_table_t *pgd)
-{
-	pte_t pte = virt_to_pte_from_pgd(vaddr, pgd);
-	return pte & ~PAGE_MASK;
 }
 
 int check_mapping(unsigned long vaddr, unsigned long size,

@@ -21,7 +21,7 @@ struct address_space_list {
 	/* Lock for list add/removal */
 	struct spinlock list_lock;
 
-	/* To manage refcounting of *all* spaces in the list */
+	/* Used when delete/creating spaces */
 	struct mutex ref_lock;
 	int count;
 };

@@ -29,6 +29,7 @@ void kip_init_syscalls(void)
 	kip.getid = ARM_SYSCALL_PAGE + sys_getid_offset;
 	kip.kmem_control = ARM_SYSCALL_PAGE + sys_kmem_control_offset;
 	kip.time = ARM_SYSCALL_PAGE + sys_time_offset;
+	kip.mutex_control = ARM_SYSCALL_PAGE + sys_mutex_control_offset;
 }
 
 /* Jump table for all system calls. */
@@ -53,6 +54,7 @@ void syscall_init()
 	syscall_table[sys_kread_offset >> 2]		 	= (syscall_fn_t)sys_kread;
 	syscall_table[sys_kmem_control_offset >> 2]		= (syscall_fn_t)sys_kmem_control;
 	syscall_table[sys_time_offset >> 2]			= (syscall_fn_t)sys_time;
+	syscall_table[sys_mutex_control_offset >> 2]			= (syscall_fn_t)sys_mutex_control;
 
 	add_mapping(virt_to_phys(&__syscall_page_start),
 		    ARM_SYSCALL_PAGE, PAGE_SIZE, MAP_USR_RO_FLAGS);
