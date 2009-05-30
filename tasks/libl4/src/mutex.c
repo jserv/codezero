@@ -6,6 +6,7 @@
 #include <l4lib/mutex.h>
 #include <l4lib/types.h>
 #include <l4lib/arch/syscalls.h>
+#include <l4lib/arch/syslib.h>
 
 /*
  * NOTES:

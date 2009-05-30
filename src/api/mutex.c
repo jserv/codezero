@@ -24,23 +24,29 @@ struct mutex_queue {
 
 struct mutex_queue_head {
 	struct list_head list;
+
+	/*
+	 * Lock for mutex_queue create/deletion and also list add/removal.
+	 * Both operations are done jointly so a single lock is enough.
+	 */
+	struct mutex mutex_control_mutex;
 	int count;
 } mutex_queue_head;
 
-/*
- * Lock for mutex_queue create/deletion and also list add/removal.
- * Both operations are done jointly so a single lock is enough.
- */
-struct mutex mutex_control_mutex;
-
+void init_mutex_queue_head(void)
+{
+	memset(&mutex_queue_head, 0, sizeof (mutex_queue_head));
+	INIT_LIST_HEAD(&mutex_queue_head.list);
+	mutex_init(&mutex_queue_head.mutex_control_mutex);
+}
 void mutex_queue_head_lock()
 {
-	mutex_lock(&mutex_control_mutex);
+	mutex_lock(&mutex_queue_head.mutex_control_mutex);
 }
 
 void mutex_queue_head_unlock()
 {
-	mutex_unlock(&mutex_control_mutex);
+	mutex_unlock(&mutex_queue_head.mutex_control_mutex);
 }
 
 

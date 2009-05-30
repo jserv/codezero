@@ -26,6 +26,7 @@
 #include INC_PLAT(printascii.h)
 #include INC_API(syscall.h)
 #include INC_API(kip.h)
+#include INC_API(mutex.h)
 
 unsigned int kernel_mapping_end;
 
@@ -344,6 +345,7 @@ void init_tasks()
 	/* Initialise the global task and address space lists */
 	init_ktcb_list();
 	init_address_space_list();
+	init_mutex_queue_head();
 
 	printk("%s: Initialized. Starting %s as pager.\n",
 	       __KERNELNAME__, __PAGERNAME__);

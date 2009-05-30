@@ -198,6 +198,18 @@ BEGIN_PROC(l4_space_control)
 END_PROC(l4_space_control)
 
 /*
+ * Locks/unlocks a userspace mutex.
+ * @r0 = mutex virtual address, @r1 = mutex operation code
+ */
+BEGIN_PROC(l4_mutex_control)
+	stmfd	sp!, {lr}
+	ldr	r12, =__l4_mutex_control
+	mov	lr, pc
+	ldr	pc, [r12]
+	ldmfd	sp!, {pc}	@ Restore original lr and return.
+END_PROC(l4_mutex_control)
+
+/*
  * Sets registers of a thread and its pager.
  * @r0 = ptr to exregs_data structure, @r1 = tid of thread.
  */

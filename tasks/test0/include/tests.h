@@ -23,5 +23,6 @@ int dirtest(void);
 int fileio(void);
 int clonetest(void);
 int exectest(void);
+int user_mutex_test(void);
 
 #endif /* __TEST0_TESTS_H__ */

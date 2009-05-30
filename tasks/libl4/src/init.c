@@ -55,6 +55,6 @@ void __l4_init(void)
 			(__l4_exchange_registers_t)kip->exchange_registers;
 	__l4_kmem_control =	(__l4_kmem_control_t)kip->kmem_control;
 	__l4_time =		(__l4_time_t)kip->time;
-	__l4_mutex_control=	(__l4_mutex_control_t)kip->mutex_control;
+	__l4_mutex_control =	(__l4_mutex_control_t)kip->mutex_control;
 }
 

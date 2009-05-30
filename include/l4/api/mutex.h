@@ -6,6 +6,8 @@
 #if defined (__KERNEL__)
 #define MUTEX_CONTROL_LOCK		L4_MUTEX_LOCK
 #define MUTEX_CONTROL_UNLOCK		L4_MUTEX_UNLOCK
+
+void init_mutex_queue_head(void);
 #endif
 
 #define L4_MUTEX_LOCK		0
