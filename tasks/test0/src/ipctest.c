@@ -81,7 +81,8 @@ void ipc_extended_test(void)
 			    __FUNCTION__, (int)base);
 		goto out_err;
 	} else
-		test_printf("mmap: Anonymous private buffer at %p\n", base);
+		test_printf("%s: mmap: Anonymous private buffer at %p\n",
+			    __FUNCTION__, base);
 
 	/*
 	 * Both tasks read/write both pages

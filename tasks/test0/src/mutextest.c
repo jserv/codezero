@@ -67,12 +67,12 @@ int user_mutex_test(void)
 	l4_mutex_init(&shared_page->mutex);
 
 	/* Initialize buffer with unique child value */
-	printf("Child writing:\n");
-	for (int i = 0; i < buf_size; i++) {
+	printf("Initializing shared page with child values.\n");
+	BUG();
+	shared_page->child_has_run = 0;
+	shared_page->parent_has_run = 0;
+	for (int i = 0; i < buf_size; i++)
 		shared_page->page_rest[i] = 'c';
-		printf("%c", shared_page->page_rest[i]);
-	}
-	printf("\n\n");
 
 	/* Fork the current task */
 	if ((child = fork()) < 0) {
@@ -124,23 +124,24 @@ int user_mutex_test(void)
 			l4_mutex_lock(&shared_page->mutex);
 			printf("Parent locked page.\n");
 
-			printf("Parent reading:\n");
+	//		printf("Parent reading:\n");
 
 			/* Test and consume the page */
 			for (int i = 0; i < buf_size; i++) {
-				printf("%c", shared_page->page_rest[i]);
+	//			printf("%c", shared_page->page_rest[i]);
 				/* Test that child has produced */
 				if (shared_page->page_rest[i] != 'c') {
 					printf("Child not produced. "
 					       "page_rest[%d] = %c, "
 					       "expected = 'c'\n",
 					       i, shared_page->page_rest[i]);
+					BUG();
 					goto out_err;
 				}
 				/* Consume the page */
 				shared_page->page_rest[i] = 'P';
 			}
-			printf("\n\n");
+	//		printf("\n\n");
 			printf("Parent consumed.\n");
 			l4_mutex_unlock(&shared_page->mutex);
 			printf("Parent unlocked page.\n");
