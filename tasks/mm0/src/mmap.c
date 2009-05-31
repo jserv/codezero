@@ -17,6 +17,7 @@
 #include <shm.h>
 #include <syscalls.h>
 #include <user.h>
+#include <shm.h>
 
 struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 			unsigned int flags, unsigned long file_offset)
@@ -369,6 +370,27 @@ void *__sys_mmap(struct tcb *task, void *start, size_t length, int prot,
 		vmflags |= VM_WRITE;
 	if (prot & PROT_EXEC)
 		vmflags |= VM_EXEC;
+
+	/*
+	 * Currently MAP_SHARED && MAP_ANONYMOUS mappings use the
+	 * shm interface to create virtual shared memory files and
+	 * do_mmap is internally called through this interface.
+	 *
+	 * FIXME: A common method of creating virtual shm files
+	 * should be used by both sys_mmap and sys_shmget. With the
+	 * current method, a task that guesses the shmid of an
+	 * anonymous shared mmap can attach to it via shmat.
+	 */
+	if ((flags & MAP_ANONYMOUS) &&
+	    (flags & MAP_SHARED)) {
+		/* Create a new shared memory virtual file */
+		l4id_t shmid =	sys_shmget(IPC_PRIVATE,
+					   page_align_up(length),
+					   0);
+
+		/* Find and mmap the file via do_shmat() */
+		return sys_shmat(task, shmid, 0, 0);
+	}
 
 	return do_mmap(file, file_offset, task, (unsigned long)start,
 		       vmflags, __pfn(page_align_up(length)));

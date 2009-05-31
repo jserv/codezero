@@ -697,6 +697,8 @@ int __do_page_fault(struct fault_data *fault)
 		 */
 		} else if ((vma_flags & VMA_SHARED)) {
 			file_offset = fault_to_file_offset(fault);
+
+			/* Don't traverse, just take the first object */
 			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
 							  &vma->vm_obj_list)));
 
