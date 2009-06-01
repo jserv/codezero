@@ -20,9 +20,7 @@
  */
 struct shared_page {
 	struct l4_mutex mutex;
-	int child_has_run;
-	int parent_has_run;
-	char page_rest[];
+	int shared_var;
 };
 
 static struct shared_page *shared_page;
@@ -38,7 +36,6 @@ int user_mutex_test(void)
 {
 	pid_t child, parent;
 	int map_size = PAGE_SIZE;
-	int buf_size;
 	void *base;
 
 	/* Get parent pid */
@@ -59,19 +56,11 @@ int user_mutex_test(void)
 
 	shared_page = base;
 
-	/* Find the buffer size */
-	buf_size = map_size - sizeof(*shared_page);
-	printf("Total buffer size: %d\n", buf_size);
-
 	/* Initialize the mutex */
 	l4_mutex_init(&shared_page->mutex);
 
-	/* Initialize buffer with unique child value */
-	printf("Initializing shared page with child values.\n");
-	shared_page->child_has_run = 0;
-	shared_page->parent_has_run = 0;
-	for (int i = 0; i < buf_size; i++)
-		shared_page->page_rest[i] = 0;
+	/* Initialize the shared variable */
+	shared_page->shared_var = 0;
 
 	/* Fork the current task */
 	if ((child = fork()) < 0) {
@@ -87,80 +76,82 @@ int user_mutex_test(void)
 	/* Child locks and produces */
 	if (child == 0) {
 
-		for (int x = 0; x < 255; x++) {
-			/* Lock */
+		for (int x = 0; x < 10000; x++) {
+			int temp;
+
+			/* Lock page */
 			printf("Child locking page.\n");
 			l4_mutex_lock(&shared_page->mutex);
 
+			/* Read variable */
 			printf("Child locked page.\n");
+			temp = shared_page->shared_var;
 
+			/* Thread switch */
 			l4_thread_switch(0);
-			/* Get sample value */
-			//char val = shared_page->page_rest[0];
 
-			/* Write a unique child value to whole buffer */
-			for (int i = 0; i < buf_size; i++) {
-#if 0
-				/* Check sample is same in all */
-				if (shared_page->page_rest[i] != val) {
-					printf("Sample values dont match. "
-					       "page_rest[%d] = %c, "
-					       "val = %c\n", i,
-					       shared_page->page_rest[i], val);
-					goto out_err;
-				}
-#endif
-				shared_page->page_rest[i]--;
-			}
-			printf("Child produced. Unlocking...\n");
+			/* Update local copy */
+			temp++;
+
+			/* Thread switch */
+			l4_thread_switch(0);
+
+			/* Write back the result */
+			shared_page->shared_var = temp;
+
+			printf("Child modified. Unlocking...\n");
+
 			/* Unlock */
 			l4_mutex_unlock(&shared_page->mutex);
 			printf("Child unlocked page.\n");
+
+			/* Thread switch */
+			l4_thread_switch(0);
+
 		}
 		/* Sync with the parent */
 		l4_send(parent, L4_IPC_TAG_SYNC);
 
 	/* Parent locks and consumes */
 	} else {
-		for (int x = 0; x < 255; x++) {
-			printf("Parent locking page.\n");
+		for (int x = 0; x < 10000; x++) {
+			int temp;
 
-			/* Lock the page */
+			/* Lock page */
+			printf("Parent locking page.\n");
 			l4_mutex_lock(&shared_page->mutex);
+
+			/* Read variable */
 			printf("Parent locked page.\n");
+			temp = shared_page->shared_var;
+
+			/* Thread switch */
 			l4_thread_switch(0);
 
-	//		printf("Parent reading:\n");
+			/* Update local copy */
+			temp--;
 
-			/* Test and consume the page */
-			for (int i = 0; i < buf_size; i++) {
-	//			printf("%c", shared_page->page_rest[i]);
-				/* Test that child has produced */
-#if 0
-				if (shared_page->page_rest[i] != 'c') {
-					printf("Child not produced. "
-					       "page_rest[%d] = %c, "
-					       "expected = 'c'\n",
-					       i, shared_page->page_rest[i]);
-					BUG();
-					goto out_err;
-				}
-#endif
-				/* Consume the page */
-				shared_page->page_rest[i]++;
-			}
-	//		printf("\n\n");
-			printf("Parent consumed. Unlocking...\n");
+			/* Thread switch */
+			l4_thread_switch(0);
+
+			/* Write back the result */
+			shared_page->shared_var = temp;
+
+			printf("Parent modified. Unlocking...\n");
+
+			/* Unlock */
 			l4_mutex_unlock(&shared_page->mutex);
 			printf("Parent unlocked page.\n");
+
+			/* Thread switch */
+			l4_thread_switch(0);
 		}
 		/* Sync with the child */
 		l4_receive(child);
 
-		printf("Parent checking validity of values.\n");
-		for (int i = 0; i < 255; i++)
-			if (shared_page->page_rest[i] != 0)
-				goto out_err;
+		printf("Parent checking validity of value.\n");
+		if (shared_page->shared_var != 0)
+			goto out_err;
 
 		printf("USER MUTEX TEST:    -- PASSED --\n");
 	}
