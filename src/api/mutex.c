@@ -199,7 +199,6 @@ int mutex_control_unlock(unsigned long mutex_address)
 
 	/* Search for the mutex queue */
 	if (!(mutex_queue = mutex_control_find(mutex_address))) {
-		mutex_queue_head_unlock();
 
 		/* No such mutex, create one and sleep on it */
 		if (!(mutex_queue = mutex_control_create(mutex_address))) {
