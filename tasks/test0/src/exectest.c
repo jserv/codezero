@@ -16,7 +16,7 @@ extern char _end_test_exec[];
 
 int exectest(void)
 {
-	int fd;
+	int fd, err;
 	void *exec_start = (void *)_start_test_exec;
 	unsigned long size = _end_test_exec - _start_test_exec;
 	int left, cnt;
@@ -28,6 +28,7 @@ int exectest(void)
 
 	/* First create a new file and write the executable data to that file */
 	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
+		err = errno;
 		test_printf("OPEN: %d\n", errno);
 		goto out_err;
 	}
@@ -40,7 +41,7 @@ int exectest(void)
 		left -= cnt;
 	}
 
-	if (close(fd) < 0)
+	if ((err = close(fd)) < 0)
 		goto out_err;
 
 	/* Set up some arguments */
@@ -51,9 +52,10 @@ int exectest(void)
 	argv[4] = 0;
 
 	/* Execute the file */
-	execve(filename, argv, 0);
+	err = execve(filename, argv, 0);
 
 out_err:
+	printf("EXECVE failed with %d\n", err);
 	printf("EXECVE TEST      -- FAILED --\n");
 	return 0;
 }
