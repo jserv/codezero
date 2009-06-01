@@ -42,7 +42,7 @@ void init_kmalloc()
  * Allocates memory from mem_caches that it generates on-the-fly,
  * for up to KMALLOC_POOLS_MAX different sizes.
  */
-void *kmalloc(int size)
+void *__kmalloc(int size)
 {
 	struct mem_cache *cache;
 	int right_sized_pool_idx = -1;
@@ -82,7 +82,7 @@ void *kmalloc(int size)
 	if (right_sized_pool_idx >= 0)
 		index = right_sized_pool_idx;
 	else /* No pool of this size, allocate new by incrementing total */
-		index = km_pool.total++; 
+		index = km_pool.total++;
 
 	/* Only allow up to page size */
 	BUG_ON(size >= PAGE_SIZE);
@@ -96,11 +96,21 @@ void *kmalloc(int size)
 	return mem_cache_alloc(cache);
 }
 
+void *kmalloc(int size)
+{
+	void *p;
+
+	mutex_lock(&km_pool.kmalloc_mutex);
+	p = __kmalloc(size);
+	mutex_unlock(&km_pool.kmalloc_mutex);
+	return p;
+}
+
 /* FIXME:
  * Horrible complexity O(n^2) because we don't know which cache
  * we're freeing from!!! But its simple. ;-)
  */
-int kfree(void *p)
+int __kfree(void *p)
 {
 	struct mem_cache *cache, *tmp;
 
@@ -122,6 +132,15 @@ int kfree(void *p)
 			}
 		}
 	return -1;
+}
+
+int kfree(void *p)
+{
+	int ret;
+	mutex_lock(&km_pool.kmalloc_mutex);
+	ret = __kfree(p);
+	mutex_unlock(&km_pool.kmalloc_mutex);
+	return ret;
 }
 
 void *kzalloc(int size)
