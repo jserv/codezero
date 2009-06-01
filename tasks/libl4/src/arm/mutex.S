@@ -56,7 +56,7 @@ BEGIN_PROC(__l4_mutex_unlock)
 	swp	r2, r3, [r0]
 	cmp	r2, r1			@ Check lock had original tid value
 	movne	r0, #L4_MUTEX_CONTENDED	@ Indicate contention
-	movne	r0, #L4_MUTEX_SUCCESS	@ Indicate no contention
+	moveq	r0, #L4_MUTEX_SUCCESS	@ Indicate no contention
 	cmp	r2, #L4_MUTEX_UNLOCKED	@ Or - was it already unlocked?
 1:
 	beq	1b			@ If so busy-spin to indicate bug.

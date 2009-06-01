@@ -35,14 +35,51 @@ void task_unset_wqh(struct ktcb *task)
 
 }
 
+/*
+ * Initiate wait on current task that
+ * has already been placed in a waitqueue
+ */
+int wait_on_prepared_wait(void)
+{
+	/* Simply scheduling should initate wait */
+	schedule();
+
+	/* Did we wake up normally or get interrupted */
+	if (current->flags & TASK_INTERRUPTED) {
+		current->flags &= ~TASK_INTERRUPTED;
+		return -EINTR;
+	}
+	/* No errors */
+	return 0;
+}
+
+/*
+ * Do all preparations to sleep but return without sleeping.
+ * This is useful if the task needs to get in the waitqueue before
+ * it releases a lock.
+ */
+int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq)
+{
+	spin_lock(&wqh->slock);
+	wqh->sleepers++;
+	list_add_tail(&wq->task_list, &wqh->task_list);
+	task_set_wqh(current, wqh, wq);
+	sched_prepare_sleep();
+	printk("(%d) waiting on wqh at: 0x%p\n",
+	       current->tid, wqh);
+	spin_unlock(&wqh->slock);
+
+	return 0;
+}
+
 /* Sleep without any condition */
 int wait_on(struct waitqueue_head *wqh)
 {
 	CREATE_WAITQUEUE_ON_STACK(wq, current);
 	spin_lock(&wqh->slock);
-	task_set_wqh(current, wqh, &wq);
 	wqh->sleepers++;
 	list_add_tail(&wq.task_list, &wqh->task_list);
+	task_set_wqh(current, wqh, &wq);
 	sched_prepare_sleep();
 	printk("(%d) waiting on wqh at: 0x%p\n",
 	       current->tid, wqh);
@@ -95,10 +132,10 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 						  struct waitqueue,
 						  task_list);
 		struct ktcb *sleeper = wq->task;
-		task_unset_wqh(sleeper);
 		BUG_ON(list_empty(&wqh->task_list));
 		list_del_init(&wq->task_list);
 		wqh->sleepers--;
+		task_unset_wqh(sleeper);
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
 		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);

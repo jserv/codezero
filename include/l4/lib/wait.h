@@ -77,6 +77,7 @@ int wake_up_task(struct ktcb *task, unsigned int flags);
 void wake_up_all(struct waitqueue_head *wqh, unsigned int flags);
 
 int wait_on(struct waitqueue_head *wqh);
-
+int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq);
+int wait_on_prepared_wait(void);
 #endif /* __LIB_WAIT_H__ */
 

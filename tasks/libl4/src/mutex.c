@@ -50,18 +50,28 @@ void l4_mutex_init(struct l4_mutex *m)
 int l4_mutex_lock(struct l4_mutex *m)
 {
 	l4id_t tid = self_tid();
+	int err;
 
-	while(__l4_mutex_lock(m, tid) == L4_MUTEX_CONTENDED)
-		l4_mutex_control(&m->lock, L4_MUTEX_LOCK);
+	while(__l4_mutex_lock(m, tid) == L4_MUTEX_CONTENDED) {
+		if ((err = l4_mutex_control(&m->lock, L4_MUTEX_LOCK)) < 0) {
+			printf("%s: Error: %d\n", __FUNCTION__, err);
+			return err;
+		}
+	}
 	return 0;
 }
 
 int l4_mutex_unlock(struct l4_mutex *m)
 {
 	l4id_t tid = self_tid();
+	int err;
 
-	if (__l4_mutex_unlock(m, tid) == L4_MUTEX_CONTENDED)
-		l4_mutex_control(&m->lock, L4_MUTEX_UNLOCK);
+	if (__l4_mutex_unlock(m, tid) == L4_MUTEX_CONTENDED) {
+		if ((err = l4_mutex_control(&m->lock, L4_MUTEX_UNLOCK)) < 0) {
+			printf("%s: Error: %d\n", __FUNCTION__, err);
+			return err;
+		}
+	}
 	return 0;
 }
 

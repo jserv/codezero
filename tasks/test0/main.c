@@ -52,9 +52,9 @@ void main(void)
 		ipc_full_test();
 		ipc_extended_test();
 	}
-//	if (parent_of_all == getpid()) {
-//		user_mutex_test();
-//	}
+	if (parent_of_all == getpid()) {
+		user_mutex_test();
+	}
 	exectest();
 
 	while (1)

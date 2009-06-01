@@ -68,11 +68,10 @@ int user_mutex_test(void)
 
 	/* Initialize buffer with unique child value */
 	printf("Initializing shared page with child values.\n");
-	BUG();
 	shared_page->child_has_run = 0;
 	shared_page->parent_has_run = 0;
 	for (int i = 0; i < buf_size; i++)
-		shared_page->page_rest[i] = 'c';
+		shared_page->page_rest[i] = 0;
 
 	/* Fork the current task */
 	if ((child = fork()) < 0) {
@@ -88,17 +87,20 @@ int user_mutex_test(void)
 	/* Child locks and produces */
 	if (child == 0) {
 
-		for (int i = 0; i < 5; i++) {
+		for (int x = 0; x < 255; x++) {
 			/* Lock */
 			printf("Child locking page.\n");
 			l4_mutex_lock(&shared_page->mutex);
 
 			printf("Child locked page.\n");
+
+			l4_thread_switch(0);
 			/* Get sample value */
-			char val = shared_page->page_rest[0];
+			//char val = shared_page->page_rest[0];
 
 			/* Write a unique child value to whole buffer */
 			for (int i = 0; i < buf_size; i++) {
+#if 0
 				/* Check sample is same in all */
 				if (shared_page->page_rest[i] != val) {
 					printf("Sample values dont match. "
@@ -107,22 +109,26 @@ int user_mutex_test(void)
 					       shared_page->page_rest[i], val);
 					goto out_err;
 				}
-				shared_page->page_rest[i] = 'c';
+#endif
+				shared_page->page_rest[i]--;
 			}
-			printf("Child produced.\n");
+			printf("Child produced. Unlocking...\n");
 			/* Unlock */
 			l4_mutex_unlock(&shared_page->mutex);
 			printf("Child unlocked page.\n");
 		}
+		/* Sync with the parent */
+		l4_send(parent, L4_IPC_TAG_SYNC);
 
 	/* Parent locks and consumes */
 	} else {
-		for (int i = 0; i < 5; i++) {
+		for (int x = 0; x < 255; x++) {
 			printf("Parent locking page.\n");
 
 			/* Lock the page */
 			l4_mutex_lock(&shared_page->mutex);
 			printf("Parent locked page.\n");
+			l4_thread_switch(0);
 
 	//		printf("Parent reading:\n");
 
@@ -130,6 +136,7 @@ int user_mutex_test(void)
 			for (int i = 0; i < buf_size; i++) {
 	//			printf("%c", shared_page->page_rest[i]);
 				/* Test that child has produced */
+#if 0
 				if (shared_page->page_rest[i] != 'c') {
 					printf("Child not produced. "
 					       "page_rest[%d] = %c, "
@@ -138,14 +145,22 @@ int user_mutex_test(void)
 					BUG();
 					goto out_err;
 				}
+#endif
 				/* Consume the page */
-				shared_page->page_rest[i] = 'P';
+				shared_page->page_rest[i]++;
 			}
 	//		printf("\n\n");
-			printf("Parent consumed.\n");
+			printf("Parent consumed. Unlocking...\n");
 			l4_mutex_unlock(&shared_page->mutex);
 			printf("Parent unlocked page.\n");
 		}
+		/* Sync with the child */
+		l4_receive(child);
+
+		printf("Parent checking validity of values.\n");
+		for (int i = 0; i < 255; i++)
+			if (shared_page->page_rest[i] != 0)
+				goto out_err;
 
 		printf("USER MUTEX TEST:    -- PASSED --\n");
 	}

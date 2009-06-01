@@ -14,6 +14,7 @@
 struct kmalloc_mempool {
 	int total;
 	struct list_head pool_head[KMALLOC_POOLS_MAX];
+	struct mutex kmalloc_mutex;
 };
 struct kmalloc_mempool km_pool;
 
@@ -21,6 +22,7 @@ void init_kmalloc()
 {
 	for (int i = 0; i < KMALLOC_POOLS_MAX; i++)
 		INIT_LIST_HEAD(&km_pool.pool_head[i]);
+	mutex_init(&km_pool.kmalloc_mutex);
 }
 
 /*
@@ -69,6 +71,7 @@ void *kmalloc(int size)
 	BUG_ON(size >= PAGE_SIZE);
 	BUG_ON(!(cache = mem_cache_init(alloc_page(), PAGE_SIZE,
 					size, 0)));
+	printk("%s: Created new cache for size %d\n", __FUNCTION__, size);
 	list_add(&cache->list, &km_pool.pool_head[index]);
 	return mem_cache_alloc(cache);
 }
@@ -87,7 +90,12 @@ int kfree(void *p)
 				if (mem_cache_is_empty(cache)) {
 					list_del(&cache->list);
 					free_page(cache);
-					/* Total remains the same. */
+					/*
+					 * Total remains the same unless all
+					 * caches are freed on that pool
+					 */
+					if (list_empty(&km_pool.pool_head[i]))
+						km_pool.total--;
 				}
 				return 0;
 			}

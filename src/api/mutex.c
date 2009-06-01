@@ -19,15 +19,21 @@
 struct mutex_queue {
 	unsigned long physical;
 	struct list_head list;
-	struct waitqueue_head wqh;
+	struct waitqueue_head wqh_waiters;
+	struct waitqueue_head wqh_wakers;
 };
 
 struct mutex_queue_head {
 	struct list_head list;
 
 	/*
-	 * Lock for mutex_queue create/deletion and also list add/removal.
-	 * Both operations are done jointly so a single lock is enough.
+	 * Single lock for:
+	 * (1) Mutex_queue create/deletion
+	 * (2) List add/removal.
+	 * (3) Inspection of waitqueues:
+	 *     - Both waitqueue spinlocks need to be acquired for
+	 *       rendezvous inspection to occur atomically. Currently
+	 *       it's not done since we rely on this mutex for that.
 	 */
 	struct mutex mutex_control_mutex;
 	int count;
@@ -56,7 +62,8 @@ void mutex_queue_init(struct mutex_queue *mq, unsigned long physical)
 	mq->physical = physical;
 
 	INIT_LIST_HEAD(&mq->list);
-	waitqueue_head_init(&mq->wqh);
+	waitqueue_head_init(&mq->wqh_wakers);
+	waitqueue_head_init(&mq->wqh_waiters);
 }
 
 void mutex_control_add(struct mutex_queue *mq)
@@ -105,8 +112,10 @@ void mutex_control_delete(struct mutex_queue *mq)
 	BUG_ON(!list_empty(&mq->list));
 
 	/* Test internals of waitqueue */
-	BUG_ON(&mq->wqh.sleepers);
-	BUG_ON(!list_empty(&mq->wqh.task_list));
+	BUG_ON(mq->wqh_waiters.sleepers);
+	BUG_ON(mq->wqh_wakers.sleepers);
+	BUG_ON(!list_empty(&mq->wqh_waiters.task_list));
+	BUG_ON(!list_empty(&mq->wqh_wakers.task_list));
 
 	kfree(mq);
 }
@@ -119,7 +128,8 @@ void mutex_control_delete(struct mutex_queue *mq)
  *     searched for in the existing mutex list. If it does not
  *     appear there, it gets added.
  * (2) The thread is put to sleep in the mutex wait queue
- *     until a wake up event occurs.
+ *     until a wake up event occurs. If there is already an asleep
+ *     waker (i.e. unlocker) that is woken up and we return.
  */
 int mutex_control_lock(unsigned long mutex_address)
 {
@@ -136,13 +146,36 @@ int mutex_control_lock(unsigned long mutex_address)
 		}
 		/* Add the queue to mutex queue list */
 		mutex_control_add(mutex_queue);
+	} else {
+		/* See if there is an unlocker */
+		if (mutex_queue->wqh_wakers.sleepers) {
+			/*
+			 * If yes, wake it up async and we can *hope*
+		 	 * to acquire the lock before the waker
+		 	 */
+			wake_up(&mutex_queue->wqh_wakers, WAKEUP_ASYNC);
+
+			/* Since noone is left, delete the mutex queue */
+			mutex_control_remove(mutex_queue);
+			mutex_control_delete(mutex_queue);
+
+			/* Release lock and return */
+			mutex_queue_head_unlock();
+
+			return 0;
+		}
 	}
+
+	/* Prepare to wait on the waiters queue */
+	CREATE_WAITQUEUE_ON_STACK(wq, current);
+	wait_on_prepare(&mutex_queue->wqh_waiters, &wq);
+
+	/* Release lock */
 	mutex_queue_head_unlock();
 
-	/* Now sleep on the queue */
-	wait_on(&mutex_queue->wqh);
+	/* Initiate prepared wait */
+	return wait_on_prepared_wait();
 
-	return 0;
 }
 
 /*
@@ -152,7 +185,7 @@ int mutex_control_lock(unsigned long mutex_address)
  *
  * (1) The mutex is converted into its physical form and
  *     searched for in the existing mutex list. If not found,
- *     the call returns an error.
+ *     a new one is created and the thread sleeps there as a waker.
  * (2) All the threads waiting on this mutex are woken up. This may
  *     cause a thundering herd, but user threads cannot be trusted
  *     to acquire the mutex, waking up all of them increases the
@@ -167,11 +200,32 @@ int mutex_control_unlock(unsigned long mutex_address)
 	/* Search for the mutex queue */
 	if (!(mutex_queue = mutex_control_find(mutex_address))) {
 		mutex_queue_head_unlock();
-		/* No such mutex */
-		return -ESRCH;
+
+		/* No such mutex, create one and sleep on it */
+		if (!(mutex_queue = mutex_control_create(mutex_address))) {
+			mutex_queue_head_unlock();
+			return -ENOMEM;
+		}
+
+		/* Add the queue to mutex queue list */
+		mutex_control_add(mutex_queue);
+
+		/* Prepare to wait on the wakers queue */
+		CREATE_WAITQUEUE_ON_STACK(wq, current);
+		wait_on_prepare(&mutex_queue->wqh_wakers, &wq);
+
+		/* Release lock */
+		mutex_queue_head_unlock();
+
+		/* Initiate prepared wait */
+		return wait_on_prepared_wait();
 	}
-	/* Found it, now wake all waiters up in FIFO order */
-	wake_up_all(&mutex_queue->wqh, WAKEUP_ASYNC);
+
+	/*
+	 * Found it, if it exists, there are waiters,
+	 * now wake all of them up in FIFO order
+	 */
+	wake_up(&mutex_queue->wqh_waiters, WAKEUP_ASYNC);
 
 	/* Since noone is left, delete the mutex queue */
 	mutex_control_remove(mutex_queue);
@@ -191,12 +245,16 @@ int sys_mutex_control(syscall_context_t *regs)
 
 	/* Check valid operation */
 	if (mutex_op != MUTEX_CONTROL_LOCK &&
-	    mutex_op != MUTEX_CONTROL_UNLOCK)
+	    mutex_op != MUTEX_CONTROL_UNLOCK) {
+		printk("Invalid args to %s.\n", __FUNCTION__);
 		return -EINVAL;
+	}
 
 	/* Check valid user virtual address */
-	if (!USER_ADDR(mutex_address))
+	if (!USER_ADDR(mutex_address)) {
+		printk("Invalid args to %s.\n", __FUNCTION__);
 		return -EINVAL;
+	}
 
 	/* Find and check physical address for virtual mutex address */
 	if (!(mutex_physical =
@@ -206,11 +264,16 @@ int sys_mutex_control(syscall_context_t *regs)
 
 	switch (mutex_op) {
 	case MUTEX_CONTROL_LOCK:
+		printk("(%d): MUTEX_LOCK\n", current->tid);
 		ret = mutex_control_lock(mutex_physical);
 		break;
 	case MUTEX_CONTROL_UNLOCK:
+		printk("(%d): MUTEX_UNLOCK\n", current->tid);
 		ret = mutex_control_unlock(mutex_physical);
 		break;
+	default:
+		printk("%s: Invalid operands\n", __FUNCTION__);
+		ret = -EINVAL;
 	}
 
 	return ret;
