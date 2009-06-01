@@ -2,15 +2,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <linux/types.h>
-#include <linux/dirent.h>
-#include <linux/unistd.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <l4lib/os/posix/readdir.h>
 #include <tests.h>
 
