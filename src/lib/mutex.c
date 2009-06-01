@@ -126,7 +126,7 @@ int mutex_lock(struct mutex *mutex)
 			mutex->wqh.sleepers++;
 			sched_prepare_sleep();
 			spin_unlock(&mutex->wqh.slock);
-			printk("(%d) sleeping...\n", current->tid);
+			// printk("(%d) sleeping...\n", current->tid);
 			schedule();
 
 			/* Did we wake up normally or get interrupted */

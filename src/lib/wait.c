@@ -65,8 +65,8 @@ int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq)
 	list_add_tail(&wq->task_list, &wqh->task_list);
 	task_set_wqh(current, wqh, wq);
 	sched_prepare_sleep();
-	printk("(%d) waiting on wqh at: 0x%p\n",
-	       current->tid, wqh);
+	//printk("(%d) waiting on wqh at: 0x%p\n",
+	//       current->tid, wqh);
 	spin_unlock(&wqh->slock);
 
 	return 0;
@@ -81,8 +81,8 @@ int wait_on(struct waitqueue_head *wqh)
 	list_add_tail(&wq.task_list, &wqh->task_list);
 	task_set_wqh(current, wqh, &wq);
 	sched_prepare_sleep();
-	printk("(%d) waiting on wqh at: 0x%p\n",
-	       current->tid, wqh);
+	//printk("(%d) waiting on wqh at: 0x%p\n",
+	//       current->tid, wqh);
 	spin_unlock(&wqh->slock);
 	schedule();
 
@@ -95,7 +95,7 @@ int wait_on(struct waitqueue_head *wqh)
 	return 0;
 }
 
-/* Wake up all */
+/* Wake up all - FIXME: this is buggy with double spin_unlock */
 void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 {
 	BUG_ON(wqh->sleepers < 0);
@@ -111,7 +111,7 @@ void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 		wqh->sleepers--;
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
-		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
+		// printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		spin_unlock(&wqh->slock);
 
 		if (flags & WAKEUP_SYNC)
@@ -138,7 +138,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 		task_unset_wqh(sleeper);
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
-		printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
+		// printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		spin_unlock(&wqh->slock);
 
 		if (flags & WAKEUP_SYNC)

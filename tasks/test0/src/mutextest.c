@@ -52,7 +52,7 @@ int user_mutex_test(void)
 			    __FUNCTION__, (int)base);
 		goto out_err;
 	} else
-		printf("mmap: Anonymous shared buffer at %p\n", base);
+		test_printf("mmap: Anonymous shared buffer at %p\n", base);
 
 	shared_page = base;
 
@@ -64,31 +64,28 @@ int user_mutex_test(void)
 
 	/* Fork the current task */
 	if ((child = fork()) < 0) {
-		printf("%s: Fork failed with %d\n", __FUNCTION__, errno);
+		test_printf("%s: Fork failed with %d\n", __FUNCTION__, errno);
 		goto out_err;
 	}
 
 	if (child)
-		printf("%d: Created child with pid %d\n", getpid(), child);
+		test_printf("%d: Created child with pid %d\n", getpid(), child);
 	else
-		printf("Child %d running.\n", getpid());
+		test_printf("Child %d running.\n", getpid());
 
 	/* Child locks and produces */
 	if (child == 0) {
 
-		for (int x = 0; x < 10000; x++) {
+		for (int x = 0; x < 2000; x++) {
 			int temp;
 
 			/* Lock page */
-			printf("Child locking page.\n");
+			test_printf("Child locking page.\n");
 			l4_mutex_lock(&shared_page->mutex);
 
 			/* Read variable */
-			printf("Child locked page.\n");
+			test_printf("Child locked page.\n");
 			temp = shared_page->shared_var;
-
-			/* Thread switch */
-			l4_thread_switch(0);
 
 			/* Update local copy */
 			temp++;
@@ -99,11 +96,11 @@ int user_mutex_test(void)
 			/* Write back the result */
 			shared_page->shared_var = temp;
 
-			printf("Child modified. Unlocking...\n");
+			test_printf("Child modified. Unlocking...\n");
 
 			/* Unlock */
 			l4_mutex_unlock(&shared_page->mutex);
-			printf("Child unlocked page.\n");
+			test_printf("Child unlocked page.\n");
 
 			/* Thread switch */
 			l4_thread_switch(0);
@@ -114,19 +111,16 @@ int user_mutex_test(void)
 
 	/* Parent locks and consumes */
 	} else {
-		for (int x = 0; x < 10000; x++) {
+		for (int x = 0; x < 2000; x++) {
 			int temp;
 
 			/* Lock page */
-			printf("Parent locking page.\n");
+			test_printf("Parent locking page.\n");
 			l4_mutex_lock(&shared_page->mutex);
 
 			/* Read variable */
-			printf("Parent locked page.\n");
+			test_printf("Parent locked page.\n");
 			temp = shared_page->shared_var;
-
-			/* Thread switch */
-			l4_thread_switch(0);
 
 			/* Update local copy */
 			temp--;
@@ -137,11 +131,11 @@ int user_mutex_test(void)
 			/* Write back the result */
 			shared_page->shared_var = temp;
 
-			printf("Parent modified. Unlocking...\n");
+			test_printf("Parent modified. Unlocking...\n");
 
 			/* Unlock */
 			l4_mutex_unlock(&shared_page->mutex);
-			printf("Parent unlocked page.\n");
+			test_printf("Parent unlocked page.\n");
 
 			/* Thread switch */
 			l4_thread_switch(0);
@@ -149,7 +143,7 @@ int user_mutex_test(void)
 		/* Sync with the child */
 		l4_receive(child);
 
-		printf("Parent checking validity of value.\n");
+		test_printf("Parent checking validity of value.\n");
 		if (shared_page->shared_var != 0)
 			goto out_err;
 

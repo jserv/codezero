@@ -263,11 +263,9 @@ int sys_mutex_control(syscall_context_t *regs)
 
 	switch (mutex_op) {
 	case MUTEX_CONTROL_LOCK:
-		printk("(%d): MUTEX_LOCK\n", current->tid);
 		ret = mutex_control_lock(mutex_physical);
 		break;
 	case MUTEX_CONTROL_UNLOCK:
-		printk("(%d): MUTEX_UNLOCK\n", current->tid);
 		ret = mutex_control_unlock(mutex_physical);
 		break;
 	default:

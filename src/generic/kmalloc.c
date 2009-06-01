@@ -88,7 +88,7 @@ void *__kmalloc(int size)
 	BUG_ON(size >= PAGE_SIZE);
 	BUG_ON(!(cache = mem_cache_init(alloc_page(), PAGE_SIZE,
 					size, 0)));
-	printk("%s: Created new cache for size %d\n", __FUNCTION__, size);
+	// printk("%s: Created new cache for size %d\n", __FUNCTION__, size);
 	list_add(&cache->list, &km_pool.pool_head[index].cache_list);
 	km_pool.pool_head[index].occupied = 1;
 	km_pool.pool_head[index].total_caches++;
