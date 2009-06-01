@@ -29,8 +29,21 @@ int exectest(void)
 	/* First create a new file and write the executable data to that file */
 	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
 		err = errno;
-		test_printf("OPEN: %d\n", errno);
-		goto out_err;
+		test_printf("OPEN: %d, for %s\n", errno, filename);
+		/* If it is a minor error like EEXIST, create one with different name */
+		if (errno == EEXIST) {
+			sprintf(filename, "/home/bahadir/execfile%d-2",
+				getpid());
+			if ((fd = open(filename,
+				       O_RDWR | O_CREAT | O_TRUNC, S_IRWXU))
+				       < 0) {
+				printf("OPEN: %d, failed twice, "
+				       "last time for %s\n",
+				       errno, filename);
+				goto out_err;
+			}
+		} else
+			goto out_err;
 	}
 
 	left = size;
@@ -41,8 +54,9 @@ int exectest(void)
 		left -= cnt;
 	}
 
-	if ((err = close(fd)) < 0)
+	if ((err = close(fd)) < 0) {
 		goto out_err;
+	}
 
 	/* Set up some arguments */
 	argv[0] = "FIRST ARG";
