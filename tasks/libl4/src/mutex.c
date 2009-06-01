@@ -10,9 +10,13 @@
 
 /*
  * NOTES:
- * l4_mutex_lock() locks an initialized mutex.
+ *
+ * The design is kept as simple as possible.
+ *
+ * l4_mutex_lock() locks an initialized, mutex.
  * If it contends, it calls the mutex syscall.
- * l4_mutex_unlock() unlocks an acquired mutex.
+ *
+ * l4_mutex_unlock() releases an acquired mutex.
  * If there was contention, mutex syscall is called
  * to resolve by the kernel.
  *
@@ -24,9 +28,17 @@
  *     virtual mutex addresses are translated to physical
  *     and checked for match.
  *
- * (2) If a mutex is contended, and kernel is called by the
- *     locker. The syscall simply wakes up any waiters on
- *     the mutex in FIFO order and returns.
+ * (2) If a mutex is contended, kernel is called by both the
+ *     locker and the unlocker (i.e. the lock holder). The syscall
+ *     results in a rendezvous and both tasks quit the syscall
+ *     synchronised. A rendezvous is necessary because it is not possible
+ *     to check lock status and send a WAIT or WAKEUP request to the
+ *     kernel atomically from userspace. In other words, a WAKEUP call
+ *     would be lost if it arrived before the unsuccessful lock attempt
+ *     resulted in a WAIT.
+ *
+ * (3) The unlocker releases the lock after it returns from the syscall.
+ * (4) The locker continuously tries to acquire the lock
  *
  * Issues:
  * - The kernel action is to merely wake up sleepers. If
