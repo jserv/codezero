@@ -96,7 +96,7 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 	/* Copy parent relationship */
 	BUG_ON(new->parent);
 	new->parent = orig->parent;
-	list_add(&new->child_ref, &orig->parent->children);
+	list_insert(&new->child_ref, &orig->parent->children);
 
 	/* Flush all IO on task's files and close fds */
 	task_close_files(orig);

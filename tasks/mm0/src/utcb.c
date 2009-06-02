@@ -67,7 +67,7 @@ unsigned long task_new_utcb_desc(struct tcb *task)
 	if (!(d	= kzalloc(sizeof(*d))))
 		return 0;
 
-	INIT_LIST_HEAD(&d->list);
+	link_init(&d->list);
 
 	/* We currently assume UTCB is smaller than PAGE_SIZE */
        BUG_ON(UTCB_SIZE > PAGE_SIZE);
@@ -80,7 +80,7 @@ unsigned long task_new_utcb_desc(struct tcb *task)
        d->utcb_base = (unsigned long)utcb_new_address(1);
 
        /* Add descriptor to tcb's chain */
-       list_add(&d->list, &task->utcb_head->list);
+       list_insert(&d->list, &task->utcb_head->list);
 
        /* Obtain and return first slot */
        return utcb_new_slot(d);
@@ -89,7 +89,7 @@ unsigned long task_new_utcb_desc(struct tcb *task)
 int task_delete_utcb_desc(struct tcb *task, struct utcb_desc *d)
 {
 	/* Unlink desc from its list */
-	list_del_init(&d->list);
+	list_remove_init(&d->list);
 
 	/* Unmap the descriptor region */
 	do_munmap(task, d->utcb_base, 1);
@@ -104,7 +104,7 @@ int task_delete_utcb_desc(struct tcb *task, struct utcb_desc *d)
 }
 
 /*
- * Upon fork, the utcb descriptor list is replaced by a new one, since it is a new
+ * Upon fork, the utcb descriptor list is origaced by a new one, since it is a new
  * address space. A new utcb is allocated and mmap'ed for the child task
  * running in the newly created address space.
  *
@@ -126,7 +126,7 @@ int task_setup_utcb(struct tcb *task)
 	BUG_ON(task->utcb_address);
 
 	/* Search for an empty utcb slot already allocated to this space */
-	list_for_each_entry(udesc, &task->utcb_head->list, list)
+	list_foreach_struct(udesc, &task->utcb_head->list, list)
 		if ((slot = utcb_new_slot(udesc)))
 			goto out;
 
@@ -163,7 +163,7 @@ int task_destroy_utcb(struct tcb *task)
 	// printf("UTCB: Destroying 0x%x\n", task->utcb_address);
 
 	/* Find the utcb descriptor slot first */
-	list_for_each_entry(udesc, &task->utcb_head->list, list) {
+	list_foreach_struct(udesc, &task->utcb_head->list, list) {
 		/* FIXME: Use variable alignment than a page */
 		/* Detect matching slot */
 		if (page_align(task->utcb_address) == udesc->utcb_base) {

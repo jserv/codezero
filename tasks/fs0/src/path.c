@@ -19,8 +19,8 @@ const char *pathdata_next_component(struct pathdata *pdata)
 	struct pathcomp *p, *n;
 	const char *pathstr;
 
-	list_for_each_entry_safe(p, n, &pdata->list, list) {
-		list_del(&p->list);
+	list_foreach_removable_struct(p, n, &pdata->list, list) {
+		list_remove(&p->list);
 		pathstr = p->str;
 		kfree(p);
 		return pathstr;
@@ -35,8 +35,8 @@ const char *pathdata_last_component(struct pathdata *pdata)
 	const char *pathstr;
 
 	if (!list_empty(&pdata->list)) {
-		p = list_entry(pdata->list.prev, struct pathcomp, list);
-		list_del(&p->list);
+		p = link_to_struct(pdata->list.prev, struct pathcomp, list);
+		list_remove(&p->list);
 		pathstr = p->str;
 		kfree(p);
 		return pathstr;
@@ -50,8 +50,8 @@ void pathdata_destroy(struct pathdata *p)
 {
 	struct pathcomp *c, *n;
 
-	list_for_each_entry_safe(c, n, &p->list, list) {
-		list_del(&c->list);
+	list_foreach_removable_struct(c, n, &p->list, list) {
+		list_remove(&c->list);
 		kfree(c);
 	}
 	kfree(p);
@@ -62,7 +62,7 @@ void pathdata_print(struct pathdata *p)
 	struct pathcomp *comp;
 
 	printf("Extracted path is:\n");
-	list_for_each_entry(comp, &p->list, list)
+	list_foreach_struct(comp, &p->list, list)
 		printf("%s\n", comp->str);
 }
 
@@ -78,7 +78,7 @@ struct pathdata *pathdata_parse(const char *pathname,
 		return PTR_ERR(-ENOMEM);
 
 	/* Initialise pathdata */
-	INIT_LIST_HEAD(&pdata->list);
+	link_init(&pdata->list);
 	strcpy(pathbuf, pathname);
 
 	/* First component is root if there's a root */
@@ -87,9 +87,9 @@ struct pathdata *pathdata_parse(const char *pathname,
 			kfree(pdata);
 			return PTR_ERR(-ENOMEM);
 		}
-		INIT_LIST_HEAD(&comp->list);
+		link_init(&comp->list);
 		comp->str = VFS_STR_ROOTDIR;
-		list_add_tail(&comp->list, &pdata->list);
+		list_insert_tail(&comp->list, &pdata->list);
 
 		if (task)
 			/* Lookup start vnode is root vnode */
@@ -105,15 +105,15 @@ struct pathdata *pathdata_parse(const char *pathname,
 			kfree(pdata);
 			return PTR_ERR(-ENOMEM);
 		}
-		INIT_LIST_HEAD(&comp->list);
+		link_init(&comp->list);
 
 		/* Get current dentry for this task */
-		curdir = list_entry(task->fs_data->curdir->dentries.next,
+		curdir = link_to_struct(task->fs_data->curdir->dentries.next,
 				    struct dentry, vref);
 
 		/* Use its name in path component */
 		comp->str = curdir->name;
-		list_add_tail(&comp->list, &pdata->list);
+		list_insert_tail(&comp->list, &pdata->list);
 
 		/* Lookup start vnode is current dir vnode */
 		pdata->vstart = task->fs_data->curdir;
@@ -130,9 +130,9 @@ struct pathdata *pathdata_parse(const char *pathname,
 				pathdata_destroy(pdata);
 				return PTR_ERR(-ENOMEM);
 			}
-			INIT_LIST_HEAD(&comp->list);
+			link_init(&comp->list);
 			comp->str = str;
-			list_add_tail(&comp->list, &pdata->list);
+			list_insert_tail(&comp->list, &pdata->list);
 		}
 
 		/* Next component */

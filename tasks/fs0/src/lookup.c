@@ -22,7 +22,7 @@ struct vnode *lookup_dentry_children(struct dentry *parentdir,
 	struct vnode *v;
 	const char *component = pathdata_next_component(pdata);
 
-	list_for_each_entry(childdir, &parentdir->children, child)
+	list_foreach_struct(childdir, &parentdir->children, child)
 		if (IS_ERR(v = childdir->vnode->ops.lookup(childdir->vnode,
 							   pdata, component)))
 			/* Means not found, continue search */
@@ -47,7 +47,7 @@ struct vnode *generic_vnode_lookup(struct vnode *thisnode,
 	int err;
 
 	/* Does this path component match with any of this vnode's dentries? */
-	list_for_each_entry(d, &thisnode->dentries, vref) {
+	list_foreach_struct(d, &thisnode->dentries, vref) {
 		if (d->ops.compare(d, component)) {
 			/* Is this a directory? */
 			if (vfs_isdir(thisnode)) {

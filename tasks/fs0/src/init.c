@@ -14,21 +14,21 @@
 #include <l4/api/errno.h>
 #include <memfs/memfs.h>
 
-struct list_head fs_type_list;
+struct link fs_type_list;
 
 struct superblock *vfs_probe_filesystems(void *block)
 {
 	struct file_system_type *fstype;
 	struct superblock *sb;
 
-	list_for_each_entry(fstype, &fs_type_list, list) {
+	list_foreach_struct(fstype, &fs_type_list, list) {
 		/* Does the superblock match for this fs type? */
 		if ((sb = fstype->ops.get_superblock(block))) {
 			/*
 			 * Add this to the list of superblocks this
 			 * fs already has.
 			 */
-			list_add(&sb->list, &fstype->sblist);
+			list_insert(&sb->list, &fstype->sblist);
 			return sb;
 		}
 	}
@@ -43,7 +43,7 @@ struct superblock *vfs_probe_filesystems(void *block)
 void vfs_register_filesystems(void)
 {
 	/* Initialise fstype list */
-	INIT_LIST_HEAD(&fs_type_list);
+	link_init(&fs_type_list);
 
 	/* Call per-fs registration functions */
 	memfs_register_fstype(&fs_type_list);

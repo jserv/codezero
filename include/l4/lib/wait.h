@@ -6,7 +6,7 @@
 
 struct ktcb;
 struct waitqueue {
-	struct list_head task_list;
+	struct link task_list;
 	struct ktcb *task;
 };
 
@@ -26,13 +26,13 @@ struct waitqueue wq = {					\
 struct waitqueue_head {
 	int sleepers;
 	struct spinlock slock;
-	struct list_head task_list;
+	struct link task_list;
 };
 
 static inline void waitqueue_head_init(struct waitqueue_head *head)
 {
 	memset(head, 0, sizeof(struct waitqueue_head));
-	INIT_LIST_HEAD(&head->task_list);
+	link_init(&head->task_list);
 }
 
 void task_set_wqh(struct ktcb *task, struct waitqueue_head *wqh,
@@ -58,7 +58,7 @@ do {								\
 		CREATE_WAITQUEUE_ON_STACK(wq, current);		\
 		task_set_wqh(current, wqh, &wq);		\
 		(wqh)->sleepers++;				\
-		list_add_tail(&wq.task_list, &(wqh)->task_list);\
+		list_insert_tail(&wq.task_list, &(wqh)->task_list);\
 		/* printk("(%d) waiting...\n", current->tid);*/	\
 		sched_prepare_sleep();				\
 		spin_unlock(&(wqh)->slock);			\

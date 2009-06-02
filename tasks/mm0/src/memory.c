@@ -79,7 +79,7 @@ void init_physmem(struct initdata *initdata, struct membank *membank)
 
 	/* Initialise the page array */
 	for (int i = 0; i < npages; i++) {
-		INIT_LIST_HEAD(&membank[0].page_array[i].list);
+		link_init(&membank[0].page_array[i].list);
 
 		/* Set use counts for pages the kernel has already used up */
 		if (!(pmap->map[BITWISE_GETWORD(i)] & BITWISE_GETBIT(i)))

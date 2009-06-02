@@ -21,7 +21,7 @@
 #include <utcb.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
-LIST_HEAD(boot_file_list);
+LINK_DECLARE(boot_file_list);
 
 /*
  * A specialised function for setting up the task environment of mm0.
@@ -53,7 +53,7 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 		return err;
 
 	/* Set pager as child and parent of itself */
-	list_add(&task->child_ref, &task->children);
+	list_insert(&task->child_ref, &task->children);
 	task->parent = task;
 
 	/*
@@ -78,9 +78,9 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 struct vm_file *initdata_next_bootfile(struct initdata *initdata)
 {
 	struct vm_file *file, *n;
-	list_for_each_entry_safe(file, n, &initdata->boot_file_list,
+	list_foreach_removable_struct(file, n, &initdata->boot_file_list,
 				 list) {
-		list_del_init(&file->list);
+		list_remove_init(&file->list);
 		return file;
 	}
 	return 0;
@@ -96,10 +96,10 @@ int start_boot_tasks(struct initdata *initdata)
 	struct tcb *fs0_task;
 	struct svc_image *img;
 	struct task_ids ids;
-	struct list_head other_files;
+	struct link other_files;
 	int total = 0;
 
-	INIT_LIST_HEAD(&other_files);
+	link_init(&other_files);
 
 	/* Separate out special server tasks and regular files */
 	do {
@@ -113,7 +113,7 @@ int start_boot_tasks(struct initdata *initdata)
 			else if (!strcmp(img->name, __VFSNAME__))
 				fs0_file = file;
 			else
-				list_add(&file->list, &other_files);
+				list_insert(&file->list, &other_files);
 		} else
 			break;
 	} while (1);
@@ -138,12 +138,12 @@ int start_boot_tasks(struct initdata *initdata)
 	total++;
 
 	/* Initialise other tasks */
-	list_for_each_entry_safe(file, n, &other_files, list) {
+	list_foreach_removable_struct(file, n, &other_files, list) {
 		// printf("%s: Initialising new boot task.\n", __TASKNAME__);
 		ids.tid = TASK_ID_INVALID;
 		ids.spid = TASK_ID_INVALID;
 		ids.tgid = TASK_ID_INVALID;
-		list_del_init(&file->list);
+		list_remove_init(&file->list);
 		BUG_ON(IS_ERR(boottask_exec(file, USER_AREA_START, USER_AREA_END, &ids)));
 		total++;
 	}

@@ -12,7 +12,7 @@ struct dentry *bootfs_dentry_lookup(struct dentry *d, char *dname)
 {
 	struct dentry *this;
 
-	list_for_each_entry(this, child, &d->children) {
+	list_foreach_struct(this, child, &d->children) {
 		if (this->compare(this, dname))
 			return this;
 	}
@@ -65,16 +65,16 @@ void bootfs_populate(struct initdata *initdata, struct superblock *sb)
 		d->vnode = v;
 		d->parent = sb->root;
 		strncpy(d->name, img->name, VFS_DENTRY_NAME_MAX);
-		INIT_LIST_HEAD(&d->child);
-		INIT_LIST_HEAD(&d->children);
-		list_add(&d->child, &sb->root->children);
+		link_init(&d->child);
+		link_init(&d->children);
+		list_insert(&d->child, &sb->root->children);
 
 		/* Initialise vnode for image */
 		v->refcnt = 0;
 		v->id = img->phys_start;
 		v->size = img->phys_end - img->phys_start;
-		INIT_LIST_HEAD(&v->dirents);
-		list_add(&d->v_ref, &v->dirents);
+		link_init(&v->dirents);
+		list_insert(&d->v_ref, &v->dirents);
 
 		/* Initialise file struct for image */
 		f->refcnt = 0;
@@ -93,17 +93,17 @@ void bootfs_init_root(struct dentry *r)
 	/* Initialise dentry for rootdir */
 	r->refcnt = 0;
 	strcpy(r->name, "");
-	INIT_LIST_HEAD(&r->child);
-	INIT_LIST_HEAD(&r->children);
-	INIT_LIST_HEAD(&r->vref);
+	link_init(&r->child);
+	link_init(&r->children);
+	link_init(&r->vref);
 	r->parent = r;
 
 	/* Initialise vnode for rootdir */
 	v->id = 0;
 	v->refcnt = 0;
-	INIT_LIST_HEAD(&v->dirents);
-	INIT_LIST_HEAD(&v->state_list);
-	list_add(&r->vref, &v->dirents);
+	link_init(&v->dirents);
+	link_init(&v->state_list);
+	list_insert(&r->vref, &v->dirents);
 	v->size = 0;
 }
 

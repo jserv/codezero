@@ -20,7 +20,7 @@
  * start/end boundaries. Does not grow/shrink but you can link-list it.
  */
 struct mem_cache {
-	struct list_head list;
+	struct link list;
 	struct mutex mutex;
 	int total;
 	int free;

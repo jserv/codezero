@@ -62,7 +62,7 @@ int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq)
 {
 	spin_lock(&wqh->slock);
 	wqh->sleepers++;
-	list_add_tail(&wq->task_list, &wqh->task_list);
+	list_insert_tail(&wq->task_list, &wqh->task_list);
 	task_set_wqh(current, wqh, wq);
 	sched_prepare_sleep();
 	//printk("(%d) waiting on wqh at: 0x%p\n",
@@ -78,7 +78,7 @@ int wait_on(struct waitqueue_head *wqh)
 	CREATE_WAITQUEUE_ON_STACK(wq, current);
 	spin_lock(&wqh->slock);
 	wqh->sleepers++;
-	list_add_tail(&wq.task_list, &wqh->task_list);
+	list_insert_tail(&wq.task_list, &wqh->task_list);
 	task_set_wqh(current, wqh, &wq);
 	sched_prepare_sleep();
 	//printk("(%d) waiting on wqh at: 0x%p\n",
@@ -101,13 +101,13 @@ void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 	BUG_ON(wqh->sleepers < 0);
 	spin_lock(&wqh->slock);
 	while (wqh->sleepers > 0) {
-		struct waitqueue *wq = list_entry(wqh->task_list.next,
+		struct waitqueue *wq = link_to_struct(wqh->task_list.next,
 						  struct waitqueue,
 						  task_list);
 		struct ktcb *sleeper = wq->task;
 		task_unset_wqh(sleeper);
 		BUG_ON(list_empty(&wqh->task_list));
-		list_del_init(&wq->task_list);
+		list_remove_init(&wq->task_list);
 		wqh->sleepers--;
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
@@ -128,12 +128,12 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 	BUG_ON(wqh->sleepers < 0);
 	spin_lock(&wqh->slock);
 	if (wqh->sleepers > 0) {
-		struct waitqueue *wq = list_entry(wqh->task_list.next,
+		struct waitqueue *wq = link_to_struct(wqh->task_list.next,
 						  struct waitqueue,
 						  task_list);
 		struct ktcb *sleeper = wq->task;
 		BUG_ON(list_empty(&wqh->task_list));
-		list_del_init(&wq->task_list);
+		list_remove_init(&wq->task_list);
 		wqh->sleepers--;
 		task_unset_wqh(sleeper);
 		if (flags & WAKEUP_INTERRUPT)
@@ -193,7 +193,7 @@ int wake_up_task(struct ktcb *task, unsigned int flags)
 	}
 
 	/* Now we can remove the task from its waitqueue */
-	list_del_init(&wq->task_list);
+	list_remove_init(&wq->task_list);
 	wqh->sleepers--;
 	task->waiting_on = 0;
 	task->wq = 0;

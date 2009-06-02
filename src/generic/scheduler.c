@@ -26,7 +26,7 @@
 /* A basic runqueue */
 struct runqueue {
 	struct spinlock lock;		/* Lock */
-	struct list_head task_list;	/* List of tasks in rq */
+	struct link task_list;	/* List of tasks in rq */
 	unsigned int total;		/* Total tasks */
 };
 
@@ -101,7 +101,7 @@ void sched_init_runqueues(void)
 {
 	for (int i = 0; i < SCHED_RQ_TOTAL; i++) {
 		memset(&sched_rq[i], 0, sizeof(struct runqueue));
-		INIT_LIST_HEAD(&sched_rq[i].task_list);
+		link_init(&sched_rq[i].task_list);
 		spin_lock_init(&sched_rq[i].lock);
 	}
 
@@ -135,9 +135,9 @@ static void sched_rq_add_task(struct ktcb *task, struct runqueue *rq, int front)
 
 	sched_lock_runqueues();
 	if (front)
-		list_add(&task->rq_list, &rq->task_list);
+		list_insert(&task->rq_list, &rq->task_list);
 	else
-		list_add_tail(&task->rq_list, &rq->task_list);
+		list_insert_tail(&task->rq_list, &rq->task_list);
 	rq->total++;
 	task->rq = rq;
 	sched_unlock_runqueues();
@@ -156,7 +156,7 @@ static inline void sched_rq_remove_task(struct ktcb *task)
 	 */
  	rq = task->rq;
 	BUG_ON(list_empty(&task->rq_list));
-	list_del_init(&task->rq_list);
+	list_remove_init(&task->rq_list);
 	task->rq = 0;
 	rq->total--;
 
@@ -167,7 +167,7 @@ static inline void sched_rq_remove_task(struct ktcb *task)
 
 void sched_init_task(struct ktcb *task, int prio)
 {
-	INIT_LIST_HEAD(&task->rq_list);
+	link_init(&task->rq_list);
 	task->priority = prio;
 	task->ticks_left = 0;
 	task->state = TASK_INACTIVE;
@@ -345,12 +345,12 @@ void schedule()
 
 	/* Determine the next task to be run */
 	if (rq_runnable->total > 0) {
-		next = list_entry(rq_runnable->task_list.next,
+		next = link_to_struct(rq_runnable->task_list.next,
 				  struct ktcb, rq_list);
 	} else {
 		if (rq_expired->total > 0) {
 			sched_rq_swap_runqueues();
-			next = list_entry(rq_runnable->task_list.next,
+			next = link_to_struct(rq_runnable->task_list.next,
 					  struct ktcb, rq_list);
 		} else {
 			printk("Idle task.\n");

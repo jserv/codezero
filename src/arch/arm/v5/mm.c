@@ -616,7 +616,7 @@ void relocate_page_tables(void)
  * Useful for upgrading to page-grained control over a section mapping:
  * Remaps a section mapping in pages. It allocates a pmd, (at all times because
  * there can't really be an already existing pmd for a section mapping) fills
- * in the page information, and replaces the direct section physical translation
+ * in the page information, and origaces the direct section physical translation
  * with the address of the pmd. Flushes the caches/tlbs.
  */
 void remap_as_pages(void *vstart, void *vend)

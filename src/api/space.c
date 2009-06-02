@@ -13,7 +13,7 @@
  * For lazy mm switching, a list of newly created mappings that are common to
  * all tasks (e.g. any mapping done in the kernel) can be kept here so that when
  * a new task is scheduled, the same mappings are copied to its page tables as
- * well. struct list_head new_mappings;
+ * well. struct link new_mappings;
  */
 
 int sys_map(syscall_context_t *regs)

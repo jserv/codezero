@@ -17,7 +17,7 @@
  * fixed-size memory cache) Keeps track of free/occupied items within its
  * start/end boundaries. Does not grow/shrink but you can link-list it. */
 struct mem_cache {
-	struct list_head list;
+	struct link list;
 	int total;
 	int free;
 	unsigned int start;

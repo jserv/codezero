@@ -190,7 +190,7 @@ struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned 
 	}
 
 	/* Check if that vm_file is already in the list */
-	list_for_each_entry(vmfile, &global_vm_files.list, list) {
+	list_foreach_struct(vmfile, &global_vm_files.list, list) {
 
 		/* Check whether it is a vfs file and if so vnums match. */
 		if ((vmfile->type & VM_FILE_VFS) &&
@@ -240,7 +240,7 @@ int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
 	task->files->fd[fd].cursor = 0;
 
 	/* Check if that vm_file is already in the list */
-	list_for_each_entry(vmfile, &global_vm_files.list, list) {
+	list_foreach_struct(vmfile, &global_vm_files.list, list) {
 
 		/* Check whether it is a vfs file and if so vnums match. */
 		if ((vmfile->type & VM_FILE_VFS) &&
@@ -301,22 +301,22 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 
 	/* Add if list is empty */
 	if (list_empty(&vmo->page_cache)) {
-		list_add_tail(&this->list, &vmo->page_cache);
+		list_insert_tail(&this->list, &vmo->page_cache);
 		return 0;
 	}
 
 	/* Else find the right interval */
-	list_for_each_entry(before, &vmo->page_cache, list) {
-		after = list_entry(before->list.next, struct page, list);
+	list_foreach_struct(before, &vmo->page_cache, list) {
+		after = link_to_struct(before->list.next, struct page, list);
 
 		/* If there's only one in list */
 		if (before->list.next == &vmo->page_cache) {
 			/* Add as next if greater */
 			if (this->offset > before->offset)
-				list_add(&this->list, &before->list);
+				list_insert(&this->list, &before->list);
 			/* Add  as previous if smaller */
 			else if (this->offset < before->offset)
-				list_add_tail(&this->list, &before->list);
+				list_insert_tail(&this->list, &before->list);
 			else
 				BUG();
 			return 0;
@@ -325,7 +325,7 @@ int insert_page_olist(struct page *this, struct vm_object *vmo)
 		/* If this page is in-between two other, insert it there */
 		if (before->offset < this->offset &&
 		    after->offset > this->offset) {
-			list_add(&this->list, &before->list);
+			list_insert(&this->list, &before->list);
 			return 0;
 		}
 		BUG_ON(this->offset == before->offset);
@@ -603,7 +603,7 @@ int write_cache_pages_orig(struct vm_file *vmfile, struct tcb *task, void *buf,
 	int copysize, left;
 
 	/* Find the head of consecutive pages */
-	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
+	list_foreach_struct(head, &vmfile->vm_obj.page_cache, list)
 		if (head->offset == pfn_start)
 			goto copy;
 
@@ -627,7 +627,7 @@ copy:
 	last_pgoff = head->offset;
 
 	/* Map the rest, copy and unmap. */
-	list_for_each_entry(this, &head->list, list) {
+	list_foreach_struct(this, &head->list, list) {
 		if (left == 0 || this->offset == pfn_end)
 			break;
 
@@ -666,7 +666,7 @@ int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 	int copysize, left;
 
 	/* Find the head of consecutive pages */
-	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list) {
+	list_foreach_struct(head, &vmfile->vm_obj.page_cache, list) {
 		/* First page */
 		if (head->offset == pfn_start) {
 			left = count;
@@ -726,7 +726,7 @@ int read_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 	unsigned long copy_offset;	/* Current copy offset on the buffer */
 
 	/* Find the head of consecutive pages */
-	list_for_each_entry(head, &vmfile->vm_obj.page_cache, list)
+	list_foreach_struct(head, &vmfile->vm_obj.page_cache, list)
 		if (head->offset == pfn_start)
 			goto copy;
 
@@ -745,7 +745,7 @@ copy:
 	last_pgoff = head->offset;
 
 	/* Map the rest, copy and unmap. */
-	list_for_each_entry(this, &head->list, list) {
+	list_foreach_struct(this, &head->list, list) {
 		if (left == 0 || this->offset == pfn_end)
 			break;
 

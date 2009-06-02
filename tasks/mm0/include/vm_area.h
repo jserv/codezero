@@ -57,7 +57,7 @@ enum VM_FILE_TYPE {
 struct page {
 	int refcnt;		/* Refcount */
 	struct spinlock lock;	/* Page lock. */
-	struct list_head list;  /* For list of a vm_object's in-memory pages */
+	struct link list;  /* For list of a vm_object's in-memory pages */
 	struct vm_object *owner;/* The vm_object the page belongs to */
 	unsigned long virtual;	/* If refs >1, first mapper's virtual address */
 	unsigned int flags;	/* Flags associated with the page. */
@@ -115,20 +115,20 @@ struct vm_object {
 	int npages;		    /* Number of pages in memory */
 	int nlinks;		    /* Number of mapper links that refer */
 	int shadows;		    /* Number of shadows that refer */
-	struct list_head shref;	    /* Shadow reference from original object */
-	struct list_head shdw_list; /* List of vm objects that shadows this one */
-	struct list_head link_list; /* List of links that refer to this object */
+	struct link shref;	    /* Shadow reference from original object */
+	struct link shdw_list; /* List of vm objects that shadows this one */
+	struct link link_list; /* List of links that refer to this object */
 	struct vm_object *orig_obj; /* Original object that this one shadows */
 	unsigned int flags;	    /* Defines the type and flags of the object */
-	struct list_head list;	    /* List of all vm objects in memory */
+	struct link list;	    /* List of all vm objects in memory */
 	struct vm_pager *pager;	    /* The pager for this object */
-	struct list_head page_cache;/* List of in-memory pages */
+	struct link page_cache;/* List of in-memory pages */
 };
 
 /* In memory representation of either a vfs file, a device. */
 struct vm_file {
 	int openers;
-	struct list_head list;
+	struct link list;
 	unsigned long length;
 	unsigned int type;
 	struct vm_object vm_obj;
@@ -138,22 +138,22 @@ struct vm_file {
 
 /* To create per-vma vm_object lists */
 struct vm_obj_link {
-	struct list_head list;
-	struct list_head linkref;
+	struct link list;
+	struct link linkref;
 	struct vm_object *obj;
 };
 
 static inline void vm_link_object(struct vm_obj_link *link, struct vm_object *obj)
 {
 	link->obj = obj;
-	list_add(&link->linkref, &obj->link_list);
+	list_insert(&link->linkref, &obj->link_list);
 	obj->nlinks++;
 }
 
 static inline struct vm_object *vm_unlink_object(struct vm_obj_link *link)
 {
 	/* Delete link from object's link list */
-	list_del(&link->linkref);
+	list_remove(&link->linkref);
 
 	/* Reduce object's mapper link count */
 	link->obj->nlinks--;
@@ -175,8 +175,8 @@ static inline struct vm_object *vm_unlink_object(struct vm_obj_link *link)
  * object's copy of pages supersede the ones lower in the stack.
  */
 struct vm_area {
-	struct list_head list;		/* Per-task vma list */
-	struct list_head vm_obj_list;	/* Head for vm_object list. */
+	struct link list;		/* Per-task vma list */
+	struct link vm_obj_list;	/* Head for vm_object list. */
 	unsigned long pfn_start;	/* Region start virtual pfn */
 	unsigned long pfn_end;		/* Region end virtual pfn, exclusive */
 	unsigned long flags;		/* Protection flags. */
@@ -189,12 +189,12 @@ struct vm_area {
  * rather than searching the address. E.g. munmap/msync
  */
 static inline struct vm_area *find_vma(unsigned long addr,
-				       struct list_head *vm_area_list)
+				       struct link *vm_area_list)
 {
 	struct vm_area *vma;
 	unsigned long pfn = __pfn(addr);
 
-	list_for_each_entry(vma, vm_area_list, list)
+	list_foreach_struct(vma, vm_area_list, list)
 		if ((pfn >= vma->pfn_start) && (pfn < vma->pfn_end))
 			return vma;
 	return 0;
@@ -213,12 +213,12 @@ extern struct vm_pager devzero_pager;
 extern struct vm_pager swap_pager;
 
 /* vm object and vm file lists */
-extern struct list_head vm_object_list;
+extern struct link vm_object_list;
 
 /* vm object link related functions */
 struct vm_obj_link *vm_objlink_create(void);
-struct vm_obj_link *vma_next_link(struct list_head *link,
-				  struct list_head *head);
+struct vm_obj_link *vma_next_link(struct link *link,
+				  struct link *head);
 
 /* vm file and object initialisation */
 struct vm_object *vm_object_create(void);
@@ -229,8 +229,8 @@ void vm_file_put(struct vm_file *f);
 
 /* Printing objects, files */
 void vm_object_print(struct vm_object *vmo);
-void vm_print_objects(struct list_head *vmo_list);
-void vm_print_files(struct list_head *file_list);
+void vm_print_objects(struct link *vmo_list);
+void vm_print_files(struct link *file_list);
 
 /* Used for pre-faulting a page from mm0 */
 int prefault_page(struct tcb *task, unsigned long address,
@@ -248,7 +248,7 @@ int validate_task_range(struct tcb *t, unsigned long start,
 /* Changes all shadows and their ptes to read-only */
 int vm_freeze_shadows(struct tcb *task);
 
-int task_insert_vma(struct vm_area *vma, struct list_head *vma_list);
+int task_insert_vma(struct vm_area *vma, struct link *vma_list);
 
 /* Main page fault entry point */
 int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);

@@ -51,18 +51,18 @@ struct task_fd_head {
 };
 
 struct task_vma_head {
-	struct list_head list;
+	struct link list;
 	int tcb_refs;
 };
 
 struct utcb_desc {
-	struct list_head list;
+	struct link list;
 	unsigned long utcb_base;
 	struct id_pool *slots;
 };
 
 struct utcb_head {
-	struct list_head list;
+	struct link list;
 	int tcb_refs;
 };
 
@@ -70,11 +70,11 @@ struct utcb_head {
 /* Stores all task information that can be kept in userspace. */
 struct tcb {
 	/* Task list */
-	struct list_head list;
+	struct link list;
 
 	/* Fields for parent-child relations */
-	struct list_head child_ref;	/* Child ref in parent's list */
-	struct list_head children;	/* List of children */
+	struct link child_ref;	/* Child ref in parent's list */
+	struct link children;	/* List of children */
 	struct tcb *parent;		/* Parent task */
 
 	/* Task creation flags */
@@ -131,7 +131,7 @@ struct tcb {
 };
 
 struct tcb_head {
-	struct list_head list;
+	struct link list;
 	int total;			/* Total threads */
 };
 

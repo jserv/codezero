@@ -28,15 +28,15 @@
 
 /* Covers 3 main types of memory needed by the kernel. */
 struct pgalloc {
-	struct list_head cache_list[3];
+	struct link cache_list[3];
 };
 static struct pgalloc pgalloc;
 
 void pgalloc_add_new_cache(struct mem_cache *cache, int cidx)
 {
-	INIT_LIST_HEAD(&cache->list);
+	link_init(&cache->list);
 	BUG_ON(cidx >= PGALLOC_CACHE_TOTAL || cidx < 0);
-	list_add(&cache->list, &pgalloc.cache_list[cidx]);
+	list_insert(&cache->list, &pgalloc.cache_list[cidx]);
 }
 
 void print_kmem_grant_params(grant_kmem_usage_t *params)
@@ -108,7 +108,7 @@ void init_pgalloc(void)
 	int initial_grant = PGALLOC_INIT_GRANT;
 
 	for (int i = 0; i < PGALLOC_CACHE_TOTAL; i++)
-		INIT_LIST_HEAD(&pgalloc.cache_list[i]);
+		link_init(&pgalloc.cache_list[i]);
 
 	/* Grant ourselves with an initial chunk of physical memory */
 	physmem.free_cur = page_align_up(physmem.free_cur);
@@ -122,14 +122,14 @@ void init_pgalloc(void)
 
 void pgalloc_remove_cache(struct mem_cache *cache)
 {
-	list_del_init(&cache->list);
+	list_remove_init(&cache->list);
 }
 
 static inline void *pgalloc_from_cache(int cidx)
 {
 	struct mem_cache *cache, *n;
 
-	list_for_each_entry_safe(cache, n, &pgalloc.cache_list[cidx], list)
+	list_foreach_removable_struct(cache, n, &pgalloc.cache_list[cidx], list)
 		if (mem_cache_total_empty(cache))
 			return mem_cache_zalloc(cache);
 	return 0;
@@ -139,7 +139,7 @@ int kfree_to_cache(int cidx, void *virtual)
 {
 	struct mem_cache *cache, *n;
 
-	list_for_each_entry_safe(cache, n, &pgalloc.cache_list[cidx], list)
+	list_foreach_removable_struct(cache, n, &pgalloc.cache_list[cidx], list)
 		if (mem_cache_free(cache, virtual) == 0)
 			return 0;
 	return -1;

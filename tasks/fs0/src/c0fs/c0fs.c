@@ -23,7 +23,7 @@ struct file_system_type sfs_type = {
 };
 
 /* Registers sfs as an available filesystem type */
-void sfs_register_fstype(struct list_head *fslist)
+void sfs_register_fstype(struct link *fslist)
 {
-	list_add(&sfs_type.list, fslist);
+	list_insert(&sfs_type.list, fslist);
 }

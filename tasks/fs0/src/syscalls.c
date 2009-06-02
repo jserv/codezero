@@ -55,7 +55,7 @@ int pager_sys_open(struct tcb *pager, l4id_t opener, int fd)
 
 	/*
 	 * Write file information, they will
-	 * be sent via the return reply.
+	 * be sent via the return origy.
 	 */
 	write_mr(L4SYS_ARG0, v->vnum);
 	write_mr(L4SYS_ARG1, v->size);
@@ -89,7 +89,7 @@ int pager_open_bypath(struct tcb *pager, char *pathname)
 
 	/*
 	 * Write file information, they will
-	 * be sent via the return reply.
+	 * be sent via the return origy.
 	 */
 	write_mr(L4SYS_ARG0, v->vnum);
 	write_mr(L4SYS_ARG1, v->size);
@@ -109,10 +109,10 @@ void print_vnode(struct vnode *v)
 	struct dentry *d, *c;
 
 	printf("Vnode names:\n");
-	list_for_each_entry(d, &v->dentries, vref) {
+	list_foreach_struct(d, &v->dentries, vref) {
 		printf("%s\n", d->name);
 		printf("Children dentries:\n");
-		list_for_each_entry(c, &d->children, child)
+		list_foreach_struct(c, &d->children, child)
 			printf("%s\n", c->name);
 	}
 }
@@ -496,7 +496,7 @@ int sys_readdir(struct tcb *t, int fd, void *buf, int count)
 	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
 		return -EINVAL;
 
-	d = list_entry(v->dentries.next, struct dentry, vref);
+	d = link_to_struct(v->dentries.next, struct dentry, vref);
 
 	/* Ensure vnode is a directory */
 	if (!vfs_isdir(v))

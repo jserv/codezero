@@ -5,7 +5,7 @@
 void print_page_area_list(struct page_area *p)
 {
 	struct page_area *current_item = p;
-	struct list_head *begin = &p->list;
+	struct link *begin = &p->list;
 	if (!current_item) {
 		printf("%-20s\n", "Null list.");
 		return;
@@ -18,7 +18,7 @@ void print_page_area_list(struct page_area *p)
 	printf("%-20s %d\n", "Used:", current_item->used);
 	printf("%-20s %d\n\n", "Number of pages:", current_item->numpages);
 
-	list_for_each_entry (current_item, begin, list) {
+	list_foreach_struct (current_item, begin, list) {
 		printf("%-20s\n%-20s\n", "Page area:","-------------------------");
 		printf("%-20s %d\n", "Index:", current_item->index);
 		printf("%-20s %d\n", "Used:", current_item->used);
@@ -38,7 +38,7 @@ void print_subpage_area(struct subpage_area *s)
 void print_subpage_area_list(struct subpage_area *s)
 {
 	struct subpage_area *current_item = s;
-	struct list_head *begin = &s->list;
+	struct link *begin = &s->list;
 	if (!current_item) {
 		printf("Null list.\n");
 		return;
@@ -52,7 +52,7 @@ void print_subpage_area_list(struct subpage_area *s)
 	printf("%-20s %d\n", "Used:", current_item->used);
 	printf("%-20s %d\n\n", "Head_of_pages:", current_item->head_of_pages);
 
-	list_for_each_entry (current_item, begin, list) {
+	list_foreach_struct (current_item, begin, list) {
 		print_subpage_area(current_item);
 	}
 }

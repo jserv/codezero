@@ -75,7 +75,7 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 		BUG_ON(!(tgleader = find_task(sender->tgid)));
 
 		/* Destroy all children threads. */
-		list_for_each_entry(thread, &tgleader->children, child_ref)
+		list_foreach_struct(thread, &tgleader->children, child_ref)
 			do_exit(thread, 0);
 	} else {
 		/* Otherwise group leader is same as sender */

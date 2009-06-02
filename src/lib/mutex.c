@@ -37,8 +37,8 @@ void sem_up(struct mutex *mutex)
 		/* Each producer wakes one consumer in queue. */
 		mutex->sleepers--;
 		BUG_ON(list_empty(&mutex->wq.task_list));
-		list_for_each_entry(wq, &mutex->wq.task_list, task_list) {
-			list_del_init(&wq->task_list);
+		list_foreach_struct(wq, &mutex->wq.task_list, task_list) {
+			list_remove_init(&wq->task_list);
 			spin_unlock(&mutex->slock);
 			sleeper = wq->task;
 			printk("(%d) Waking up consumer (%d)\n", current->tid,
@@ -48,8 +48,8 @@ void sem_up(struct mutex *mutex)
 		}
 	} else if (cnt > 0) {
 		DECLARE_WAITQUEUE(wq, current);
-		INIT_LIST_HEAD(&wq.task_list);
-		list_add_tail(&wq.task_list, &mutex->wq.task_list);
+		link_init(&wq.task_list);
+		list_insert_tail(&wq.task_list, &mutex->wq.task_list);
 		mutex->sleepers++;
 		sched_prepare_sleep();
 		printk("(%d) produced, now sleeping...\n", current->tid);
@@ -75,8 +75,8 @@ void sem_down(struct mutex *mutex)
 		/* Each consumer wakes one producer in queue. */
 		mutex->sleepers--;
 		BUG_ON(list_empty(&mutex->wq.task_list));
-		list_for_each_entry(wq, &mutex->wq.task_list, task_list) {
-			list_del_init(&wq->task_list);
+		list_foreach_struct(wq, &mutex->wq.task_list, task_list) {
+			list_remove_init(&wq->task_list);
 			spin_unlock(&mutex->slock);
 			sleeper = wq->task;
 			printk("(%d) Waking up producer (%d)\n", current->tid,
@@ -86,8 +86,8 @@ void sem_down(struct mutex *mutex)
 		}
 	} else if (cnt < 0) {
 		DECLARE_WAITQUEUE(wq, current);
-		INIT_LIST_HEAD(&wq.task_list);
-		list_add_tail(&wq.task_list, &mutex->wq.task_list);
+		link_init(&wq.task_list);
+		list_insert_tail(&wq.task_list, &mutex->wq.task_list);
 		mutex->sleepers++;
 		sched_prepare_sleep();
 		printk("(%d) Waiting to consume, now sleeping...\n", current->tid);
@@ -122,7 +122,7 @@ int mutex_lock(struct mutex *mutex)
 		if (!__mutex_lock(&mutex->lock)) { /* Could not lock, sleep. */
 			CREATE_WAITQUEUE_ON_STACK(wq, current);
 			task_set_wqh(current, &mutex->wqh, &wq);
-			list_add_tail(&wq.task_list, &mutex->wqh.task_list);
+			list_insert_tail(&wq.task_list, &mutex->wqh.task_list);
 			mutex->wqh.sleepers++;
 			sched_prepare_sleep();
 			spin_unlock(&mutex->wqh.slock);
@@ -151,14 +151,14 @@ void mutex_unlock(struct mutex *mutex)
 	BUG_ON(current->nlocks < 0);
 	BUG_ON(mutex->wqh.sleepers < 0);
 	if (mutex->wqh.sleepers > 0) {
-		struct waitqueue *wq = list_entry(mutex->wqh.task_list.next,
+		struct waitqueue *wq = link_to_struct(mutex->wqh.task_list.next,
 						  struct waitqueue,
 						  task_list);
 		struct ktcb *sleeper = wq->task;
 
 		task_unset_wqh(sleeper);
 		BUG_ON(list_empty(&mutex->wqh.task_list));
-		list_del_init(&wq->task_list);
+		list_remove_init(&wq->task_list);
 		mutex->wqh.sleepers--;
 		spin_unlock(&mutex->wqh.slock);
 

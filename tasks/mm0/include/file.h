@@ -33,6 +33,6 @@ struct vfs_file_data {
 struct vm_file *vfs_file_create(void);
 
 
-extern struct list_head vm_file_list;
+extern struct link vm_file_list;
 
 #endif /* __MM0_FILE_H__ */

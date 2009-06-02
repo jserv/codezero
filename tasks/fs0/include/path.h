@@ -21,12 +21,12 @@
 #define VFS_STR_XATDIR		"...."
 
 struct pathdata {
-	struct list_head list;
+	struct link list;
 	struct vnode *vstart;
 };
 
 struct pathcomp {
-	struct list_head list;
+	struct link list;
 	const char *str;
 };
 

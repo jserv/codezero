@@ -78,7 +78,7 @@ void handle_fs_requests(void)
 	switch(tag) {
 	case L4_IPC_TAG_SYNC:
 		printf("%s: Synced with waiting thread.\n", __TASKNAME__);
-		return; /* No reply for this tag */
+		return; /* No origy for this tag */
 	case L4_IPC_TAG_OPEN:
 		ret = sys_open(sender, (void *)mr[0], (int)mr[1], (unsigned int)mr[2]);
 		break;

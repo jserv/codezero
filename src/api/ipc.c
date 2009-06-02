@@ -232,7 +232,7 @@ int ipc_send(l4id_t recv_tid, unsigned int flags)
 		struct waitqueue *wq = receiver->wq;
 
 		/* Remove from waitqueue */
-		list_del_init(&wq->task_list);
+		list_remove_init(&wq->task_list);
 		wqhr->sleepers--;
 		task_unset_wqh(receiver);
 
@@ -255,7 +255,7 @@ int ipc_send(l4id_t recv_tid, unsigned int flags)
 	/* The receiver is not ready and/or not expecting us */
 	CREATE_WAITQUEUE_ON_STACK(wq, current);
 	wqhs->sleepers++;
-	list_add_tail(&wq.task_list, &wqhs->task_list);
+	list_insert_tail(&wq.task_list, &wqhs->task_list);
 	task_set_wqh(current, wqhs, &wq);
 	sched_prepare_sleep();
 	spin_unlock(&wqhr->slock);
@@ -292,13 +292,13 @@ int ipc_recv(l4id_t senderid, unsigned int flags)
 		BUG_ON(list_empty(&wqhs->task_list));
 
 		/* Look for a sender we want to receive from */
-		list_for_each_entry_safe(wq, n, &wqhs->task_list, task_list) {
+		list_foreach_removable_struct(wq, n, &wqhs->task_list, task_list) {
 			sleeper = wq->task;
 
 			/* Found a sender that we wanted to receive from */
 			if ((sleeper->tid == current->expected_sender) ||
 			    (current->expected_sender == L4_ANYTHREAD)) {
-				list_del_init(&wq->task_list);
+				list_remove_init(&wq->task_list);
 				wqhs->sleepers--;
 				task_unset_wqh(sleeper);
 				spin_unlock(&wqhr->slock);
@@ -320,7 +320,7 @@ int ipc_recv(l4id_t senderid, unsigned int flags)
 	/* The sender is not ready */
 	CREATE_WAITQUEUE_ON_STACK(wq, current);
 	wqhr->sleepers++;
-	list_add_tail(&wq.task_list, &wqhr->task_list);
+	list_insert_tail(&wq.task_list, &wqhr->task_list);
 	task_set_wqh(current, wqhr, &wq);
 	sched_prepare_sleep();
 	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__,
@@ -341,7 +341,7 @@ int ipc_recv(l4id_t senderid, unsigned int flags)
  * (1) User task (client) calls ipc_sendrecv();
  * (2) System task (server) calls ipc_recv() with from == ANYTHREAD.
  * (3) Rendezvous occurs. Both tasks exchange mrs and leave rendezvous.
- * (4,5) User task, immediately calls ipc_recv(), expecting a reply from server.
+ * (4,5) User task, immediately calls ipc_recv(), expecting a origy from server.
  * (4,5) System task handles the request in userspace.
  * (6) System task calls ipc_send() sending the return result.
  * (7) Rendezvous occurs. Both tasks exchange mrs and leave rendezvous.
@@ -355,7 +355,7 @@ int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags)
 		if ((ret = ipc_send(to, flags)) < 0)
 			return ret;
 		/*
-		 * Get reply. A client would block its server
+		 * Get origy. A client would block its server
 		 * only very briefly between these calls.
 		 */
 		if ((ret = ipc_recv(from, flags)) < 0)

@@ -26,7 +26,7 @@ static struct page_area *new_page_area(struct page_allocator *p)
 	struct mem_cache *cache;
 	struct page_area *new_area;
 
-	list_for_each_entry(cache, &p->pga_cache_list, list) {
+	list_foreach_struct(cache, &p->pga_cache_list, list) {
 		if ((new_area = mem_cache_alloc(cache)) != 0) {
 			new_area->cache = cache;
 			p->pga_free--;
@@ -45,7 +45,7 @@ get_free_page_area(int quantity, struct page_allocator *p)
 	if (quantity <= 0)
 		return 0;
 
-	list_for_each_entry(area, &p->page_area_list, list) {
+	list_foreach_struct(area, &p->page_area_list, list) {
 
 		/* Check for exact size match */
 		if (area->numpages == quantity && !area->used) {
@@ -60,8 +60,8 @@ get_free_page_area(int quantity, struct page_allocator *p)
 			new->pfn = area->pfn + area->numpages;
 			new->numpages = quantity;
 			new->used = 1;
-			INIT_LIST_HEAD(&new->list);
-			list_add(&new->list, &area->list);
+			link_init(&new->list);
+			list_insert(&new->list, &area->list);
 			return new;
 		}
 	}
@@ -91,36 +91,36 @@ void init_page_allocator(unsigned long start, unsigned long end)
 	struct page_area *freemem, *area;
 	struct mem_cache *cache;
 
-	INIT_LIST_HEAD(&allocator.page_area_list);
-	INIT_LIST_HEAD(&allocator.pga_cache_list);
+	link_init(&allocator.page_area_list);
+	link_init(&allocator.pga_cache_list);
 
 	/* Initialise the first page area cache */
 	cache = mem_cache_init(l4_map_helper((void *)start, 1), PAGE_SIZE,
 			       sizeof(struct page_area), 0);
-	list_add(&cache->list, &allocator.pga_cache_list);
+	list_insert(&cache->list, &allocator.pga_cache_list);
 
 	/* Initialise the first area that describes the page just allocated */
 	area = mem_cache_alloc(cache);
-	INIT_LIST_HEAD(&area->list);
+	link_init(&area->list);
 	area->pfn = __pfn(start);
 	area->used = 1;
 	area->numpages = 1;
 	area->cache = cache;
-	list_add(&area->list, &allocator.page_area_list);
+	list_insert(&area->list, &allocator.page_area_list);
 
 	/* Update freemem start address */
 	start += PAGE_SIZE;
 
 	/* Initialise first area that describes all of free physical memory */
 	freemem = mem_cache_alloc(cache);
-	INIT_LIST_HEAD(&freemem->list);
+	link_init(&freemem->list);
 	freemem->pfn = __pfn(start);
 	freemem->numpages = __pfn(end) - freemem->pfn;
 	freemem->cache = cache;
 	freemem->used = 0;
 
 	/* Add it as the first unused page area */
-	list_add(&freemem->list, &allocator.page_area_list);
+	list_insert(&freemem->list, &allocator.page_area_list);
 
 	/* Initialise free page area counter */
 	allocator.pga_free = mem_cache_total_empty(cache);
@@ -163,7 +163,7 @@ int check_page_areas(struct page_allocator *p)
 		 * Add the new cache to available
 		 * list of free page area caches
 		 */
-		list_add(&newcache->list, &p->pga_cache_list);
+		list_insert(&newcache->list, &p->pga_cache_list);
 		/* Unlock here */
 	}
 	return 0;
@@ -202,13 +202,13 @@ struct page_area *merge_free_areas(struct page_area *before,
 	BUG_ON(before == after);
 
 	before->numpages += after->numpages;
-	list_del(&after->list);
+	list_remove(&after->list);
 	c = after->cache;
 	mem_cache_free(c, after);
 
 	/* Recursively free the cache page */
 	if (mem_cache_is_empty(c)) {
-		list_del(&c->list);
+		list_remove(&c->list);
 		BUG_ON(free_page(l4_unmap_helper(c, 1)) < 0)
 	}
 	return before;
@@ -219,7 +219,7 @@ static int find_and_free_page_area(void *addr, struct page_allocator *p)
 	struct page_area *area, *prev, *next;
 
 	/* First find the page area to be freed. */
-	list_for_each_entry(area, &p->page_area_list, list)
+	list_foreach_struct(area, &p->page_area_list, list)
 		if (__pfn_to_addr(area->pfn) == (unsigned long)addr &&
 		    area->used) {	/* Found it */
 			area->used = 0;
@@ -230,12 +230,12 @@ static int find_and_free_page_area(void *addr, struct page_allocator *p)
 found:
 	/* Now merge with adjacent areas, if possible */
 	if (area->list.prev != &p->page_area_list) {
-		prev = list_entry(area->list.prev, struct page_area, list);
+		prev = link_to_struct(area->list.prev, struct page_area, list);
 		if (!prev->used)
 			area = merge_free_areas(prev, area);
 	}
 	if (area->list.next != &p->page_area_list) {
-		next = list_entry(area->list.next, struct page_area, list);
+		next = link_to_struct(area->list.next, struct page_area, list);
 		if (!next->used)
 			area = merge_free_areas(area, next);
 	}

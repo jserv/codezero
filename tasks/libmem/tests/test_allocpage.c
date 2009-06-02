@@ -29,13 +29,13 @@ void print_page_area(struct page_area *a, int areano)
 	return;
 }
 
-void print_areas(struct list_head *area_head)
+void print_areas(struct link *area_head)
 {
 	struct page_area *cur;
 	int areano = 1;
 
 	printf("Page areas:\n-------------\n");
-	list_for_each_entry(cur, area_head, list)
+	list_foreach_struct(cur, area_head, list)
 		print_page_area(cur, areano++);
 }
 
@@ -47,12 +47,12 @@ void print_cache(struct mem_cache *c, int cacheno)
 	printf("Start: 0x%x\n", c->start);
 }
 
-void print_caches(struct list_head *cache_head)
+void print_caches(struct link *cache_head)
 {
 	int caches = 1;
 	struct mem_cache *cur;
 
-	list_for_each_entry(cur, cache_head, list)
+	list_foreach_struct(cur, cache_head, list)
 		print_cache(cur, caches++);
 }
 

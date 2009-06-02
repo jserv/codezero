@@ -18,13 +18,13 @@
 
 struct mutex_queue {
 	unsigned long physical;
-	struct list_head list;
+	struct link list;
 	struct waitqueue_head wqh_waiters;
 	struct waitqueue_head wqh_wakers;
 };
 
 struct mutex_queue_head {
-	struct list_head list;
+	struct link list;
 
 	/*
 	 * Single lock for:
@@ -42,7 +42,7 @@ struct mutex_queue_head {
 void init_mutex_queue_head(void)
 {
 	memset(&mutex_queue_head, 0, sizeof (mutex_queue_head));
-	INIT_LIST_HEAD(&mutex_queue_head.list);
+	link_init(&mutex_queue_head.list);
 	mutex_init(&mutex_queue_head.mutex_control_mutex);
 }
 void mutex_queue_head_lock()
@@ -61,7 +61,7 @@ void mutex_queue_init(struct mutex_queue *mq, unsigned long physical)
 	/* This is the unique key that describes this mutex */
 	mq->physical = physical;
 
-	INIT_LIST_HEAD(&mq->list);
+	link_init(&mq->list);
 	waitqueue_head_init(&mq->wqh_wakers);
 	waitqueue_head_init(&mq->wqh_waiters);
 }
@@ -70,13 +70,13 @@ void mutex_control_add(struct mutex_queue *mq)
 {
 	BUG_ON(!list_empty(&mq->list));
 
-	list_add(&mq->list, &mutex_queue_head.list);
+	list_insert(&mq->list, &mutex_queue_head.list);
 	mutex_queue_head.count++;
 }
 
 void mutex_control_remove(struct mutex_queue *mq)
 {
-	list_del_init(&mq->list);
+	list_remove_init(&mq->list);
 	mutex_queue_head.count--;
 }
 
@@ -86,7 +86,7 @@ struct mutex_queue *mutex_control_find(unsigned long mutex_physical)
 	struct mutex_queue *mutex_queue;
 
 	/* Find the mutex queue with this key */
-	list_for_each_entry(mutex_queue, &mutex_queue_head.list, list)
+	list_foreach_struct(mutex_queue, &mutex_queue_head.list, list)
 		if (mutex_queue->physical == mutex_physical)
 			return mutex_queue;
 

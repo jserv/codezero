@@ -29,13 +29,13 @@ int memfs_init_caches(struct memfs_superblock *sb)
 	free_block = (void *)sb + sizeof(*sb);
 	block_cache = mem_cache_init(free_block, sb->fssize - sizeof(*sb),
 				     sb->blocksize, 1);
-	list_add(&block_cache->list, &sb->block_cache_list);
+	list_insert(&block_cache->list, &sb->block_cache_list);
 
 	/* Allocate a block and initialise it as first inode cache */
 	free_block = mem_cache_alloc(block_cache);
 	inode_cache = mem_cache_init(free_block, sb->blocksize,
 				     sizeof(struct memfs_inode), 0);
-	list_add(&inode_cache->list, &sb->inode_cache_list);
+	list_insert(&inode_cache->list, &sb->inode_cache_list);
 
 	return 0;
 }
@@ -62,8 +62,8 @@ int memfs_format_filesystem(void *buffer)
 	sb->bpool = id_pool_new_init(MEMFS_TOTAL_BLOCKS);
 
 	/* Initialise bitmap allocation lists for blocks and inodes */
-	INIT_LIST_HEAD(&sb->block_cache_list);
-	INIT_LIST_HEAD(&sb->inode_cache_list);
+	link_init(&sb->block_cache_list);
+	link_init(&sb->inode_cache_list);
 	memfs_init_caches(sb);
 
 	return 0;
@@ -74,7 +74,7 @@ void *memfs_alloc_block(struct memfs_superblock *sb)
 {
 	struct mem_cache *cache;
 
-	list_for_each_entry(cache, &sb->block_cache_list, list) {
+	list_foreach_struct(cache, &sb->block_cache_list, list) {
 		if (cache->free)
 			return mem_cache_zalloc(cache);
 		else
@@ -91,7 +91,7 @@ int memfs_free_block(struct memfs_superblock *sb, void *block)
 {
 	struct mem_cache *c, *tmp;
 
-	list_for_each_entry_safe(c, tmp, &sb->block_cache_list, list)
+	list_foreach_removable_struct(c, tmp, &sb->block_cache_list, list)
 		if (!mem_cache_free(c, block))
 			return 0;
 		else
@@ -151,11 +151,11 @@ int memfs_init_rootdir(struct superblock *sb)
 	d->vnode = v;
 
 	/* Associate dentry with its vnode */
-	list_add(&d->vref, &d->vnode->dentries);
+	list_insert(&d->vref, &d->vnode->dentries);
 
 	/* Add both vnode and dentry to their flat caches */
-	list_add(&d->cache_list, &dentry_cache);
-	list_add(&v->cache_list, &vnode_cache);
+	list_insert(&d->cache_list, &dentry_cache);
+	list_insert(&v->cache_list, &vnode_cache);
 
 	return 0;
 }
@@ -204,12 +204,12 @@ struct superblock *memfs_get_superblock(void *block)
 }
 
 /* Registers sfs as an available filesystem type */
-void memfs_register_fstype(struct list_head *fslist)
+void memfs_register_fstype(struct link *fslist)
 {
 	/* Initialise superblock list for this fstype */
-	INIT_LIST_HEAD(&memfs_fstype.sblist);
+	link_init(&memfs_fstype.sblist);
 
 	/* Add this fstype to list of available fstypes. */
-	list_add(&memfs_fstype.list, fslist);
+	list_insert(&memfs_fstype.list, fslist);
 }
 

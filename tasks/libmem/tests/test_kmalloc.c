@@ -17,7 +17,7 @@
 #include "debug.h"
 #include "tests.h"
 
-extern struct list_head km_area_start;
+extern struct link km_area_start;
 
 void print_kmalloc_state(void)
 {

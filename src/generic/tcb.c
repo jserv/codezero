@@ -21,7 +21,7 @@ struct id_pool *space_id_pool;
 
 /* Hash table for all existing tasks */
 struct ktcb_list {
-	struct list_head list;
+	struct link list;
 	struct spinlock list_lock;
 	int count;
 };
@@ -32,12 +32,12 @@ void init_ktcb_list(void)
 {
 	memset(&ktcb_list, 0, sizeof(ktcb_list));
 	spin_lock_init(&ktcb_list.list_lock);
-	INIT_LIST_HEAD(&ktcb_list.list);
+	link_init(&ktcb_list.list);
 }
 
 void tcb_init(struct ktcb *new)
 {
-	INIT_LIST_HEAD(&new->task_list);
+	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
 
 	/* Initialise task's scheduling state and parameters. */
@@ -107,7 +107,7 @@ struct ktcb *tcb_find_by_space(l4id_t spid)
 	struct ktcb *task;
 
 	spin_lock(&ktcb_list.list_lock);
-	list_for_each_entry(task, &ktcb_list.list, task_list) {
+	list_foreach_struct(task, &ktcb_list.list, task_list) {
 		if (task->space->spid == spid) {
 			spin_unlock(&ktcb_list.list_lock);
 			return task;
@@ -122,7 +122,7 @@ struct ktcb *tcb_find(l4id_t tid)
 	struct ktcb *task;
 
 	spin_lock(&ktcb_list.list_lock);
-	list_for_each_entry(task, &ktcb_list.list, task_list) {
+	list_foreach_struct(task, &ktcb_list.list, task_list) {
 		if (task->tid == tid) {
 			spin_unlock(&ktcb_list.list_lock);
 			return task;
@@ -137,7 +137,7 @@ void tcb_add(struct ktcb *new)
 	spin_lock(&ktcb_list.list_lock);
 	BUG_ON(!list_empty(&new->task_list));
 	BUG_ON(!++ktcb_list.count);
-	list_add(&new->task_list, &ktcb_list.list);
+	list_insert(&new->task_list, &ktcb_list.list);
 	spin_unlock(&ktcb_list.list_lock);
 }
 
@@ -146,7 +146,7 @@ void tcb_remove(struct ktcb *new)
 	spin_lock(&ktcb_list.list_lock);
 	BUG_ON(list_empty(&new->task_list));
 	BUG_ON(--ktcb_list.count < 0);
-	list_del_init(&new->task_list);
+	list_remove_init(&new->task_list);
 	spin_unlock(&ktcb_list.list_lock);
 }
 

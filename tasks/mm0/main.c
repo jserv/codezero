@@ -25,7 +25,7 @@
 #include <boot.h>
 
 
-/* Receives all registers and replies back */
+/* Receives all registers and origies back */
 int ipc_test_full_sync(l4id_t senderid)
 {
 	for (int i = MR_UNUSED_START; i < MR_TOTAL + MR_REST; i++) {
@@ -35,7 +35,7 @@ int ipc_test_full_sync(l4id_t senderid)
 		write_mr(i, 0);
 	}
 
-	/* Send a full reply */
+	/* Send a full origy */
 	l4_send_full(senderid, 0);
 	return 0;
 }
@@ -158,7 +158,7 @@ void handle_requests(void)
 		ret = sys_execve(sender, (char *)mr[0],
 				 (char **)mr[1], (char **)mr[2]);
 		if (ret < 0)
-			break;	/* We reply for errors */
+			break;	/* We origy for errors */
 		else
 			return; /* else we're done */
 	}

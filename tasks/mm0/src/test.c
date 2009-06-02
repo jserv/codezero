@@ -30,7 +30,7 @@ int vm_object_test_link_count(struct vm_object *vmo)
 	int links = 0;
 	struct vm_obj_link *l;
 
-	list_for_each_entry(l, &vmo->link_list, linkref)
+	list_foreach_struct(l, &vmo->link_list, linkref)
 		links++;
 
 	BUG_ON(links != vmo->nlinks);
@@ -42,7 +42,7 @@ int vm_object_test_shadow_count(struct vm_object *vmo)
 	struct vm_object *sh;
 	int shadows = 0;
 
-	list_for_each_entry(sh, &vmo->shdw_list, shref)
+	list_foreach_struct(sh, &vmo->shdw_list, shref)
 		shadows++;
 
 	BUG_ON(shadows != vmo->shadows);
@@ -64,7 +64,7 @@ int mm0_test_global_vm_integrity(void)
 	memset(&vmstat, 0, sizeof(vmstat));
 
 	/* Count all shadow and file objects */
-	list_for_each_entry(vmo, &global_vm_objects.list, list) {
+	list_foreach_struct(vmo, &global_vm_objects.list, list) {
 		vmstat.shadows_referred += vmo->shadows;
 		if (vmo->flags & VM_OBJ_SHADOW)
 			vmstat.shadow_objects++;
@@ -76,7 +76,7 @@ int mm0_test_global_vm_integrity(void)
 	}
 
 	/* Count all registered vmfiles */
-	list_for_each_entry(f, &global_vm_files.list, list) {
+	list_foreach_struct(f, &global_vm_files.list, list) {
 		vmstat.vm_files++;
 		if (f->type == VM_FILE_SHM)
 			vmstat.shm_files++;
@@ -116,7 +116,7 @@ int mm0_test_global_vm_integrity(void)
 	BUG_ON(vmstat.shadow_objects != vmstat.shadows_referred);
 
 	/* Count all tasks */
-	list_for_each_entry(task, &global_tasks.list, list)
+	list_foreach_struct(task, &global_tasks.list, list)
 		vmstat.tasks++;
 
  	if (vmstat.tasks != global_tasks.total) {

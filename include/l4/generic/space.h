@@ -27,7 +27,7 @@
 /* A simple page table with a reference count */
 struct address_space {
 	l4id_t spid;
-	struct list_head list;
+	struct link list;
 	struct mutex lock;
 	pgd_table_t *pgd;
 	int ktcb_refs;

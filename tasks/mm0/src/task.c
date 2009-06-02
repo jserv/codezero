@@ -45,7 +45,7 @@ void print_tasks(void)
 {
 	struct tcb *task;
 	printf("Tasks:\n========\n");
-	list_for_each_entry(task, &global_tasks.list, list) {
+	list_foreach_struct(task, &global_tasks.list, list) {
 		printf("Task tid: %d, spid: %d\n", task->tid, task->spid);
 	}
 }
@@ -53,14 +53,14 @@ void print_tasks(void)
 void global_add_task(struct tcb *task)
 {
 	BUG_ON(!list_empty(&task->list));
-	list_add_tail(&task->list, &global_tasks.list);
+	list_insert_tail(&task->list, &global_tasks.list);
 	global_tasks.total++;
 }
 
 void global_remove_task(struct tcb *task)
 {
 	BUG_ON(list_empty(&task->list));
-	list_del_init(&task->list);
+	list_remove_init(&task->list);
 	BUG_ON(--global_tasks.total < 0);
 }
 
@@ -68,7 +68,7 @@ struct tcb *find_task(int tid)
 {
 	struct tcb *t;
 
-	list_for_each_entry(t, &global_tasks.list, list)
+	list_foreach_struct(t, &global_tasks.list, list)
 		if (t->tid == tid)
 			return t;
 	return 0;
@@ -89,7 +89,7 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 			return PTR_ERR(-ENOMEM);
 		}
 		task->vm_area_head->tcb_refs = 1;
-		INIT_LIST_HEAD(&task->vm_area_head->list);
+		link_init(&task->vm_area_head->list);
 
 		/* Also allocate a utcb head for new address space */
 		if (!(task->utcb_head =
@@ -99,7 +99,7 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 			return PTR_ERR(-ENOMEM);
 		}
 		task->utcb_head->tcb_refs = 1;
-		INIT_LIST_HEAD(&task->utcb_head->list);
+		link_init(&task->utcb_head->list);
 	}
 
 	/* Allocate file structures if not shared */
@@ -120,9 +120,9 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 	task->tgid = TASK_ID_INVALID;
 
 	/* Initialise list structure */
-	INIT_LIST_HEAD(&task->list);
-	INIT_LIST_HEAD(&task->child_ref);
-	INIT_LIST_HEAD(&task->children);
+	link_init(&task->list);
+	link_init(&task->child_ref);
+	link_init(&task->children);
 
 	return task;
 }
@@ -180,15 +180,15 @@ int tcb_destroy(struct tcb *task)
 	 * All children of the current task becomes children
 	 * of the parent of this task.
 	 */
-	list_for_each_entry_safe(child, n, &task->children,
+	list_foreach_removable_struct(child, n, &task->children,
 				 child_ref) {
-		list_del_init(&child->child_ref);
-		list_add_tail(&child->child_ref,
+		list_remove_init(&child->child_ref);
+		list_insert_tail(&child->child_ref,
 			      &task->parent->children);
 		child->parent = task->parent;
 	}
 	/* The task is not a child of its parent */
-	list_del_init(&task->child_ref);
+	list_remove_init(&task->child_ref);
 
 	/* Now task deletion make sure task is in no list */
 	BUG_ON(!list_empty(&task->list));
@@ -209,7 +209,7 @@ int task_copy_vmas(struct tcb *to, struct tcb *from)
 {
 	struct vm_area *vma, *new_vma;
 
-	list_for_each_entry(vma, &from->vm_area_head->list, list) {
+	list_foreach_struct(vma, &from->vm_area_head->list, list) {
 
 		/* Create a new vma */
 		new_vma = vma_new(vma->pfn_start, vma->pfn_end - vma->pfn_start,
@@ -233,12 +233,12 @@ int task_release_vmas(struct task_vma_head *vma_head)
 {
 	struct vm_area *vma, *n;
 
-	list_for_each_entry_safe(vma, n, &vma_head->list, list) {
+	list_foreach_removable_struct(vma, n, &vma_head->list, list) {
 		/* Release all links */
 		vma_drop_merge_delete_all(vma);
 
 		/* Delete the vma from task's vma list */
-		list_del(&vma->list);
+		list_remove(&vma->list);
 
 		/* Free the vma */
 		kfree(vma);
@@ -358,11 +358,11 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 			 * On these conditions child shares
 			 * the parent of the caller
 			 */
-			list_add_tail(&task->child_ref,
+			list_insert_tail(&task->child_ref,
 				      &parent->parent->children);
 			task->parent = parent->parent;
 		} else {
-			list_add_tail(&task->child_ref,
+			list_insert_tail(&task->child_ref,
 				      &parent->children);
 			task->parent = parent;
 		}
@@ -370,7 +370,7 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 		struct tcb *pager = find_task(PAGER_TID);
 
 		/* All parentless tasks are children of the pager */
-		list_add_tail(&task->child_ref, &pager->children);
+		list_insert_tail(&task->child_ref, &pager->children);
 		task->parent = pager;
 	}
 
@@ -674,7 +674,7 @@ int vfs_send_task_data(struct tcb *vfs)
 	tdata_head->total = global_tasks.total;
 
 	/* Write per-task data for all tasks */
-	list_for_each_entry(t, &global_tasks.list, list) {
+	list_foreach_struct(t, &global_tasks.list, list) {
 		tdata_head->tdata[li].tid = t->tid;
 		tdata_head->tdata[li].shpage_address = (unsigned long)t->shared_page;
 		li++;
@@ -697,7 +697,7 @@ int task_prefault_regions(struct tcb *task, struct vm_file *f)
 {
 	struct vm_area *vma;
 
-	list_for_each_entry(vma, &task->vm_area_head->list, list) {
+	list_foreach_struct(vma, &task->vm_area_head->list, list) {
 		for (int pfn = vma->pfn_start; pfn < vma->pfn_end; pfn++)
 			BUG_ON(prefault_page(task, __pfn_to_addr(pfn),
 					     VM_READ | VM_WRITE) < 0);

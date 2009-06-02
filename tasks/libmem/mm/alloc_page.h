@@ -6,7 +6,7 @@
 /* List member to keep track of free and unused physical pages.
  * Has PAGE_SIZE granularity */
 struct page_area {
-	struct list_head list;
+	struct link list;
 	unsigned int used;	/* Used or free */
 	unsigned int pfn;	/* Base pfn */
 	unsigned int numpages;	/* Number of pages this region covers */
@@ -15,8 +15,8 @@ struct page_area {
 };
 
 struct page_allocator {
-	struct list_head page_area_list;
-	struct list_head pga_cache_list;
+	struct link page_area_list;
+	struct link pga_cache_list;
 	int pga_free;
 };
 

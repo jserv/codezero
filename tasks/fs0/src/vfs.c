@@ -8,8 +8,8 @@
 #include <task.h>
 #include <path.h>
 
-LIST_HEAD(vnode_cache);
-LIST_HEAD(dentry_cache);
+LINK_DECLARE(vnode_cache);
+LINK_DECLARE(dentry_cache);
 
 /*
  * /
@@ -33,7 +33,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 	int err;
 
 	/* Check the vnode flat list by vnum */
-	list_for_each_entry(v, &vnode_cache, cache_list)
+	list_foreach_struct(v, &vnode_cache, cache_list)
 		if (v->vnum == vnum)
 			return v;
 
@@ -48,7 +48,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 	}
 
 	/* Add the vnode back to vnode flat list */
-	list_add(&v->cache_list, &vnode_cache);
+	list_insert(&v->cache_list, &vnode_cache);
 
 	return v;
 }

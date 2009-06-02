@@ -12,7 +12,7 @@
 #define KMALLOC_POOLS_MAX	5
 
 struct kmalloc_pool_head {
-	struct list_head cache_list;
+	struct link cache_list;
 	int occupied;
 	int total_caches;
 	int cache_size;
@@ -28,7 +28,7 @@ struct kmalloc_mempool km_pool;
 void init_kmalloc()
 {
 	for (int i = 0; i < KMALLOC_POOLS_MAX; i++) {
-		INIT_LIST_HEAD(&km_pool.pool_head[i].cache_list);
+		link_init(&km_pool.pool_head[i].cache_list);
 		km_pool.pool_head[i].occupied = 0;
 		km_pool.pool_head[i].total_caches = 0;
 		km_pool.pool_head[i].cache_size = 0;
@@ -58,7 +58,7 @@ void *__kmalloc(int size)
 			 * Found the pool, now see if any
 			 * cache has available slots
 			 */
-			list_for_each_entry(cache, &km_pool.pool_head[i].cache_list,
+			list_foreach_struct(cache, &km_pool.pool_head[i].cache_list,
 					    list) {
 				if (cache->free)
 					return mem_cache_alloc(cache);
@@ -89,7 +89,7 @@ void *__kmalloc(int size)
 	BUG_ON(!(cache = mem_cache_init(alloc_page(), PAGE_SIZE,
 					size, 0)));
 	// printk("%s: Created new cache for size %d\n", __FUNCTION__, size);
-	list_add(&cache->list, &km_pool.pool_head[index].cache_list);
+	list_insert(&cache->list, &km_pool.pool_head[index].cache_list);
 	km_pool.pool_head[index].occupied = 1;
 	km_pool.pool_head[index].total_caches++;
 	km_pool.pool_head[index].cache_size = size;
@@ -115,13 +115,13 @@ int __kfree(void *p)
 	struct mem_cache *cache, *tmp;
 
 	for (int i = 0; i < km_pool.total; i++)
-		list_for_each_entry_safe(cache, tmp,
+		list_foreach_removable_struct(cache, tmp,
 					 &km_pool.pool_head[i].cache_list,
 					 list) {
 			if (!mem_cache_free(cache, p)) {
 				if (mem_cache_is_empty(cache)) {
 					km_pool.pool_head[i].total_caches--;
-					list_del(&cache->list);
+					list_remove(&cache->list);
 					free_page(cache);
 					/*
 					 * Total remains the same but slot

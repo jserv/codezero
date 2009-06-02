@@ -32,14 +32,14 @@ struct global_list global_tasks = {
 void global_add_task(struct tcb *task)
 {
 	BUG_ON(!list_empty(&task->list));
-	list_add_tail(&task->list, &global_tasks.list);
+	list_insert_tail(&task->list, &global_tasks.list);
 	global_tasks.total++;
 }
 
 void global_remove_task(struct tcb *task)
 {
 	BUG_ON(list_empty(&task->list));
-	list_del_init(&task->list);
+	list_remove_init(&task->list);
 	BUG_ON(--global_tasks.total < 0);
 }
 
@@ -47,7 +47,7 @@ struct tcb *find_task(int tid)
 {
 	struct tcb *t;
 
-	list_for_each_entry(t, &global_tasks.list, list)
+	list_foreach_struct(t, &global_tasks.list, list)
 		if (t->tid == tid)
 			return t;
 	return 0;
@@ -95,7 +95,7 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 	task->tid = TASK_ID_INVALID;
 
 	/* Initialise list structure */
-	INIT_LIST_HEAD(&task->list);
+	link_init(&task->list);
 
 	return task;
 }

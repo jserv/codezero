@@ -12,6 +12,6 @@
 #endif
 
 void print_page_area_list(struct page_allocator *p);
-void print_km_area_list(struct list_head *s);
+void print_km_area_list(struct link *s);
 void print_km_area(struct km_area *s);
 #endif /* DEBUG_H */

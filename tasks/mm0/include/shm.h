@@ -25,7 +25,7 @@ struct shm_descriptor {
 struct shm_descriptor {
 	int key;			/* IPC key supplied by user task */
 	l4id_t shmid;			/* SHM area id, allocated by mm0 */
-	struct list_head list;		/* SHM list, used by mm0 */
+	struct link list;		/* SHM list, used by mm0 */
 	struct vm_file *owner;
 	void *shm_addr;			/* The virtual address for segment. */
 	unsigned long size;		/* Size of the area in pages */

@@ -28,8 +28,8 @@ struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
 	if (!(vma = kzalloc(sizeof(struct vm_area))))
 		return 0;
 
-	INIT_LIST_HEAD(&vma->list);
-	INIT_LIST_HEAD(&vma->vm_obj_list);
+	link_init(&vma->list);
+	link_init(&vma->vm_obj_list);
 
 	vma->pfn_start = pfn_start;
 	vma->pfn_end = pfn_start + npages;
@@ -45,19 +45,19 @@ struct vm_area *vma_new(unsigned long pfn_start, unsigned long npages,
  * The new vma is assumed to have been correctly set up not to intersect
  * with any other existing vma.
  */
-int task_insert_vma(struct vm_area *this, struct list_head *vma_list)
+int task_insert_vma(struct vm_area *this, struct link *vma_list)
 {
 	struct vm_area *before, *after;
 
 	/* Add if list is empty */
 	if (list_empty(vma_list)) {
-		list_add_tail(&this->list, vma_list);
+		list_insert_tail(&this->list, vma_list);
 		return 0;
 	}
 
 	/* Else find the right interval */
-	list_for_each_entry(before, vma_list, list) {
-		after = list_entry(before->list.next, struct vm_area, list);
+	list_foreach_struct(before, vma_list, list) {
+		after = link_to_struct(before->list.next, struct vm_area, list);
 
 		/* If there's only one in list */
 		if (before->list.next == vma_list) {
@@ -69,10 +69,10 @@ int task_insert_vma(struct vm_area *this, struct list_head *vma_list)
 
 			/* Add as next if greater */
 			if (this->pfn_start > before->pfn_start)
-				list_add(&this->list, &before->list);
+				list_insert(&this->list, &before->list);
 			/* Add as previous if smaller */
 			else if (this->pfn_start < before->pfn_start)
-				list_add_tail(&this->list, &before->list);
+				list_insert_tail(&this->list, &before->list);
 			else
 				BUG();
 
@@ -90,7 +90,7 @@ int task_insert_vma(struct vm_area *this, struct list_head *vma_list)
 			BUG_ON(set_intersection(this->pfn_start, this->pfn_end,
 						after->pfn_start,
 						after->pfn_end));
-			list_add(&this->list, &before->list);
+			list_insert(&this->list, &before->list);
 
 			return 0;
 		}
@@ -122,7 +122,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 		return task->start;
 
 	/* First vma to check our range against */
-	vma = list_entry(task->vm_area_head->list.next, struct vm_area, list);
+	vma = link_to_struct(task->vm_area_head->list.next, struct vm_area, list);
 
 	/* Start searching from task's end of data to start of stack */
 	while (pfn_end <= __pfn(task->end)) {
@@ -147,7 +147,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 			}
 
 			/* Otherwise get next vma entry */
-			vma = list_entry(vma->list.next,
+			vma = link_to_struct(vma->list.next,
 					 struct vm_area, list);
 			continue;
 		}
@@ -282,7 +282,7 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	vm_link_object(vmo_link, &mapfile->vm_obj);
 
 	/* Add link to vma list */
-	list_add_tail(&vmo_link->list, &new->vm_obj_list);
+	list_insert_tail(&vmo_link->list, &new->vm_obj_list);
 
 	/*
 	 * If the file is a shm file, also map devzero behind it. i.e.
@@ -304,7 +304,7 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 			return PTR_ERR(-ENOMEM);
 		}
 		vm_link_object(vmo_link2, &dzero->vm_obj);
-		list_add_tail(&vmo_link2->list, &new->vm_obj_list);
+		list_insert_tail(&vmo_link2->list, &new->vm_obj_list);
 	}
 
 	/* Finished initialising the vma, add it to task */

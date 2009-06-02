@@ -40,7 +40,7 @@ void print_areas(struct page_area *ar)
 		return;
 	}
 	print_page_area(cur, areano++);
-	list_for_each_entry(cur, &ar->list, list) {
+	list_foreach_struct(cur, &ar->list, list) {
 		print_page_area(cur, areano++);
 	}
 	return;
@@ -64,7 +64,7 @@ void print_caches(struct mem_cache *c)
 		return;
 	}
 	print_cache(cur, caches++);
-	list_for_each_entry(cur, &c->list, list) {
+	list_foreach_struct(cur, &c->list, list) {
 		print_cache(cur, caches++);
 	}
 	return;

@@ -16,7 +16,7 @@
 #include <l4/lib/idpool.h>
 
 struct address_space_list {
-	struct list_head list;
+	struct link list;
 
 	/* Lock for list add/removal */
 	struct spinlock list_lock;
@@ -34,7 +34,7 @@ void init_address_space_list(void)
 
 	mutex_init(&address_space_list.ref_lock);
 	spin_lock_init(&address_space_list.list_lock);
-	INIT_LIST_HEAD(&address_space_list.list);
+	link_init(&address_space_list.list);
 }
 
 void address_space_reference_lock()
@@ -58,7 +58,7 @@ struct address_space *address_space_find(l4id_t spid)
 	struct address_space *space;
 
 	spin_lock(&address_space_list.list_lock);
-	list_for_each_entry(space, &address_space_list.list, list) {
+	list_foreach_struct(space, &address_space_list.list, list) {
 		if (space->spid == spid) {
 			spin_unlock(&address_space_list.list_lock);
 			return space;
@@ -72,7 +72,7 @@ void address_space_add(struct address_space *space)
 {
 	spin_lock(&address_space_list.list_lock);
 	BUG_ON(!list_empty(&space->list));
-	list_add(&space->list, &address_space_list.list);
+	list_insert(&space->list, &address_space_list.list);
 	BUG_ON(!++address_space_list.count);
 	spin_unlock(&address_space_list.list_lock);
 }
@@ -82,7 +82,7 @@ void address_space_remove(struct address_space *space)
 	spin_lock(&address_space_list.list_lock);
 	BUG_ON(list_empty(&space->list));
 	BUG_ON(--address_space_list.count < 0);
-	list_del_init(&space->list);
+	list_remove_init(&space->list);
 	spin_unlock(&address_space_list.list_lock);
 }
 
@@ -118,7 +118,7 @@ struct address_space *address_space_create(struct address_space *orig)
 	}
 
 	/* Initialize space structure */
-	INIT_LIST_HEAD(&space->list);
+	link_init(&space->list);
 	mutex_init(&space->lock);
 	space->pgd = pgd;
 

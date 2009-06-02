@@ -10,11 +10,11 @@
 #include <task.h>
 #include <path.h>
 
-extern struct list_head vnode_cache;
-extern struct list_head dentry_cache;
+extern struct link vnode_cache;
+extern struct link dentry_cache;
 
 /*
- * This is a temporary replacement for page cache support provided by mm0.
+ * This is a temporary origacement for page cache support provided by mm0.
  * Normally mm0 tracks all vnode pages, but this is used to track pages in
  * directory vnodes, which are normally never mapped by tasks.
  */
@@ -36,10 +36,10 @@ static inline struct dentry *vfs_alloc_dentry(void)
 {
 	struct dentry *d = kzalloc(sizeof(struct dentry));
 
-	INIT_LIST_HEAD(&d->child);
-	INIT_LIST_HEAD(&d->children);
-	INIT_LIST_HEAD(&d->vref);
-	INIT_LIST_HEAD(&d->cache_list);
+	link_init(&d->child);
+	link_init(&d->children);
+	link_init(&d->vref);
+	link_init(&d->cache_list);
 
 	return d;
 }
@@ -53,8 +53,8 @@ static inline struct vnode *vfs_alloc_vnode(void)
 {
 	struct vnode *v = kzalloc(sizeof(struct vnode));
 
-	INIT_LIST_HEAD(&v->dentries);
-	INIT_LIST_HEAD(&v->cache_list);
+	link_init(&v->dentries);
+	link_init(&v->cache_list);
 
 	return v;
 }
@@ -62,14 +62,14 @@ static inline struct vnode *vfs_alloc_vnode(void)
 static inline void vfs_free_vnode(struct vnode *v)
 {
 	BUG(); /* Are the dentries freed ??? */
-	list_del(&v->cache_list);
+	list_remove(&v->cache_list);
 	kfree(v);
 }
 
 static inline struct superblock *vfs_alloc_superblock(void)
 {
 	struct superblock *sb = kmalloc(sizeof(struct superblock));
-	INIT_LIST_HEAD(&sb->list);
+	link_init(&sb->list);
 
 	return sb;
 }

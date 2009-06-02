@@ -26,21 +26,21 @@ struct global_list global_vm_objects = {
 void global_add_vm_object(struct vm_object *obj)
 {
 	BUG_ON(!list_empty(&obj->list));
-	list_add(&obj->list, &global_vm_objects.list);
+	list_insert(&obj->list, &global_vm_objects.list);
 	global_vm_objects.total++;
 }
 
 void global_remove_vm_object(struct vm_object *obj)
 {
 	BUG_ON(list_empty(&obj->list));
-	list_del_init(&obj->list);
+	list_remove_init(&obj->list);
 	BUG_ON(--global_vm_objects.total < 0);
 }
 
 void global_add_vm_file(struct vm_file *f)
 {
 	BUG_ON(!list_empty(&f->list));
-	list_add(&f->list, &global_vm_files.list);
+	list_insert(&f->list, &global_vm_files.list);
 	global_vm_files.total++;
 
 	global_add_vm_object(&f->vm_obj);
@@ -49,7 +49,7 @@ void global_add_vm_file(struct vm_file *f)
 void global_remove_vm_file(struct vm_file *f)
 {
 	BUG_ON(list_empty(&f->list));
-	list_del_init(&f->list);
+	list_remove_init(&f->list);
 	BUG_ON(--global_vm_files.total < 0);
 
 	global_remove_vm_object(&f->vm_obj);
@@ -62,7 +62,7 @@ void print_cache_pages(struct vm_object *vmo)
 	if (!list_empty(&vmo->page_cache))
 		printf("Pages:\n======\n");
 
-	list_for_each_entry(p, &vmo->page_cache, list) {
+	list_foreach_struct(p, &vmo->page_cache, list) {
 		dprintf("Page offset: 0x%x, virtual: 0x%x, refcnt: %d\n", p->offset,
 		       p->virtual, p->refcnt);
 	}
@@ -97,29 +97,29 @@ void vm_object_print(struct vm_object *vmo)
 	// printf("\n");
 }
 
-void vm_print_files(struct list_head *files)
+void vm_print_files(struct link *files)
 {
 	struct vm_file *f;
 
-	list_for_each_entry(f, files, list)
+	list_foreach_struct(f, files, list)
 		vm_object_print(&f->vm_obj);
 }
 
-void vm_print_objects(struct list_head *objects)
+void vm_print_objects(struct link *objects)
 {
 	struct vm_object *vmo;
 
-	list_for_each_entry(vmo, objects, list)
+	list_foreach_struct(vmo, objects, list)
 		vm_object_print(vmo);
 }
 
 struct vm_object *vm_object_init(struct vm_object *obj)
 {
-	INIT_LIST_HEAD(&obj->list);
-	INIT_LIST_HEAD(&obj->shref);
-	INIT_LIST_HEAD(&obj->shdw_list);
-	INIT_LIST_HEAD(&obj->page_cache);
-	INIT_LIST_HEAD(&obj->link_list);
+	link_init(&obj->list);
+	link_init(&obj->shref);
+	link_init(&obj->shdw_list);
+	link_init(&obj->page_cache);
+	link_init(&obj->link_list);
 
 	return obj;
 }
@@ -142,7 +142,7 @@ struct vm_file *vm_file_create(void)
 	if (!(f = kzalloc(sizeof(*f))))
 		return PTR_ERR(-ENOMEM);
 
-	INIT_LIST_HEAD(&f->list);
+	link_init(&f->list);
 	vm_object_init(&f->vm_obj);
 	f->vm_obj.flags = VM_OBJ_FILE;
 

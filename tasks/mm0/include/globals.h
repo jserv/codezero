@@ -3,7 +3,7 @@
 
 struct global_list {
 	int total;
-	struct list_head list;
+	struct link list;
 };
 
 extern struct global_list global_vm_files;

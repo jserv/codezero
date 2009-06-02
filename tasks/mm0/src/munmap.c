@@ -43,7 +43,7 @@ int vma_split(struct vm_area *vma, struct tcb *task,
 	vma_copy_links(new, vma);
 
 	/* Add new one next to original vma */
-	list_add_tail(&new->list, &vma->list);
+	list_insert_tail(&new->list, &vma->list);
 
 	/* Unmap the removed portion */
 	BUG_ON(l4_unmap((void *)__pfn_to_addr(unmap_start),
@@ -102,7 +102,7 @@ int vma_destroy_single(struct tcb *task, struct vm_area *vma)
 		 vma->pfn_end - vma->pfn_start, task->tid);
 
 	/* Unlink and delete vma */
-	list_del(&vma->list);
+	list_remove(&vma->list);
 	kfree(vma);
 
 	return 0;
@@ -149,7 +149,7 @@ int vma_flush_pages(struct vm_area *vma)
 	 * could only be a single VM_SHARED file-backed object in the chain.
 	 */
 	BUG_ON(list_empty(&vma->list));
-	vmo_link = list_entry(vma->vm_obj_list.next, struct vm_obj_link, list);
+	vmo_link = link_to_struct(vma->vm_obj_list.next, struct vm_obj_link, list);
 	vmo = vmo_link->obj;
 
 	/* Only dirty objects would need flushing */
@@ -187,7 +187,7 @@ int do_munmap(struct tcb *task, unsigned long vaddr, unsigned long npages)
 	struct vm_area *vma, *n;
 	int err;
 
-	list_for_each_entry_safe(vma, n, &task->vm_area_head->list, list) {
+	list_foreach_removable_struct(vma, n, &task->vm_area_head->list, list) {
 		/* Check for intersection */
 		if (set_intersection(munmap_start, munmap_end,
 				     vma->pfn_start, vma->pfn_end)) {

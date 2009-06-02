@@ -66,8 +66,8 @@ struct memfs_superblock {
 	u64 fmaxblocks;		/* Maximum number of blocks per file */
 	u64 fssize;		/* Total size of filesystem */
 	unsigned long root_vnum;	/* The root vnum of this superblock */
-	struct list_head inode_cache_list;	/* Chain of alloc caches */
-	struct list_head block_cache_list;	/* Chain of alloc caches */
+	struct link inode_cache_list;	/* Chain of alloc caches */
+	struct link block_cache_list;	/* Chain of alloc caches */
 	struct id_pool *ipool;			/* Index pool for inodes */
 	struct id_pool *bpool;			/* Index pool for blocks */
 	struct memfs_inode *inode[MEMFS_TOTAL_INODES];	/* Table of inodes */
@@ -88,7 +88,7 @@ extern struct file_ops memfs_file_operations;
 
 int memfs_format_filesystem(void *buffer);
 struct memfs_inode *memfs_create_inode(struct memfs_superblock *sb);
-void memfs_register_fstype(struct list_head *);
+void memfs_register_fstype(struct link *);
 struct superblock *memfs_get_superblock(void *block);
 int memfs_generate_superblock(void *block);
 

@@ -52,7 +52,7 @@ struct ktcb {
 	syscall_context_t *syscall_regs;
 
 	/* Runqueue related */
-	struct list_head rq_list;
+	struct link rq_list;
 	struct runqueue *rq;
 
 	/* Thread information */
@@ -74,7 +74,7 @@ struct ktcb {
 
 	u32 ts_need_resched;	/* Scheduling flag */
 	enum task_state state;
-	struct list_head task_list; /* Global task list. */
+	struct link task_list; /* Global task list. */
 
 	/* UTCB related, see utcb.txt in docs */
 	unsigned long utcb_address;	/* Virtual ref to task's utcb area */

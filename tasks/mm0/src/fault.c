@@ -56,14 +56,14 @@ unsigned long fault_to_file_offset(struct fault_data *fault)
  * Given a reference to link = vma, head = vma, returns link1.
  * Given a reference to link = link3, head = vma, returns 0.
  */
-struct vm_obj_link *vma_next_link(struct list_head *link,
-				  struct list_head *head)
+struct vm_obj_link *vma_next_link(struct link *link,
+				  struct link *head)
 {
 	BUG_ON(list_empty(link));
 	if (link->next == head)
 		return 0;
 	else
-		return list_entry(link->next, struct vm_obj_link, list);
+		return link_to_struct(link->next, struct vm_obj_link, list);
 }
 
 /* Unlinks orig_link from its vma and deletes it but keeps the object. */
@@ -72,7 +72,7 @@ struct vm_object *vma_drop_link(struct vm_obj_link *link)
 	struct vm_object *dropped;
 
 	/* Remove object link from vma's list */
-	list_del(&link->list);
+	list_remove(&link->list);
 
 	/* Unlink the link from object */
 	dropped = vm_unlink_object(link);
@@ -104,7 +104,7 @@ int vm_object_is_subset(struct vm_object *shadow,
 	 * Do a page by page comparison. Every lesser page
 	 * must be in copier for overlap.
 	 */
-	list_for_each_entry(pl, &original->page_cache, list)
+	list_foreach_struct(pl, &original->page_cache, list)
 		if (!(pc = find_page(shadow, pl->offset)))
 			return 0;
 	/*
@@ -160,14 +160,14 @@ int vma_merge_object(struct vm_object *redundant)
 	BUG_ON(redundant->shadows != 1);
 
 	/* Get the last shadower object in front */
-	front = list_entry(redundant->shdw_list.next,
+	front = link_to_struct(redundant->shdw_list.next,
 			   struct vm_object, shref);
 
 	/* Move all non-intersecting pages to front shadow. */
-	list_for_each_entry_safe(p1, n, &redundant->page_cache, list) {
+	list_foreach_removable_struct(p1, n, &redundant->page_cache, list) {
 		/* Page doesn't exist in front, move it there */
 		if (!(p2 = find_page(front, p1->offset))) {
-			list_del_init(&p1->list);
+			list_remove_init(&p1->list);
 			spin_lock(&p1->lock);
 			p1->owner = front;
 			spin_unlock(&p1->lock);
@@ -179,20 +179,20 @@ int vma_merge_object(struct vm_object *redundant)
 	/* Sort out shadow relationships after the merge: */
 
 	/* Front won't be a shadow of the redundant shadow anymore */
-	list_del_init(&front->shref);
+	list_remove_init(&front->shref);
 
 	/* Check that there really was one shadower of redundant left */
 	BUG_ON(!list_empty(&redundant->shdw_list));
 
 	/* Redundant won't be a shadow of its next object */
-	list_del_init(&redundant->shref);
+	list_remove_init(&redundant->shref);
 
 	/* Front is now a shadow of redundant's next object */
-	list_add(&front->shref, &redundant->orig_obj->shdw_list);
+	list_insert(&front->shref, &redundant->orig_obj->shdw_list);
 	front->orig_obj = redundant->orig_obj;
 
 	/* Find last link for the object */
-	last_link = list_entry(redundant->link_list.next,
+	last_link = link_to_struct(redundant->link_list.next,
 			       struct vm_obj_link, linkref);
 
 	/* Drop the last link to the object */
@@ -213,8 +213,8 @@ struct vm_obj_link *vm_objlink_create(void)
 
 	if (!(vmo_link = kzalloc(sizeof(*vmo_link))))
 		return PTR_ERR(-ENOMEM);
-	INIT_LIST_HEAD(&vmo_link->list);
-	INIT_LIST_HEAD(&vmo_link->linkref);
+	link_init(&vmo_link->list);
+	link_init(&vmo_link->linkref);
 
 	return vmo_link;
 }
@@ -274,7 +274,7 @@ int vma_copy_links(struct vm_area *new_vma, struct vm_area *vma)
 
 	/* Get the first object on the vma */
 	BUG_ON(list_empty(&vma->vm_obj_list));
-	vmo_link = list_entry(vma->vm_obj_list.next,
+	vmo_link = link_to_struct(vma->vm_obj_list.next,
 			      struct vm_obj_link, list);
 	do {
 		/* Create a new link */
@@ -284,7 +284,7 @@ int vma_copy_links(struct vm_area *new_vma, struct vm_area *vma)
 		vm_link_object(new_link, vmo_link->obj);
 
 		/* Add the new link to vma in object order */
-		list_add_tail(&new_link->list, &new_vma->vm_obj_list);
+		list_insert_tail(&new_link->list, &new_vma->vm_obj_list);
 
 	/* Continue traversing links, doing the same copying */
 	} while((vmo_link = vma_next_link(&vmo_link->list,
@@ -361,10 +361,10 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 
 	/* Get previous and next links, if they exist */
 	prev = (link->list.prev == &vma->vm_obj_list) ? 0 :
-		list_entry(link->list.prev, struct vm_obj_link, list);
+		link_to_struct(link->list.prev, struct vm_obj_link, list);
 
 	next = (link->list.next == &vma->vm_obj_list) ? 0 :
-		list_entry(link->list.next, struct vm_obj_link, list);
+		link_to_struct(link->list.next, struct vm_obj_link, list);
 
 	/* Drop the link */
 	obj = vma_drop_link(link);
@@ -378,7 +378,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 
 		/* Remove prev from current object's shadow list */
 		BUG_ON(list_empty(&prev->obj->shref));
-		list_del_init(&prev->obj->shref);
+		list_remove_init(&prev->obj->shref);
 
 		/*
 		 * We don't allow dropping non-shadow objects yet,
@@ -387,7 +387,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 		BUG_ON(!next);
 
 		/* prev is now shadow of next */
-		list_add(&prev->obj->shref,
+		list_insert(&prev->obj->shref,
 			 &next->obj->shdw_list);
 		prev->obj->orig_obj = next->obj;
 
@@ -397,7 +397,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 		 */
 		if (obj->nlinks == 0) {
 			BUG_ON(obj->orig_obj != next->obj);
-			list_del_init(&obj->shref);
+			list_remove_init(&obj->shref);
 		} else {
 			/*
 			 * Dropped object still has referrers, which
@@ -421,7 +421,7 @@ int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link)
 				BUG_ON(obj->orig_obj != next->obj);
 				BUG_ON(--next->obj->shadows < 0);
 				// vm_object_print(next->obj);
-				list_del_init(&obj->shref);
+				list_remove_init(&obj->shref);
 			}
 		}
 	}
@@ -475,7 +475,7 @@ int vma_drop_merge_delete_all(struct vm_area *vma)
 	BUG_ON(list_empty(&vma->vm_obj_list));
 
 	/* Traverse and get rid of all links */
-	list_for_each_entry_safe(vmo_link, n, &vma->vm_obj_list, list)
+	list_foreach_removable_struct(vmo_link, n, &vma->vm_obj_list, list)
 		vma_drop_merge_delete(vma, vmo_link);
 
 	return 0;
@@ -541,10 +541,10 @@ struct page *copy_on_write(struct fault_data *fault)
  		 *       v      v
  		 *       shadow original
 		 */
-		list_add(&shadow_link->list, &vma->vm_obj_list);
+		list_insert(&shadow_link->list, &vma->vm_obj_list);
 
 		/* Add object to original's shadower list */
-		list_add(&shadow->shref, &shadow->orig_obj->shdw_list);
+		list_insert(&shadow->shref, &shadow->orig_obj->shdw_list);
 
 		/* Add to global object list */
 		global_add_vm_object(shadow);
@@ -758,7 +758,7 @@ int vm_freeze_shadows(struct tcb *task)
 	struct vm_object *vmo;
 	struct page *p;
 
-	list_for_each_entry(vma, &task->vm_area_head->list, list) {
+	list_foreach_struct(vma, &task->vm_area_head->list, list) {
 
 		/* Shared vmas don't have shadows */
 		if (vma->flags & VMA_SHARED)
@@ -766,7 +766,7 @@ int vm_freeze_shadows(struct tcb *task)
 
 		/* Get the first object */
 		BUG_ON(list_empty(&vma->vm_obj_list));
-		vmo_link = list_entry(vma->vm_obj_list.next,
+		vmo_link = link_to_struct(vma->vm_obj_list.next,
 				      struct vm_obj_link, list);
 		vmo = vmo_link->obj;
 
@@ -789,7 +789,7 @@ int vm_freeze_shadows(struct tcb *task)
 		 * Make all pages on it read-only
 		 * in the page tables.
 		 */
-		list_for_each_entry(p, &vmo->page_cache, list) {
+		list_foreach_struct(p, &vmo->page_cache, list) {
 
 			/* Find virtual address of each page */
 			virtual = vma_page_to_virtual(vma, p);

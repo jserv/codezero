@@ -108,6 +108,6 @@ struct sfs_dentry {
 } __attribute__ ((__packed__));
 
 
-void sfs_register_type(struct list_head *);
+void sfs_register_type(struct link *);
 
 #endif /* __C0FS_LAYOUT_H__ */

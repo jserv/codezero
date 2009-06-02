@@ -159,7 +159,7 @@ struct mem_cache *mem_cache_init(void *start,
 		area_start = addr_aligned;
 	}
 
-	INIT_LIST_HEAD(&cache->list);
+	link_init(&cache->list);
 	cache->start = area_start;
 	cache->end = area_start + cache_size;
 	cache->total = total;

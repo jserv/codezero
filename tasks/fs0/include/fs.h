@@ -85,10 +85,10 @@ struct dentry {
 	int refcnt;
 	char name[VFS_DNAME_MAX];
 	struct dentry *parent;		/* Parent dentry */
-	struct list_head child;		/* List of dentries with same parent */
-	struct list_head children;	/* List of children dentries */
-	struct list_head vref;		/* For vnode's dirent reference list */
-	struct list_head cache_list;	/* Dentry cache reference */
+	struct link child;		/* List of dentries with same parent */
+	struct link children;	/* List of children dentries */
+	struct link vref;		/* For vnode's dirent reference list */
+	struct link cache_list;	/* Dentry cache reference */
 	struct vnode *vnode;		/* The vnode associated with dentry */
 	struct dentry_ops ops;
 };
@@ -120,8 +120,8 @@ struct vnode {
 	struct superblock *sb;		/* Reference to superblock */
 	struct vnode_ops ops;		/* Operations on this vnode */
 	struct file_ops fops;		/* File-related operations on this vnode */
-	struct list_head dentries;	/* Dirents that refer to this vnode */
-	struct list_head cache_list;	/* For adding the vnode to vnode cache */
+	struct link dentries;	/* Dirents that refer to this vnode */
+	struct link cache_list;	/* For adding the vnode to vnode cache */
 	struct dirbuf dirbuf;		/* Only directory buffers are kept */
 	u32 mode;			/* Permissions and vnode type */
 	u32 owner;			/* Owner */
@@ -149,15 +149,15 @@ struct file_system_type {
 	char name[VFS_FSNAME_MAX];
 	unsigned long magic;
 	struct fstype_ops ops;
-	struct list_head list;	/* Member of list of all fs types */
-	struct list_head sblist; /* List of superblocks with this type */
+	struct link list;	/* Member of list of all fs types */
+	struct link sblist; /* List of superblocks with this type */
 };
 struct superblock *get_superblock(void *buf);
 
 struct superblock {
 	u64 fssize;
 	unsigned int blocksize;
-	struct list_head list;
+	struct link list;
 	struct file_system_type *fs;
 	struct superblock_ops *ops;
 	struct vnode *root;

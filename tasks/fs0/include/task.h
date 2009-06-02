@@ -32,7 +32,7 @@ struct task_fs_data {
 /* Thread control block, fs0 portion */
 struct tcb {
 	l4id_t tid;
-	struct list_head list;
+	struct link list;
 	unsigned long shpage_address;
 	struct task_fd_head *files;
 	struct task_fs_data *fs_data;

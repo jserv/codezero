@@ -21,7 +21,7 @@ struct memfs_inode *memfs_alloc_inode(struct memfs_superblock *sb)
 	void *free_block;
 
 	/* Ask existing inode caches for a new inode */
-	list_for_each_entry(cache, &sb->inode_cache_list, list) {
+	list_foreach_struct(cache, &sb->inode_cache_list, list) {
 		if (cache->free)
 			if (!(i =  mem_cache_zalloc(cache)))
 				return PTR_ERR(-ENOSPC);
@@ -38,7 +38,7 @@ struct memfs_inode *memfs_alloc_inode(struct memfs_superblock *sb)
 	/* Initialise it as an inode cache */
 	cache = mem_cache_init(free_block, sb->blocksize,
 			       sizeof(struct memfs_inode), 0);
-	list_add(&cache->list, &sb->inode_cache_list);
+	list_insert(&cache->list, &sb->inode_cache_list);
 
 	if (!(i =  mem_cache_zalloc(cache)))
 		return PTR_ERR(-ENOSPC);
@@ -53,13 +53,13 @@ int memfs_free_inode(struct memfs_superblock *sb, struct memfs_inode *i)
 {
 	struct mem_cache *c, *tmp;
 
-	list_for_each_entry_safe(c, tmp, &sb->inode_cache_list, list) {
+	list_foreach_removable_struct(c, tmp, &sb->inode_cache_list, list) {
 		/* Free it, if success */
 		if (!mem_cache_free(c, i)) {
 			/* If cache completely emtpy */
 			if (mem_cache_is_empty(c)) {
 				/* Free the block, too. */
-				list_del(&c->list);
+				list_remove(&c->list);
 				memfs_free_block(sb, c);
 			}
 			return 0;
@@ -213,7 +213,7 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 struct vnode *memfs_vnode_mknod(struct vnode *v, const char *dirname,
 				unsigned int mode)
 {
-	struct dentry *d, *parent = list_entry(v->dentries.next,
+	struct dentry *d, *parent = link_to_struct(v->dentries.next,
 					       struct dentry, vref);
 	struct memfs_dentry *memfsd;
 	struct dentry *newd;
@@ -234,7 +234,7 @@ struct vnode *memfs_vnode_mknod(struct vnode *v, const char *dirname,
 		return PTR_ERR(err);
 
 	/* Check there's no existing child with same name */
-	list_for_each_entry(d, &parent->children, child) {
+	list_foreach_struct(d, &parent->children, child) {
 		/* Does the name exist as a child? */
 		if(d->ops.compare(d, dirname))
 			return PTR_ERR(-EEXIST);
@@ -278,14 +278,14 @@ struct vnode *memfs_vnode_mknod(struct vnode *v, const char *dirname,
 	strncpy(newd->name, dirname, VFS_DNAME_MAX);
 
 	/* Associate dentry with its vnode */
-	list_add(&newd->vref, &newd->vnode->dentries);
+	list_insert(&newd->vref, &newd->vnode->dentries);
 
 	/* Associate dentry with its parent */
-	list_add(&newd->child, &parent->children);
+	list_insert(&newd->child, &parent->children);
 
 	/* Add both vnode and dentry to their flat caches */
-	list_add(&newd->cache_list, &dentry_cache);
-	list_add(&newv->cache_list, &vnode_cache);
+	list_insert(&newd->cache_list, &dentry_cache);
+	list_insert(&newv->cache_list, &vnode_cache);
 
 	return newv;
 }
@@ -303,7 +303,7 @@ int memfs_vnode_readdir(struct vnode *v)
 {
 	int err;
 	struct memfs_dentry *memfsd;
-	struct dentry *parent = list_entry(v->dentries.next,
+	struct dentry *parent = link_to_struct(v->dentries.next,
 					   struct dentry, vref);
 
 	/*
@@ -327,7 +327,7 @@ int memfs_vnode_readdir(struct vnode *v)
 
 	/*
 	 * Fail if vnode size is bigger than a page. Since this allocation
-	 * method is to be replaced, we can live with this limitation for now.
+	 * method is to be origaced, we can live with this limitation for now.
 	 */
 	BUG_ON(v->size > PAGE_SIZE);
 
@@ -349,7 +349,7 @@ int memfs_vnode_readdir(struct vnode *v)
 		/* Initialise it */
 		newd->ops = generic_dentry_operations;
 		newd->parent = parent;
-		list_add(&newd->child, &parent->children);
+		list_insert(&newd->child, &parent->children);
 
 		/*
 		 * Lookup the vnode for dentry by its vnode number. We call
@@ -367,7 +367,7 @@ int memfs_vnode_readdir(struct vnode *v)
 		}
 
 		/* Assing this dentry as a name of its vnode */
-		list_add(&newd->vref, &newd->vnode->dentries);
+		list_insert(&newd->vref, &newd->vnode->dentries);
 
 		/* Increase link count */
 		newv->links++;
@@ -376,8 +376,8 @@ int memfs_vnode_readdir(struct vnode *v)
 		memcpy(newd->name, memfsd[i].name, MEMFS_DNAME_MAX);
 
 		/* Add both vnode and dentry to their caches */
-		list_add(&newd->cache_list, &dentry_cache);
-		list_add(&newv->cache_list, &vnode_cache);
+		list_insert(&newd->cache_list, &dentry_cache);
+		list_insert(&newv->cache_list, &vnode_cache);
 	}
 
 	return 0;

@@ -21,7 +21,7 @@ struct initdata {
 	struct page_bitmap page_map;
 	unsigned long pager_utcb_virt;
 	unsigned long pager_utcb_phys;
-	struct list_head boot_file_list;
+	struct link boot_file_list;
 };
 
 extern struct initdata initdata;

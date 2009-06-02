@@ -21,7 +21,7 @@ struct page *page_init(struct page *page)
 	memset(page, 0, sizeof(*page));
 	page->refcnt = -1;
 	spin_lock_init(&page->lock);
-	INIT_LIST_HEAD(&page->list);
+	link_init(&page->list);
 
 	return page;
 
@@ -30,7 +30,7 @@ struct page *find_page(struct vm_object *obj, unsigned long pfn)
 {
 	struct page *p;
 
-	list_for_each_entry(p, &obj->page_cache, list)
+	list_foreach_struct(p, &obj->page_cache, list)
 		if (p->offset == pfn)
 			return p;
 
@@ -46,8 +46,8 @@ int default_release_pages(struct vm_object *vm_obj)
 {
 	struct page *p, *n;
 
-	list_for_each_entry_safe(p, n, &vm_obj->page_cache, list) {
-		list_del_init(&p->list);
+	list_foreach_removable_struct(p, n, &vm_obj->page_cache, list) {
+		list_remove_init(&p->list);
 		BUG_ON(p->refcnt);
 
 		/* Reinitialise the page */
@@ -219,8 +219,8 @@ int bootfile_release_pages(struct vm_object *vm_obj)
 {
 	struct page *p, *n;
 
-	list_for_each_entry_safe(p, n, &vm_obj->page_cache, list) {
-		list_del(&p->list);
+	list_foreach_removable_struct(p, n, &vm_obj->page_cache, list) {
+		list_remove(&p->list);
 		BUG_ON(p->refcnt);
 
 		/* Reinitialise the page */
@@ -295,7 +295,7 @@ int init_boot_files(struct initdata *initdata)
 	struct vm_file *boot_file;
 	struct svc_image *img;
 
-	INIT_LIST_HEAD(&initdata->boot_file_list);
+	link_init(&initdata->boot_file_list);
 
 	for (int i = 0; i < bd->total_images; i++) {
 		img = &bd->images[i];
@@ -311,7 +311,7 @@ int init_boot_files(struct initdata *initdata)
 		boot_file->vm_obj.pager = &bootfile_pager;
 
 		/* Add the file to initdata's bootfile list */
-		list_add_tail(&boot_file->list, &initdata->boot_file_list);
+		list_insert_tail(&boot_file->list, &initdata->boot_file_list);
 	}
 
 	return 0;
@@ -345,7 +345,7 @@ struct vm_file *get_devzero(void)
 {
 	struct vm_file *f;
 
-	list_for_each_entry(f, &global_vm_files.list, list)
+	list_foreach_struct(f, &global_vm_files.list, list)
 		if (f->type == VM_FILE_DEVZERO)
 			return f;
 	return 0;

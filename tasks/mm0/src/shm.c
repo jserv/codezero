@@ -130,7 +130,7 @@ void *sys_shmat(struct tcb *task, l4id_t shmid, void *shmaddr, int shmflg)
 {
 	struct vm_file *shm_file, *n;
 
-	list_for_each_entry_safe(shm_file, n, &global_vm_files.list, list) {
+	list_foreach_removable_struct(shm_file, n, &global_vm_files.list, list) {
 		if (shm_file->type == VM_FILE_SHM &&
 		    shm_file_to_desc(shm_file)->shmid == shmid)
 			return do_shmat(shm_file, shmaddr,
@@ -156,7 +156,7 @@ int sys_shmdt(struct tcb *task, const void *shmaddr)
 {
 	struct vm_file *shm_file, *n;
 
-	list_for_each_entry_safe(shm_file, n, &global_vm_files.list, list)
+	list_foreach_removable_struct(shm_file, n, &global_vm_files.list, list)
 		if (shm_file->type == VM_FILE_SHM &&
 		    shm_file_to_desc(shm_file)->shm_addr == shmaddr)
 			return do_shmdt(task, shm_file);
@@ -235,7 +235,7 @@ void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
 	struct vm_file *shm_file;
 	struct shm_descriptor *shm_desc;
 
-	list_for_each_entry(shm_file, &global_vm_files.list, list) {
+	list_foreach_struct(shm_file, &global_vm_files.list, list) {
 		if(shm_file->type == VM_FILE_SHM) {
 			shm_desc = shm_file_to_desc(shm_file);
 			/* Found the key, shmat that area */
@@ -274,7 +274,7 @@ int sys_shmget(key_t key, int size, int shmflg)
 			return shm_file_to_desc(shm)->shmid;
 	}
 
-	list_for_each_entry(shm, &global_vm_files.list, list) {
+	list_foreach_struct(shm, &global_vm_files.list, list) {
 		if (shm->type != VM_FILE_SHM)
 			continue;
 
