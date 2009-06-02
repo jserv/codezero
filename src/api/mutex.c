@@ -222,7 +222,8 @@ int mutex_control_unlock(unsigned long mutex_address)
 
 	/*
 	 * Found it, if it exists, there are waiters,
-	 * now wake all of them up in FIFO order
+	 * now wake all of them up in FIFO order.
+	 * FIXME: Make sure this is FIFO order. It doesn't seem so.
 	 */
 	wake_up(&mutex_queue->wqh_waiters, WAKEUP_ASYNC);
 

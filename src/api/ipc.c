@@ -76,7 +76,7 @@ int ipc_extended_copy(struct ktcb *to, struct ktcb *from)
 
 	/*
 	 * Copy from sender's kernel stack buffer
-	 * to receiver's paged-in userspace buffer
+	 * to receiver's kernel stack buffer
 	 */
 	memcpy(to->extended_ipc_buffer,
 	       from->extended_ipc_buffer, size);
