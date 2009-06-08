@@ -7,7 +7,6 @@
 #ifndef __KIP_H__
 #define __KIP_H__
 
-/* FIXME: LICENCE: Taken from a forum post. Must reimplement with GPL terms */
 #define __YEAR__ ((((__DATE__ [7] - '0') * 10 + (__DATE__ [8] - '0')) * 10 \
 			+ (__DATE__ [9] - '0')) * 10 + (__DATE__ [10] - '0'))
 
@@ -24,19 +23,18 @@
 #define __DAY__ ((__DATE__ [4] == ' ' ? 0 : __DATE__ [4] - '0') * 10 \
 		+ (__DATE__ [5] - '0'))
 
-//#define DATE_AS_INT (((YEAR - 2000) * 12 + MONTH) * 31 + DAY)
 
+#define CODEZERO_VERSION		0
+#define CODEZERO_SUBVERSION		1
+#define KDESC_DATE_SIZE			12
+#define KDESC_TIME_SIZE			9
 
-struct kernel_desc {
-	u16 rsrv;
-	u8 subid;
-	u8 id;
-	u16 gendate;
-	u16 date_rsrv;
-	u16 subsubver;
-	u8 subver;
-	u8 ver;
-	u32 supplier;
+struct kernel_descriptor {
+	u32 version;
+	u32 subversion;
+	u32 magic;
+	char date[KDESC_DATE_SIZE];
+	char time[KDESC_TIME_SIZE];
 } __attribute__((__packed__));
 
 /* Experimental KIP with non-standard offsets */
@@ -70,7 +68,7 @@ struct kip {
 
 	u32 utcb;
 
-	struct kernel_desc kdesc;
+	struct kernel_descriptor kdesc;
 } __attribute__((__packed__));
 
 /*

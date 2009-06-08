@@ -181,12 +181,12 @@ void kip_init()
 	kip.api_version 	= 0xBB;
 	kip.api_subversion 	= 1;
 	kip.api_flags 		= 0; 		/* LE, 32-bit architecture */
-	kip.kdesc.subid		= 0x1;
-	kip.kdesc.id 		= 0xBB;
-	kip.kdesc.gendate 	= (__YEAR__ << 9)|(__MONTH__ << 5)|(__DAY__);
-	kip.kdesc.subsubver 	= 0x00000001; /* Consider as .00000001 */
-	kip.kdesc.ver 		= 0;
-	memcpy(&kip.kdesc.supplier, "BBB", 3);
+	kip.kdesc.magic		= 0xBBB;
+	kip.kdesc.version	= CODEZERO_VERSION;
+	kip.kdesc.subversion	= CODEZERO_SUBVERSION;
+	// kip.kdesc.gendate 	= (__YEAR__ << 9)|(__MONTH__ << 5)|(__DAY__);
+	strncpy(kip.kdesc.date, __DATE__, KDESC_DATE_SIZE);
+	strncpy(kip.kdesc.time, __TIME__, KDESC_TIME_SIZE);
 
 	kip_init_syscalls();
 
@@ -198,6 +198,8 @@ void kip_init()
 
 	add_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,
 		    MAP_USR_RO_FLAGS);
+	printk("%s: Kernel built on %s, %s\n", __KERNELNAME__,
+	       kip.kdesc.date, kip.kdesc.time);
 }
 
 

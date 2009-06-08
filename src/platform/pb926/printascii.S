@@ -1,7 +1,41 @@
-
-#include INC_PLAT(debug-macro.S)
+/*
+ * Basic UART printing.
+ */
 #include INC_ARCH(asm.h)
 #include INC_GLUE(memlayout.h)
+
+#define UART_DATA_OFFSET		0x0
+
+	.macro uart_address rx
+	mrc	p15, 0, \rx, c1, c0
+	tst	\rx, #1		@ MMU enabled?
+	moveq	\rx, #0x10000000
+	orreq	\rx, \rx, #0x001F0000
+	orreq	\rx, \rx, #0x00001000
+	/* FIXME: This offset is incorrect */
+	movne	\rx,      #0xf9000000 @#IO_AREA0_VADDR
+	addne	\rx, \rx, #PB926_UART0_VOFFSET	@ UART0 page offset from
+						@ virtual io area base.
+	.endm
+
+	.macro uart_send, ry, rx
+	strb	\ry, [\rx, #UART_DATA_OFFSET]
+	.endm
+
+	.macro uart_wait, ry, rx
+501:
+	ldr	\ry, [\rx, #0x18]
+	tst	\ry, #1 << 5
+	bne	501b
+	.endm
+
+	.macro uart_busy, ry, rx
+501:
+	ldr	\ry, [\rx, #0x18]
+	tst	\ry, #1 << 3
+	bne	501b
+	.endm
+
 		.text
 /*
  * Useful debugging routines
@@ -49,11 +83,11 @@ printhex:	adr	r2, hexbuf
 
 BEGIN_PROC(printascii)
 		get_straddr r0, r1
-		addruart r3
+		uart_address r3
 		b	2f
-1:		waituart r2, r3
-		senduart r1, r3
-		busyuart r2, r3
+1:		uart_wait r2, r3
+		uart_send r1, r3
+		uart_busy r2, r3
 		teq	r1, #'\n'
 		moveq	r1, #'\r'
 		beq	1b
@@ -65,7 +99,7 @@ BEGIN_PROC(printascii)
 END_PROC(printascii)
 
 BEGIN_PROC(printch)
-		addruart r3
+		uart_address r3
 		mov	r1, r0
 		mov	r0, #0
 		b	1b

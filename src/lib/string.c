@@ -41,29 +41,27 @@ int strcmp(const char *s1, const char *s2)
 	}
 }
 
-/* LICENCE: Taken from linux for now BB.
- * strncpy - Copy a length-limited, %NUL-terminated string
- * @dest: Where to copy the string to
- * @src: Where to copy the string from
- * @count: The maximum number of bytes to copy
+/*
+ * Copies string pointed by @from to string pointed by @to.
  *
- * The result is not %NUL-terminated if the source exceeds
- * @count bytes.
- *
- * In the case where the length of @src is less than  that  of
- * count, the remainder of @dest will be padded with %NUL.
- *
+ * If count is greater than the length of string in @from,
+ * pads rest of the locations with null.
  */
-char *strncpy(char *dest, const char *src, int count)
+char *strncpy(char *to, const char *from, int count)
 {
-	char *tmp = dest;
- 
+	char *temp = to;
+
 	while (count) {
-		if ((*tmp = *src) != 0)
-			src++;
-		tmp++;
+		*temp = *from;
+
+		/*
+		 * Stop updating from if null
+		 * terminator is reached.
+		 */
+		if (*from)
+			from++;
+		temp++;
 		count--;
 	}
-	return dest;
+	return to;
 }
-
