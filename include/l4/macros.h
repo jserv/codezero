@@ -53,24 +53,12 @@
 #ifndef __ASSEMBLY__
 #include <stddef.h>	/* offsetof macro, defined in the `standard' way. */
 #endif
-/* Offset of struct fields. */
-//#if (__GNUC__ >= 4)
-//#define offsetof(type, field)	__builtin_offsetof(type, field)
-//#else
-//#define offsetof(type, field)	(u32)(&((type *)0)->field)
-//#endif
 
-/* LICENSE: Taken off Linux */
-/**
- * container_of - cast a member of a structure out to the containing structure
- * @ptr:	the pointer to the member.
- * @type:	the type of the container struct this is embedded in.
- * @member:	the name of the member within the struct.
- *
- */
-#define container_of(ptr, type, member) ({			\
-        const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
-        (type *)( (char *)__mptr - offsetof(type,member) );})
+#define container_of(ptr, struct_type, field)					\
+({										\
+	const typeof(((struct_type *)0)->field) *field_ptr = (ptr);		\
+	(struct_type *)((char *)field_ptr - offsetof(struct_type, field));	\
+})
 
 /* Prefetching is noop for now */
 #define	prefetch(x)		x
