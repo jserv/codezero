@@ -29,6 +29,7 @@ static inline void mutex_init(struct mutex *mutex)
 int mutex_trylock(struct mutex *mutex);
 int mutex_lock(struct mutex *mutex);
 void mutex_unlock(struct mutex *mutex);
+void mutex_unlock_async(struct mutex *mutex);
 
 /* NOTE: Since spinlocks guard mutex acquiring & sleeping, no locks needed */
 static inline int mutex_inc(unsigned int *cnt)

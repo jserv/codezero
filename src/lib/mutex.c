@@ -143,7 +143,7 @@ int mutex_lock(struct mutex *mutex)
 	return 0;
 }
 
-void mutex_unlock(struct mutex *mutex)
+static inline void mutex_unlock_common(struct mutex *mutex, int sync)
 {
 	spin_lock(&mutex->wqh.slock);
 	__mutex_unlock(&mutex->lock);
@@ -152,8 +152,8 @@ void mutex_unlock(struct mutex *mutex)
 	BUG_ON(mutex->wqh.sleepers < 0);
 	if (mutex->wqh.sleepers > 0) {
 		struct waitqueue *wq = link_to_struct(mutex->wqh.task_list.next,
-						  struct waitqueue,
-						  task_list);
+						      struct waitqueue,
+						      task_list);
 		struct ktcb *sleeper = wq->task;
 
 		task_unset_wqh(sleeper);
@@ -168,11 +168,24 @@ void mutex_unlock(struct mutex *mutex)
 		 * but it may potentially starve the sleeper causing
 		 * non-determinism. We may consider priorities here.
 		 */
-		sched_resume_sync(sleeper);
+		if (sync)
+			sched_resume_sync(sleeper);
+		else
+			sched_resume_async(sleeper);
 
 		/* Don't iterate, wake only one task. */
 		return;
 	}
 	spin_unlock(&mutex->wqh.slock);
+}
+
+void mutex_unlock(struct mutex *mutex)
+{
+	mutex_unlock_common(mutex, 1);
+}
+
+void mutex_unlock_async(struct mutex *mutex)
+{
+	mutex_unlock_common(mutex, 0);
 }
 
