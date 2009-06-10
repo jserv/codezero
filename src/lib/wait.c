@@ -41,7 +41,7 @@ void task_unset_wqh(struct ktcb *task)
  */
 int wait_on_prepared_wait(void)
 {
-	/* Simply scheduling should initate wait */
+	/* Simply scheduling should initiate wait */
 	schedule();
 
 	/* Did we wake up normally or get interrupted */

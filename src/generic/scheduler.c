@@ -97,6 +97,22 @@ int in_task_context(void)
 	return !in_irq_context();
 }
 
+
+/*
+ * In current implementation, if all task are asleep it is considered
+ * a bug. We use idle_task() to investigate.
+ *
+ * In the future, it will be natural that all tasks may be asleep,
+ * so this will change to something such as a Wait-for-Interrupt
+ * routine.
+ */
+void idle_task(void)
+{
+	printk("Idle task.\n");
+
+	while(1);
+}
+
 void sched_init_runqueues(void)
 {
 	for (int i = 0; i < SCHED_RQ_TOTAL; i++) {
@@ -353,8 +369,7 @@ void schedule()
 			next = link_to_struct(rq_runnable->task_list.next,
 					  struct ktcb, rq_list);
 		} else {
-			printk("Idle task.\n");
-			while(1);
+			idle_task();
 		}
 	}
 
