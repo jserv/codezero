@@ -172,16 +172,10 @@ int mutex_control_lock(unsigned long mutex_address)
 	/* Prepare to wait on the contenders queue */
 	CREATE_WAITQUEUE_ON_STACK(wq, current);
 
-	/* Disable to protect from sleeping by preemption */
-	preempt_disable();
-
 	wait_on_prepare(&mutex_queue->wqh_contenders, &wq);
 
 	/* Release lock */
 	mutex_queue_head_unlock();
-
-	/* Now safe to sleep voluntarily or by preemption */
-	preempt_enable();
 
 	/* Initiate prepared wait */
 	return wait_on_prepared_wait();
@@ -222,17 +216,11 @@ int mutex_control_unlock(unsigned long mutex_address)
 		/* Prepare to wait on the lock holders queue */
 		CREATE_WAITQUEUE_ON_STACK(wq, current);
 
-		/* Disable to protect from sleeping by preemption */
-		preempt_disable();
-
 		/* Prepare to wait */
 		wait_on_prepare(&mutex_queue->wqh_holders, &wq);
 
 		/* Release lock first */
 		mutex_queue_head_unlock();
-
-		/* Now safe to sleep voluntarily or by preemption */
-		preempt_enable();
 
 		/* Initiate prepared wait */
 		return wait_on_prepared_wait();

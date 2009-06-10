@@ -38,10 +38,16 @@ void task_unset_wqh(struct ktcb *task)
 /*
  * Initiate wait on current task that
  * has already been placed in a waitqueue
+ * 
+ * NOTE: This enables preemption and wait_on_prepare()
+ * should be called first.
  */
 int wait_on_prepared_wait(void)
 {
-	/* Simply scheduling should initiate wait */
+	/* Now safe to sleep by preemption */
+	preempt_enable();
+
+	/* Sleep voluntarily to initiate wait */
 	schedule();
 
 	/* Did we wake up normally or get interrupted */
@@ -57,9 +63,15 @@ int wait_on_prepared_wait(void)
  * Do all preparations to sleep but return without sleeping.
  * This is useful if the task needs to get in the waitqueue before
  * it releases a lock.
+ * 
+ * NOTE: This disables preemption and it should be enabled by a
+ * call to wait_on_prepared_wait() - the other function of the pair.
  */
 int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq)
 {
+	/* Disable to protect from sleeping by preemption */
+	preempt_disable();
+
 	spin_lock(&wqh->slock);
 	wqh->sleepers++;
 	list_insert_tail(&wq->task_list, &wqh->task_list);
