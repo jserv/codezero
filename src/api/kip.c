@@ -56,15 +56,12 @@ int __sys_kread(int rd, void *dest)
  * support file positions, any such features aren't supported since this is call
  * is discarded after startup.
  */
-int sys_kread(struct syscall_context *a)
+int sys_kread(int rd, void *addr)
 {
-	unsigned int *arg = KTCB_REF_ARG0(current);
-	void *addr = (void *)arg[1];	/* Buffer address */
-	int rd = (int)arg[0];	/* Request descriptor */
-
 	/* Error checking */
 	if (rd < 0)
 		return -EINVAL;
+
 	return __sys_kread(rd, addr);
 }
 

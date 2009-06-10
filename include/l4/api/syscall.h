@@ -7,6 +7,8 @@
 #define __SYSCALL_H__
 
 #include INC_GLUE(syscall.h)
+#include INC_API(exregs.h)
+#include <l4/generic/time.h>
 
 #define syscall_offset_mask			0xFF
 
@@ -29,19 +31,20 @@
 
 void print_syscall_context(struct ktcb *t);
 
-int sys_ipc(struct syscall_context *);
-int sys_thread_switch(struct syscall_context *);
-int sys_thread_control(struct syscall_context *);
-int sys_exchange_registers(struct syscall_context *);
-int sys_schedule(struct syscall_context *);
-int sys_unmap(struct syscall_context *);
-int sys_space_control(struct syscall_context *);
-int sys_ipc_control(struct syscall_context *);
-int sys_map(struct syscall_context *);
-int sys_getid(struct syscall_context *);
-int sys_kread(struct syscall_context *);
-int sys_kmem_control(struct syscall_context *);
-int sys_time(struct syscall_context *);
-int sys_mutex_control(struct syscall_context *);
+int sys_ipc(l4id_t to, l4id_t from, unsigned int flags);
+int sys_thread_switch(void);
+int sys_thread_control(unsigned int flags, struct task_ids *ids);
+int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid);
+int sys_schedule(void);
+int sys_unmap(unsigned long virtual, unsigned long npages, unsigned int tid);
+int sys_space_control(void);
+int sys_ipc_control(void);
+int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
+	    unsigned long flags, unsigned int tid);
+int sys_getid(struct task_ids *ids);
+int sys_kread(int rd, void *addr);
+int sys_kmem_control(unsigned long pfn, int npages, int grant);
+int sys_time(struct timeval *tv, int set);
+int sys_mutex_control(unsigned long mutex_address, int mutex_op);
 
 #endif /* __SYSCALL_H__ */

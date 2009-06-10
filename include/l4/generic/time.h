@@ -7,6 +7,12 @@
 #ifndef __GENERIC_TIMER_H__
 #define __GENERIC_TIMER_H__
 
+/* Used by posix systems */
+struct timeval {
+	int tv_sec;
+	int tv_usec;
+};
+
 extern volatile u32 jiffies;
 
 int do_timer_irq(void);

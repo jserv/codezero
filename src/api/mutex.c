@@ -242,10 +242,8 @@ int mutex_control_unlock(unsigned long mutex_address)
 	return 0;
 }
 
-int sys_mutex_control(syscall_context_t *regs)
+int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 {
-	unsigned long mutex_address = (unsigned long)regs->r0;
-	int mutex_op = (int)regs->r1;
 	unsigned long mutex_physical;
 	int ret = 0;
 

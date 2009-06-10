@@ -16,13 +16,9 @@
  * well. struct link new_mappings;
  */
 
-int sys_map(syscall_context_t *regs)
+int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
+	    unsigned long flags, unsigned int tid)
 {
-	unsigned long phys = regs->r0;
-	unsigned long virt = regs->r1;
-	unsigned long npages = regs->r2;
-	unsigned long flags = regs->r3;
-	unsigned int tid = regs->r4;
 	struct ktcb *target;
 
 	if (tid == current->tid) { /* The easiest case */
@@ -46,11 +42,8 @@ found:
  * sucessfully, returns 0. If part of the range was found to be already
  * unmapped, returns -1. This is may or may not be an error.
  */
-int sys_unmap(syscall_context_t *regs)
+int sys_unmap(unsigned long virtual, unsigned long npages, unsigned int tid)
 {
-	unsigned long virtual = regs->r0;
-	unsigned long npages = regs->r1;
-	unsigned int tid = regs->r2;
 	struct ktcb *target;
 	int ret = 0, retval = 0;
 

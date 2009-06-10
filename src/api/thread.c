@@ -15,7 +15,7 @@
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
 
-int sys_thread_switch(syscall_context_t *regs)
+int sys_thread_switch(void)
 {
 	schedule();
 	return 0;
@@ -343,11 +343,9 @@ out_err:
  * space for a thread that doesn't already have one, or destroys it if the last
  * thread that uses it is destroyed.
  */
-int sys_thread_control(syscall_context_t *regs)
+int sys_thread_control(unsigned int flags, struct task_ids *ids)
 {
 	int ret = 0;
-	unsigned int flags = regs->r0;
-	struct task_ids *ids = (struct task_ids *)regs->r1;
 
 	switch (flags & THREAD_ACTION_MASK) {
 	case THREAD_CREATE:

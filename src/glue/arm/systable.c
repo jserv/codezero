@@ -7,6 +7,7 @@
 #include <l4/lib/printk.h>
 #include <l4/generic/space.h>
 #include <l4/generic/scheduler.h>
+#include <l4/generic/tcb.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memlayout.h)
 #include INC_GLUE(syscall.h)
@@ -35,26 +36,104 @@ void kip_init_syscalls(void)
 /* Jump table for all system calls. */
 syscall_fn_t syscall_table[SYSCALLS_TOTAL];
 
+
+int arch_sys_ipc(syscall_context_t *regs)
+{
+	return sys_ipc((l4id_t)regs->r0, (l4id_t)regs->r1,
+		       (unsigned int)regs->r2);
+}
+
+int arch_sys_thread_switch(syscall_context_t *regs)
+{
+	return sys_thread_switch();
+}
+
+int arch_sys_thread_control(syscall_context_t *regs)
+{
+	return sys_thread_control((unsigned int)regs->r0,
+				  (struct task_ids *)regs->r1);
+}
+
+int arch_sys_exchange_registers(syscall_context_t *regs)
+{
+	return sys_exchange_registers((struct exregs_data *)regs->r0,
+				      (l4id_t)regs->r1);
+}
+
+int arch_sys_schedule(syscall_context_t *regs)
+{
+	return sys_schedule();
+}
+
+int arch_sys_getid(syscall_context_t *regs)
+{
+	return sys_getid((struct task_ids *)regs->r0);
+}
+
+int arch_sys_unmap(syscall_context_t *regs)
+{
+	return sys_unmap((unsigned long)regs->r0, (unsigned long)regs->r1,
+			 (unsigned int)regs->r2);
+}
+
+int arch_sys_space_control(syscall_context_t *regs)
+{
+	return sys_space_control();
+}
+
+int arch_sys_ipc_control(syscall_context_t *regs)
+{
+	return sys_ipc_control();
+}
+
+int arch_sys_map(syscall_context_t *regs)
+{
+	return sys_map((unsigned long)regs->r0, (unsigned long)regs->r1,
+		       (unsigned long)regs->r2, (unsigned long)regs->r3,
+		       (unsigned int)regs->r4);
+}
+
+int arch_sys_kread(syscall_context_t *regs)
+{
+	return sys_kread((int)regs->r0, (void *)regs->r1);
+}
+
+int arch_sys_kmem_control(syscall_context_t *regs)
+{
+	return sys_kmem_control((unsigned long)regs->r0, (int)regs->r1, (int)regs->r2);
+}
+
+int arch_sys_time(syscall_context_t *regs)
+{
+	return sys_time((struct timeval *)regs->r0, (int)regs->r1);
+}
+
+int arch_sys_mutex_control(syscall_context_t *regs)
+{
+	return sys_mutex_control((unsigned long)regs->r0, (int)regs->r1);
+}
+
+
 /*
  * Initialises the system call jump table, for kernel to use.
  * Also maps the system call page into userspace.
  */
 void syscall_init()
 {
-	syscall_table[sys_ipc_offset >> 2] 			= (syscall_fn_t)sys_ipc;
-	syscall_table[sys_thread_switch_offset >> 2] 		= (syscall_fn_t)sys_thread_switch;
-	syscall_table[sys_thread_control_offset >> 2] 		= (syscall_fn_t)sys_thread_control;
-	syscall_table[sys_exchange_registers_offset >> 2] 	= (syscall_fn_t)sys_exchange_registers;
-	syscall_table[sys_schedule_offset >> 2] 		= (syscall_fn_t)sys_schedule;
-	syscall_table[sys_getid_offset >> 2]	 		= (syscall_fn_t)sys_getid;
-	syscall_table[sys_unmap_offset >> 2] 			= (syscall_fn_t)sys_unmap;
-	syscall_table[sys_space_control_offset >> 2] 		= (syscall_fn_t)sys_space_control;
-	syscall_table[sys_ipc_control_offset >> 2] 		= (syscall_fn_t)sys_ipc_control;
-	syscall_table[sys_map_offset >> 2] 			= (syscall_fn_t)sys_map;
-	syscall_table[sys_kread_offset >> 2]		 	= (syscall_fn_t)sys_kread;
-	syscall_table[sys_kmem_control_offset >> 2]		= (syscall_fn_t)sys_kmem_control;
-	syscall_table[sys_time_offset >> 2]			= (syscall_fn_t)sys_time;
-	syscall_table[sys_mutex_control_offset >> 2]		= (syscall_fn_t)sys_mutex_control;
+	syscall_table[sys_ipc_offset >> 2] 			= (syscall_fn_t)arch_sys_ipc;
+	syscall_table[sys_thread_switch_offset >> 2] 		= (syscall_fn_t)arch_sys_thread_switch;
+	syscall_table[sys_thread_control_offset >> 2] 		= (syscall_fn_t)arch_sys_thread_control;
+	syscall_table[sys_exchange_registers_offset >> 2] 	= (syscall_fn_t)arch_sys_exchange_registers;
+	syscall_table[sys_schedule_offset >> 2] 		= (syscall_fn_t)arch_sys_schedule;
+	syscall_table[sys_getid_offset >> 2]	 		= (syscall_fn_t)arch_sys_getid;
+	syscall_table[sys_unmap_offset >> 2] 			= (syscall_fn_t)arch_sys_unmap;
+	syscall_table[sys_space_control_offset >> 2] 		= (syscall_fn_t)arch_sys_space_control;
+	syscall_table[sys_ipc_control_offset >> 2] 		= (syscall_fn_t)arch_sys_ipc_control;
+	syscall_table[sys_map_offset >> 2] 			= (syscall_fn_t)arch_sys_map;
+	syscall_table[sys_kread_offset >> 2]		 	= (syscall_fn_t)arch_sys_kread;
+	syscall_table[sys_kmem_control_offset >> 2]		= (syscall_fn_t)arch_sys_kmem_control;
+	syscall_table[sys_time_offset >> 2]			= (syscall_fn_t)arch_sys_time;
+	syscall_table[sys_mutex_control_offset >> 2]		= (syscall_fn_t)arch_sys_mutex_control;
 
 	add_mapping(virt_to_phys(&__syscall_page_start),
 		    ARM_SYSCALL_PAGE, PAGE_SIZE, MAP_USR_RO_FLAGS);

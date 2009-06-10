@@ -98,12 +98,10 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
  * condition so that the scheduler does not execute it as we modify
  * its context.
  */
-int sys_exchange_registers(syscall_context_t *regs)
+int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 {
 	int err = 0;
 	struct ktcb *task;
-	struct exregs_data *exregs = (struct exregs_data *)regs->r0;
-	l4id_t tid = regs->r1;
 
 	/* Find tcb from its list */
 	if (!(task = tcb_find(tid)))
@@ -150,20 +148,19 @@ out:
 	return err;
 }
 
-int sys_schedule(syscall_context_t *regs)
+int sys_schedule(void)
 {
 	printk("(SVC) %s called. Tid (%d)\n", __FUNCTION__, current->tid);
 	return 0;
 }
 
-int sys_space_control(syscall_context_t *regs)
+int sys_space_control(void)
 {
 	return -ENOSYS;
 }
 
-int sys_getid(syscall_context_t *regs)
+int sys_getid(struct task_ids *ids)
 {
-	struct task_ids *ids = (struct task_ids *)regs->r0;
 	struct ktcb *this = current;
 
 	ids->tid = this->tid;
@@ -192,12 +189,8 @@ int validate_granted_pages(unsigned long pfn, int npages)
  * this memory is used for thread creation and memory mapping, (e.g. new
  * page tables, page middle directories, per-task kernel stack etc.)
  */
-int sys_kmem_control(syscall_context_t *regs)
+int sys_kmem_control(unsigned long pfn, int npages, int grant)
 {
-	unsigned long pfn = (unsigned long)regs->r0;
-	int npages = (int)regs->r1;
-	int grant = (int)regs->r2;
-
 	/* Pager is granting us pages */
 	if (grant) {
 		/*

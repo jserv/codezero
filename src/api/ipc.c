@@ -149,7 +149,7 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 	return ret;
 }
 
-int sys_ipc_control(syscall_context_t *regs)
+int sys_ipc_control(void)
 {
 	return -ENOSYS;
 }
@@ -540,11 +540,8 @@ void printk_sysregs(syscall_context_t *regs)
  * - Can propagate messages from third party threads.
  * - A thread can both send and receive on the same call.
  */
-int sys_ipc(syscall_context_t *regs)
+int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 {
-	l4id_t to = (l4id_t)regs->r0;
-	l4id_t from = (l4id_t)regs->r1;
-	unsigned int flags = (unsigned int)regs->r2;
 	unsigned int ipc_type = 0;
 	int ret = 0;
 

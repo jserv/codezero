@@ -37,12 +37,6 @@ struct time_info {
 	u64 sec;	/* Seconds so far */
 };
 
-/* Used by posix systems */
-struct timeval {
-	int tv_sec;
-	int tv_usec;
-};
-
 static struct time_info systime = { 0 };
 
 /*
@@ -71,13 +65,12 @@ void update_system_time(void)
 }
 
 /* Read system time */
-int sys_time(syscall_context_t *args)
+int sys_time(struct timeval *tv, int set)
 {
-       	struct timeval *tv = (struct timeval *)args->r0;
-	int set = (int)args->r1;
 	int retries = 20;
 
-	if (check_access((unsigned long)tv, sizeof(*tv), MAP_USR_RW_FLAGS, 1) < 0)
+	if (check_access((unsigned long)tv, sizeof(*tv),
+			 MAP_USR_RW_FLAGS, 1) < 0)
 		return -EINVAL;
 
 	/* Get time */
