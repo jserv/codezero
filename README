@@ -1,100 +1,44 @@
 
-		Codezero Microkernel Pre-release
+		Codezero Microkernel v0.1 Release
 
-		Copyright (C) 2007, 2008 Bahadir Balban
+		Copyright (C) 2007-2009 Bahadir Bilgehan Balban
 
+1.) What is Codezero?
 
-What is Codezero?
-
-Codezero is a new microkernel that has been developed for embedded systems. It
-implements a simple API that is based on the L4 Microkernel, and it can be used
-as a base to develop or run new operating systems. As part of the project,
-server tasks are provided that implement memory management and a virtual
-filesystem layer. These servers are built upon the base Codezero API, and they
-currently support a small but essential subset of the POSIX API.
-
-Codezero targets high-end embedded systems that support virtual memory and it
-has an emphasis on the ARM architecture. Open source development practices are
-used in its development. Users can use Codezero's POSIX-like server tasks or
-another operating system built upon it, or both at the same time. Codezero aims
-to differ from other systems by implementing a modern embedded operating system
-and yet provide more flexibility than a single operating system API.
+Codezero is a new L4 microkernel that has been written from scratch. It is a
+modern microkernel implementation that provides capabilities for virtualization
+and implementation of native OS services. Codezero can act as a virtualisation
+platform, a hardware abstraction layer, and as a basis for developing operating
+system services. Codezero's primary focus is on embedded systems.
 
 
-Why the name Codezero?
+2.) Why the name Codezero?
 
 The project focuses on simplicity and clarity in software design. Everything is
-kept simple, from the user-level tasks down to the build system that does not
-take part in the actual microkernel.
+kept simple, from the user-level services down to the build system that does
+not take part in the actual microkernel. Codezero is a microkernel that is
+easy-to-use and modify, providing a rapid kernel software development
+environment.
 
 
-Who could use Codezero?
+3.) Why use Codezero?
 
-Currently, Codezero can be used on any embedded system that requires
-multitasking and virtual memory support but not all the detailed features of a
-complex operating system. Codezero's initial advantage in that respect would be
-its clarity and simplicity that makes it easier for users to grasp and use. In
-the near future, the real-time features will be optimised and it will also be a
-good candidate for real-time applications. Finally it will be used on systems
-that require high dependability. Tightly integrated embedded systems are one
-such example where multiple isolated application domains exist side-by-side,
-sharing the same cpu and memory system.
+Codezero aims to provide easy hands-on experience; you may simply download the
+source tree, install the tools using this guide, and get up and running with
+development on your virtual embedded platform from the comfort of your host PC.
 
-
-What are the design features?
-
-Codezero attempts to incorporate many modern features that are present in
-today's operating systems. Some of them are presented below.
-
-Based on the L4 microkernel design principles, there are only a few system
-calls in Codezero. These system calls provide purely mechanism; threads and
-address spaces, and the methods of inter-process communication between them.
-Anything beyond these are policy and they are implemented in the userspace. Due
-to this rigorously simple design the same microkernel can be used to design
-completely different operating systems.
-
-In terms of other features, the microkernel is preemptive, and smp-ready.
-Currently only synchronous communication is implemented, but this will change
-in the near future. The microkernel also incorporates a simple priority-based
-scheduler, and all blocking operations (locking, ipc, waiting) are
-interruptible. Even though the microkernel needs to be optimised in its
-real-time capabilities, it does incorporate the necessary architecture to
-support real-time performance.
-
-There are two system tasks built upon the base microkernel that manage memory
-and file-based I/O, called MM0 and FS0. MM0 is the system task that implements
-memory management. It contains allocators and manages the page cache. It
-implements demand paging by managing page faults, physical pages and their
-file/task associations. MM0 provides the default paging mechanism on Codezero.
-
-FS0 is the system task that implements a simple, modern virtual filesystem
-layer. It is designed to serve file requests from MM0. Since it abstracts the
-low-level filesystem details, it is a relatively easy job to port a new
-filesystem to be used under FS0.
-
-MM0 and FS0 both reside in the userspace, and they are not mandatory services.
-For example the virtual and physical memory resources can be partitioned by
-Codezero among pagers, and a third-party pager can override Codezero's pager on
-the same run-time, and implement an independent paging behaviour for its own
-memory partition. This feature provides the option of having an adjustable
-mixture of generalisation and specialisation of system services at the same
-run-time. For instance, Codezero's abstract posix-like page/file management
-services can be used in combination with an application-specific pager that
-depends on its own paging abilities. A critical task could both use mm0 and
-fs0's posix-like files benefiting from the abstraction and simplification that
-it brings, but at the same time rely on its own specialised page-fault handling
-mechanism for its critical data. Similarly, a complete operating system can be
-virtualised and both native and virtualised applications can run on the same
-run-time.
+Codezero strives to incorporate the most modern design features and presents
+them in a well-written source code base. In other words, Codezero strives to be
+technically cutting edge. Updates are rapid and open community is encouraged to
+get involved in core development.
 
 
-What will the license be?
+4.) What is the license?
 
-The current release is distributed under GNU General Public License Version 3
-and this version only. Any next version will be released in the same license,
-but there are intentions to keep the project in a dual-licensed manner. In any
-case, one version of the source code will always be released as open source as
-in the OSI definition.
+The current release is distributed under GNU General Public License Version 3.
+For contributions we ask for a copyright share agreement and you may freely
+contribute to the project this way. This is our current model, but if you
+object to this, feel free to mention your ideas in our mailing list.
 
 The third party source code under the directories loader/ tools/ libs/c
 libs/elf have their own copyright and licenses, separate from this project. All
@@ -102,79 +46,22 @@ third party source code is open source in the OSI definition. Please check
 these directories for their respective licenses.
 
 
-Why yet another POSIX microkernel?
+5.) Why not improve on a popular open source kernel instead of Codezero?
 
-There are many open source POSIX operating systems with advanced features such
-as BSD versions and Linux. However, neither of these were originally designed
-for embedded systems. Multiple problems arise due to this fact.
+Open source POSIX kernels are not designed for running on embedded platforms.
+  * Their source code is encumbered and cluttered with legacy or unrelated
+    components.
+  * Their user bases are saturated, their core developers are engaged and
+    focused on non-embedded platforms.
+  * Their source code base is too complex to grasp and most components enforce
+    unnecessary policy on embedded applications.
 
-Unix itself and all the tools built upon weren't meant for using on small
-devices. Accordingly, existing Unix operating systems contain a lot of
-historical code. Their code base is so big, that it gets more and more
-difficult to understand how their internals work. On these systems usually much
-of the existing code base is irrelevant to newly developed software, and
-embedded systems need new software often. Codezero is written from scratch to
-solely target embedded systems and as such the source code is %100 relevant.
-It is small and free from legacy code.
+Codezero is simple, clean, and focused on embedded systems. Still, existing
+open source kernels are valuable with some of their features and drivers. As a
+result, we attempt to virtualize them on top of Codezero.
 
-From a design perspective, these kernels have a monolithic design, and as such
-they may have issues with dependability due to much of the code sharing the
-same address space. This is an important issue on embedded systems since their
-operation is more sensitive to disruptions. Being a microkernel design,
-Codezero aims to defeat this problem and increase dependability.
-
-From a support perspective, most unix operating systems like BSD and Linux have
-a highly saturated user base. The developers focus on these existing users and
-often the systems they support are not embedded computers. Codezero will focus
-completely on embedded systems, aiming to meet the support need for this type
-of systems.
-
-Other than modern Unix kernels, there are established operating systems
-targeting embedded devices. Codezero will contrast and compete with some of
-them by its simplicity, some by its openness and some by its feature set, but
-mostly by providing a more flexible development model.
-
-Finally, POSIX compliance is only a step, or a partial aim for the Codezero
-microkernel. It is not limited to the goal of just complying with POSIX, which
-has been done many times by other operating systems. Codezero microkernel will
-provide a dependable software environment where isolated application domains
-can run side-by-side in the same run-time. In addition, user-level servers MM0
-and FS0 will implement native system services and provide a POSIX-like API for
-these application domains.  By supplying a variety of system software options,
-the applications will be able to choose among different speed, safety,
-determinism policies at the same run-time. This is expected to prove useful in
-embedded systems.
-
-Furthermore there are new ideas in literature that would improve systems
-software but aren't implemented either because they have no existing users or
-may break compatibility (e.g. some are presented in Plan 9). For example file
-abstractions could be used more liberally to cover data exchange and control of
-devices, services and network communication. Existing kernels already have
-established methods of doing such operations and they would oppose major design
-overhauls, which limits their innovation capability for this kind of
-experimentation. In contrast, Codezero's partitioned nature provides the
-opportunity to implement innovative feature services in small and isolated
-parts, without cluttering the rest of the system. As well as natively
-supporting existing APIs such as POSIX, Codezero project aims to keep up with
-the latest OS literature and provide the opportunity to incorporate the latest
-ideas in OS technology.
-
-
-Can you summarise? Why should I use Codezero, again?
-
-Codezero is an operating system that targets embedded systems with virtual
-memory support. It implements modern features such as demand-paging and a
-virtual filesystem layer under a POSIX-like API. Different from most other
-POSIX-like systems, it is based on a microkernel design. The microkernel has
-been carefully designed so that it is small and well-focused. It has a cleanly
-separated set of system services that can be used as a base for implementing or
-running other operating systems. It can also be used as a barebones system that
-provides multitasking and thread communication. Its source code is also freely
-available (See LICENSE heading for details). Codezero aims to differ from other
-systems by implementing an open and modern embedded operating system that
-provides more flexibility than a single operating system API. Since currently
-there's a very small user base, it can be easily adopted for any custom
-embedded system project that needs focused developer attention.
+Other embedded open source kernels are also out there. Codezero aims to differ
+by clarity, simplicity and its cutting edge features.
 
 
 
