@@ -16,14 +16,10 @@ extern unsigned long arm_high_vector[];
 extern unsigned long _end_vectors[];
 extern unsigned long _start_kip[];
 extern unsigned long _end_kip[];
-extern unsigned long _start_ptab[];
-extern unsigned long _end_ptab[];
+extern unsigned long _start_init[];
+extern unsigned long _end_init[];
 extern unsigned long _bootstack[];
 extern unsigned long _end_kernel[];
-extern unsigned long _start_kspace[];
-extern unsigned long _start_pmd[];
-extern unsigned long _end_pmd[];
-extern unsigned long _end_kspace[];
 extern unsigned long _end[];
 
 /* Link markers that get modified at runtime */

@@ -13,6 +13,7 @@
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
+#include <l4/generic/bootmem.h>
 #include INC_ARCH(linker.h)
 #include INC_ARCH(asm.h)
 #include INC_ARCH(bootdesc.h)
@@ -30,27 +31,22 @@
 
 unsigned int kernel_mapping_end;
 
-void init_locks(void)
-{
-}
-
-struct address_space pager_space;
-
 /* Maps the early memory regions needed to bootstrap the system */
 void init_kernel_mappings(void)
 {
-	init_clear_ptab();
+	memset(&init_pgd, 0, sizeof(pgd_table_t));
 
 	/* Map kernel area to its virtual region */
-	add_section_mapping_init(virt_to_phys(_start_text),
-				 (unsigned int)_start_text, 1,
+	add_section_mapping_init(align(virt_to_phys(_start_text),SZ_1MB),
+				 align((unsigned int)_start_text, SZ_1MB), 1,
 				 cacheable | bufferable);
 
 	/* Map kernel one-to-one to its physical region */
-	add_section_mapping_init(virt_to_phys(_start_text),
-				 virt_to_phys(_start_text),
+	add_section_mapping_init(align(virt_to_phys(_start_text),SZ_1MB),
+				 align(virt_to_phys(_start_text),SZ_1MB),
 				 1, 0);
 
+#if 0
 	/* Map page table to its virtual region */
 	add_section_mapping_init(virt_to_phys(_start_kspace),
 				 (unsigned int)_start_kspace,
@@ -67,7 +63,8 @@ void init_kernel_mappings(void)
 	current->space = &pager_space;
 
 	/* Access physical address of pager_space to assign with initial pgd */
-	((struct address_space *)virt_to_phys(current->space))->pgd = &kspace;
+	((struct address_space *)virt_to_phys(current->space))->pgd = &init_pgd;
+#endif
 }
 
 void print_sections(void)
@@ -83,11 +80,9 @@ void print_sections(void)
 	dprintk("_start_kip: ", (unsigned int) _start_kip);
 	dprintk("_end_kip: ", (unsigned int) _end_kip);
 	dprintk("_bootstack: ",	(unsigned int)_bootstack);
-	dprintk("_end_kernel: ",	(unsigned int)_end_kernel);
-	dprintk("_start_kspace: ", (unsigned int)_start_kspace);
-	dprintk("_start_pmd: ", (unsigned int)_start_pmd);
-	dprintk("_end_pmd: ", (unsigned int)_end_pmd);
-	dprintk("_end_kspace: ", (unsigned int)_end_kspace);
+	dprintk("_end_kernel: ", (unsigned int)_end_kernel);
+	dprintk("_start_init: ", (unsigned int)_start_init);
+	dprintk("_end_init: ", (unsigned int)_end_init);
 	dprintk("_end: ", (unsigned int)_end);
 }
 
@@ -101,11 +96,11 @@ void start_vm()
 	 * TTB must be 16K aligned. This is because first level tables are
 	 * sized 16K.
 	 */
-	if ((unsigned int)&kspace & 0x3FFF)
+	if ((unsigned int)&init_pgd & 0x3FFF)
 		dprintk("kspace not properly aligned for ttb:",
-			(u32)&kspace);
-	memset((void *)&kspace, 0, sizeof(pgd_table_t));
-	arm_set_ttb(virt_to_phys(&kspace));
+			(u32)&init_pgd);
+	// memset((void *)&kspace, 0, sizeof(pgd_table_t));
+	arm_set_ttb(virt_to_phys(&init_pgd));
 
 	/*
 	 * This sets all 16 domains to zero and  domain 0 to 1. The outcome
@@ -208,8 +203,8 @@ void vectors_init()
 	unsigned int size = ((u32)_end_vectors - (u32)arm_high_vector);
 
 	/* Map the vectors in high vector page */
-	add_mapping(virt_to_phys(arm_high_vector),
-		    ARM_HIGH_VECTOR, size, 0);
+	add_boot_mapping(virt_to_phys(arm_high_vector),
+			 ARM_HIGH_VECTOR, size, 0);
 	arm_enable_high_vectors();
 
 	/* Kernel memory trapping is enabled at this point. */
@@ -361,17 +356,15 @@ void init_tasks()
 void start_kernel(void)
 {
 	printascii("\n"__KERNELNAME__": start kernel...\n");
+
 	/* Print section boundaries for kernel image */
-	//print_sections();
+	print_sections();
 
 	/* Initialise section mappings for the kernel area */
 	init_kernel_mappings();
 
 	/* Enable virtual memory and jump to virtual addresses */
 	start_vm();
-
-	/* PMD tables initialised */
-	init_pmd_tables();
 
 	/* Initialise platform-specific page mappings, and peripherals */
 	platform_init();
@@ -382,10 +375,13 @@ void start_kernel(void)
 	vectors_init();
 
 	/* Remap 1MB kernel sections as 4Kb pages. */
-	remap_as_pages(_start_kernel, _end_kernel);
+	// remap_as_pages((void *)page_align(_start_kernel), (void *)page_align_up(_end));
 
 	/* Move the initial pgd into a more convenient place, mapped as pages. */
-	relocate_page_tables();
+	// relocate_page_tables();
+
+	/* Evaluate system resources and set up resource pools */
+	init_system_resources();
 
 	/* Initialise memory allocators */
 	paging_init();
@@ -395,9 +391,6 @@ void start_kernel(void)
 
 	/* Initialise system call page */
 	syscall_init();
-
-	/* Initialise everything else, e.g. locks, lists... */
-	init_locks();
 
 	/* Setup inittask's ktcb and push it to scheduler runqueue */
 	init_tasks();

@@ -137,6 +137,9 @@ void arch_hardware_flush(pgd_table_t *pgd);
 void add_section_mapping_init(unsigned int paddr, unsigned int vaddr,
 			      unsigned int size, unsigned int flags);
 
+void add_boot_mapping(unsigned int paddr, unsigned int vaddr,
+		      unsigned int size, unsigned int flags);
+
 struct address_space;
 int delete_page_tables(struct address_space *space);
 int copy_user_tables(struct address_space *new, struct address_space *orig);

@@ -33,7 +33,7 @@
 #define	PB926_SIC_BASE			0x10003000 /* Secondary IC */
 #define	PB926_UART0_BASE		0x101F1000 /* Console port (UART0) */
 
-/* 
+/*
  * Uart virtual address until a file-based console access
  * is available for userspace
  */

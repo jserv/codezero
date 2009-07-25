@@ -31,8 +31,8 @@ void read_bootdesc(void)
 	 * End of the kernel image is where bootdesc resides. Note this is
 	 * not added to the page_map because it's meant to be discarded.
 	 */
-	add_mapping(virt_to_phys(_end), (unsigned long)_end, PAGE_SIZE,
-		    MAP_USR_DEFAULT_FLAGS);
+//	add_mapping(virt_to_phys(_end), (unsigned long)_end, PAGE_SIZE,
+//		    MAP_USR_DEFAULT_FLAGS);
 
 	/* Get original bootdesc */
 	bootdesc = (struct bootdesc *)_end;

@@ -33,7 +33,7 @@
 #define page_align(addr)		(((unsigned int)(addr)) &  \
 					 (~PAGE_MASK))
 
-#define is_aligned(val, mask)		(!(((unsigned long)(val)) & mask))
+#define is_aligned(val, size)		(!(((unsigned long)(val)) & ((size) - 1)))
 #define is_page_aligned(val)		(!(((unsigned long)(val)) & PAGE_MASK))
 #define page_boundary(x)		is_page_aligned(x)
 
@@ -80,13 +80,6 @@ static inline void be32_to_cpu(unsigned int x)
 #define TASK_AVERAGE_SIZE		SZ_16MB
 #define TASKS_PER_1MB_GRANT		28
 
-extern pgd_table_t kspace;
-extern pmd_table_t pmd_tables[];
-extern unsigned long pmdtab_i;
-
-void init_pmd_tables(void);
-pmd_table_t *alloc_boot_pmd(void);
-
 /*
  * Each time a pager grants memory to the kernel, these parameters are called
  * for in order to distribute the granted memory for different purposes.
@@ -104,13 +97,9 @@ typedef struct grant_kmem_usage {
 } grant_kmem_usage_t;
 
 void paging_init(void);
-void init_pmd_tables(void);
-void init_clear_ptab(void);
 
 unsigned int space_flags_to_ptflags(unsigned int flags);
 
-void add_boot_mapping(unsigned int paddr, unsigned int vaddr,
-		 unsigned int size, unsigned int flags);
 void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
 		     unsigned int size, unsigned int flags,
 		     pgd_table_t *pgd);

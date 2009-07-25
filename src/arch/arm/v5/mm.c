@@ -6,6 +6,7 @@
 #include <l4/lib/string.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
+#include <l4/generic/bootmem.h>
 #include <l4/api/errno.h>
 #include INC_SUBARCH(mm.h)
 #include INC_SUBARCH(mmu_ops.h)
@@ -30,7 +31,7 @@
  */
 void remove_section_mapping(unsigned long vaddr)
 {
-	pgd_table_t *pgd = TASK_PGD(current);
+	pgd_table_t *pgd = &init_pgd;;
 	pgd_t pgd_i = PGD_INDEX(vaddr);
 	if (!((pgd->entry[pgd_i] & PGD_TYPE_MASK)
 	      & PGD_TYPE_SECTION))
@@ -55,7 +56,7 @@ void __add_section_mapping_init(unsigned int paddr,
 	unsigned int l1_offset;
 
 	/* 1st level page table address */
-	l1_ptab = virt_to_phys(&kspace);
+	l1_ptab = virt_to_phys(&init_pgd);
 
 	/* Get the section offset for this vaddr */
 	l1_offset = (vaddr >> 18) & 0x3FFC;
@@ -200,6 +201,51 @@ void attach_pmd(pgd_table_t *pgd, pmd_table_t *pmd, unsigned int vaddr)
 }
 
 /*
+ * Same as normal mapping but with some boot tweaks.
+ */
+void add_boot_mapping(unsigned int paddr, unsigned int vaddr,
+		      unsigned int size, unsigned int flags)
+{
+	pmd_table_t *pmd;
+	pgd_table_t *pgd = &init_pgd;
+	unsigned int numpages = (size >> PAGE_BITS);
+
+	if (size < PAGE_SIZE) {
+		printascii("Error: Mapping size must be in bytes not pages.\n");
+		while(1);
+	}
+	if (size & PAGE_MASK)
+		numpages++;
+
+	/* Convert generic map flags to pagetable-specific */
+	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
+
+	/* Map all consecutive pages that cover given size */
+	for (int i = 0; i < numpages; i++) {
+		/* Check if another mapping already has a pmd attached. */
+		pmd = pmd_exists(pgd, vaddr);
+		if (!pmd) {
+			/*
+			 * If this is the first vaddr in
+			 * this pmd, allocate new pmd
+			 */
+			pmd = alloc_boot_pmd();
+
+			/* Attach pmd to its entry in pgd */
+			attach_pmd(pgd, pmd, vaddr);
+		}
+
+		/* Attach paddr to this pmd */
+		__add_mapping(page_align(paddr),
+			      page_align(vaddr), flags, pmd);
+
+		/* Go to the next page to be mapped */
+		paddr += PAGE_SIZE;
+		vaddr += PAGE_SIZE;
+	}
+}
+
+/*
  * Maps @paddr to @vaddr, covering @size bytes also allocates new pmd if
  * necessary. This flavor explicitly supplies the pgd to modify. This is useful
  * when modifying userspace of processes that are not currently running. (Only
@@ -211,6 +257,7 @@ void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
 {
 	pmd_table_t *pmd;
 	unsigned int numpages = (size >> PAGE_BITS);
+
 
 	if (size < PAGE_SIZE) {
 		printascii("Error: Mapping size must be in bytes not pages.\n");
@@ -553,6 +600,7 @@ out_error:
 
 extern pmd_table_t *pmd_array;
 
+#if 0
 /*
  * Moves the section mapped kspace that resides far apart from kernel as close
  * as possible to the kernel image, and unmaps the old 1MB kspace section which
@@ -611,6 +659,7 @@ void relocate_page_tables(void)
 	       __KERNELNAME__, virt_to_phys(&kspace),
 	       virt_to_phys(TASK_PGD(current)));
 }
+#endif
 
 /*
  * Useful for upgrading to page-grained control over a section mapping:
@@ -629,18 +678,14 @@ void remap_as_pages(void *vstart, void *vend)
 	pgd_table_t *pgd = (pgd_table_t *)TASK_PGD(current);
 	pmd_table_t *pmd = alloc_pmd();
 	u32 pmd_phys = virt_to_phys(pmd);
-	int numpages = __pfn(page_align_up(pend) - pstart);
-
-	BUG_ON((unsigned long)vstart & ARM_SECTION_MASK);
-	BUG_ON(pmd_i);
+	int numpages = __pfn(pend - pstart);
 
 	/* Fill in the pmd first */
-	while (pmd_i < numpages) {
-		pmd->entry[pmd_i] = paddr;
-		pmd->entry[pmd_i] |= PMD_TYPE_SMALL; /* Small page type */
-		pmd->entry[pmd_i] |= space_flags_to_ptflags(MAP_SVC_DEFAULT_FLAGS);
+	for (int n = 0; n < numpages; n++) {
+		pmd->entry[pmd_i + n] = paddr;
+		pmd->entry[pmd_i + n] |= PMD_TYPE_SMALL; /* Small page type */
+		pmd->entry[pmd_i + n] |= space_flags_to_ptflags(MAP_SVC_DEFAULT_FLAGS);
 		paddr += PAGE_SIZE;
-		pmd_i++;
 	}
 
 	/* Fill in the type to produce a complete pmd translator information */

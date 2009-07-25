@@ -152,12 +152,7 @@ void *alloc_page(void)
 
 void *alloc_pmd(void)
 {
-	pmd_table_t *pmd;
-
-	if (!(pmd = alloc_boot_pmd()))
-		pmd = pgalloc_from_cache(PGALLOC_PMD_CACHE);
-
-	return pmd;
+	return pgalloc_from_cache(PGALLOC_PMD_CACHE);
 }
 
 void *alloc_pgd(void)

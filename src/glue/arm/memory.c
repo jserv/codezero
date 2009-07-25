@@ -39,48 +39,6 @@ unsigned int space_flags_to_ptflags(unsigned int flags)
 	BUG(); return 0;
 }
 
-#define NUM_PMD_TABLES				7
-//#define NUM_PGD_TABLES				8
-
-/* Initial first level page table to provide startup mappings */
-SECTION(".kspace.pgd") pgd_table_t kspace;
-SECTION(".kspace.pmd") pmd_table_t pmd_tables[NUM_PMD_TABLES];
-
-/* A mini bitmap for boot pmd allocations */
-static int pmd_cnt;
-pmd_table_t *pmd_array;
-
-pmd_table_t *alloc_boot_pmd(void)
-{
-	pmd_table_t *pt;
-
-	if (pmd_cnt == NUM_PMD_TABLES)
-		return 0;
-
-	pt = &pmd_array[pmd_cnt++];
-	BUG_ON((unsigned long)pt & (sizeof(pmd_table_t) - 1));
-
-	return pt;
-}
-
-/*
- * Initialises pmd allocation cache, this is called before page allocator
- * initialises. After this call one can add page mappings via add_mapping().
- * This also sets the alloc_pmd() global function to this boot-time version.
- */
-void init_pmd_tables(void)
-{
-	pmd_cnt = 0;
-	pmd_array = pmd_tables;
-	memset(pmd_array, 0, NUM_PMD_TABLES * sizeof(pmd_table_t));
-}
-
-/* Clears out all entries in the initial page table */
-void init_clear_ptab(void)
-{
-	memset((void *)virt_to_phys(&kspace), 0, sizeof(pgd_table_t));
-}
-
 /* Sets up struct page array and the physical memory descriptor. */
 void paging_init(void)
 {

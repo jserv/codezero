@@ -27,7 +27,7 @@ import cml2header
 import cmlconfigure
 
 # The linker script to link the final executable
-linker_script = join(headers_root, 'l4/arch/arm/mylink.lds')
+linker_script = join(headers_root, 'l4/arch/arm/linker.lds')
 
 # Environment to build sources
 #env = None

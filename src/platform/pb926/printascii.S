@@ -51,6 +51,7 @@ BEGIN_PROC(printhex4)
 BEGIN_PROC(printhex2)
 		mov	r1, #2
 printhex:	adr	r2, hexbuf
+@printhex:	ldr	r2, =hexbuf
 		add	r3, r2, r1
 		mov	r1, #0
 		strb	r1, [r3]
@@ -77,8 +78,9 @@ printhex:	adr	r2, hexbuf
 	.macro get_straddr rs, rm
 		mrc	p15, 0, \rm, c1, c0		@ Get MMU bits.
 		tst	\rm, #1				@ MMU enabled?
+		@subeq	\rs, \rs, #KERNEL_AREA_START
 		biceq	\rs, \rs, #KERNEL_AREA_START	@ Clear Virtual mem offset.
-		orreq	\rs, \rs, #PHYS_ADDR_BASE	@ Add Phy mem offset.
+		@orreq	\rs, \rs, #PHYS_ADDR_BASE	@ Add Phy mem offset.
 	.endm
 
 BEGIN_PROC(printascii)
