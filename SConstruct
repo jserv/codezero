@@ -1,4 +1,4 @@
-# -*- mode: python; coding: utf-8 -*-
+# -*- mode: python; coding: utf-8; -*-
 
 #  Codezero -- a microkernel for embedded systems.
 #
@@ -37,4 +37,3 @@ libs = { }
 crts = { }
 for variant in [ 'baremetal' , 'userspace' ] :
     ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = 'build/lib/c/' + variant , duplicate = 0 , exports = { 'variant' : variant } )
-
