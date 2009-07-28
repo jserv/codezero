@@ -17,25 +17,13 @@
 #
 #  Author: Russel Winder
 
-import os
+Import ( 'environment' , 'lib' )
 
-arch = 'arm'
-platform = 'pb926'
+e = environment.Clone ( )
+e.Append ( LIBS = lib )
+e.Append ( CPPPATH = [ 'include' , '#libs/c/include' , '#libs/c/include/arch/' + e['ARCH'] ] )
 
-environment = Environment (
-    CC = 'arm-none-linux-gnueabi-gcc',
-    CCFLAGS = [ '-g' , '-nostdinc' , '-nostdlib' , '-ffreestanding' ] ,
-    LINKFLAGS = [ '-nostdlib' ] ,
-    ENV = { 'PATH' : os.environ['PATH'] } ,
-    LIBS = 'gcc' ,
-    ARCH = arch , 
-    PLATFORM = platform )
 
-Export ( 'environment' )
+result = e.StaticLibrary ( 'elf' , Glob ( 'src/*.c' ) )
 
-libs = { }
-crts = { }
-for variant in [ 'baremetal' , 'userspace' ] :
-    ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = 'build/lib/c/' + variant , duplicate = 0 , exports = { 'variant' : variant } )
-
-libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = 'build/lib/elf' , duplicate = 0 , exports = { 'lib' : libs['baremetal'] } )
+Return ( 'result' )
