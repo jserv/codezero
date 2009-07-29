@@ -15,16 +15,6 @@
 #include <l4/api/kip.h>
 #include <l4/lib/idpool.h>
 
-struct address_space_list {
-	struct link list;
-
-	/* Lock for list add/removal */
-	struct spinlock list_lock;
-
-	/* Used when delete/creating spaces */
-	struct mutex ref_lock;
-	int count;
-};
 
 static struct address_space_list address_space_list;
 

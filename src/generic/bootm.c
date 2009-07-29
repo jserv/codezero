@@ -28,6 +28,12 @@ void *alloc_bootmem(int size, int alignment)
 		if (!is_aligned(cursor, alignment))
 			/* Align the cursor to alignment */
 			cursor = align_up(cursor, alignment);
+	/* Align to 4 byte by default */
+	} else if (size >= 4) {
+		/* And cursor is not aligned */
+		if (!is_aligned(cursor, 4))
+			/* Align the cursor to alignment */
+			cursor = align_up(cursor, 4);
 	}
 
 	/* Allocate from cursor */

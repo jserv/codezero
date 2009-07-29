@@ -19,12 +19,6 @@
 struct id_pool *thread_id_pool;
 struct id_pool *space_id_pool;
 
-/* Hash table for all existing tasks */
-struct ktcb_list {
-	struct link list;
-	struct spinlock list_lock;
-	int count;
-};
 
 static struct ktcb_list ktcb_list;
 

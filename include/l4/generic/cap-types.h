@@ -1,0 +1,83 @@
+/*
+ * Types of capabilities and their operations
+ *
+ * Copyright (C) 2009 Bahadir Balban
+ */
+#ifndef __CAP_TYPES_H__
+#define __CAP_TYPES_H__
+
+/*
+ * Capability types
+ */
+#define CAP_TYPE_MASK		0x0000FFFF
+#define CAP_TYPE_TCTRL		(1 << 0)
+#define CAP_TYPE_EXREGS		(1 << 1)
+#define CAP_TYPE_MAP		(1 << 2)
+#define CAP_TYPE_IPC		(1 << 3)
+#define CAP_TYPE_SCHED		(1 << 4)
+#define CAP_TYPE_UMUTEX		(1 << 5)
+#define CAP_TYPE_QUANTITY	(1 << 6)
+
+/*
+ * Resource types
+ */
+#define CAP_RTYPE_MASK		0xFFFF0000
+#define CAP_RTYPE_THREAD	(1 << 16)
+#define CAP_RTYPE_TGROUP	(1 << 17)
+#define CAP_RTYPE_SPACE		(1 << 18)
+#define CAP_RTYPE_CONTAINER	(1 << 19)
+#define CAP_RTYPE_UMUTEX	(1 << 20)
+#define CAP_RTYPE_VIRTMEM	(1 << 21)
+#define CAP_RTYPE_PHYSMEM	(1 << 22)
+#define CAP_RTYPE_CPUPOOL	(1 << 23)
+#define CAP_RTYPE_THREADPOOL	(1 << 24)
+#define CAP_RTYPE_SPACEPOOL	(1 << 25)
+#define CAP_RTYPE_MUTEXPOOL	(1 << 27)
+#define CAP_RTYPE_MEMPOOL	(1 << 26)	/* Do we need this ??? */
+/*
+ * Access permissions
+ */
+
+/* Thread control capability */
+#define CAP_TCTRL_CREATE	(1 << 0)
+#define CAP_TCTRL_DESTROY	(1 << 1)
+#define CAP_TCTRL_SUSPEND	(1 << 2)
+#define CAP_TCTRL_RESUME	(1 << 3)
+#define CAP_TCTRL_RECYCLE	(1 << 4)
+
+/* Exchange registers capability */
+#define CAP_EXREGS_RW_PAGER	(1 << 0)
+#define CAP_EXREGS_RW_UTCB	(1 << 1)
+#define CAP_EXREGS_RW_SP	(1 << 2)
+#define CAP_EXREGS_RW_PC	(1 << 3)
+#define CAP_EXREGS_RW_REGS	(1 << 4)
+#define CAP_EXREGS_RW_CPU	(1 << 5)
+#define CAP_EXREGS_RW_CPUTIME	(1 << 6)
+
+/* Map capability */
+#define CAP_MAP_READ		(1 << 0)
+#define CAP_MAP_WRITE		(1 << 1)
+#define CAP_MAP_EXEC		(1 << 2)
+#define CAP_MAP_CACHED		(1 << 3)
+#define CAP_MAP_UNCACHED	(1 << 4)
+#define CAP_MAP_UNMAP		(1 << 5)
+
+/* Ipc capability */
+#define CAP_IPC_SEND		(1 << 0)
+#define CAP_IPC_RECV		(1 << 1)
+#define CAP_IPC_SHORT		(1 << 2)
+#define CAP_IPC_FULL		(1 << 3)
+#define CAP_IPC_EXTENDED	(1 << 4)
+#define CAP_IPC_ASYNC		(1 << 5)
+
+/* Userspace mutex capability */
+#define CAP_UMUTEX_LOCK		(1 << 0)
+
+/* Capability control capability */
+#define CAP_CAP_SPLIT		(1 << 0)
+#define CAP_CAP_SPLICE		(1 << 1)
+#define CAP_CAP_REDUCE		(1 << 2)
+#define CAP_CAP_REVOKE		(1 << 3)
+#define CAP_CAP_GRANT		(1 << 4)
+
+#endif /* __CAP_TYPES_H__ */

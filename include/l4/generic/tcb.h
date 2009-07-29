@@ -8,6 +8,7 @@
 
 #include <l4/lib/list.h>
 #include <l4/lib/mutex.h>
+#include <l4/lib/spinlock.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/pgalloc.h>
 #include <l4/generic/space.h>
@@ -120,6 +121,13 @@ union ktcb_union {
 	char kstack[PAGE_SIZE];
 };
 
+
+/* Hash table for all existing tasks */
+struct ktcb_list {
+	struct link list;
+	struct spinlock list_lock;
+	int count;
+};
 
 /*
  * Each task is allocated a unique global id. A thread group can only belong to

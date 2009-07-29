@@ -9,11 +9,14 @@
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
 #include <l4/generic/capability.h>
+#include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
 #include <l4/api/mutex.h>
+#include <l4/lib/list.h>
+#include <l4/lib/idpool.h>
 
 /* Container macro. No locks needed! */
-#define container		(current->container)
+#define this_container		(current->container)
 
 struct container {
 	/* Unique container id */
@@ -47,21 +50,48 @@ struct container {
 /* The array of containers present on the system */
 extern struct container container[];
 
-
-struct memdesc {
+/* Compact, raw capability structure */
+struct cap_info {
+	unsigned int type;
+	u32 access;
 	unsigned long start;
 	unsigned long end;
-	unsigned int flags;
+	unsigned long size;
 };
 
-struct cinfo {
-	char cname[32];
+struct pager_info {
 	unsigned long pager_lma;
 	unsigned long pager_vma;
 	unsigned long pager_size;
 
-	unsigned long total_memdesc;
-	struct memdesc memdesc[];
+	/* Number of capabilities defined */
+	int ncaps;
+
+	/*
+	 * Zero or more ipc caps,
+	 * One or more thread pool caps,
+	 * One or more space pool caps,
+	 * One or more exregs caps,
+	 * One or more tcontrol caps,
+	 * One or more cputime caps,
+	 * One or more physmem caps,
+	 * One or more virtmem caps,
+	 * Zero or more umutex caps,
+	 */
+	struct cap_info caps[];
 };
 
+/*
+ * This auto-generated structure is
+ * used to create run-time containers
+ */
+struct container_info {
+	char *name;
+	int npagers;
+	struct pager_info pagers[];
+};
+
+extern struct container_info cinfo[];
+
 #endif /* __CONTAINER_H__ */
+

@@ -30,6 +30,7 @@ struct mem_cache {
 	unsigned int *bitmap;
 };
 
+int mem_cache_bufsize(void *start, int struct_size, int nstructs, int aligned);
 void *mem_cache_zalloc(struct mem_cache *cache);
 void *mem_cache_alloc(struct mem_cache *cache);
 int mem_cache_free(struct mem_cache *cache, void *addr);

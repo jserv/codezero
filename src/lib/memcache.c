@@ -90,18 +90,60 @@ out:
 	return err;
 }
 
-struct mem_cache *mem_cache_init(void *start,
+/*
+ * Given a buffer start address, structure size, number of
+ * structs and alignment requirements, determines how much
+ * memory is needed from that starting address
+ */
+int mem_cache_bufsize(void *start, int struct_size, int nstructs, int aligned)
+{
+	unsigned long start_address = (unsigned long)start;
+	int total_bytes, bwords;
+
+	/* Word alignment requirement */
+	start_address = align_up(start_address, sizeof(int));
+
+	/* Total bytes to contain structures */
+	total_bytes = struct_size * nstructs;
+
+	/* Total words to contain bitmap */
+	bwords = nstructs >> 5;
+
+	/* An extra word if not a multiple of one word's bits */
+	if (nstructs & 0x1F)
+		bwords++;
+
+	/* Total bitmap bytes */
+	bitmap_size = bwords * sizeof(int);
+
+	/* Current would-be start address */
+	start_address += bitmap_size + total_bytes + sizeof(struct mem_cache);
+
+	/* Check alignment requirement */
+	if (aligned)
+		start_address += align_up(start_address, struct_size);
+
+	return start_address - (unsigned long)start;
+}
+
+struct mem_cache *mem_cache_init(void *bufstart,
 				 int cache_size,
 				 int struct_size,
 				 unsigned int aligned)
 {
-	struct mem_cache *cache = start;
+	/* Align to nearest word boundary */
+	void *start;
+	struct mem_cache *cache;
 	unsigned int area_start;
 	unsigned int *bitmap;
 	int bwords_in_structs;
 	int bwords;
 	int total;
 	int bsize;
+
+       	start = (void *)align_up(bufstart, sizeof(int));
+	cache_size -= (int)start - (int)bufstart;
+	mem_cache = start;
 
 	if ((struct_size < 0) || (cache_size < 0) ||
 	    ((unsigned long)start == ~(0))) {

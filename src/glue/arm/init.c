@@ -14,6 +14,7 @@
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/bootmem.h>
+#include <l4/generic/resource.h>
 #include INC_ARCH(linker.h)
 #include INC_ARCH(asm.h)
 #include INC_ARCH(bootdesc.h)
