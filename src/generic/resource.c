@@ -169,7 +169,7 @@ int process_cap_info(struct cap_info *cap,
 		}
 		break;
 	case CAP_RTYPE_PHYSMEM:
-		if ((ret = memcap_unmap(&kcont->virtmem_free,
+		if ((ret = memcap_unmap(&kcont->physmem_free,
 					cap->start, cap->end))) {
 			if (ret < 0)
 				printk("FATAL: Insufficient boot memory "

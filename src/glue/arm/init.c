@@ -376,7 +376,7 @@ void start_kernel(void)
 	vectors_init();
 
 	/* Remap 1MB kernel sections as 4Kb pages. */
-	// remap_as_pages((void *)page_align(_start_kernel), (void *)page_align_up(_end));
+	remap_as_pages((void *)page_align(_start_kernel), (void *)page_align_up(_end_kernel));
 
 	/* Move the initial pgd into a more convenient place, mapped as pages. */
 	// relocate_page_tables();

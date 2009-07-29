@@ -675,8 +675,8 @@ void remap_as_pages(void *vstart, void *vend)
 	unsigned long paddr = pstart;
 	pgd_t pgd_i = PGD_INDEX(vstart);
 	pmd_t pmd_i = PMD_INDEX(vstart);
-	pgd_table_t *pgd = (pgd_table_t *)TASK_PGD(current);
-	pmd_table_t *pmd = alloc_pmd();
+	pgd_table_t *pgd = &init_pgd;
+	pmd_table_t *pmd = alloc_boot_pmd();
 	u32 pmd_phys = virt_to_phys(pmd);
 	int numpages = __pfn(pend - pstart);
 
