@@ -7,6 +7,8 @@
 #define __V5_MM_H__
 
 /* ARM specific definitions */
+#define VIRT_MEM_START			0
+#define VIRT_MEM_END			0xFFFFFFFF
 #define ARM_SECTION_SIZE		SZ_1MB
 #define ARM_SECTION_MASK		(ARM_SECTION_SIZE - 1)
 #define ARM_SECTION_BITS		20

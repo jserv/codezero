@@ -98,7 +98,7 @@ out:
 int mem_cache_bufsize(void *start, int struct_size, int nstructs, int aligned)
 {
 	unsigned long start_address = (unsigned long)start;
-	int total_bytes, bwords;
+	int total_bytes, bwords, bitmap_size;
 
 	/* Word alignment requirement */
 	start_address = align_up(start_address, sizeof(int));
@@ -121,7 +121,7 @@ int mem_cache_bufsize(void *start, int struct_size, int nstructs, int aligned)
 
 	/* Check alignment requirement */
 	if (aligned)
-		start_address += align_up(start_address, struct_size);
+		start_address = align_up(start_address, struct_size);
 
 	return start_address - (unsigned long)start;
 }
@@ -143,7 +143,7 @@ struct mem_cache *mem_cache_init(void *bufstart,
 
        	start = (void *)align_up(bufstart, sizeof(int));
 	cache_size -= (int)start - (int)bufstart;
-	mem_cache = start;
+	cache = start;
 
 	if ((struct_size < 0) || (cache_size < 0) ||
 	    ((unsigned long)start == ~(0))) {

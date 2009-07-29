@@ -382,7 +382,7 @@ void start_kernel(void)
 	// relocate_page_tables();
 
 	/* Evaluate system resources and set up resource pools */
-	init_system_resources();
+	init_system_resources(&kernel_container);
 
 	/* Initialise memory allocators */
 	paging_init();

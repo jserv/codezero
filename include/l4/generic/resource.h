@@ -2,7 +2,7 @@
 #define __RESOURCES_H__
 
 /* Number of containers defined at compile-time */
-#define CONTAINERS_TOTAL		1
+#define TOTAL_CONTAINERS		1
 
 #include <l4/generic/capability.h>
 
@@ -13,6 +13,7 @@ struct boot_resources {
 	int nthreads;
 	int nspaces;
 	int npmds;
+	int nmutex;
 
 	/* Kernel resource usage */
 	int nkpmds;
@@ -38,14 +39,13 @@ struct kernel_container {
 	struct mem_cache *pmd_cache;
 	struct mem_cache *ktcb_cache;
 	struct mem_cache *address_space_cache;
-	struct mem_cache *umutex_cache;
+	struct mem_cache *mutex_cache;
 	struct mem_cache *cap_cache;
 	struct mem_cache *cont_cache;
 };
 
 extern struct kernel_container kernel_container;
 
-int init_system_resources(struct kernel_container *kcont,
-			  struct boot_resources *bootres);
+int init_system_resources(struct kernel_container *kcont);
 
 #endif /* __RESOURCES_H__ */

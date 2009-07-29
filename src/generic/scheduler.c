@@ -23,14 +23,6 @@
 #include INC_ARCH(exception.h)
 
 
-/* A basic runqueue */
-struct runqueue {
-	struct spinlock lock;		/* Lock */
-	struct link task_list;	/* List of tasks in rq */
-	unsigned int total;		/* Total tasks */
-};
-
-#define SCHED_RQ_TOTAL					2
 static struct runqueue sched_rq[SCHED_RQ_TOTAL];
 static struct runqueue *rq_runnable, *rq_expired;
 static int prio_total;			/* Total priority of all tasks */

@@ -44,11 +44,12 @@ struct container {
 	 * Threads, address spaces, mutex queues, cpu share ...
 	 * Pagers possess these capabilities.
 	 */
-	struct capability caps[5] /* threadpool, spacepool, mutexpool, cpupool, mempool */
+	struct capability caps[5]; /* threadpool, spacepool, mutexpool, cpupool, mempool */
 };
 
-/* The array of containers present on the system */
-extern struct container container[];
+
+#define CONFIG_MAX_CAPS_USED			11
+#define CONFIG_MAX_PAGERS_USED			2
 
 /* Compact, raw capability structure */
 struct cap_info {
@@ -78,7 +79,7 @@ struct pager_info {
 	 * One or more virtmem caps,
 	 * Zero or more umutex caps,
 	 */
-	struct cap_info caps[];
+	struct cap_info caps[CONFIG_MAX_CAPS_USED];
 };
 
 /*
@@ -86,9 +87,9 @@ struct pager_info {
  * used to create run-time containers
  */
 struct container_info {
-	char *name;
+	char name[64];
 	int npagers;
-	struct pager_info pagers[];
+	struct pager_info pager[CONFIG_MAX_PAGERS_USED];
 };
 
 extern struct container_info cinfo[];

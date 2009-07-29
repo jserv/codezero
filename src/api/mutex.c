@@ -16,31 +16,6 @@
 #include INC_ARCH(exception.h)
 #include INC_GLUE(memory.h)
 
-struct mutex_queue {
-	unsigned long physical;
-	struct link list;
-	struct waitqueue_head wqh_contenders;
-	struct waitqueue_head wqh_holders;
-};
-
-
-/*
- * Mutex queue head keeps the list of all userspace mutexes.
- *
- * Here, mutex_control_mutex is a single lock for:
- * (1) Mutex_queue create/deletion
- * (2) List add/removal.
- * (3) Wait synchronization:
- *     - Both waitqueue spinlocks need to be acquired for
- *       rendezvous inspection to occur atomically. Currently
- *       it's not done since we rely on this mutex for that.
- */
-struct mutex_queue_head {
-	struct link list;
-	struct mutex mutex_control_mutex;
-	int count;
-} mutex_queue_head;
-
 void init_mutex_queue_head(void)
 {
 	memset(&mutex_queue_head, 0, sizeof (mutex_queue_head));
