@@ -19,10 +19,23 @@
 
 import os
 
+includeDirectory = 'include'
+toolsDirectory = 'tools'
+cml2ToolsDirectory = toolsDirectory + '/cml2-tools'
+
+buildDirectory = 'build'
+
+environment = Environment ( )
+
+configuration = Configure ( environment , config_h = 'config.h' )
+environment = configuration.Finish ( )
+
 arch = 'arm'
 platform = 'pb926'
 
-environment = Environment (
+linkerScript = includeDirectory + '/l4/arch/' + arch + '/mylinks.lds'
+
+libraryEnvironment = environment.Clone (
     CC = 'arm-none-linux-gnueabi-gcc',
     CCFLAGS = [ '-g' , '-nostdinc' , '-nostdlib' , '-ffreestanding' ] ,
     LINKFLAGS = [ '-nostdlib' ] ,
@@ -31,11 +44,32 @@ environment = Environment (
     ARCH = arch , 
     PLATFORM = platform )
 
-Export ( 'environment' )
-
 libs = { }
 crts = { }
 for variant in [ 'baremetal' , 'userspace' ] :
-    ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = 'build/lib/c/' + variant , duplicate = 0 , exports = { 'variant' : variant } )
+    ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = buildDirectory + '/lib/c/' + variant , duplicate = 0 , exports = { 'environment' : libraryEnvironment , 'variant' : variant } )
 
-libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = 'build/lib/elf' , duplicate = 0 , exports = { 'lib' : libs['baremetal'] } )
+libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = buildDirectory + '/lib/elf' , duplicate = 0 , exports = { 'environment' : libraryEnvironment , 'lib' : libs['baremetal'] } )
+
+cmlCompiledRules = Command ( '#' + buildDirectory + '/rules.out' , '#configs/' + arch + '.cml' , cml2ToolsDirectory + '/cmlcompile.py -o $TARGET $SOURCE' )
+cmlConfiguredRules = Command ( '#' + buildDirectory + '/config.out' , cmlCompiledRules , cml2ToolsDirectory + '/cmlconfigure.py -c -o $TARGET $SOURCE' )
+cmlConfigHeader = Command ( '#' + buildDirectory + '/config.h' , cmlConfiguredRules , toolsDirectory + '/cml2header.py -o $TARGET -i $SOURCE' )
+
+Alias ( 'configure' , cmlConfigHeader )
+if 'configure' in COMMAND_LINE_TARGETS:
+    AlwaysBuild ( cmlConfiguredRules )
+
+kernelEnvironment = environment.Clone (
+    CC = 'arm-none-eabi-gcc' ,
+    # We don't use -nostdinc because sometimes we need standard headers, such as stdarg.h e.g. for variable
+    # args, as in printk().
+    CCFLAGS = [ '-g' , '-mcpu=arm926ej-s' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
+    LINKFLAGS = [ '-nostdlib' , '-T' + linkerScript ] ,
+    ASFLAGS = [ '-D__ASSEMBLY__' ] ,
+    PROGSUFFIX = '.axf' ,
+    ENV = { 'PATH' : os.environ['PATH'] } ,
+    LIBS = 'gcc' ,  # libgcc.a is required for the division routines.
+    CPPPATH = includeDirectory ,
+    CPPFLAGS = [ '-include l4/config.h' , '-include l4/macros.h' , '-include l4/types.h' , '-D__KERNEL__' ] )
+
+Clean ( '.' , [ buildDirectory ] )
