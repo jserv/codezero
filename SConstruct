@@ -2,7 +2,7 @@
 
 #  Codezero -- a microkernel for embedded systems.
 #
-#  Copyright © 2009 B Labs Ltd
+#  Copyright © 2009  B Labs Ltd
 #
 #  This program is free software: you can redistribute it and/or modify it under the terms of the GNU
 #  General Public License as published by the Free Software Foundation, either version 3 of the License, or
@@ -73,7 +73,9 @@ else :
                 
     baseEnvironment = Environment ( tools = [ 'gnulink' , 'gcc' , 'gas' , 'ar' ] )
 
-    configuration = Configure ( baseEnvironment , config_h =  'config.h' )
+    kernelSConscriptPaths = [ 'generic' , 'api' , 'lib' ]
+
+    configuration = Configure ( baseEnvironment , config_h =  buildDirectory + '/l4/config.h' )
     configData = processCML2Config ( )
     arch = None
     platform = None
@@ -81,21 +83,30 @@ else :
     for key , value in configData.items ( ) :
         if value :
             items = key.split ( '_' )
-            if items[0] == 'ARCH' : arch = items[1].lower ( )
+            if items[0] == 'ARCH' :
+                arch = items[1].lower ( )
     for key , value in configData.items ( ) :
         if value :
             items = key.split ( '_' )
             if items[0] == arch.upper ( ) :
-                if items[1] == 'PLATFORM' : platform = items[2].lower ( )
-                if items[1] == 'SUBARCH' : subarch = items[2].lower ( )
+                if items[1] == 'PLATFORM' :
+                    platform = items[2].lower ( )
+                if items[1] == 'SUBARCH' :
+                    subarch = items[2].lower ( )
             if items[0] == 'DRIVER' :
-                pass
-    configuration.Define ( '__ARCH__' , arch ) 
+                kernelSConscriptPaths.append ( 'drivers/' + ( 'irq' if items[1] == 'IRQCTRL' else items[1].lower ( ) ) + '/' + items[2].lower ( ) )
+    configuration.Define ( '__ARCH__' , arch )
     configuration.Define ( '__PLATFORM__' , platform )
     configuration.Define ( '__SUBARCH__' , subarch )
+    kernelSConscriptPaths += [
+        'arch/' + arch ,
+        'glue/' + arch ,
+        'platform/' + platform ,
+        'arch/' + arch + '/' + subarch ]
+    configuration.env['ARCH'] = arch
+    configuration.env['PLATFORM'] = platform
+    configuration.env['SUBARCH'] = subarch
     baseEnvironment = configuration.Finish ( )
-
-    linkerScript = includeDirectory + '/l4/arch/' + arch + '/mylinks.lds'
 
     libraryEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-linux-gnueabi-gcc',
@@ -118,14 +129,32 @@ else :
         # We don't use -nostdinc because sometimes we need standard headers, such as stdarg.h e.g. for variable
         # args, as in printk().
         CCFLAGS = [ '-g' , '-mcpu=arm926ej-s' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
-        LINKFLAGS = [ '-nostdlib' , '-T' + linkerScript ] ,
+        LINKFLAGS = [ '-nostdlib' , '-T' +  includeDirectory + '/l4/arch/' + arch + '/mylink.lds' ] ,
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         PROGSUFFIX = '.axf' ,
         ENV = { 'PATH' : os.environ['PATH'] } ,
         LIBS = 'gcc' ,  # libgcc.a is required for the division routines.
-        CPPPATH = includeDirectory ,
-        CPPFLAGS = [ '-include config.h' , '-include #' + buildDirectory + '/cml2Config.h' , '-include l4/macros.h' , '-include l4/types.h' , '-D__KERNEL__' ] )
+        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] ,
+        CPPFLAGS = [ '-include' , 'config.h' , '-include' , 'cml2Config.h' , '-include' , 'macros.h' , '-include' , 'types.h' , '-D__KERNEL__' ] )
     
-    Default ( crts.values ( ) + libs.values ( ) + [ libelf ] )
+    kernelComponents = [ ]
+    for scriptPath in [ 'src/' + path for path in kernelSConscriptPaths ] :
+        kernelComponents.append ( SConscript ( scriptPath + '/SConscript' , variant_dir = buildDirectory + '/' + scriptPath , duplicate = 0 , exports = { 'environment' : kernelEnvironment } ) )
+
+    startAxf = kernelEnvironment.Program ( buildDirectory + '/start.axf' ,  kernelComponents )
+
+    tasksEnvironment = baseEnvironment.Clone (
+        CC = 'arm-none-linux-gnueabi-gcc' ,
+        CCFLAGS = [ '-g' , '-nostdlib' , '-Wall' , '-Werror' , '-ffreestanding' , '-std=gnu99' ] ,
+        LINKFLAGS = [ '-nostdlib' ] ,
+        ENV = { 'PATH' : os.environ['PATH'] } ,
+        LIBS = 'gcc' ,
+        CPPPATH = [ '#' + includeDirectory , '#' + buildDirectory + '/l4' , includeDirectory  , '#' + includeDirectory + '/l4' ] )
+
+    tasks = [ ]
+    for task in [ item for item in os.listdir ( 'tasks' ) if os.path.isdir ( 'tasks/' + item ) ] :
+        tasks.append ( SConscript ( 'tasks/' + item + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
+
+    Default ( crts.values ( ) + libs.values ( ) + [ libelf , startAxf ] ) # + tasks )
     
     Clean ( '.' , [ buildDirectory ] )

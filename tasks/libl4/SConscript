@@ -17,19 +17,8 @@
 #
 #  Author: Russel Winder
 
-Import ( 'environment' , 'variant' )
+Import ( 'environment' )
 
-source = \
-        Glob ( 'src/*.c' ) + \
-        Glob ( 'src/sys-' + variant + '/*.c' ) + \
-        Glob ( 'src/sys-' + variant + '/arch-' + environment['ARCH'] + '/*.c' ) + \
-        Glob ( 'src/sys-' + variant + '/arch-' + environment['ARCH'] + '/plat-' + environment['PLATFORM'] + '/*.c' ) + \
-        Glob ( 'src/arch-' + environment['ARCH'] + '/*.c' ) + \
-        Glob ( 'src/arch-' + environment['ARCH'] + '/*.S' )
+library = environment.StaticLibrary ( 'l4' , Glob ( 'src/*.c' ) + Glob ( 'src/' + environment['ARCH'] + '/*.S' ) )
 
-result = (
-    environment.StaticLibrary ( 'c-' + variant , source , CPPPATH = [ 'include' , 'include/sys-' + variant + '/arch-' + environment['ARCH'] ] ) ,
-    environment.StaticObject ( 'crt/sys-' + variant + '/arch-' + environment['ARCH'] + '/crt0.S' )
-    )
-
-Return ( 'result' )
+Return ( 'library' )
