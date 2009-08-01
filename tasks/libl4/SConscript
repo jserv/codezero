@@ -19,6 +19,9 @@
 
 Import ( 'environment' )
 
-library = environment.StaticLibrary ( 'l4' , Glob ( 'src/*.c' ) + Glob ( 'src/' + environment['ARCH'] + '/*.S' ) )
+e = environment.Clone ( )
+e.Append ( CPPPATH = [ '#' + 'tasks/libposix/include' , 'include/libl4/arch' ] )
+
+library = e.StaticLibrary ( 'l4' , Glob ( 'src/*.c' ) + Glob ( 'src/' + environment['ARCH'] + '/*.[cS]' ) )
 
 Return ( 'library' )

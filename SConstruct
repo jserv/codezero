@@ -149,12 +149,12 @@ else :
         LINKFLAGS = [ '-nostdlib' ] ,
         ENV = { 'PATH' : os.environ['PATH'] } ,
         LIBS = 'gcc' ,
-        CPPPATH = [ '#' + includeDirectory , '#' + buildDirectory + '/l4' , includeDirectory  , '#' + includeDirectory + '/l4' ] )
+        CPPPATH = [ '#' + includeDirectory , '#' + buildDirectory + '/l4' , includeDirectory ] )
 
     tasks = [ ]
-    for task in [ item for item in os.listdir ( 'tasks' ) if os.path.isdir ( 'tasks/' + item ) ] :
-        tasks.append ( SConscript ( 'tasks/' + item + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
+    for task in [ item for item in os.listdir ( 'tasks' ) if os.path.isdir ( 'tasks/' + item ) and os.path.exists ( 'tasks/' + item + '/SConscript' )] :
+        tasks.append ( SConscript ( 'tasks/' + task + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
 
-    Default ( crts.values ( ) + libs.values ( ) + [ libelf , startAxf ] ) # + tasks )
+    Default ( crts.values ( ) + libs.values ( ) + [ libelf , startAxf ] + tasks )
     
     Clean ( '.' , [ buildDirectory ] )
