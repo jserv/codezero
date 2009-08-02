@@ -27,9 +27,15 @@ source = \
         Glob ( 'src/arch-' + environment['ARCH'] + '/*.c' ) + \
         Glob ( 'src/arch-' + environment['ARCH'] + '/*.S' )
 
+e = environment.Clone ( )
+e.Append ( CPPPATH = [ 'include' , 'include/sys-' + variant + '/arch-' + environment['ARCH'] ] )
+
+objects = e.StaticObject ( source )
+Depends ( objects , e['configFiles'] )
+
 result = (
-    environment.StaticLibrary ( 'c-' + variant , source , CPPPATH = [ 'include' , 'include/sys-' + variant + '/arch-' + environment['ARCH'] ] ) ,
-    environment.StaticObject ( 'crt/sys-' + variant + '/arch-' + environment['ARCH'] + '/crt0.S' )
+    e.StaticLibrary ( 'c-' + variant , objects ) ,
+    e.StaticObject ( 'crt/sys-' + variant + '/arch-' + e['ARCH'] + '/crt0.S' )
     )
 
 Return ( 'result' )

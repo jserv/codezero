@@ -71,7 +71,8 @@ else :
                     configItems[item[0].strip ( )] = ( item[1].strip ( ) == 'y' )
         return configItems
                 
-    baseEnvironment = Environment ( tools = [ 'gnulink' , 'gcc' , 'gas' , 'ar' ] )
+    baseEnvironment = Environment ( tools = [ 'gnulink' , 'gcc' , 'gas' , 'ar' ] ,
+                                    configFiles = ( '#' + cml2CompileRulesFile ,  '#' + cml2ConfigPropertiesFile ,  '#' + cml2ConfigHeaderFile ) )
 
     kernelSConscriptPaths = [ 'generic' , 'api' , 'lib' ]
 
@@ -109,7 +110,7 @@ else :
     baseEnvironment = configuration.Finish ( )
 
     libraryEnvironment = baseEnvironment.Clone (
-        CC = 'arm-none-linux-gnueabi-gcc',
+        CC = 'arm-none-linux-gnueabi-gcc' ,
         CCFLAGS = [ '-g' , '-nostdinc' , '-nostdlib' , '-ffreestanding' ] ,
         LINKFLAGS = [ '-nostdlib' ] ,
         ENV = { 'PATH' : os.environ['PATH'] } ,
@@ -120,9 +121,10 @@ else :
     libs = { }
     crts = { }
     for variant in [ 'baremetal' , 'userspace' ] :
-        ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = buildDirectory + '/lib/c/' + variant , duplicate = 0 , exports = { 'environment' : libraryEnvironment , 'variant' : variant } )
+        ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = buildDirectory + '/' + arch + '/lib/c/' + variant , duplicate = 0 , exports = { 'environment' : libraryEnvironment , 'variant' : variant } )
+        Depends (  ( libs[variant] , crts[variant] ) , ( cml2CompileRulesFile , cml2ConfigPropertiesFile , cml2ConfigHeaderFile ) )
 
-    libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = buildDirectory + '/lib/elf' , duplicate = 0 , exports = { 'environment' : libraryEnvironment } )
+    libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = buildDirectory + '/' + arch + '/lib/elf' , duplicate = 0 , exports = { 'environment' : libraryEnvironment } )
 
     kernelEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-eabi-gcc' ,
@@ -139,7 +141,7 @@ else :
     
     kernelComponents = [ ]
     for scriptPath in [ 'src/' + path for path in kernelSConscriptPaths ] :
-        kernelComponents.append ( SConscript ( scriptPath + '/SConscript' , variant_dir = buildDirectory + '/' + scriptPath , duplicate = 0 , exports = { 'environment' : kernelEnvironment } ) )
+        kernelComponents.append ( SConscript ( scriptPath + '/SConscript' , variant_dir = buildDirectory + '/' + arch + '/' + scriptPath , duplicate = 0 , exports = { 'environment' : kernelEnvironment } ) )
 
     startAxf = kernelEnvironment.Program ( buildDirectory + '/start.axf' ,  kernelComponents )
 
@@ -153,7 +155,7 @@ else :
 
     tasks = [ ]
     for task in [ item for item in os.listdir ( 'tasks' ) if os.path.isdir ( 'tasks/' + item ) and os.path.exists ( 'tasks/' + item + '/SConscript' )] :
-        tasks.append ( SConscript ( 'tasks/' + task + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
+        tasks.append ( SConscript ( 'tasks/' + task + '/SConscript' , variant_dir = buildDirectory + '/' + arch + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
 
     Default ( crts.values ( ) + libs.values ( ) + [ libelf , startAxf ] + tasks )
     

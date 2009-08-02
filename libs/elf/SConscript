@@ -22,6 +22,9 @@ Import ( 'environment' )
 e = environment.Clone ( )
 e.Append ( CPPPATH = [ 'include' , '#libs/c/include' , '#libs/c/include/arch/' + e['ARCH'] ] )
 
-result = e.StaticLibrary ( 'elf' , Glob ( 'src/*.c' ) )
+objects = e.StaticObject ( Glob ( 'src/*.c' ) )
+Depends ( objects , e['configFiles'] )
+
+result = e.StaticLibrary ( 'elf' , objects )
 
 Return ( 'result' )
