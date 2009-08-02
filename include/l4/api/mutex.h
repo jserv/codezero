@@ -33,9 +33,10 @@ struct mutex_queue_head {
 	struct link list;
 	struct mutex mutex_control_mutex;
 	int count;
-} mutex_queue_head;
+};
 
-void init_mutex_queue_head(void);
+void init_mutex_queue_head(struct mutex_queue_head *mqhead);
+
 #endif
 
 #define L4_MUTEX_LOCK		0

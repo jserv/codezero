@@ -8,6 +8,7 @@
 #include INC_ARCH(exception.h)
 #include INC_SUBARCH(mm.h)
 #include <l4/generic/space.h>
+#include <l4/generic/container.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/kmalloc.h>
 #include <l4/api/space.h>
@@ -16,25 +17,23 @@
 #include <l4/lib/idpool.h>
 
 
-static struct address_space_list address_space_list;
-
-void init_address_space_list(void)
+void init_address_space_list(struct address_space_list *space_list)
 {
-	memset(&address_space_list, 0, sizeof(address_space_list));
+	memset(space_list, 0, sizeof(*space_list));
 
-	mutex_init(&address_space_list.ref_lock);
-	spin_lock_init(&address_space_list.list_lock);
-	link_init(&address_space_list.list);
+	mutex_init(&space_list->ref_lock);
+	spin_lock_init(&space_list->list_lock);
+	link_init(&space_list->list);
 }
 
 void address_space_reference_lock()
 {
-	mutex_lock(&address_space_list.ref_lock);
+	mutex_lock(&curcont->space_list.ref_lock);
 }
 
 void address_space_reference_unlock()
 {
-	mutex_unlock(&address_space_list.ref_lock);
+	mutex_unlock(&curcont->space_list.ref_lock);
 }
 
 void address_space_attach(struct ktcb *tcb, struct address_space *space)
@@ -47,33 +46,33 @@ struct address_space *address_space_find(l4id_t spid)
 {
 	struct address_space *space;
 
-	spin_lock(&address_space_list.list_lock);
-	list_foreach_struct(space, &address_space_list.list, list) {
+	spin_lock(&curcont->space_list.list_lock);
+	list_foreach_struct(space, &curcont->space_list.list, list) {
 		if (space->spid == spid) {
-			spin_unlock(&address_space_list.list_lock);
+			spin_unlock(&curcont->space_list.list_lock);
 			return space;
 		}
 	}
-	spin_unlock(&address_space_list.list_lock);
+	spin_unlock(&curcont->space_list.list_lock);
 	return 0;
 }
 
 void address_space_add(struct address_space *space)
 {
-	spin_lock(&address_space_list.list_lock);
+	spin_lock(&curcont->space_list.list_lock);
 	BUG_ON(!list_empty(&space->list));
-	list_insert(&space->list, &address_space_list.list);
-	BUG_ON(!++address_space_list.count);
-	spin_unlock(&address_space_list.list_lock);
+	list_insert(&space->list, &curcont->space_list.list);
+	BUG_ON(!++curcont->space_list.count);
+	spin_unlock(&curcont->space_list.list_lock);
 }
 
 void address_space_remove(struct address_space *space)
 {
-	spin_lock(&address_space_list.list_lock);
+	spin_lock(&curcont->space_list.list_lock);
 	BUG_ON(list_empty(&space->list));
-	BUG_ON(--address_space_list.count < 0);
+	BUG_ON(--curcont->space_list.count < 0);
 	list_remove_init(&space->list);
-	spin_unlock(&address_space_list.list_lock);
+	spin_unlock(&curcont->space_list.list_lock);
 }
 
 /* Assumes address space reflock is already held */
@@ -98,12 +97,12 @@ struct address_space *address_space_create(struct address_space *orig)
 	int err;
 
 	/* Allocate space structure */
-	if (!(space = kzalloc(sizeof(*space))))
+	if (!(space = alloc_space()))
 		return PTR_ERR(-ENOMEM);
 
 	/* Allocate pgd */
 	if (!(pgd = alloc_pgd())) {
-		kfree(space);
+		free_space(space);
 		return PTR_ERR(-ENOMEM);
 	}
 
@@ -120,7 +119,7 @@ struct address_space *address_space_create(struct address_space *orig)
 	 * is not allowed since spid field is used to indicate the space to
 	 * copy from.
 	 */
-	space->spid = id_new(space_id_pool);
+	space->spid = id_new(&kernel_container.space_ids);
 
 	/* If an original space is supplied */
 	if (orig) {

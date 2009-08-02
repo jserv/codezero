@@ -10,7 +10,7 @@
 #include <l4/lib/mutex.h>
 #include <l4/lib/spinlock.h>
 #include <l4/generic/scheduler.h>
-#include <l4/generic/pgalloc.h>
+#include <l4/generic/resource.h>
 #include <l4/generic/space.h>
 #include INC_GLUE(memory.h)
 #include INC_GLUE(syscall.h)
@@ -41,6 +41,8 @@ struct task_ids {
 	l4id_t spid;
 	l4id_t tgid;
 };
+
+struct container;
 
 struct ktcb {
 	/* User context */
@@ -94,6 +96,9 @@ struct ktcb {
 	/* Page table information */
 	struct address_space *space;
 
+	/* Container */
+	struct container *container;
+
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;
 	struct waitqueue_head wqh_send;
@@ -120,7 +125,6 @@ union ktcb_union {
 	struct ktcb ktcb;
 	char kstack[PAGE_SIZE];
 };
-
 
 /* Hash table for all existing tasks */
 struct ktcb_list {
@@ -157,7 +161,7 @@ void tcb_init(struct ktcb *tcb);
 struct ktcb *tcb_alloc_init(void);
 void tcb_delete(struct ktcb *tcb);
 
-void init_ktcb_list(void);
+void init_ktcb_list(struct ktcb_list *ktcb_list);
 void task_update_utcb(struct ktcb *cur, struct ktcb *next);
 int tcb_check_and_lazy_map_utcb(struct ktcb *task);
 

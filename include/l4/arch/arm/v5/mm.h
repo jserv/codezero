@@ -148,7 +148,8 @@ int copy_user_tables(struct address_space *new, struct address_space *orig);
 pgd_table_t *copy_page_tables(pgd_table_t *from);
 void remap_as_pages(void *vstart, void *vend);
 
-void relocate_page_tables(void);
+int pgd_count_pmds(pgd_table_t *pgd);
+pgd_table_t *realloc_page_tables(void);
 void remove_section_mapping(unsigned long vaddr);
 
 void copy_pgds_by_vrange(pgd_table_t *to, pgd_table_t *from,

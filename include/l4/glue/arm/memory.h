@@ -121,5 +121,8 @@ pte_t virt_to_pte(unsigned long virtual);
 pte_t virt_to_pte_from_pgd(unsigned long virtual, pgd_table_t *pgd);
 unsigned long virt_to_phys_by_pgd(unsigned long vaddr, pgd_table_t *pgd);
 
+struct ktcb;
+void task_init_registers(struct ktcb *task, unsigned long pc);
+
 #endif /* __GLUE_ARM_MEMORY_H__ */
 

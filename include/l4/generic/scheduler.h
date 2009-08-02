@@ -45,6 +45,7 @@ struct runqueue {
 	struct link task_list;	/* List of tasks in rq */
 	unsigned int total;		/* Total tasks */
 };
+
 /* Contains per-container scheduling structures */
 struct scheduler {
 	struct runqueue sched_rq[SCHED_RQ_TOTAL];
@@ -55,6 +56,7 @@ struct scheduler {
 	int prio_total;
 };
 
+void sched_init_runqueue(struct runqueue *rq);
 void sched_init_task(struct ktcb *task, int priority);
 void sched_prepare_sleep(void);
 void sched_suspend_sync(void);
@@ -63,5 +65,6 @@ void sched_resume_sync(struct ktcb *task);
 void sched_resume_async(struct ktcb *task);
 void scheduler_start(void);
 void schedule(void);
+void sched_init(struct scheduler *scheduler);
 
 #endif /* __SCHEDULER_H__ */

@@ -6,6 +6,7 @@
 #include <l4/generic/tcb.h>
 #include <l4/generic/space.h>
 #include <l4/generic/scheduler.h>
+#include <l4/generic/container.h>
 #include <l4/generic/preempt.h>
 #include <l4/generic/space.h>
 #include <l4/lib/idpool.h>
@@ -20,17 +21,18 @@ struct id_pool *thread_id_pool;
 struct id_pool *space_id_pool;
 
 
-static struct ktcb_list ktcb_list;
-
-void init_ktcb_list(void)
+void init_ktcb_list(struct ktcb_list *ktcb_list)
 {
-	memset(&ktcb_list, 0, sizeof(ktcb_list));
-	spin_lock_init(&ktcb_list.list_lock);
-	link_init(&ktcb_list.list);
+	memset(ktcb_list, 0, sizeof(*ktcb_list));
+	spin_lock_init(&ktcb_list->list_lock);
+	link_init(&ktcb_list->list);
 }
 
 void tcb_init(struct ktcb *new)
 {
+	new->tid = id_new(&kernel_container.ktcb_ids);
+	new->tgid = new->tid;
+
 	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
 
@@ -46,7 +48,7 @@ void tcb_init(struct ktcb *new)
 
 struct ktcb *tcb_alloc(void)
 {
-	return zalloc_page();
+	return alloc_ktcb();
 }
 
 struct ktcb *tcb_alloc_init(void)
@@ -93,21 +95,21 @@ void tcb_delete(struct ktcb *tcb)
 	id_del(thread_id_pool, tcb->tid);
 
 	/* Free the tcb */
-	free_page(tcb);
+	free_ktcb(tcb);
 }
 
 struct ktcb *tcb_find_by_space(l4id_t spid)
 {
 	struct ktcb *task;
 
-	spin_lock(&ktcb_list.list_lock);
-	list_foreach_struct(task, &ktcb_list.list, task_list) {
+	spin_lock(&curcont->ktcb_list.list_lock);
+	list_foreach_struct(task, &curcont->ktcb_list.list, task_list) {
 		if (task->space->spid == spid) {
-			spin_unlock(&ktcb_list.list_lock);
+			spin_unlock(&curcont->ktcb_list.list_lock);
 			return task;
 		}
 	}
-	spin_unlock(&ktcb_list.list_lock);
+	spin_unlock(&curcont->ktcb_list.list_lock);
 	return 0;
 }
 
@@ -115,33 +117,33 @@ struct ktcb *tcb_find(l4id_t tid)
 {
 	struct ktcb *task;
 
-	spin_lock(&ktcb_list.list_lock);
-	list_foreach_struct(task, &ktcb_list.list, task_list) {
+	spin_lock(&curcont->ktcb_list.list_lock);
+	list_foreach_struct(task, &curcont->ktcb_list.list, task_list) {
 		if (task->tid == tid) {
-			spin_unlock(&ktcb_list.list_lock);
+			spin_unlock(&curcont->ktcb_list.list_lock);
 			return task;
 		}
 	}
-	spin_unlock(&ktcb_list.list_lock);
+	spin_unlock(&curcont->ktcb_list.list_lock);
 	return 0;
 }
 
 void tcb_add(struct ktcb *new)
 {
-	spin_lock(&ktcb_list.list_lock);
+	spin_lock(&curcont->ktcb_list.list_lock);
 	BUG_ON(!list_empty(&new->task_list));
-	BUG_ON(!++ktcb_list.count);
-	list_insert(&new->task_list, &ktcb_list.list);
-	spin_unlock(&ktcb_list.list_lock);
+	BUG_ON(!++curcont->ktcb_list.count);
+	list_insert(&new->task_list, &curcont->ktcb_list.list);
+	spin_unlock(&curcont->ktcb_list.list_lock);
 }
 
 void tcb_remove(struct ktcb *new)
 {
-	spin_lock(&ktcb_list.list_lock);
+	spin_lock(&curcont->ktcb_list.list_lock);
 	BUG_ON(list_empty(&new->task_list));
-	BUG_ON(--ktcb_list.count < 0);
+	BUG_ON(--curcont->ktcb_list.count < 0);
 	list_remove_init(&new->task_list);
-	spin_unlock(&ktcb_list.list_lock);
+	spin_unlock(&curcont->ktcb_list.list_lock);
 }
 
 /* Offsets for ktcb fields that are accessed from assembler */

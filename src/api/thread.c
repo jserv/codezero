@@ -11,7 +11,7 @@
 #include <l4/lib/idpool.h>
 #include <l4/lib/mutex.h>
 #include <l4/lib/wait.h>
-#include <l4/generic/pgalloc.h>
+#include <l4/generic/resource.h>
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
 
@@ -334,7 +334,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 
 out_err:
 	/* Pre-mature tcb needs freeing by free_page */
-	free_page(new);
+	free_ktcb(new);
 	return err;
 }
 

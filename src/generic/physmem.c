@@ -4,7 +4,7 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <l4/generic/physmem.h>
-#include <l4/generic/pgalloc.h>
+#include <l4/generic/resource.h>
 #include <l4/generic/tcb.h>
 #include <l4/lib/list.h>
 #include <l4/lib/spinlock.h>
@@ -88,6 +88,6 @@ void physmem_init()
 
 void memory_init()
 {
-	init_pgalloc();
+	//init_pgalloc();
 }
 

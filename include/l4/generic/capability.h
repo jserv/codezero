@@ -14,21 +14,23 @@
  *
  * In this structure:
  *
- * The capid denotes the unique capability ID. The resid denotes the unique ID
- * of targeted resource. The owner denotes the unique ID of capability owner.
- * This is almost always a thread ID.
+ * The capid denotes the unique capability ID.
+ * The resid denotes the unique ID of targeted resource.
+ * The owner denotes the unique ID of the one and only capability owner. This is
+ * almost always a thread ID.
  *
- * The type field contains two types: The capability type, and the targeted
- * resource type. The targeted resouce type denotes what type of resource the
- * capability is allowed to operate on. For example a thread, a thread group,
- * an address space or a memory can be of this type.
+ * The type field contains two types:
+ * 	- The capability type,
+ * 	- The targeted resource type.
+ *
+ * The targeted resouce type denotes what type of resource the capability is
+ * allowed to operate on. For example a thread, a thread group, an address space
+ * or a memory can be of this type.
  *
  * The capability type defines the general set of operations allowed on a
- * particular resource. The resource type defines the type of resource that
- * the capability is targeting. For example a capability type may be
- * thread_control, exchange_registers, ipc, or map operations. A resource type
- * may be such as a thread, a thread group, a virtual or physical memory
- * region.
+ * particular resource. For example a capability type may be thread_control,
+ * exchange_registers, ipc, or map operations. A resource type may be such as a
+ * thread, a thread group, a virtual or physical memory region.
  *
  * There are also quantitative capability types. While their names denote
  * quantitative objects such as memory, threads, and address spaces, these
@@ -63,6 +65,9 @@ struct cap_list {
 	int ncaps;
 	struct link caps;
 };
+
+void capability_init(struct capability *cap);
+struct capability *capability_create(void);
 
 #if 0
 /* Virtual memory space allocated to container */

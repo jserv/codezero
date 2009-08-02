@@ -7,6 +7,7 @@
 #include <l4/lib/mutex.h>
 #include <l4/lib/printk.h>
 #include <l4/generic/scheduler.h>
+#include <l4/generic/container.h>
 #include <l4/generic/kmalloc.h>
 #include <l4/generic/tcb.h>
 #include <l4/api/kip.h>
@@ -16,21 +17,22 @@
 #include INC_ARCH(exception.h)
 #include INC_GLUE(memory.h)
 
-void init_mutex_queue_head(void)
+void init_mutex_queue_head(struct mutex_queue_head *mqhead)
 {
-	memset(&mutex_queue_head, 0, sizeof (mutex_queue_head));
-	link_init(&mutex_queue_head.list);
-	mutex_init(&mutex_queue_head.mutex_control_mutex);
-}
-void mutex_queue_head_lock()
-{
-	mutex_lock(&mutex_queue_head.mutex_control_mutex);
+	memset(mqhead, 0, sizeof(*mqhead));
+	link_init(&mqhead->list);
+	mutex_init(&mqhead->mutex_control_mutex);
 }
 
-void mutex_queue_head_unlock()
+void mutex_queue_head_lock(struct mutex_queue_head *mqhead)
+{
+	mutex_lock(&mqhead->mutex_control_mutex);
+}
+
+void mutex_queue_head_unlock(struct mutex_queue_head *mqhead)
 {
 	/* Async unlock because in some cases preemption may be disabled here */
-	mutex_unlock_async(&mutex_queue_head.mutex_control_mutex);
+	mutex_unlock_async(&mqhead->mutex_control_mutex);
 }
 
 
@@ -44,27 +46,28 @@ void mutex_queue_init(struct mutex_queue *mq, unsigned long physical)
 	waitqueue_head_init(&mq->wqh_contenders);
 }
 
-void mutex_control_add(struct mutex_queue *mq)
+void mutex_control_add(struct mutex_queue_head *mqhead, struct mutex_queue *mq)
 {
 	BUG_ON(!list_empty(&mq->list));
 
-	list_insert(&mq->list, &mutex_queue_head.list);
-	mutex_queue_head.count++;
+	list_insert(&mq->list, &mqhead->list);
+	mqhead->count++;
 }
 
-void mutex_control_remove(struct mutex_queue *mq)
+void mutex_control_remove(struct mutex_queue_head *mqhead, struct mutex_queue *mq)
 {
 	list_remove_init(&mq->list);
-	mutex_queue_head.count--;
+	mqhead->count--;
 }
 
 /* Note, this has ptr/negative error returns instead of ptr/zero. */
-struct mutex_queue *mutex_control_find(unsigned long mutex_physical)
+struct mutex_queue *mutex_control_find(struct mutex_queue_head *mqhead,
+				       unsigned long mutex_physical)
 {
 	struct mutex_queue *mutex_queue;
 
 	/* Find the mutex queue with this key */
-	list_foreach_struct(mutex_queue, &mutex_queue_head.list, list)
+	list_foreach_struct(mutex_queue, &mqhead->list, list)
 		if (mutex_queue->physical == mutex_physical)
 			return mutex_queue;
 
@@ -109,21 +112,22 @@ void mutex_control_delete(struct mutex_queue *mq)
  *     until a wake up event occurs. If there is already an asleep
  *     lock holder (i.e. unlocker) that is woken up and we return.
  */
-int mutex_control_lock(unsigned long mutex_address)
+int mutex_control_lock(struct mutex_queue_head *mqhead,
+		       unsigned long mutex_address)
 {
 	struct mutex_queue *mutex_queue;
 
-	mutex_queue_head_lock();
+	mutex_queue_head_lock(mqhead);
 
 	/* Search for the mutex queue */
-	if (!(mutex_queue = mutex_control_find(mutex_address))) {
+	if (!(mutex_queue = mutex_control_find(mqhead, mutex_address))) {
 		/* Create a new one */
 		if (!(mutex_queue = mutex_control_create(mutex_address))) {
-			mutex_queue_head_unlock();
+			mutex_queue_head_unlock(mqhead);
 			return -ENOMEM;
 		}
 		/* Add the queue to mutex queue list */
-		mutex_control_add(mutex_queue);
+		mutex_control_add(mqhead, mutex_queue);
 	} else {
 		/* See if there is a lock holder */
 		if (mutex_queue->wqh_holders.sleepers) {
@@ -134,11 +138,11 @@ int mutex_control_lock(unsigned long mutex_address)
 			wake_up(&mutex_queue->wqh_holders, WAKEUP_ASYNC);
 
 			/* Since noone is left, delete the mutex queue */
-			mutex_control_remove(mutex_queue);
+			mutex_control_remove(mqhead, mutex_queue);
 			mutex_control_delete(mutex_queue);
 
 			/* Release lock and return */
-			mutex_queue_head_unlock();
+			mutex_queue_head_unlock(mqhead);
 
 			return 0;
 		}
@@ -150,7 +154,7 @@ int mutex_control_lock(unsigned long mutex_address)
 	wait_on_prepare(&mutex_queue->wqh_contenders, &wq);
 
 	/* Release lock */
-	mutex_queue_head_unlock();
+	mutex_queue_head_unlock(mqhead);
 
 	/* Initiate prepared wait */
 	return wait_on_prepared_wait();
@@ -170,23 +174,24 @@ int mutex_control_lock(unsigned long mutex_address)
  *     to acquire the mutex, waking up all of them increases the
  *     chances that some thread may acquire it.
  */
-int mutex_control_unlock(unsigned long mutex_address)
+int mutex_control_unlock(struct mutex_queue_head *mqhead,
+			 unsigned long mutex_address)
 {
 	struct mutex_queue *mutex_queue;
 
-	mutex_queue_head_lock();
+	mutex_queue_head_lock(mqhead);
 
 	/* Search for the mutex queue */
-	if (!(mutex_queue = mutex_control_find(mutex_address))) {
+	if (!(mutex_queue = mutex_control_find(mqhead, mutex_address))) {
 
 		/* No such mutex, create one and sleep on it */
 		if (!(mutex_queue = mutex_control_create(mutex_address))) {
-			mutex_queue_head_unlock();
+			mutex_queue_head_unlock(mqhead);
 			return -ENOMEM;
 		}
 
 		/* Add the queue to mutex queue list */
-		mutex_control_add(mutex_queue);
+		mutex_control_add(mqhead, mutex_queue);
 
 		/* Prepare to wait on the lock holders queue */
 		CREATE_WAITQUEUE_ON_STACK(wq, current);
@@ -195,7 +200,7 @@ int mutex_control_unlock(unsigned long mutex_address)
 		wait_on_prepare(&mutex_queue->wqh_holders, &wq);
 
 		/* Release lock first */
-		mutex_queue_head_unlock();
+		mutex_queue_head_unlock(mqhead);
 
 		/* Initiate prepared wait */
 		return wait_on_prepared_wait();
@@ -209,11 +214,11 @@ int mutex_control_unlock(unsigned long mutex_address)
 	wake_up(&mutex_queue->wqh_contenders, WAKEUP_ASYNC);
 
 	/* Since noone is left, delete the mutex queue */
-	mutex_control_remove(mutex_queue);
+	mutex_control_remove(mqhead, mutex_queue);
 	mutex_control_delete(mutex_queue);
 
 	/* Release lock and return */
-	mutex_queue_head_unlock();
+	mutex_queue_head_unlock(mqhead);
 	return 0;
 }
 
@@ -238,15 +243,17 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 	/* Find and check physical address for virtual mutex address */
 	if (!(mutex_physical =
 		virt_to_phys_by_pgd(mutex_address,
-				   TASK_PGD(current))))
+				    TASK_PGD(current))))
 		return -EINVAL;
 
 	switch (mutex_op) {
 	case MUTEX_CONTROL_LOCK:
-		ret = mutex_control_lock(mutex_physical);
+		ret = mutex_control_lock(&curcont->mutex_queue_head,
+					 mutex_physical);
 		break;
 	case MUTEX_CONTROL_UNLOCK:
-		ret = mutex_control_unlock(mutex_physical);
+		ret = mutex_control_unlock(&curcont->mutex_queue_head,
+					   mutex_physical);
 		break;
 	default:
 		printk("%s: Invalid operands\n", __FUNCTION__);
@@ -255,5 +262,4 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 
 	return ret;
 }
-
 

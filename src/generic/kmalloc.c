@@ -5,7 +5,7 @@
  */
 #include <l4/lib/list.h>
 #include <l4/lib/memcache.h>
-#include <l4/generic/pgalloc.h>
+#include <l4/generic/resource.h>
 #include INC_GLUE(memory.h)
 
 /* Supports this many different kmalloc sizes */
@@ -36,117 +36,18 @@ void init_kmalloc()
 	mutex_init(&km_pool.kmalloc_mutex);
 }
 
-/*
- * KMALLOC implementation:
- *
- * Allocates memory from mem_caches that it generates on-the-fly,
- * for up to KMALLOC_POOLS_MAX different sizes.
- */
-void *__kmalloc(int size)
-{
-	struct mem_cache *cache;
-	int right_sized_pool_idx = -1;
-       	int index;
-
-	BUG_ON(!size); /* It is a kernel bug if size is 0 */
-
-	for (int i = 0; i < km_pool.total; i++) {
-		/* Check if this pool has right size */
-		if (km_pool.pool_head[i].cache_size == size) {
-			right_sized_pool_idx = i;
-			/*
-			 * Found the pool, now see if any
-			 * cache has available slots
-			 */
-			list_foreach_struct(cache, &km_pool.pool_head[i].cache_list,
-					    list) {
-				if (cache->free)
-					return mem_cache_alloc(cache);
-				else
-					break;
-			}
-		}
-	}
-
-	/*
-	 * All pools are allocated and none has requested size
-	 */
-	if ((right_sized_pool_idx < 0) &&
-	    (km_pool.total == KMALLOC_POOLS_MAX - 1)) {
-		printk("kmalloc: Too many types of pool sizes requested. "
-		       "Giving up.\n");
-		BUG();
-	}
-
-	/* A pool exists with given size? (But no cache in it is free) */
-	if (right_sized_pool_idx >= 0)
-		index = right_sized_pool_idx;
-	else /* No pool of this size, allocate new by incrementing total */
-		index = km_pool.total++;
-
-	/* Only allow up to page size */
-	BUG_ON(size >= PAGE_SIZE);
-	BUG_ON(!(cache = mem_cache_init(alloc_page(), PAGE_SIZE,
-					size, 0)));
-	// printk("%s: Created new cache for size %d\n", __FUNCTION__, size);
-	list_insert(&cache->list, &km_pool.pool_head[index].cache_list);
-	km_pool.pool_head[index].occupied = 1;
-	km_pool.pool_head[index].total_caches++;
-	km_pool.pool_head[index].cache_size = size;
-	return mem_cache_alloc(cache);
-}
-
 void *kmalloc(int size)
 {
-	void *p;
-
-	mutex_lock(&km_pool.kmalloc_mutex);
-	p = __kmalloc(size);
-	mutex_unlock(&km_pool.kmalloc_mutex);
-	return p;
-}
-
-/* FIXME:
- * Horrible complexity O(n^2) because we don't know which cache
- * we're freeing from!!! But its simple. ;-)
- */
-int __kfree(void *p)
-{
-	struct mem_cache *cache, *tmp;
-
-	for (int i = 0; i < km_pool.total; i++)
-		list_foreach_removable_struct(cache, tmp,
-					 &km_pool.pool_head[i].cache_list,
-					 list) {
-			if (!mem_cache_free(cache, p)) {
-				if (mem_cache_is_empty(cache)) {
-					km_pool.pool_head[i].total_caches--;
-					list_remove(&cache->list);
-					free_page(cache);
-					/*
-					 * Total remains the same but slot
-					 * may have no caches left.
-					 */
-				}
-				return 0;
-			}
-		}
-	return -1;
+	return 0;
 }
 
 int kfree(void *p)
 {
-	int ret;
-	mutex_lock(&km_pool.kmalloc_mutex);
-	ret = __kfree(p);
-	mutex_unlock(&km_pool.kmalloc_mutex);
-	return ret;
+	return 0;
 }
 
 void *kzalloc(int size)
 {
-	void *p = kmalloc(size);
-	memset(p, 0, size);
-	return p;
+	return 0;
 }
 

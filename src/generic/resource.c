@@ -3,7 +3,6 @@
  *
  * Copyright (C) 2009 Bahadir Balban
  */
-
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
 #include <l4/generic/container.h>
@@ -15,6 +14,76 @@
 #include INC_ARCH(linker.h)
 
 struct kernel_container kernel_container;
+
+pgd_table_t *alloc_pgd(void)
+{
+	return mem_cache_zalloc(kernel_container.pgd_cache);
+}
+
+pmd_table_t *alloc_pmd(void)
+{
+	return mem_cache_zalloc(kernel_container.pmd_cache);
+}
+
+struct address_space *alloc_space(void)
+{
+	return mem_cache_zalloc(kernel_container.space_cache);
+}
+
+struct ktcb *alloc_ktcb(void)
+{
+	return mem_cache_zalloc(kernel_container.ktcb_cache);
+}
+
+struct capability *alloc_capability(void)
+{
+	return mem_cache_zalloc(kernel_container.cap_cache);
+}
+
+struct container *alloc_container(void)
+{
+	return mem_cache_zalloc(kernel_container.cont_cache);
+}
+
+struct mutex_queue *alloc_user_mutex(void)
+{
+	return mem_cache_zalloc(kernel_container.mutex_cache);
+}
+
+void free_pgd(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.pgd_cache, addr) < 0);
+}
+
+void free_pmd(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.pmd_cache, addr) < 0);
+}
+
+void free_space(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.space_cache, addr) < 0);
+}
+
+void free_ktcb(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.ktcb_cache, addr) < 0);
+}
+
+void free_capability(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.cap_cache, addr) < 0);
+}
+
+void free_container(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.cont_cache, addr) < 0);
+}
+
+void free_user_mutex(void *addr)
+{
+	BUG_ON(mem_cache_free(kernel_container.mutex_cache, addr) < 0);
+}
 
 void cap_list_init(struct cap_list *clist)
 {
@@ -78,6 +147,10 @@ int memcap_shrink(struct capability *cap, struct cap_list *cap_list,
 	return 0;
 }
 
+/*
+ * Given a single memory cap (that definitely overlaps) removes
+ * the portion of pfns specified by start/end.
+ */
 int memcap_unmap_range(struct capability *cap,
 		       struct cap_list *cap_list,
 		       const unsigned long start,
@@ -129,65 +202,6 @@ int memcap_unmap(struct cap_list *cap_list,
 }
 
 /*
- * Do all system accounting for this capability info
- * structure that belongs to a container, such as
- * count its resource requirements, remove its portion
- * from global kernel capabilities etc.
- */
-int process_cap_info(struct cap_info *cap,
-		     struct boot_resources *bootres,
-		     struct kernel_container *kcont)
-{
-	int ret;
-
-	switch (cap->type & CAP_RTYPE_MASK) {
-	case CAP_RTYPE_THREADPOOL:
-		bootres->nthreads += cap->size;
-		break;
-	case CAP_RTYPE_SPACEPOOL:
-		bootres->nspaces += cap->size;
-		break;
-	case CAP_RTYPE_MUTEXPOOL:
-		bootres->nmutex += cap->size;
-		break;
-	case CAP_RTYPE_VIRTMEM:
-		/* Area size in pages divided by mapsize in pages */
-		bootres->npmds +=
-			cap->size / __pfn(PMD_MAP_SIZE);
-		if ((ret = memcap_unmap(&kcont->virtmem_free,
-			     		cap->start, cap->end))) {
-			if (ret < 0)
-				printk("FATAL: Insufficient boot memory "
-				       "to split capability\n");
-			if (ret > 0)
-				printk("FATAL: Memory capability range "
-				       "overlaps with another one. "
-				       "start=0x%lx, end=0x%lx\n",
-				       __pfn_to_addr(cap->start),
-				       __pfn_to_addr(cap->end));
-			BUG();
-		}
-		break;
-	case CAP_RTYPE_PHYSMEM:
-		if ((ret = memcap_unmap(&kcont->physmem_free,
-					cap->start, cap->end))) {
-			if (ret < 0)
-				printk("FATAL: Insufficient boot memory "
-				       "to split capability\n");
-			if (ret > 0)
-				printk("FATAL: Memory capability range "
-				       "overlaps with another one. "
-				       "start=0x%lx, end=0x%lx\n",
-				       __pfn_to_addr(cap->start),
-				       __pfn_to_addr(cap->end));
-			BUG();
-		}
-		break;
-	}
-	return ret;
-}
-
-/*
  * Migrate any boot allocations to their relevant caches.
  */
 void migrate_boot_resources(struct boot_resources *bootres,
@@ -219,64 +233,27 @@ int free_boot_memory(struct boot_resources *bootres,
 	return 0;
 }
 
-
-struct mem_cache *init_resource_cache(int nstruct, int struct_size,
-				      struct kernel_container *kcont,
-				      int aligned)
-{
-	struct capability *cap;
-	unsigned long bufsize;
-
-	/* In all unused physical memory regions */
-	list_foreach_struct(cap, &kcont->physmem_free.caps, list) {
-		/* Get buffer size needed for cache */
-		bufsize = mem_cache_bufsize((void *)__pfn_to_addr(cap->start),
-					    struct_size, nstruct,
-					    aligned);
-		/*
-		 * Check if memcap region size is enough to cover
-		 * resource allocation
-		 */
-		if (__pfn_to_addr(cap->end - cap->start) >= bufsize) {
-			unsigned long virtual =
-				phys_to_virt(__pfn_to_addr(cap->start));
-			/*
-			 * Map the buffer as boot mapping if pmd caches
-			 * are not initialized
-			 */
-			if (!kcont->pmd_cache) {
-				add_boot_mapping(__pfn_to_addr(cap->start),
-						 virtual, bufsize,
-						 MAP_SVC_RW_FLAGS);
-			} else {
-				add_mapping(__pfn_to_addr(cap->start),
-					    virtual, bufsize,
-					    MAP_SVC_RW_FLAGS);
-			}
-			/* Unmap area from memcap */
-			memcap_unmap_range(cap, &kcont->physmem_free,
-					   cap->start, cap->start +
-					   __pfn(page_align_up((bufsize))));
-
-			/* TODO: Manipulate memcaps for virtual range??? */
-
-			/* Initialize the cache */
-			return mem_cache_init((void *)virtual, bufsize,
-					      PGD_SIZE, 1);
-		}
-	}
-	return 0;
-}
-
 /*
  * Initializes kernel caplists, and sets up total of physical
  * and virtual memory as single capabilities of the kernel.
  * They will then get split into caps of different lengths
- * during the traversal of container capabilities.
+ * during the traversal of container capabilities, and memcache
+ * allocations.
  */
 void init_kernel_container(struct kernel_container *kcont)
 {
 	struct capability *physmem, *virtmem, *kernel_area;
+
+	/* Initialize system id pools */
+	kcont->space_ids.nwords = SYSTEM_IDS_MAX;
+	kcont->ktcb_ids.nwords = SYSTEM_IDS_MAX;
+	kcont->resource_ids.nwords = SYSTEM_IDS_MAX;
+	kcont->container_ids.nwords = SYSTEM_IDS_MAX;
+	kcont->mutex_ids.nwords = SYSTEM_IDS_MAX;
+	kcont->capability_ids.nwords = SYSTEM_IDS_MAX;
+
+	/* Get first container id for itself */
+	kcont->cid = id_new(&kcont->container_ids);
 
 	/* Initialize kernel capability lists */
 	cap_list_init(&kcont->physmem_used);
@@ -318,40 +295,164 @@ void init_kernel_container(struct kernel_container *kcont)
 	 */
 }
 
-void create_containers(struct boot_resources *bootres,
-		       struct kernel_container *kcont)
+/*
+ * Copies cinfo structures to real capabilities for each pager.
+ *
+ * FIXME: Check if pager has enough resources to create its caps.
+ */
+int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 {
+	struct capability *cap;
+	struct cap_info *cap_info;
 
+	pager->start_lma = pinfo->pager_lma;
+	pager->start_vma = pinfo->pager_vma;
+	pager->memsize = pinfo->pager_size;
+
+	/* Copy all cinfo structures into real capabilities */
+	for (int i = 0; i < pinfo->ncaps; i++) {
+		cap = capability_create();
+
+		cap_info = &pinfo->caps[i];
+
+		cap->type = cap_info->type;
+		cap->access = cap_info->access;
+		cap->start = cap_info->start;
+		cap->end = cap_info->end;
+		cap->size = cap_info->size;
+
+		cap_list_insert(cap, &pager->cap_list);
+	}
+	return 0;
 }
 
-void create_capabilities(struct boot_resources *bootres,
-		         struct kernel_container *kcont)
+/*
+ * Copies container info from a given compact container descriptor to
+ * a real container
+ */
+int copy_container_info(struct container *c, struct container_info *cinfo)
+{
+	strncpy(c->name, cinfo->name, CONFIG_CONTAINER_NAMESIZE);
+	c->npagers = cinfo->npagers;
+
+	/* Copy capabilities */
+	for (int i = 0; i < c->npagers; i++)
+		copy_pager_info(&c->pager[i], &cinfo->pager[i]);
+	return 0;
+}
+
+/*
+ * Create real containers from compile-time created cinfo structures
+ */
+void setup_containers(struct boot_resources *bootres,
+		      struct kernel_container *kcont)
+{
+	struct container *container;
+	pgd_table_t *current_pgd;
+
+	/*
+	 * Move to real page tables, accounted by
+	 * pgds and pmds provided from the caches
+	 */
+	current_pgd = realloc_page_tables();
+
+	/* Create all containers but leave pagers */
+	for (int i = 0; i < bootres->nconts; i++) {
+		/* Allocate & init container */
+		container = container_create();
+
+		/* Fill in its information */
+		copy_container_info(container, &cinfo[i]);
+
+		/* Add it to kernel container list */
+		kcont_insert_container(container, kcont);
+	}
+
+	/* Initialize pagers */
+	container_init_pagers(kcont, current_pgd);
+}
+
+void setup_capabilities(struct boot_resources *bootres,
+		        struct kernel_container *kcont)
 {
 
 }
 
 /*
- * Make sure to count boot pmds, and kernel capabilities
- * created in boot memory.
+ * Given a structure size and numbers, it initializes a memory cache
+ * using free memory available from free kernel memory capabilities.
+ */
+struct mem_cache *init_resource_cache(int nstruct, int struct_size,
+				      struct kernel_container *kcont,
+				      int aligned)
+{
+	struct capability *cap;
+	unsigned long bufsize;
+
+	/* In all unused physical memory regions */
+	list_foreach_struct(cap, &kcont->physmem_free.caps, list) {
+		/* Get buffer size needed for cache */
+		bufsize = mem_cache_bufsize((void *)__pfn_to_addr(cap->start),
+					    struct_size, nstruct,
+					    aligned);
+		/*
+		 * Check if memcap region size is enough to cover
+		 * resource allocation
+		 */
+		if (__pfn_to_addr(cap->end - cap->start) >= bufsize) {
+			unsigned long virtual =
+				phys_to_virt(__pfn_to_addr(cap->start));
+			/*
+			 * Map the buffer as boot mapping if pmd caches
+			 * are not initialized
+			 */
+			if (!kcont->pmd_cache) {
+				add_boot_mapping(__pfn_to_addr(cap->start),
+						 virtual,
+						 page_align_up(bufsize),
+						 MAP_SVC_RW_FLAGS);
+			} else {
+				add_mapping(__pfn_to_addr(cap->start),
+					    virtual, page_align_up(bufsize),
+					    MAP_SVC_RW_FLAGS);
+			}
+			/* Unmap area from memcap */
+			memcap_unmap_range(cap, &kcont->physmem_free,
+					   cap->start, cap->start +
+					   __pfn(page_align_up((bufsize))));
+
+			/* TODO: Manipulate memcaps for virtual range??? */
+
+			/* Initialize the cache */
+			return mem_cache_init((void *)virtual, bufsize,
+					      struct_size, 1);
+		}
+	}
+	return 0;
+}
+
+/*
+ * TODO: Initialize ID cache
  *
- * Also total capabilities in the system + number of
- * capabilities containers are allowed to create dynamically.
- *
- * Count the extra pgd + space needed in case all containers quit
+ * Given a kernel container and the set of boot resources required,
+ * initializes all memory caches for allocations. Once caches are
+ * initialized, earlier boot allocations are migrated to caches.
  */
 void init_resource_allocators(struct boot_resources *bootres,
 			      struct kernel_container *kcont)
 {
+	/*
+	 * An extra space reserved for kernel
+	 * in case all containers quit
+	 */
+	bootres->nspaces++;
+
 	/* Initialise PGD cache */
 	kcont->pgd_cache = init_resource_cache(bootres->nspaces,
 				    	       PGD_SIZE, kcont, 1);
 
-	/* Initialise PMD cache */
-	kcont->pmd_cache = init_resource_cache(bootres->npmds,
-					       PMD_SIZE, kcont, 1);
-
 	/* Initialise struct address_space cache */
-	kcont->address_space_cache =
+	kcont->space_cache =
 		init_resource_cache(bootres->nspaces,
 				    sizeof(struct address_space),
 				    kcont, 0);
@@ -364,33 +465,122 @@ void init_resource_allocators(struct boot_resources *bootres,
 	kcont->mutex_cache = init_resource_cache(bootres->nmutex,
 						 sizeof(struct mutex_queue),
 						 kcont, 0);
-	/* TODO: Initialize ID cache */
-
-	/* Initialise capability cache */
-	kcont->cap_cache = init_resource_cache(bootres->ncaps, /* FIXME: Count correctly */
-					       sizeof(struct capability),
-					       kcont, 0);
 	/* Initialise container cache */
 	kcont->cont_cache = init_resource_cache(bootres->nconts,
 						sizeof(struct container),
 						kcont, 0);
 
-	/* Create system containers */
-	create_containers(bootres, kcont);
+	/*
+	 * Add all caps used by the kernel + two extra in case
+	 * more memcaps get split after cap cache init below.
+	 */
+	bootres->ncaps += kcont->virtmem_used.ncaps +
+			  kcont->virtmem_free.ncaps +
+			  kcont->physmem_used.ncaps +
+			  kcont->physmem_free.ncaps + 2;
 
-	/* Create capabilities */
-	create_capabilities(bootres, kcont);
+	/* Initialise capability cache */
+	kcont->cap_cache = init_resource_cache(bootres->ncaps,
+					       sizeof(struct capability),
+					       kcont, 0);
+
+	/* Count boot pmds used so far and add them */
+	bootres->npmds += pgd_count_pmds(&init_pgd);
+
+	/*
+	 * Calculate maximum possible pmds
+	 * that may be used during this pmd
+	 * cache init and add them.
+	 */
+	bootres->npmds += ((bootres->npmds * PMD_SIZE) / PMD_MAP_SIZE);
+	if (!is_aligned(bootres->npmds * PMD_SIZE, PMD_MAP_SIZE))
+		bootres->npmds++;
+
+	/* Initialise PMD cache */
+	kcont->pmd_cache = init_resource_cache(bootres->npmds,
+					       PMD_SIZE, kcont, 1);
+
+	}
+
+/*
+ * Do all system accounting for a given capability info
+ * structure that belongs to a container, such as
+ * count its resource requirements, remove its portion
+ * from global kernel resource capabilities etc.
+ */
+int process_cap_info(struct cap_info *cap,
+		     struct boot_resources *bootres,
+		     struct kernel_container *kcont)
+{
+	int ret;
+
+	switch (cap->type & CAP_RTYPE_MASK) {
+	case CAP_RTYPE_THREADPOOL:
+		bootres->nthreads += cap->size;
+		break;
+	case CAP_RTYPE_SPACEPOOL:
+		bootres->nspaces += cap->size;
+		break;
+	case CAP_RTYPE_MUTEXPOOL:
+		bootres->nmutex += cap->size;
+		break;
+	case CAP_RTYPE_MAPPOOL:
+		/* Speficies how many pmds can be mapped */
+		bootres->npmds += cap->size;
+		break;
+	case CAP_RTYPE_CAPPOOL:
+		/* Specifies how many new caps can be created */
+		bootres->ncaps += cap->size;
+		break;
+
+	case CAP_RTYPE_VIRTMEM:
+		if ((ret = memcap_unmap(&kcont->virtmem_free,
+			     		cap->start, cap->end))) {
+			if (ret < 0)
+				printk("FATAL: Insufficient boot memory "
+				       "to split capability\n");
+			if (ret > 0)
+				printk("FATAL: Memory capability range "
+				       "overlaps with another one. "
+				       "start=0x%lx, end=0x%lx\n",
+				       __pfn_to_addr(cap->start),
+				       __pfn_to_addr(cap->end));
+			BUG();
+		}
+		break;
+	case CAP_RTYPE_PHYSMEM:
+		if ((ret = memcap_unmap(&kcont->physmem_free,
+					cap->start, cap->end))) {
+			if (ret < 0)
+				printk("FATAL: Insufficient boot memory "
+				       "to split capability\n");
+			if (ret > 0)
+				printk("FATAL: Memory capability range "
+				       "overlaps with another one. "
+				       "start=0x%lx, end=0x%lx\n",
+				       __pfn_to_addr(cap->start),
+				       __pfn_to_addr(cap->end));
+			BUG();
+		}
+		break;
+	}
+	return ret;
 }
 
-int init_boot_resources(struct boot_resources *bootres,
-			struct kernel_container *kcont)
+/*
+ * Initializes the kernel container by describing both virtual
+ * and physical memory. Then traverses cap_info structures
+ * to figure out resource requirements of containers.
+ */
+int setup_boot_resources(struct boot_resources *bootres,
+			 struct kernel_container *kcont)
 {
 	struct cap_info *cap;
 
 	init_kernel_container(kcont);
 
 	/* Number of containers known at compile-time */
-	bootres->nconts = TOTAL_CONTAINERS;
+	bootres->nconts = CONFIG_TOTAL_CONTAINERS;
 
 	/* Traverse all containers */
 	for (int i = 0; i < bootres->nconts; i++) {
@@ -409,29 +599,34 @@ int init_boot_resources(struct boot_resources *bootres,
 		}
 	}
 
-	/* TODO: Count all ids needed to represent all */
 	return 0;
 }
 
 /*
  * FIXME: Add error handling
+ *
+ * Initializes all system resources and handling of those
+ * resources. First descriptions are done by allocating from
+ * boot memory, once memory caches are initialized, boot
+ * memory allocations are migrated over to caches.
  */
 int init_system_resources(struct kernel_container *kcont)
 {
-
 	struct boot_resources bootres;
 
 	memset(&bootres, 0, sizeof(bootres));
 
-	init_boot_resources(&bootres, kcont);
+	setup_boot_resources(&bootres, kcont);
 
 	init_resource_allocators(&bootres, kcont);
 
-	free_boot_memory(&bootres, kcont);
+	/* Create system containers */
+	setup_containers(&bootres, kcont);
+
+	/* Create capabilities */
+	setup_capabilities(&bootres, kcont);
 
 	return 0;
 }
-
-
 
 

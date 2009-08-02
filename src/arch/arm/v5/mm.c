@@ -7,6 +7,7 @@
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
 #include <l4/generic/bootmem.h>
+#include <l4/generic/resource.h>
 #include <l4/api/errno.h>
 #include INC_SUBARCH(mm.h)
 #include INC_SUBARCH(mmu_ops.h)
@@ -535,6 +536,16 @@ out_error:
 	return -ENOMEM;
 }
 
+int pgd_count_pmds(pgd_table_t *pgd)
+{
+	int npmd = 0;
+
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++)
+		if ((pgd->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE)
+			npmd++;
+	return npmd;
+}
+
 /*
  * Allocates and copies all levels of page tables from one task to another.
  * Useful when forking.
@@ -600,66 +611,56 @@ out_error:
 
 extern pmd_table_t *pmd_array;
 
-#if 0
 /*
- * Moves the section mapped kspace that resides far apart from kernel as close
- * as possible to the kernel image, and unmaps the old 1MB kspace section which
- * is really largely unused.
+ * Jumps from boot page tables to tables allocated from the cache.
  */
-void relocate_page_tables(void)
+pgd_table_t *realloc_page_tables(void)
 {
-	/* Adjust the end of kernel address to page table alignment. */
-	unsigned long pt_new = align_up(_end_kernel, sizeof(pgd_table_t));
-	unsigned long reloc_offset = (unsigned long)_start_kspace - pt_new;
-	unsigned long pt_area_size = (unsigned long)_end_kspace -
-				     (unsigned long)_start_kspace;
+	pgd_table_t *pgd_new = alloc_pgd();
+	pgd_table_t *pgd_old = &init_pgd;
+	pmd_table_t *orig, *pmd;
 
-	BUG_ON(reloc_offset & (SZ_1K - 1))
+	/* Copy whole pgd entries */
+	memcpy(pgd_new, pgd_old, sizeof(pgd_table_t));
 
-	/* Map the new page table area into the current pgd table */
-	add_mapping(virt_to_phys(pt_new), pt_new, pt_area_size,
-		    MAP_IO_DEFAULT_FLAGS);
+	/* Allocate and copy all pmds */
+	for (int i = 0; i < PGD_ENTRY_TOTAL; i++) {
+		/* Detect a pmd entry */
+		if ((pgd_old->entry[i] & PGD_TYPE_MASK) == PGD_TYPE_COARSE) {
+			/* Allocate new pmd */
+			if (!(pmd = alloc_pmd())) {
+				printk("FATAL: PMD allocation "
+				       "failed during system initialization\n");
+				BUG();
+			}
 
-	/* Copy the entire kspace area, i.e. the pgd + static pmds. */
-	memcpy((void *)pt_new, _start_kspace, pt_area_size);
+			/* Find original pmd */
+			orig = (pmd_table_t *)
+				phys_to_virt((pgd_old->entry[i] &
+				PGD_COARSE_ALIGN_MASK));
 
-	/* Update the only reference to current pgd table */
-	TASK_PGD(current) = (pgd_table_t *)pt_new;
+			/* Copy original to new */
+			memcpy(pmd, orig, sizeof(pmd_table_t));
 
-	/*
-	 * Since pmd's are also moved, update the pmd references in pgd by
-	 * subtracting the relocation offset from each valid pmd entry.
-	 * TODO: This would be best done within a helper function.
-	 */
-	for (int i = 0; i < PGD_ENTRY_TOTAL; i++)
-		/* If there's a coarse 2nd level entry */
-		if ((TASK_PGD(current)->entry[i] & PGD_TYPE_MASK)
-		    == PGD_TYPE_COARSE)
-			TASK_PGD(current)->entry[i] -= reloc_offset;
-
-	/* Update the pmd array pointer. */
-	pmd_array = (pmd_table_t *)((unsigned long)_start_pmd - reloc_offset);
+			/* Replace original pmd entry in pgd with new */
+			pgd_new->entry[i] = (pgd_t)virt_to_phys(pmd);
+			pgd_new->entry[i] |= PGD_TYPE_COARSE;
+		}
+	}
 
 	/* Switch the virtual memory system into new area */
 	arm_clean_invalidate_cache();
 	arm_drain_writebuffer();
 	arm_invalidate_tlb();
-	arm_set_ttb(virt_to_phys(TASK_PGD(current)));
+	arm_set_ttb(virt_to_phys(pgd_new));
 	arm_invalidate_tlb();
 
-	/* Unmap the old page table area */
-	remove_section_mapping((unsigned long)&kspace);
-
-	/* Update the page table markers to the new area. Any references would
-	 * go to these markers. */
-	__pt_start = pt_new;
-	__pt_end = pt_new + pt_area_size;
-
 	printk("%s: Initial page tables moved from 0x%x to 0x%x physical\n",
-	       __KERNELNAME__, virt_to_phys(&kspace),
-	       virt_to_phys(TASK_PGD(current)));
+	       __KERNELNAME__, virt_to_phys(pgd_old),
+	       virt_to_phys(pgd_new));
+
+	return pgd_new;
 }
-#endif
 
 /*
  * Useful for upgrading to page-grained control over a section mapping:

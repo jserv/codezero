@@ -7,7 +7,7 @@
 #include <l4/lib/printk.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/tcb.h>
-#include <l4/generic/pgalloc.h>
+#include <l4/generic/resource.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/space.h>
 #include <l4/api/space.h>
@@ -201,7 +201,7 @@ int sys_kmem_control(unsigned long pfn, int npages, int grant)
 			return -EINVAL;
 
 		/* Add the granted pages to the allocator */
-		if (pgalloc_add_new_grant(pfn, npages))
+	//	if (pgalloc_add_new_grant(pfn, npages))
 			BUG();
 	} else /* Reclaim not implemented yet */
 		BUG();

@@ -15,6 +15,7 @@
 #include <l4/generic/tcb.h>
 #include <l4/generic/bootmem.h>
 #include <l4/generic/resource.h>
+#include <l4/generic/container.h>
 #include INC_ARCH(linker.h)
 #include INC_ARCH(asm.h)
 #include INC_ARCH(bootdesc.h)
@@ -256,6 +257,7 @@ void switch_to_user(struct ktcb *task)
 	jump(task);
 }
 
+#if 0
 /*
  * Initialize the pager in the system.
  *
@@ -328,6 +330,7 @@ void init_pager(char *name, struct task_ids *ids)
 
 	/* Scheduler initialises the very first task itself */
 }
+#endif
 
 void init_tasks()
 {
@@ -341,9 +344,9 @@ void init_tasks()
 	ids.tgid = ids.tid;
 
 	/* Initialise the global task and address space lists */
-	init_ktcb_list();
-	init_address_space_list();
-	init_mutex_queue_head();
+	//init_ktcb_list();
+	//init_address_space_list();
+	//init_mutex_queue_head();
 
 	printk("%s: Initialized. Starting %s as pager.\n",
 	       __KERNELNAME__, __PAGERNAME__);
@@ -351,7 +354,7 @@ void init_tasks()
 	 * This must come last so that other tasks can copy its pgd before it
 	 * modifies it for its own specifics.
 	 */
-	init_pager(__PAGERNAME__, &ids);
+	// init_pager(__PAGERNAME__, &ids);
 }
 
 void start_kernel(void)
@@ -381,20 +384,14 @@ void start_kernel(void)
 	/* Move the initial pgd into a more convenient place, mapped as pages. */
 	// relocate_page_tables();
 
-	/* Evaluate system resources and set up resource pools */
-	init_system_resources(&kernel_container);
-
-	/* Initialise memory allocators */
-	paging_init();
-
 	/* Initialise kip and map for userspace access */
 	kip_init();
 
 	/* Initialise system call page */
 	syscall_init();
 
-	/* Setup inittask's ktcb and push it to scheduler runqueue */
-	init_tasks();
+	/* Evaluate system resources and set up resource pools */
+	init_system_resources(&kernel_container);
 
 	/* Start the scheduler with available tasks in the runqueue */
 	scheduler_start();

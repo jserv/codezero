@@ -54,7 +54,7 @@ void address_space_add(struct address_space *space);
 void address_space_remove(struct address_space *space);
 void address_space_reference_lock();
 void address_space_reference_unlock();
-void init_address_space_list(void);
+void init_address_space_list(struct address_space_list *space_list);
 int check_access(unsigned long vaddr, unsigned long size,
 		 unsigned int flags, int page_in);
 #endif

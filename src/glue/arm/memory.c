@@ -39,6 +39,12 @@ unsigned int space_flags_to_ptflags(unsigned int flags)
 	BUG(); return 0;
 }
 
+void task_init_registers(struct ktcb *task, unsigned long pc)
+{
+	task->context.pc = (u32)pc;
+	task->context.spsr = ARM_MODE_USR;
+}
+
 /* Sets up struct page array and the physical memory descriptor. */
 void paging_init(void)
 {

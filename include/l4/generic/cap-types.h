@@ -32,8 +32,10 @@
 #define CAP_RTYPE_CPUPOOL	(1 << 23)
 #define CAP_RTYPE_THREADPOOL	(1 << 24)
 #define CAP_RTYPE_SPACEPOOL	(1 << 25)
-#define CAP_RTYPE_MUTEXPOOL	(1 << 27)
-#define CAP_RTYPE_MEMPOOL	(1 << 26)	/* Do we need this ??? */
+#define CAP_RTYPE_MUTEXPOOL	(1 << 26)
+#define CAP_RTYPE_MAPPOOL	(1 << 27) /* For pmd spending */
+#define CAP_RTYPE_CAPPOOL	(1 << 28) /* For new cap generation */
+
 /*
  * Access permissions
  */
@@ -61,6 +63,7 @@
 #define CAP_MAP_CACHED		(1 << 3)
 #define CAP_MAP_UNCACHED	(1 << 4)
 #define CAP_MAP_UNMAP		(1 << 5)
+#define CAP_MAP_UTCB		(1 << 6)
 
 /* Ipc capability */
 #define CAP_IPC_SEND		(1 << 0)

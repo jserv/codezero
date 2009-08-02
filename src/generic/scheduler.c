@@ -11,6 +11,8 @@
 #include <l4/lib/bit.h>
 #include <l4/lib/spinlock.h>
 #include <l4/generic/scheduler.h>
+#include <l4/generic/resource.h>
+#include <l4/generic/container.h>
 #include <l4/generic/preempt.h>
 #include <l4/generic/irq.h>
 #include <l4/generic/tcb.h>
@@ -23,9 +25,8 @@
 #include INC_ARCH(exception.h)
 
 
-static struct runqueue sched_rq[SCHED_RQ_TOTAL];
-static struct runqueue *rq_runnable, *rq_expired;
-static int prio_total;			/* Total priority of all tasks */
+//static struct runqueue *rq_runnable, *rq_expired;
+//static int prio_total;			/* Total priority of all tasks */
 
 /* This is incremented on each irq or voluntarily by preempt_disable() */
 extern unsigned int current_irq_nest_count;
@@ -35,14 +36,14 @@ static int voluntary_preempt = 0;
 
 void sched_lock_runqueues(void)
 {
-	spin_lock(&sched_rq[0].lock);
-	spin_lock(&sched_rq[1].lock);
+	spin_lock(&curcont->scheduler.sched_rq[0].lock);
+	spin_lock(&curcont->scheduler.sched_rq[1].lock);
 }
 
 void sched_unlock_runqueues(void)
 {
-	spin_unlock(&sched_rq[0].lock);
-	spin_unlock(&sched_rq[1].lock);
+	spin_unlock(&curcont->scheduler.sched_rq[0].lock);
+	spin_unlock(&curcont->scheduler.sched_rq[1].lock);
 }
 
 int preemptive()
@@ -105,17 +106,21 @@ void idle_task(void)
 	while(1);
 }
 
-void sched_init_runqueues(void)
+void sched_init_runqueue(struct runqueue *rq)
 {
-	for (int i = 0; i < SCHED_RQ_TOTAL; i++) {
-		memset(&sched_rq[i], 0, sizeof(struct runqueue));
-		link_init(&sched_rq[i].task_list);
-		spin_lock_init(&sched_rq[i].lock);
-	}
+	memset(rq, 0, sizeof(struct runqueue));
+	link_init(&rq->task_list);
+	spin_lock_init(&rq->lock);
+}
 
-	rq_runnable = &sched_rq[0];
-	rq_expired = &sched_rq[1];
-	prio_total = 0;
+void sched_init(struct scheduler *scheduler)
+{
+	for (int i = 0; i < SCHED_RQ_TOTAL; i++)
+		sched_init_runqueue(&scheduler->sched_rq[i]);
+
+	scheduler->rq_runnable = &scheduler->sched_rq[0];
+	scheduler->rq_expired = &scheduler->sched_rq[1];
+	scheduler->prio_total = 0;
 }
 
 /* Swap runnable and expired runqueues. */
@@ -123,13 +128,14 @@ static void sched_rq_swap_runqueues(void)
 {
 	struct runqueue *temp;
 
-	BUG_ON(list_empty(&rq_expired->task_list));
-	BUG_ON(rq_expired->total == 0);
+	BUG_ON(list_empty(&curcont->scheduler.rq_expired->task_list));
+	BUG_ON(curcont->scheduler.rq_expired->total == 0);
 
 	/* Queues are swapped and expired list becomes runnable */
-	temp = rq_runnable;
-	rq_runnable = rq_expired;
-	rq_expired = temp;
+	temp = curcont->scheduler.rq_runnable;
+	curcont->scheduler.rq_runnable =
+		curcont->scheduler.rq_expired;
+	curcont->scheduler.rq_expired = temp;
 }
 
 /* Set policy on where to add tasks in the runqueue */
@@ -202,7 +208,9 @@ void sched_resume_sync(struct ktcb *task)
 {
 	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
-	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
+	sched_rq_add_task(task,
+			  curcont->scheduler.rq_runnable,
+			  RQ_ADD_FRONT);
 	schedule();
 }
 
@@ -215,7 +223,7 @@ void sched_resume_sync(struct ktcb *task)
 void sched_resume_async(struct ktcb *task)
 {
 	task->state = TASK_RUNNABLE;
-	sched_rq_add_task(task, rq_runnable, RQ_ADD_FRONT);
+	sched_rq_add_task(task, curcont->scheduler.rq_runnable, RQ_ADD_FRONT);
 }
 
 /*
@@ -228,8 +236,8 @@ void sched_suspend_sync(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	prio_total -= current->priority;
-	BUG_ON(prio_total <= 0);
+	curcont->scheduler.prio_total -= current->priority;
+	BUG_ON(curcont->scheduler.prio_total <= 0);
 	preempt_enable();
 
 	/* Async wake up any waiters */
@@ -243,8 +251,8 @@ void sched_suspend_async(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	prio_total -= current->priority;
-	BUG_ON(prio_total <= 0);
+	curcont->scheduler.prio_total -= current->priority;
+	BUG_ON(curcont->scheduler.prio_total <= 0);
 
 	/* This will make sure we yield soon */
 	preempt_enable();
@@ -338,9 +346,13 @@ void schedule()
 	if (current->state == TASK_RUNNABLE) {
 		sched_rq_remove_task(current);
 		if (current->ticks_left)
-			sched_rq_add_task(current, rq_runnable, RQ_ADD_BEHIND);
+			sched_rq_add_task(current,
+					  curcont->scheduler.rq_runnable,
+					  RQ_ADD_BEHIND);
 		else
-			sched_rq_add_task(current, rq_expired, RQ_ADD_BEHIND);
+			sched_rq_add_task(current,
+					  curcont->scheduler.rq_expired,
+					  RQ_ADD_BEHIND);
 	}
 
 	/*
@@ -352,14 +364,16 @@ void schedule()
 		wake_up_task(current, WAKEUP_INTERRUPT);
 
 	/* Determine the next task to be run */
-	if (rq_runnable->total > 0) {
-		next = link_to_struct(rq_runnable->task_list.next,
-				  struct ktcb, rq_list);
+	if (curcont->scheduler.rq_runnable->total > 0) {
+		next = link_to_struct(
+		       curcont->scheduler.rq_runnable->task_list.next,
+		       struct ktcb, rq_list);
 	} else {
-		if (rq_expired->total > 0) {
+		if (curcont->scheduler.rq_expired->total > 0) {
 			sched_rq_swap_runqueues();
-			next = link_to_struct(rq_runnable->task_list.next,
-					  struct ktcb, rq_list);
+			next = link_to_struct(
+			       curcont->scheduler.rq_runnable->task_list.next,
+			       struct ktcb, rq_list);
 		} else {
 			idle_task();
 		}
@@ -367,7 +381,7 @@ void schedule()
 
 	/* New tasks affect runqueue total priority. */
 	if (next->flags & TASK_RESUMING) {
-		prio_total += next->priority;
+		curcont->scheduler.prio_total += next->priority;
 		next->flags &= ~TASK_RESUMING;
 	}
 
@@ -378,7 +392,7 @@ void schedule()
 		 * becomes runnable rather than all at once. It is done
 		 * every runqueue swap
 		 */
-		sched_recalc_ticks(next, prio_total);
+		sched_recalc_ticks(next, curcont->scheduler.prio_total);
 		next->ticks_left = next->ticks_assigned;
 	}
 
@@ -392,25 +406,11 @@ void schedule()
 }
 
 /*
- * Initialise pager as runnable for first-ever scheduling,
- * and start the scheduler.
+ * Start the timer and switch to current task
+ * for first-ever scheduling.
  */
 void scheduler_start()
 {
-	/* Initialise runqueues */
-	sched_init_runqueues();
-
-	/* Initialise scheduler fields of pager */
-	sched_init_task(current, TASK_PRIO_PAGER);
-
-	/* Add task to runqueue first */
-	sched_rq_add_task(current, rq_runnable, RQ_ADD_FRONT);
-
-	/* Give it a kick-start tick and make runnable */
-	current->ticks_left = 1;
-	current->state = TASK_RUNNABLE;
-
-	/* Start the timer and switch */
 	timer_start();
 	switch_to_user(current);
 }

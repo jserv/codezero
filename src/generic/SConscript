@@ -4,7 +4,7 @@
 Import('env')
 
 # The set of source files associated with this SConscript file.
-src_local = ['physmem.c', 'irq.c', 'scheduler.c', 'time.c', 'tcb.c', 'pgalloc.c', 'kmalloc.c', 'space.c', 'bootm.c', 'resource.c', 'container.c']
+src_local = ['physmem.c', 'irq.c', 'scheduler.c', 'time.c', 'tcb.c', 'kmalloc.c', 'space.c', 'bootm.c', 'resource.c', 'container.c', 'capability.c']
 
 obj = env.Object(src_local)
 Return('obj')

@@ -126,6 +126,7 @@ int mem_cache_bufsize(void *start, int struct_size, int nstructs, int aligned)
 	return start_address - (unsigned long)start;
 }
 
+#if 0
 struct mem_cache *mem_cache_init(void *bufstart,
 				 int cache_size,
 				 int struct_size,
@@ -198,6 +199,93 @@ struct mem_cache *mem_cache_init(void *bufstart,
 		if (diff)
 			total--;
 		cache_size -= diff;
+		area_start = addr_aligned;
+	}
+
+	link_init(&cache->list);
+	cache->start = area_start;
+	cache->end = area_start + cache_size;
+	cache->total = total;
+	cache->free = cache->total;
+	cache->struct_size = struct_size;
+	cache->bitmap = bitmap;
+
+	mutex_init(&cache->mutex);
+	memset(cache->bitmap, 0, bwords*SZ_WORD);
+
+	return cache;
+}
+#endif
+
+struct mem_cache *mem_cache_init(void *bufstart, int cache_size,
+				 int struct_size, unsigned int aligned)
+{
+	void *start;
+	struct mem_cache *cache;
+	unsigned int area_start;
+	unsigned int *bitmap;
+	int bwords, total, bsize;
+
+	/* Align to nearest word boundary */
+       	start = (void *)align_up(bufstart, sizeof(int));
+	cache_size -= (int)start - (int)bufstart;
+	cache = start;
+
+	if ((struct_size < 0) || (cache_size < 0) ||
+	    ((unsigned long)start == ~(0))) {
+		printk("Invalid parameters.\n");
+		return 0;
+	}
+
+	/*
+	 * The cache definition itself is at the beginning.
+	 * Skipping it to get to start of free memory. i.e. the cache.
+	 */
+	area_start = (unsigned long)start + sizeof(struct mem_cache);
+	cache_size -= sizeof(struct mem_cache);
+
+	if (cache_size < struct_size) {
+		printk("Cache too small for given struct_size\n");
+		return 0;
+	}
+
+	/* Get how much bitmap words occupy */
+	total = cache_size / struct_size;
+	bwords = total >> 5;	/* Divide by 32 */
+	if (total & 0x1F) {	/* Remainder? */
+		bwords++;	/* Add one more word for remainder */
+	}
+	bsize = bwords * 4;
+
+	/* Reduce bitmap bytes from cache size */
+	cache_size -= bsize;
+
+	/* Recalculate total - it may or may not have changed */
+	total = cache_size / struct_size;
+
+	/* This should always catch too small caches */
+	if (total <= 0) {
+		printk("Cache too small for given struct_size\n");
+		return 0;
+	}
+	if (cache_size <= 0) {
+		printk("Cache too small for given struct_size\n");
+		return 0;
+	}
+
+	bitmap = (unsigned int *)area_start;
+	area_start = (unsigned int)(bitmap + bwords);
+
+	if (aligned) {
+		unsigned int addr = area_start;
+		unsigned int addr_aligned = align_up(area_start, struct_size);
+		unsigned int diff = addr_aligned - addr;
+
+		BUG_ON(diff >= struct_size);
+		cache_size -= diff;
+
+		/* Recalculate total */
+		total = cache_size / struct_size;
 		area_start = addr_aligned;
 	}
 

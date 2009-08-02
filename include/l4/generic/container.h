@@ -9,34 +9,47 @@
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
 #include <l4/generic/capability.h>
+#include <l4/generic/resource.h>
 #include <l4/generic/tcb.h>
 #include <l4/lib/idpool.h>
 #include <l4/api/mutex.h>
 #include <l4/lib/list.h>
 #include <l4/lib/idpool.h>
 
+#define curcont			(current->container)
+
+#define CONFIG_CONTAINER_NAMESIZE		64
+#define CONFIG_MAX_CAPS_USED			14
+#define CONFIG_MAX_PAGERS_USED			2
+
 /* Container macro. No locks needed! */
-#define this_container		(current->container)
+
+struct pager {
+	struct ktcb *tcb;
+	unsigned long start_lma;
+	unsigned long start_vma;
+	unsigned long start_address;
+	unsigned long stack_address;
+	unsigned long memsize;
+	struct cap_list cap_list;
+};
+
 
 struct container {
-	/* Unique container id */
-	l4id_t cid;
+	l4id_t cid;				/* Unique container id */
+	int npagers;				/* # of pagers */
+	struct link list;			/* List ref for containers */
+	struct address_space_list space_list;	/* List of address spaces */
+	char name[CONFIG_CONTAINER_NAMESIZE];	/* Name of container */
+	struct ktcb_list ktcb_list;		/* List of threads */
+	struct link pager_list;			/* List of pagers */
 
-	/* List of address spaces */
-	struct address_space_list space_list;
-
-	/* List of threads */
-	struct ktcb_list ktcb_list;
-
-	/* ID pools for threads and spaces */
-	struct id_pool *thread_id_pool;
+	struct id_pool *thread_id_pool;		/* Id pools for thread/spaces */
 	struct id_pool *space_id_pool;
 
-	/* Scheduling structs */
-	struct scheduler scheduler;
+	struct scheduler scheduler;		/* Scheduling structs */
 
-	/* Mutex list for all userspace mutexes */
-	struct mutex_queue_head mutex_queue_head;
+	struct mutex_queue_head mutex_queue_head; /* Userspace mutex list */
 
 	/*
 	 * Capabilities that apply to this container
@@ -44,12 +57,9 @@ struct container {
 	 * Threads, address spaces, mutex queues, cpu share ...
 	 * Pagers possess these capabilities.
 	 */
-	struct capability caps[5]; /* threadpool, spacepool, mutexpool, cpupool, mempool */
+	/* threadpool, spacepool, mutexpool, cpupool, mempool */
+	struct pager pager[CONFIG_MAX_PAGERS_USED];
 };
-
-
-#define CONFIG_MAX_CAPS_USED			11
-#define CONFIG_MAX_PAGERS_USED			2
 
 /* Compact, raw capability structure */
 struct cap_info {
@@ -60,10 +70,13 @@ struct cap_info {
 	unsigned long size;
 };
 
+
 struct pager_info {
 	unsigned long pager_lma;
 	unsigned long pager_vma;
 	unsigned long pager_size;
+	unsigned long start_address;
+	unsigned long stack_address;
 
 	/* Number of capabilities defined */
 	int ncaps;
@@ -87,12 +100,22 @@ struct pager_info {
  * used to create run-time containers
  */
 struct container_info {
-	char name[64];
+	char name[CONFIG_CONTAINER_NAMESIZE];
 	int npagers;
 	struct pager_info pager[CONFIG_MAX_PAGERS_USED];
 };
 
 extern struct container_info cinfo[];
+
+void kcont_insert_container(struct container *c,
+			    struct kernel_container *kcont);
+
+struct container *container_create(void);
+
+int container_init_pagers(struct kernel_container *kcont,
+			  pgd_table_t *current_pgd);
+
+int init_containers(struct kernel_container *kcont);
 
 #endif /* __CONTAINER_H__ */
 

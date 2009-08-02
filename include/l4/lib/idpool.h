@@ -4,7 +4,17 @@
 #include <l4/lib/bit.h>
 #include <l4/lib/spinlock.h>
 
+/* One page size minus the structure fields */
+#define CONFIG_MAX_SYSTEM_IDS			(1023*32)
+#define SYSTEM_IDS_MAX				(CONFIG_MAX_SYSTEM_IDS >> 5)
+
 struct id_pool {
+	struct spinlock lock;
+	int nwords;
+	u32 bitmap[SYSTEM_IDS_MAX];
+};
+
+struct id_pool_variable {
 	struct spinlock lock;
 	int nwords;
 	u32 bitmap[];
