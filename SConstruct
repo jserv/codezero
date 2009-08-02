@@ -62,6 +62,8 @@ else :
         print "####\n#### Configuration has not been undertaken, please run 'scons configure'.\n####"
         Exit ( )
 
+##########  Create the base environment and process the configuration ########################
+
     def processCML2Config ( ) :
         configItems = { }
         with file ( cml2ConfigPropertiesFile ) as configFile :
@@ -72,6 +74,7 @@ else :
         return configItems
                 
     baseEnvironment = Environment ( tools = [ 'gnulink' , 'gcc' , 'gas' , 'ar' ] ,
+                                    ENV = { 'PATH' : os.environ['PATH'] } ,
                                     configFiles = ( '#' + cml2CompileRulesFile ,  '#' + cml2ConfigPropertiesFile ,  '#' + cml2ConfigHeaderFile ) )
 
     kernelSConscriptPaths = [ 'generic' , 'api' , 'lib' ]
@@ -109,11 +112,12 @@ else :
     configuration.env['SUBARCH'] = subarch
     baseEnvironment = configuration.Finish ( )
 
+##########  Build the libraries ########################
+
     libraryEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-linux-gnueabi-gcc' ,
-        CCFLAGS = [ '-g' , '-nostdinc' , '-nostdlib' , '-ffreestanding' ] ,
+        CCFLAGS = [ '-g' , '-nostdinc' , '-nostdlib' , '-ffreestanding'  , '-std=gnu99' , '-Wall' , '-Werror' ] ,
         LINKFLAGS = [ '-nostdlib' ] ,
-        ENV = { 'PATH' : os.environ['PATH'] } ,
         LIBS = 'gcc' ,
         ARCH = arch , 
         PLATFORM = platform )
@@ -121,42 +125,85 @@ else :
     libs = { }
     crts = { }
     for variant in [ 'baremetal' , 'userspace' ] :
-        ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = buildDirectory + '/' + arch + '/lib/c/' + variant , duplicate = 0 , exports = { 'environment' : libraryEnvironment , 'variant' : variant } )
-        Depends (  ( libs[variant] , crts[variant] ) , ( cml2CompileRulesFile , cml2ConfigPropertiesFile , cml2ConfigHeaderFile ) )
+        ( libs[variant] , crts[variant] ) = SConscript ( 'libs/c/SConscript' , variant_dir = buildDirectory + '/lib/c/' + variant , duplicate = 0 , exports = { 'environment' : libraryEnvironment , 'variant' : variant } )
+        Depends (  ( libs[variant] , crts[variant] ) , libraryEnvironment['configFiles'] )
 
-    libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = buildDirectory + '/' + arch + '/lib/elf' , duplicate = 0 , exports = { 'environment' : libraryEnvironment } )
+    baseEnvironment['libc'] = libs['userspace']
+    baseEnvironment['crt0'] = crts['userspace']
+
+    libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = buildDirectory + '/lib/elf' , duplicate = 0 , exports = { 'environment' : libraryEnvironment } )
+    Depends ( libelf , libraryEnvironment['configFiles'] )
+
+    Alias ( 'libraries' , crts.values ( ) + libs.values ( ) + [ libelf ] )
+
+##########  Build the kernel ########################
 
     kernelEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-eabi-gcc' ,
         # We don't use -nostdinc because sometimes we need standard headers, such as stdarg.h e.g. for variable
         # args, as in printk().
-        CCFLAGS = [ '-g' , '-mcpu=arm926ej-s' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
+        CCFLAGS = [ '-mcpu=arm926ej-s' , '-g' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
         LINKFLAGS = [ '-nostdlib' , '-T' +  includeDirectory + '/l4/arch/' + arch + '/mylink.lds' ] ,
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         PROGSUFFIX = '.axf' ,
-        ENV = { 'PATH' : os.environ['PATH'] } ,
-        LIBS = 'gcc' ,  # libgcc.a is required for the division routines.
+        LIBS = 'gcc' ,
         CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] ,
         CPPFLAGS = [ '-include' , 'config.h' , '-include' , 'cml2Config.h' , '-include' , 'macros.h' , '-include' , 'types.h' , '-D__KERNEL__' ] )
     
     kernelComponents = [ ]
     for scriptPath in [ 'src/' + path for path in kernelSConscriptPaths ] :
-        kernelComponents.append ( SConscript ( scriptPath + '/SConscript' , variant_dir = buildDirectory + '/' + arch + '/' + scriptPath , duplicate = 0 , exports = { 'environment' : kernelEnvironment } ) )
-
+        kernelComponents.append ( SConscript ( scriptPath + '/SConscript' , variant_dir = buildDirectory + '/' + scriptPath , duplicate = 0 , exports = { 'environment' : kernelEnvironment } ) )
     startAxf = kernelEnvironment.Program ( buildDirectory + '/start.axf' ,  kernelComponents )
+    Depends (  kernelComponents + [ startAxf ] , kernelEnvironment['configFiles'] )
+    
+    Alias ( 'kernel' , startAxf )
 
+##########  Build the tasks ########################
+
+    tasksSupportLibraryEnvironment = baseEnvironment.Clone (
+        CC = 'arm-none-linux-gnueabi-gcc' ,
+        CCFLAGS = [ '-g' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
+        LINKFLAGS = [ '-nostdlib' ] ,
+        ASFLAGS = [ '-D__ASSEMBLY__' ] ,
+        LIBS = 'gcc' ,
+        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
+
+    taskLibraries = [ ]
+    for library in [ 'libmem' , 'libl4' , 'libposix' ] :
+        taskLibraries.append ( SConscript ( 'tasks/' + library + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + library , duplicate = 0 , exports = { 'environment' : tasksSupportLibraryEnvironment } ) )
+
+    Depends ( taskLibraries , tasksSupportLibraryEnvironment['configFiles'] )
+
+    Alias ( 'tasksLibraries' , taskLibraries )
+    
     tasksEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-linux-gnueabi-gcc' ,
-        CCFLAGS = [ '-g' , '-nostdlib' , '-Wall' , '-Werror' , '-ffreestanding' , '-std=gnu99' ] ,
+        CCFLAGS = [ '-g' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
         LINKFLAGS = [ '-nostdlib' ] ,
-        ENV = { 'PATH' : os.environ['PATH'] } ,
+        ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         LIBS = 'gcc' ,
-        CPPPATH = [ '#' + includeDirectory , '#' + buildDirectory + '/l4' , includeDirectory ] )
+        CPPDEFINES = [ '__USERSPACE__' ] ,
+        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
 
     tasks = [ ]
-    for task in [ item for item in os.listdir ( 'tasks' ) if os.path.isdir ( 'tasks/' + item ) and os.path.exists ( 'tasks/' + item + '/SConscript' )] :
-        tasks.append ( SConscript ( 'tasks/' + task + '/SConscript' , variant_dir = buildDirectory + '/' + arch + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
+    for task in [ 'mm0' ] : # [ 'mm0' ,  'fs0' , 'test0' ] :
+        tasks.append ( SConscript ( 'tasks/' + task + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
+
+    Depends ( tasks , tasksEnvironment['configFiles'] )
+
+    Alias ( 'tasks' , tasks )
+
+##########  Other rules. ########################
 
     Default ( crts.values ( ) + libs.values ( ) + [ libelf , startAxf ] + tasks )
     
     Clean ( '.' , [ buildDirectory ] )
+
+    Help ( '''
+configure -- configure the build area ready for a build.
+
+libraries -- build the support library.
+kernel -- build the kernel.
+taskLibraries -- build all the support libraries for the tasks.
+tasks -- build all the tasks.
+''' )
