@@ -135,8 +135,8 @@ void syscall_init()
 	syscall_table[sys_time_offset >> 2]			= (syscall_fn_t)arch_sys_time;
 	syscall_table[sys_mutex_control_offset >> 2]		= (syscall_fn_t)arch_sys_mutex_control;
 
-	add_mapping(virt_to_phys(&__syscall_page_start),
-		    ARM_SYSCALL_PAGE, PAGE_SIZE, MAP_USR_RO_FLAGS);
+	add_boot_mapping(virt_to_phys(&__syscall_page_start),
+			 ARM_SYSCALL_PAGE, PAGE_SIZE, MAP_USR_RO_FLAGS);
 }
 
 /* Checks a syscall is legitimate and dispatches to appropriate handler. */

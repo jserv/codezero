@@ -209,7 +209,7 @@ void sched_resume_sync(struct ktcb *task)
 	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
 	sched_rq_add_task(task,
-			  curcont->scheduler.rq_runnable,
+			  task->container->scheduler.rq_runnable,
 			  RQ_ADD_FRONT);
 	schedule();
 }
@@ -223,7 +223,9 @@ void sched_resume_sync(struct ktcb *task)
 void sched_resume_async(struct ktcb *task)
 {
 	task->state = TASK_RUNNABLE;
-	sched_rq_add_task(task, curcont->scheduler.rq_runnable, RQ_ADD_FRONT);
+	sched_rq_add_task(task,
+			  task->container->scheduler.rq_runnable,
+			  RQ_ADD_FRONT);
 }
 
 /*

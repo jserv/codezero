@@ -69,6 +69,20 @@ struct cap_list {
 void capability_init(struct capability *cap);
 struct capability *capability_create(void);
 
+
+static inline void cap_list_init(struct cap_list *clist)
+{
+	clist->ncaps = 0;
+	link_init(&clist->caps);
+}
+
+static inline void cap_list_insert(struct capability *cap,
+				   struct cap_list *clist)
+{
+	list_insert(&cap->list, &clist->caps);
+	clist->ncaps++;
+}
+
 #if 0
 /* Virtual memory space allocated to container */
 struct capability cap_virtmap = {

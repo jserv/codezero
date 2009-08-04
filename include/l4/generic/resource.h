@@ -35,6 +35,13 @@ struct container_head {
 	struct link list;
 };
 
+static inline void
+container_head_init(struct container_head *chead)
+{
+	chead->ncont = 0;
+	link_init(&chead->list);
+}
+
 /*
  * Everything on the platform is described and stored
  * in the structure below.

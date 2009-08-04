@@ -72,11 +72,12 @@ SECTIONS
 	{
 		. = ALIGN(16K);	/* For initial pgd */
 		*(.init.pgd)
-		*(.init.data)
 		*(.init.bootmem)
+		*(.init.data)
 	}
 	/* Space for boot stack */
 	. += 0x1000;
+	. = ALIGN(4K);	/* A page aligned stack of at least 4KB */
 	_end_init = .;
 	_bootstack = .;
 	_end_kernel = .;

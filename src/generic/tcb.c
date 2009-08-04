@@ -130,11 +130,13 @@ struct ktcb *tcb_find(l4id_t tid)
 
 void tcb_add(struct ktcb *new)
 {
-	spin_lock(&curcont->ktcb_list.list_lock);
+	struct container *c = new->container;
+
+	spin_lock(&c->ktcb_list.list_lock);
 	BUG_ON(!list_empty(&new->task_list));
-	BUG_ON(!++curcont->ktcb_list.count);
-	list_insert(&new->task_list, &curcont->ktcb_list.list);
-	spin_unlock(&curcont->ktcb_list.list_lock);
+	BUG_ON(!++c->ktcb_list.count);
+	list_insert(&new->task_list, &c->ktcb_list.list);
+	spin_unlock(&c->ktcb_list.list_lock);
 }
 
 void tcb_remove(struct ktcb *new)

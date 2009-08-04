@@ -25,6 +25,7 @@
 #include INC_GLUE(memory.h)
 #include INC_GLUE(message.h)
 #include INC_GLUE(syscall.h)
+#include INC_GLUE(init.h)
 #include INC_PLAT(platform.h)
 #include INC_PLAT(printascii.h)
 #include INC_API(syscall.h)
@@ -193,8 +194,8 @@ void kip_init()
 	/* All thread utcbs are allocated starting from UTCB_AREA_START */
 	*utcb_ref = (struct utcb *)UTCB_AREA_START;
 
-	add_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,
-		    MAP_USR_RO_FLAGS);
+	add_boot_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,
+			 MAP_USR_RO_FLAGS);
 	printk("%s: Kernel built on %s, %s\n", __KERNELNAME__,
 	       kip.kdesc.date, kip.kdesc.time);
 }
@@ -357,6 +358,18 @@ void init_tasks()
 	// init_pager(__PAGERNAME__, &ids);
 }
 
+void setup_dummy_current()
+{
+	/*
+	 * Initialize the beginning of last page of
+	 * stack as the current ktcb
+	 */
+	memset(current, 0, sizeof(struct ktcb));
+
+	current->space = &init_space;
+	TASK_PGD(current) = &init_pgd;
+}
+
 void start_kernel(void)
 {
 	printascii("\n"__KERNELNAME__": start kernel...\n");
@@ -370,6 +383,9 @@ void start_kernel(void)
 	/* Enable virtual memory and jump to virtual addresses */
 	start_vm();
 
+	/* Set up a dummy current ktcb on boot stack with initial pgd */
+	setup_dummy_current();
+
 	/* Initialise platform-specific page mappings, and peripherals */
 	platform_init();
 
@@ -379,7 +395,8 @@ void start_kernel(void)
 	vectors_init();
 
 	/* Remap 1MB kernel sections as 4Kb pages. */
-	remap_as_pages((void *)page_align(_start_kernel), (void *)page_align_up(_end_kernel));
+	remap_as_pages((void *)page_align(_start_kernel),
+		       (void *)page_align_up(_end_kernel));
 
 	/* Move the initial pgd into a more convenient place, mapped as pages. */
 	// relocate_page_tables();

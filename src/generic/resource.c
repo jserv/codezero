@@ -85,18 +85,6 @@ void free_user_mutex(void *addr)
 	BUG_ON(mem_cache_free(kernel_container.mutex_cache, addr) < 0);
 }
 
-void cap_list_init(struct cap_list *clist)
-{
-	clist->ncaps = 0;
-	link_init(&clist->caps);
-}
-
-void cap_list_insert(struct capability *cap, struct cap_list *clist)
-{
-	list_insert(&cap->list, &clist->caps);
-	clist->ncaps++;
-}
-
 /*
  * This splits a capability, splitter region must be in
  * the *middle* of original capability
@@ -252,6 +240,9 @@ void init_kernel_container(struct kernel_container *kcont)
 	kcont->mutex_ids.nwords = SYSTEM_IDS_MAX;
 	kcont->capability_ids.nwords = SYSTEM_IDS_MAX;
 
+	/* Initialize container head */
+	container_head_init(&kcont->containers);
+
 	/* Get first container id for itself */
 	kcont->cid = id_new(&kcont->container_ids);
 
@@ -305,9 +296,9 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 	struct capability *cap;
 	struct cap_info *cap_info;
 
-	pager->start_lma = pinfo->pager_lma;
-	pager->start_vma = pinfo->pager_vma;
-	pager->memsize = pinfo->pager_size;
+	pager->start_lma = __pfn_to_addr(pinfo->pager_lma);
+	pager->start_vma = __pfn_to_addr(pinfo->pager_vma);
+	pager->memsize = __pfn_to_addr(pinfo->pager_size);
 
 	/* Copy all cinfo structures into real capabilities */
 	for (int i = 0; i < pinfo->ncaps; i++) {
@@ -353,6 +344,10 @@ void setup_containers(struct boot_resources *bootres,
 	/*
 	 * Move to real page tables, accounted by
 	 * pgds and pmds provided from the caches
+	 *
+	 * We do not want to delay this too much,
+	 * since we want to avoid allocating an uncertain
+	 * amount of memory from the boot allocators.
 	 */
 	current_pgd = realloc_page_tables();
 
@@ -372,10 +367,51 @@ void setup_containers(struct boot_resources *bootres,
 	container_init_pagers(kcont, current_pgd);
 }
 
-void setup_capabilities(struct boot_resources *bootres,
-		        struct kernel_container *kcont)
+/*
+ * Copy boot-time allocated kernel capabilities to ones that
+ * are allocated from the capability memcache
+ */
+void copy_boot_capabilities(struct cap_list *caplist)
 {
+	struct capability *bootcap, *n, *realcap;
 
+	/* For every bootmem-allocated capability */
+	list_foreach_removable_struct(bootcap, n,
+				      &caplist->caps,
+				      list) {
+		/* Create new one from capability cache */
+		realcap = capability_create();
+
+		/* Copy all fields except id to real */
+		realcap->owner = bootcap->owner;
+		realcap->resid = bootcap->resid;
+		realcap->type = bootcap->type;
+		realcap->access = bootcap->access;
+		realcap->start = bootcap->start;
+		realcap->end = bootcap->end;
+
+		/* Unlink boot one */
+		list_remove(&bootcap->list);
+
+		/* Add real one to head */
+		list_insert(&realcap->list,
+			    &caplist->caps);
+	}
+}
+
+/*
+ * Creates capabilities allocated with a real id, and from the
+ * capability cache, in place of ones allocated at boot-time.
+ */
+void kcont_setup_capabilities(struct boot_resources *bootres,
+			      struct kernel_container *kcont)
+{
+	copy_boot_capabilities(&kcont->physmem_used);
+	copy_boot_capabilities(&kcont->physmem_free);
+	copy_boot_capabilities(&kcont->virtmem_used);
+	copy_boot_capabilities(&kcont->virtmem_free);
+	copy_boot_capabilities(&kcont->devmem_used);
+	copy_boot_capabilities(&kcont->devmem_free);
 }
 
 /*
@@ -412,9 +448,9 @@ struct mem_cache *init_resource_cache(int nstruct, int struct_size,
 						 page_align_up(bufsize),
 						 MAP_SVC_RW_FLAGS);
 			} else {
-				add_mapping(__pfn_to_addr(cap->start),
-					    virtual, page_align_up(bufsize),
-					    MAP_SVC_RW_FLAGS);
+				add_mapping_pgd(__pfn_to_addr(cap->start),
+						virtual, page_align_up(bufsize),
+						MAP_SVC_RW_FLAGS, &init_pgd);
 			}
 			/* Unmap area from memcap */
 			memcap_unmap_range(cap, &kcont->physmem_free,
@@ -425,7 +461,7 @@ struct mem_cache *init_resource_cache(int nstruct, int struct_size,
 
 			/* Initialize the cache */
 			return mem_cache_init((void *)virtual, bufsize,
-					      struct_size, 1);
+					      struct_size, aligned);
 		}
 	}
 	return 0;
@@ -602,6 +638,7 @@ int setup_boot_resources(struct boot_resources *bootres,
 	return 0;
 }
 
+
 /*
  * FIXME: Add error handling
  *
@@ -612,6 +649,7 @@ int setup_boot_resources(struct boot_resources *bootres,
  */
 int init_system_resources(struct kernel_container *kcont)
 {
+	/* FIXME: Count kernel resources */
 	struct boot_resources bootres;
 
 	memset(&bootres, 0, sizeof(bootres));
@@ -623,8 +661,8 @@ int init_system_resources(struct kernel_container *kcont)
 	/* Create system containers */
 	setup_containers(&bootres, kcont);
 
-	/* Create capabilities */
-	setup_capabilities(&bootres, kcont);
+	/* Create real capabilities */
+	kcont_setup_capabilities(&bootres, kcont);
 
 	return 0;
 }

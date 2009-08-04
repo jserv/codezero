@@ -8,6 +8,7 @@
 #include INC_ARCH(linker.h)
 #include INC_GLUE(memory.h)
 #include <l4/lib/printk.h>
+#include <l4/generic/space.h>
 
 /* All memory allocated here is discarded after boot */
 
@@ -15,6 +16,7 @@
 
 SECTION(".init.pgd") pgd_table_t init_pgd;
 SECTION(".init.bootmem") char bootmem[BOOTMEM_SIZE];
+SECTION(".init.data") struct address_space init_space;
 
 static unsigned long cursor = (unsigned long)&bootmem;
 

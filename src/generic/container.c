@@ -144,6 +144,10 @@ int container_init(struct container *c)
 	init_ktcb_list(&c->ktcb_list);
 	init_mutex_queue_head(&c->mutex_queue_head);
 
+	/* Ini pager structs */
+	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++) {
+		cap_list_init(&c->pager[i].cap_list);
+	}
 	/* Init scheduler */
 	sched_init(&c->scheduler);
 
@@ -166,6 +170,11 @@ void kcont_insert_container(struct container *c,
 	kcont->containers.ncont++;
 }
 
+/*
+ * This searches pager capabilities and if it has a virtual memory area
+ * defined as a UTCB, uses the first entry as its utcb. If not, it is
+ * not an error, perhaps another pager will map its utcb.
+ */
 void task_setup_utcb(struct ktcb *task, struct pager *pager)
 {
 	struct capability *cap;
@@ -177,9 +186,29 @@ void task_setup_utcb(struct ktcb *task, struct pager *pager)
 		    (cap->access & CAP_MAP_UTCB)) {
 			/* Use first address slot as pager's utcb */
 			task->utcb_address = __pfn_to_addr(cap->start);
+			return;
 		}
 	}
 }
+
+#if 0
+void switch_stack(struct ktcb *task)
+{
+	register u32 stack asm("sp");
+	register u32 fp asm("fp");
+	register u32 newstack = align((unsigned long)task + PAGE_SIZE, sizeof(short));
+	signed long long offset = newstack - __bootstack;
+
+	fp += offset;
+	sp += offset;
+
+	/* Copy stack contents to new stack */
+	memcpy(&newstack, __bootstack, stack - __bootstack);
+
+	/* Switch to new stack */
+
+}
+#endif
 
 /*
  * TODO:
