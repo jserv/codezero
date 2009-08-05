@@ -140,7 +140,7 @@ else :
     libelf = SConscript ( 'libs/elf/SConscript' , variant_dir = buildDirectory + '/lib/elf' , duplicate = 0 , exports = { 'environment' : libraryEnvironment } )
     Depends ( libelf , libraryEnvironment['configFiles'] )
 
-    Alias ( 'libraries' , crts.values ( ) + libs.values ( ) + [ libelf ] )
+    Alias ( 'libs' , crts.values ( ) + libs.values ( ) + [ libelf ] )
 
 ##########  Build the kernel ########################
 
@@ -187,7 +187,7 @@ else :
 
     Depends ( taskLibraries , taskSupportLibraryEnvironment['configFiles'] )
 
-    Alias ( 'taskLibraries' , taskLibraries )
+    Alias ( 'tasklibs' , taskLibraries )
     
     tasksEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-linux-gnueabi-gcc' ,
@@ -220,9 +220,9 @@ Explicit targets are:
 
   configure -- configure the build area ready for a build.
 
-  libraries -- build the support library.
+  libs -- build the support library.
   kernel -- build the kernel.
-  taskLibraries -- build all the support libraries for the tasks.
+  tasklibs -- build all the support libraries for the tasks.
   tasks -- build all the tasks.
 
 The default target is to compile everything and to do a final link.
