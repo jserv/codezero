@@ -168,8 +168,10 @@ else :
         LIBS = 'gcc' ,
         CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
 
+    taskLibraryNames = [ f.name for f in Glob ( 'tasks/lib*' ) ]
+
     taskLibraries = [ ]
-    for library in [ 'libmem' , 'libl4' , 'libposix' ] :
+    for library in taskLibraryNames :
         taskLibraries.append ( SConscript ( 'tasks/' + library + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + library , duplicate = 0 , exports = { 'environment' : tasksSupportLibraryEnvironment } ) )
 
     Depends ( taskLibraries , tasksSupportLibraryEnvironment['configFiles'] )
@@ -186,7 +188,7 @@ else :
         CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
 
     tasks = [ ]
-    for task in [ 'mm0' ] : # [ 'mm0' ,  'fs0' , 'test0' ] :
+    for task in [ f.name for f in Glob ( 'tasks/*' ) if f.name not in taskLibraryNames + [ 'bootdesc' ] ] :
         tasks.append ( SConscript ( 'tasks/' + task + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + task , duplicate = 0 , exports = { 'environment' : tasksEnvironment } ) )
 
     Depends ( tasks , tasksEnvironment['configFiles'] )
