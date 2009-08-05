@@ -79,6 +79,12 @@ else :
 
     kernelSConscriptPaths = [ 'generic' , 'api' , 'lib' ]
 
+    #  It is assumed that the C code is assuming that the configuration file will be found at l4/config.h so create it there.
+    #
+    #  Kernel code include config.h in a different way to all the other bits of code.
+    #
+    #  TODO:  Decide if this is an issue or not.
+
     configuration = Configure ( baseEnvironment , config_h =  buildDirectory + '/l4/config.h' )
     configData = processCML2Config ( )
     arch = None
@@ -148,6 +154,11 @@ else :
         PROGSUFFIX = '.axf' ,
         LIBS = 'gcc' ,
         CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] ,
+
+        ####
+        ####  TODO:  Why are these files forcibly included, why not just leave it up to the C code to include things?
+        ####
+
         CPPFLAGS = [ '-include' , 'config.h' , '-include' , 'cml2Config.h' , '-include' , 'macros.h' , '-include' , 'types.h' , '-D__KERNEL__' ] )
     
     kernelComponents = [ ]
@@ -160,7 +171,7 @@ else :
 
 ##########  Build the tasks ########################
 
-    tasksSupportLibraryEnvironment = baseEnvironment.Clone (
+    taskSupportLibraryEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-linux-gnueabi-gcc' ,
         CCFLAGS = [ '-g' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
         LINKFLAGS = [ '-nostdlib' ] ,
@@ -172,11 +183,11 @@ else :
 
     taskLibraries = [ ]
     for library in taskLibraryNames :
-        taskLibraries.append ( SConscript ( 'tasks/' + library + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + library , duplicate = 0 , exports = { 'environment' : tasksSupportLibraryEnvironment } ) )
+        taskLibraries.append ( SConscript ( 'tasks/' + library + '/SConscript' , variant_dir = buildDirectory + '/tasks/' + library , duplicate = 0 , exports = { 'environment' : taskSupportLibraryEnvironment } ) )
 
-    Depends ( taskLibraries , tasksSupportLibraryEnvironment['configFiles'] )
+    Depends ( taskLibraries , taskSupportLibraryEnvironment['configFiles'] )
 
-    Alias ( 'tasksLibraries' , taskLibraries )
+    Alias ( 'taskLibraries' , taskLibraries )
     
     tasksEnvironment = baseEnvironment.Clone (
         CC = 'arm-none-linux-gnueabi-gcc' ,
@@ -185,7 +196,7 @@ else :
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         LIBS = 'gcc' ,
         CPPDEFINES = [ '__USERSPACE__' ] ,
-        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
+        CPPPATH = [ '#' + buildDirectory ,  '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
 
     tasks = [ ]
     for task in [ f.name for f in Glob ( 'tasks/*' ) if f.name not in taskLibraryNames + [ 'bootdesc' ] ] :
@@ -201,11 +212,19 @@ else :
     
     Clean ( '.' , [ buildDirectory ] )
 
-    Help ( '''
-configure -- configure the build area ready for a build.
+##########  Be helpful ########################
 
-libraries -- build the support library.
-kernel -- build the kernel.
-taskLibraries -- build all the support libraries for the tasks.
-tasks -- build all the tasks.
+Help ( '''
+Explicit targets are:
+
+  configure -- configure the build area ready for a build.
+
+  libraries -- build the support library.
+  kernel -- build the kernel.
+  taskLibraries -- build all the support libraries for the tasks.
+  tasks -- build all the tasks.
+
+The default target is to compile everything and to do a final link.
+
+Compilation can only be undertaken after a configuration.
 ''' )
