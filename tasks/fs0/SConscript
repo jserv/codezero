@@ -20,7 +20,7 @@
 Import ( 'environment' )
 
 e = environment.Clone ( )
-e.Append ( CPPPATH = [ 'include' , '#tasks/libl4/include' , '#tasks/libmem' , '#tasks/libposix/include' ] )
+e.Append ( LINKFLAGS = [ '-Ttasks/fs0/include/linker.lds' ] )
 
 objects = e.StaticObject ( Glob ( '*.c' ) + Glob ( 'src/*.c' ) )
 Depends ( objects , e['configFiles'] )

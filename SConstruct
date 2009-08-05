@@ -195,8 +195,9 @@ else :
         LINKFLAGS = [ '-nostdlib' ] ,
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         LIBS =  taskLibraries + [ 'gcc' , libs['userspace'] ] ,
+        PROGSUFFIX = '.axf' ,
         CPPDEFINES = [ '__USERSPACE__' ] ,
-        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory ] )
+        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , 'include' , '#tasks/libl4/include' , '#tasks/libmem' , '#tasks/libposix/include'] )
 
     tasks = [ ]
     for task in [ f.name for f in Glob ( 'tasks/*' ) if f.name not in taskLibraryNames + [ 'bootdesc' ] ] :
