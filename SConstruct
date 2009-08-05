@@ -177,7 +177,7 @@ else :
         LINKFLAGS = [ '-nostdlib' ] ,
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         LIBS = 'gcc' ,
-        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
+        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory ] )
 
     taskLibraryNames = [ f.name for f in Glob ( 'tasks/lib*' ) ]
 
@@ -196,7 +196,8 @@ else :
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
         LIBS = 'gcc' ,
         CPPDEFINES = [ '__USERSPACE__' ] ,
-        CPPPATH = [ '#' + buildDirectory ,  '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
+        CPPPATH = [ '#' + buildDirectory + '/l4' , '#' + includeDirectory ] )
+        #CPPPATH = [ '#' + buildDirectory ,  '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
 
     tasks = [ ]
     for task in [ f.name for f in Glob ( 'tasks/*' ) if f.name not in taskLibraryNames + [ 'bootdesc' ] ] :
