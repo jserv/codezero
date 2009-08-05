@@ -17,8 +17,6 @@
 #
 #  Author: Russel Winder
 
-Import('environment', 'previousImage')
+# A sequence determining the order of tasks in the packing.
 
-program = environment['buildTask']('fs0', Glob('*.c') + [Glob(directory + '/*.c') for directory in [ 'src', 'src/lib', 'src/lib/elf', 'src/memfs']], environment, previousImage)
-
-Return('program')
+taskOrder = ('mm0', 'fs0', 'test0')

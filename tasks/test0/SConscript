@@ -17,16 +17,8 @@
 #
 #  Author: Russel Winder
 
-Import('environment')
+Import('environment', 'previousImage')
 
-e = environment.Clone()
-e.Append(LINKFLAGS = ['-Ttasks/test0/include/linker.lds'])
-e.Append(LIBPATH=['#build/tasks/test0', '#build/lib/c/userspace/crt/sys-userspace/arch-arm'])
-
-objects = e.StaticObject(Glob('*.c') + Glob('src/*.c'))
-Depends(objects, e['configFiles'])
-program = e.Program('test0', objects)
-physicalBaseLinkerScript = Command('include/physical_base.lds', e['kernel'], 'tools/pyelf/readelf.py --first-free-page ' + e['kernel'][0].path + ' >> $TARGET')
-Depends(program, [physicalBaseLinkerScript, e['crt0']])
+program = environment['buildTask']('test0', Glob('*.c') + Glob('src/*.c'), environment, previousImage, ['#tasks/libposix/include/posix'])
 
 Return('program')

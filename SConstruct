@@ -169,7 +169,7 @@ else :
     
     Alias('kernel', startAxf)
 
-##########  Build the tasks ########################
+##########  Build the task libraries ########################
 
     taskSupportLibraryEnvironment = baseEnvironment.Clone(
         CC = 'arm-none-linux-gnueabi-gcc',
@@ -188,22 +188,51 @@ else :
     Depends(taskLibraries, taskSupportLibraryEnvironment['configFiles'])
 
     Alias ('tasklibs', taskLibraries)
-    
+
+##########  Build the tasks ########################
+
+    def buildTask(programName, sources, environment, previousImage, extraCppPath=None):
+        e = environment.Clone()
+        e.Append(LINKFLAGS=['-Ttasks/' + programName + '/include/linker.lds'])
+        e.Append(LIBPATH=['#build/tasks/' + programName, '#build/lib/c/userspace/crt/sys-userspace/arch-arm'])
+        if extraCppPath: e.Append(CPPPATH=extraCppPath)
+        objects = e.StaticObject(sources)
+        Depends(objects, e['configFiles'])
+        program = e.Program(programName, objects + ['#' + e['crt0'][0].name])
+        physicalBaseLinkerScript = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
+        Depends(program, [physicalBaseLinkerScript, e['crt0']])
+        return program
+
     tasksEnvironment = baseEnvironment.Clone(
         CC = 'arm-none-linux-gnueabi-gcc',
         CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
         LINKFLAGS = ['-nostdlib'],
         ASFLAGS = ['-D__ASSEMBLY__'],
-        LIBS =  taskLibraries + ['gcc', libs['userspace']],
+        LIBS =  [libs['userspace']] + taskLibraries + ['gcc', libs['userspace']], #### TODO:  Why have the userspace C library twice?
         PROGSUFFIX = '.axf',
         CPPDEFINES = ['__USERSPACE__'],
         CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', '#tasks/libl4/include', '#tasks/libmem', '#tasks/libposix/include'],
-        kernel = startAxf)
+        buildTask = buildTask)
 
+####
+####  TODO: Why doe the linker require crt0.o to be in the current directory and named as such.  Is it
+####  because of the text in the linker script?
+####
+
+    userspaceRuntime = Command(crts['userspace'][0].name, crts['userspace'][0], 'ln -s $SOURCE.path $TARGET') 
+
+    execfile('tasks/taskOrder.py')
+    imageOrderData = [(taskName, []) for taskName in taskOrder]
+    imageOrderData[0][1].append(startAxf)
     tasks = []
-    for task in [f.name for f in Glob('tasks/*') if f.name not in taskLibraryNames + ['bootdesc']]:
-        tasks.append(SConscript('tasks/' + task + '/SConscript', variant_dir = buildDirectory + '/tasks/' + task, duplicate = 0, exports = {'environment': tasksEnvironment}))
-
+    for i in range(len(imageOrderData)):
+        taskName = imageOrderData[i][0]
+        dependency = imageOrderData[i][1]
+        program = SConscript('tasks/' + taskName + '/SConscript', variant_dir = buildDirectory + '/tasks/' + taskName, duplicate = 0, exports = {'environment': tasksEnvironment, 'previousImage': dependency[0]})
+        Depends(program, userspaceRuntime)
+        tasks.append(program)
+        if i < len(imageOrderData) - 1:
+            imageOrderData[i+1][1].append(program)
     Depends(tasks, tasksEnvironment['configFiles'])
 
     Alias ('tasks', tasks)
