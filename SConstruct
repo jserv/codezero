@@ -194,10 +194,9 @@ else :
         CCFLAGS = [ '-g' , '-nostdlib' , '-ffreestanding' , '-std=gnu99' , '-Wall' , '-Werror' ] ,
         LINKFLAGS = [ '-nostdlib' ] ,
         ASFLAGS = [ '-D__ASSEMBLY__' ] ,
-        LIBS = 'gcc' ,
+        LIBS =  taskLibraries + [ 'gcc' , libs['userspace'] ] ,
         CPPDEFINES = [ '__USERSPACE__' ] ,
-        CPPPATH = [ '#' + buildDirectory + '/l4' , '#' + includeDirectory ] )
-        #CPPPATH = [ '#' + buildDirectory ,  '#' + buildDirectory + '/l4' , '#' + includeDirectory , '#' + includeDirectory + '/l4' ] )
+        CPPPATH = [ '#' + buildDirectory , '#' + buildDirectory + '/l4' , '#' + includeDirectory ] )
 
     tasks = [ ]
     for task in [ f.name for f in Glob ( 'tasks/*' ) if f.name not in taskLibraryNames + [ 'bootdesc' ] ] :
