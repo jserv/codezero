@@ -237,9 +237,26 @@ else :
 
     Alias ('tasks', tasks)
 
+##########  Create the boot description ########################
+
+    taskName = 'bootdesc'
+
+    bootdescEnvironment = baseEnvironment.Clone(
+        CC = 'arm-none-linux-gnueabi-gcc',
+        CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
+        LINKFLAGS = ['-nostdlib', '-Ttasks/' + taskName + '/linker.lds'],
+        ASFLAGS = ['-D__ASSEMBLY__'],
+        PROGSUFFIX = '.axf',
+        LIBS = ['gcc'],
+        CPPPATH = ['#' + includeDirectory])
+
+    bootdesc = SConscript('tasks/' + taskName + '/SConscript', variant_dir = buildDirectory + '/tasks/' + taskName, duplicate = 0, exports = {'environment': bootdescEnvironment, 'images': [startAxf] + tasks}) 
+
+    Alias('bootdesc', bootdesc)
+
 ##########  Other rules. ########################
 
-    Default(crts.values() + libs.values() + [libelf, startAxf] + tasks)
+    Default(crts.values() + libs.values() + [libelf, startAxf] + tasks + bootdesc)
     
     Clean('.', [buildDirectory])
 
