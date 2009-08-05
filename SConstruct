@@ -271,6 +271,7 @@ Explicit targets are:
   kernel -- build the kernel.
   tasklibs -- build all the support libraries for the tasks.
   tasks -- build all the tasks.
+  bootdesc -- build the tasks and the boot descriptor.
 
 The default target is to compile everything and to do a final link.
 
