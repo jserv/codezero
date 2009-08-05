@@ -17,23 +17,23 @@
 #
 #  Author: Russel Winder
 
-Import ( 'environment' )
+Import('environment')
 
-e = environment.Clone ( )
-e.Append ( CPPPATH = [ '#tasks/libl4/include' , '.' ] )
+e = environment.Clone()
+e.Append(CPPPATH = ['#tasks/libl4/include' , '.' ])
 
-mmObjects = e.StaticObject ( Glob ( 'mm/*.c' ) )
-Depends ( mmObjects , e['configFiles'] )
-mmLibrary = e.StaticLibrary ( 'mm' , mmObjects )
+mmObjects = e.StaticObject(Glob('mm/*.c'))
+Depends(mmObjects, e['configFiles'])
+mmLibrary = e.StaticLibrary('mm', mmObjects)
 
-kmObjects = e.StaticObject ( Glob ( 'kmalloc/*.c' ) )
-Depends ( kmObjects , e['configFiles'] )
-kmLibrary = e.StaticLibrary ( 'km' , kmObjects )
+kmObjects = e.StaticObject(Glob('kmalloc/*.c'))
+Depends(kmObjects, e['configFiles'])
+kmLibrary = e.StaticLibrary('km', kmObjects)
 
-mcObjects = e.StaticObject ( Glob ( 'memcache/*.c' ) )
-Depends ( mcObjects , e['configFiles'] )
-mcLibrary = e.StaticLibrary ( 'mc' , mcObjects )
+mcObjects = e.StaticObject(Glob('memcache/*.c'))
+Depends(mcObjects, e['configFiles'])
+mcLibrary = e.StaticLibrary('mc', mcObjects)
 
-libraries = ( mmLibrary , kmLibrary , mcLibrary )
+libraries = (mmLibrary, kmLibrary, mcLibrary)
 
-Return ( 'libraries' )
+Return('libraries')

@@ -17,8 +17,8 @@
 #
 #  Author: Russel Winder
 
-Import ( 'environment' )
+Import('environment')
 
-objects = environment.Object ( Glob ( '*.c' ) + Glob ( '*.S' ) )
+objects = environment.Object(Glob('*.c') + Glob('*.S'))
 
-Return ( 'objects' )
+Return('objects')

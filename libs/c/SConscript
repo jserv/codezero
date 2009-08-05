@@ -17,25 +17,25 @@
 #
 #  Author: Russel Winder
 
-Import ( 'environment' , 'variant' )
+Import('environment', 'variant')
 
 source = \
-        Glob ( 'src/*.c' ) + \
-        Glob ( 'src/sys-' + variant + '/*.c' ) + \
-        Glob ( 'src/sys-' + variant + '/arch-' + environment['ARCH'] + '/*.c' ) + \
-        Glob ( 'src/sys-' + variant + '/arch-' + environment['ARCH'] + '/plat-' + environment['PLATFORM'] + '/*.c' ) + \
-        Glob ( 'src/arch-' + environment['ARCH'] + '/*.c' ) + \
-        Glob ( 'src/arch-' + environment['ARCH'] + '/*.S' )
+        Glob('src/*.c') + \
+        Glob('src/sys-' + variant + '/*.c') + \
+        Glob('src/sys-' + variant + '/arch-' + environment['ARCH'] + '/*.c') + \
+        Glob('src/sys-' + variant + '/arch-' + environment['ARCH'] + '/plat-' + environment['PLATFORM'] + '/*.c') + \
+        Glob('src/arch-' + environment['ARCH'] + '/*.c') + \
+        Glob('src/arch-' + environment['ARCH'] + '/*.S')
 
-e = environment.Clone ( )
-e.Append ( CPPPATH = [ 'include' , 'include/sys-' + variant + '/arch-' + environment['ARCH'] ] )
+e = environment.Clone()
+e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + environment['ARCH']])
 
-objects = e.StaticObject ( source )
-Depends ( objects , e['configFiles'] )
+objects = e.StaticObject(source)
+Depends (objects, e['configFiles'])
 
 result = (
-    e.StaticLibrary ( 'c-' + variant , objects ) ,
-    e.StaticObject ( 'crt/sys-' + variant + '/arch-' + e['ARCH'] + '/crt0.S' )
+    e.StaticLibrary('c-' + variant, objects),
+    e.StaticObject('crt/sys-' + variant + '/arch-' + e['ARCH'] + '/crt0.S')
     )
 
-Return ( 'result' )
+Return('result')

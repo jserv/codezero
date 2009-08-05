@@ -17,13 +17,13 @@
 #
 #  Author: Russel Winder
 
-Import ( 'environment' )
+Import('environment')
 
-e = environment.Clone ( )
-e.Append ( LINKFLAGS = [ '-Ttasks/fs0/include/linker.lds' ] )
+e = environment.Clone()
+e.Append(LINKFLAGS = ['-Ttasks/fs0/include/linker.lds'])
 
-objects = e.StaticObject ( Glob ( '*.c' ) + Glob ( 'src/*.c' ) )
-Depends ( objects , e['configFiles'] )
-library = e.Program ( 'fs0' , objects + [ e['crt0'] ] )
+objects = e.StaticObject(Glob('*.c') + Glob('src/*.c'))
+Depends(objects, e['configFiles'])
+library = e.Program('fs0', objects + [e['crt0']])
 
-Return ( 'library' )
+Return('library')
