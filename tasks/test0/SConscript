@@ -21,9 +21,12 @@ Import('environment')
 
 e = environment.Clone()
 e.Append(LINKFLAGS = ['-Ttasks/test0/include/linker.lds'])
+e.Append(LIBPATH=['#build/tasks/test0', '#build/lib/c/userspace/crt/sys-userspace/arch-arm'])
 
 objects = e.StaticObject(Glob('*.c') + Glob('src/*.c'))
 Depends(objects, e['configFiles'])
-library = e.Program('test0', objects + [e['crt0']])
+program = e.Program('test0', objects)
+physicalBaseLinkerScript = Command('include/physical_base.lds', e['kernel'], 'tools/pyelf/readelf.py --first-free-page ' + e['kernel'][0].path + ' >> $TARGET')
+Depends(program, [physicalBaseLinkerScript, e['crt0']])
 
-Return('library')
+Return('program')

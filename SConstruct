@@ -197,7 +197,8 @@ else :
         LIBS =  taskLibraries + ['gcc', libs['userspace']],
         PROGSUFFIX = '.axf',
         CPPDEFINES = ['__USERSPACE__'],
-        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', '#tasks/libl4/include', '#tasks/libmem', '#tasks/libposix/include'])
+        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', '#tasks/libl4/include', '#tasks/libmem', '#tasks/libposix/include'],
+        kernel = startAxf)
 
     tasks = []
     for task in [f.name for f in Glob('tasks/*') if f.name not in taskLibraryNames + ['bootdesc']]:
