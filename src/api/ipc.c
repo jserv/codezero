@@ -11,7 +11,6 @@
 #include <l4/api/errno.h>
 #include <l4/lib/bit.h>
 #include <l4/lib/math.h>
-#include <l4/generic/kmalloc.h>
 #include INC_API(syscall.h)
 #include INC_GLUE(message.h)
 #include INC_GLUE(ipc.h)

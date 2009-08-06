@@ -8,7 +8,6 @@
 #include <l4/lib/printk.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/container.h>
-#include <l4/generic/kmalloc.h>
 #include <l4/generic/tcb.h>
 #include <l4/api/kip.h>
 #include <l4/api/errno.h>
@@ -79,7 +78,7 @@ struct mutex_queue *mutex_control_create(unsigned long mutex_physical)
 	struct mutex_queue *mutex_queue;
 
 	/* Allocate the mutex queue structure */
-	if (!(mutex_queue = kzalloc(sizeof(struct mutex_queue))))
+	if (!(mutex_queue = alloc_user_mutex()))
 		return 0;
 
 	/* Init and return */
@@ -98,7 +97,7 @@ void mutex_control_delete(struct mutex_queue *mq)
 	BUG_ON(!list_empty(&mq->wqh_contenders.task_list));
 	BUG_ON(!list_empty(&mq->wqh_holders.task_list));
 
-	kfree(mq);
+	free_user_mutex(mq);
 }
 
 /*

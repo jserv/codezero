@@ -45,6 +45,7 @@ void task_init_registers(struct ktcb *task, unsigned long pc)
 	task->context.spsr = ARM_MODE_USR;
 }
 
+#if 0
 /* Sets up struct page array and the physical memory descriptor. */
 void paging_init(void)
 {
@@ -53,6 +54,7 @@ void paging_init(void)
 	memory_init();
 	copy_bootdesc();
 }
+#endif
 
 /*
  * Copies global kernel entries into another pgd. Even for sub-pmd ranges

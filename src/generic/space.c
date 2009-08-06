@@ -10,7 +10,6 @@
 #include <l4/generic/space.h>
 #include <l4/generic/container.h>
 #include <l4/generic/tcb.h>
-#include <l4/generic/kmalloc.h>
 #include <l4/api/space.h>
 #include <l4/api/errno.h>
 #include <l4/api/kip.h>
@@ -87,7 +86,7 @@ void address_space_delete(struct address_space *space)
 	id_del(space_id_pool, space->spid);
 
 	/* Deallocate the space structure */
-	kfree(space);
+	free_space(space);
 }
 
 struct address_space *address_space_create(struct address_space *orig)
@@ -126,7 +125,7 @@ struct address_space *address_space_create(struct address_space *orig)
 		/* Copy its user entries/tables */
 		if ((err = copy_user_tables(space, orig)) < 0) {
 			free_pgd(pgd);
-			kfree(space);
+			free_space(space);
 			return PTR_ERR(err);
 		}
 	}

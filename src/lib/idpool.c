@@ -5,14 +5,14 @@
  */
 #include <l4/lib/printk.h>
 #include <l4/lib/idpool.h>
-#include <l4/generic/kmalloc.h>
 #include INC_GLUE(memory.h)
 
-struct id_pool *id_pool_new_init(int totalbits)
+struct id_pool *id_pool_new_init(int totalbits, void *freebuf)
 {
 	int nwords = BITWISE_GETWORD(totalbits);
-	struct id_pool *new = kzalloc((nwords * SZ_WORD)
-				      + sizeof(struct id_pool));
+	struct id_pool *new = freebuf;
+	// int bufsize = (nwords * SZ_WORD) + sizeof(struct id_pool);
+
 	spin_lock_init(&new->lock);
 	new->nwords = nwords;
 	return new;

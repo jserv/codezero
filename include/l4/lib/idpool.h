@@ -20,7 +20,7 @@ struct id_pool_variable {
 	u32 bitmap[];
 };
 
-struct id_pool *id_pool_new_init(int mapsize);
+struct id_pool *id_pool_new_init(int mapsize, void *buffer);
 int id_new(struct id_pool *pool);
 int id_del(struct id_pool *pool, int id);
 int id_get(struct id_pool *pool, int id);

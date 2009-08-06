@@ -7,7 +7,6 @@
 #include <l4/lib/printk.h>
 #include <l4/lib/string.h>
 #include <l4/lib/idpool.h>
-#include <l4/generic/kmalloc.h>
 #include <l4/generic/platform.h>
 #include <l4/generic/physmem.h>
 #include <l4/generic/scheduler.h>
@@ -237,6 +236,8 @@ void jump(struct ktcb *task)
 		"mov	lr,	%0\n"	/* Load pointer to context area */
 		"ldr	r0,	[lr]\n"	/* Load spsr value to r0 */
 		"msr	spsr,	r0\n"	/* Set SPSR as ARM_MODE_USR */
+		"add	sp, lr, %1\n"	/* Reset SVC stack */
+		"sub	sp, sp, %2\n"	/* Align to stack alignment */
 		"ldmib	lr, {r0-r14}^\n" /* Load all USR registers */
 
 		"nop		\n"	/* Spec says dont touch banked registers
@@ -245,7 +246,7 @@ void jump(struct ktcb *task)
 		"ldr	lr,	[lr]\n"	/* Load the PC_USR to LR */
 		"movs	pc,	lr\n"	/* Jump to userspace, also switching SPSR/CPSR */
 		:
-		: "r" (task)
+		: "r" (task), "r" (PAGE_SIZE), "r" (STACK_ALIGNMENT)
 	);
 }
 
@@ -331,7 +332,6 @@ void init_pager(char *name, struct task_ids *ids)
 
 	/* Scheduler initialises the very first task itself */
 }
-#endif
 
 void init_tasks()
 {
@@ -357,6 +357,7 @@ void init_tasks()
 	 */
 	// init_pager(__PAGERNAME__, &ids);
 }
+#endif
 
 void setup_dummy_current()
 {
@@ -368,6 +369,49 @@ void setup_dummy_current()
 
 	current->space = &init_space;
 	TASK_PGD(current) = &init_pgd;
+}
+
+void free_bootmem(void)
+{
+	/* TODO: Fill. */
+}
+
+void init_finalize(struct kernel_container *kcont)
+{
+	volatile register unsigned int stack asm("sp");
+	volatile register unsigned int newstack;
+	struct ktcb *first_task;
+	struct container *c;
+
+	/* Get the first container */
+	c = link_to_struct(kcont->containers.list.next,
+			   struct container,
+			   list);
+
+	/* Get the first pager ktcb */
+	first_task = c->pager[0].tcb;
+
+	/* Calculate first stack address */
+	newstack = align((unsigned long)first_task + PAGE_SIZE - 1,
+			 STACK_ALIGNMENT);
+
+	/* Switch to new stack */
+	stack = newstack;
+
+	/* -- Point of no stack unwinding/referencing -- */
+
+	/*
+	 * Unmap boot memory, and add it as
+	 * an unused kernel memcap
+	 */
+	free_bootmem();
+
+	/*
+	 * Start the scheduler, jumping to task
+	 */
+	scheduler_start();
+
+	/* FIXME: Make sure SP_SVC is reset in jump() */
 }
 
 void start_kernel(void)
@@ -410,8 +454,8 @@ void start_kernel(void)
 	/* Evaluate system resources and set up resource pools */
 	init_system_resources(&kernel_container);
 
-	/* Start the scheduler with available tasks in the runqueue */
-	scheduler_start();
+	/* Free boot memory, jump to first task's stack and start scheduler */
+	init_finalize(&kernel_container);
 
 	BUG();
 }

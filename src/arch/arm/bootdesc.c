@@ -6,7 +6,6 @@
 
 #include <l4/lib/printk.h>
 #include <l4/lib/string.h>
-#include <l4/generic/kmalloc.h>
 #include <l4/generic/space.h>
 #include INC_ARCH(linker.h)
 #include INC_ARCH(bootdesc.h)
@@ -16,6 +15,7 @@
 
 struct bootdesc *bootdesc;
 
+#if 0
 void copy_bootdesc()
 {
 	struct bootdesc *new = kzalloc(bootdesc->desc_size);
@@ -43,3 +43,4 @@ void read_bootdesc(void)
 			__svc_images_end = bootdesc->images[i].phys_end;
 }
 
+#endif

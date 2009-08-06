@@ -127,6 +127,8 @@ typedef struct pmd_table {
 
 #define TASK_PGD(x)		(x)->space->pgd
 
+#define STACK_ALIGNMENT				8
+
 /* Kernel's data about the fault */
 typedef struct fault_kdata {
 	u32 faulty_pc;

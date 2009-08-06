@@ -9,6 +9,8 @@
 #include <l4/generic/cap-types.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
+#include INC_SUBARCH(mm.h)
+#include INC_ARCH(linker.h)
 
 /*
  * FIXME:
@@ -192,21 +194,45 @@ void task_setup_utcb(struct ktcb *task, struct pager *pager)
 }
 
 #if 0
-void switch_stack(struct ktcb *task)
-{
-	register u32 stack asm("sp");
-	register u32 fp asm("fp");
-	register u32 newstack = align((unsigned long)task + PAGE_SIZE, sizeof(short));
-	signed long long offset = newstack - __bootstack;
 
-	fp += offset;
-	sp += offset;
+/*
+ * NOTE: This is not useful because FP stores references to
+ * old stack so even if stacks are copied, unwinding is not
+ * possible, which makes copying pointless. If there was no
+ * FP, it may make sense, but this is not tested.
+ *
+ * Copy current stack contents to new one,
+ * and jump to that stack by modifying sp and frame pointer.
+ */
+int switch_stacks(struct ktcb *task)
+{
+	volatile register unsigned int stack asm("sp");
+	volatile register unsigned int frameptr asm("fp");
+	volatile register unsigned int newstack;
+	unsigned int stack_size = (unsigned int)_bootstack - stack;
+
+	newstack = align((unsigned long)task + PAGE_SIZE - 1,
+			 STACK_ALIGNMENT);
 
 	/* Copy stack contents to new stack */
-	memcpy(&newstack, __bootstack, stack - __bootstack);
+	memcpy((void *)(newstack - stack_size),
+	       (void *)stack, stack_size);
 
-	/* Switch to new stack */
+	/*
+	 * Switch to new stack, as new stack
+	 * minus currently used stack size
+	 */
+	stack = newstack - stack_size;
 
+	/*
+	 * Frame ptr is new stack minus the original
+	 * difference from start of boot stack to current fptr
+	 */
+	frameptr = newstack -
+		   ((unsigned int)_bootstack - frameptr);
+
+	/* We should be able to return safely */
+	return 0;
 }
 #endif
 
@@ -247,6 +273,7 @@ int init_first_pager(struct pager *pager,
 
 	task->space = space;
 	task->container = cont;
+	pager->tcb = task;
 
 	/* Map the task's space */
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
@@ -290,6 +317,8 @@ int init_pager(struct pager *pager, struct container *cont)
 	task->space = address_space_create(0);
 
 	task->container = cont;
+
+	pager->tcb = task;
 
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
 			page_align_up(pager->memsize),
