@@ -38,18 +38,18 @@ BEGIN_PROC(l4_getid)
 END_PROC(l4_getid)
 
 /*
- * Reads data from the kernel into given buffer. Data is defined by request descriptor.
- * @r0 = request descriptor, @r1 = buffer address.
+ * Reads/manipulates capabilities of a thread, particularly a pager.
+ * @r0 = request type, @r1 = request flags, @r2 = io buffer ptr
  */
-BEGIN_PROC(l4_kread)
-	ldr	r12, =__l4_kread
+BEGIN_PROC(l4_capability_control)
+	ldr	r12, =__l4_capability_control
 	ldr	pc, [r12]		@ Jump into the SWI
 		/*
 		 * The LR_USR points at the return address of this function. The system
 		 * call return path directly jumps to LR_USR so we don't even need a
 		 * return instruction here.
 		 */
-END_PROC(l4_kread)
+END_PROC(l4_capability_control)
 
 /*
  * For clone() we need special assembler handling
@@ -137,17 +137,16 @@ BEGIN_PROC(l4_unmap)
 END_PROC(l4_unmap)
 
 /*
- * System call that grants a set of pages to the kernel.
- * @r0 = physical pfn, @r1 = number of pages, @r2 = whether to
- * grant or reclaim kernel memory. grant = 1, reclaim = 0.
+ * System call that controls containers and their parameters.
+ * @r0 = request type, @r1 = request flags, @r2 = io buffer ptr
  */
-BEGIN_PROC(l4_kmem_control)
+BEGIN_PROC(l4_container_control)
 	stmfd	sp!, {lr}
-	ldr	r12, =__l4_kmem_control
+	ldr	r12, =__l4_container_control
 	mov	lr, pc
 	ldr	pc, [r12]
 	ldmfd	sp!, {pc}	@ Restore original lr and return.
-END_PROC(l4_kmem_control)
+END_PROC(l4_container_control)
 
 /*
  * System call that gets or sets the time info structure.

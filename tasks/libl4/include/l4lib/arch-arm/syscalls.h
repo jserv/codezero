@@ -40,9 +40,9 @@ typedef int (*__l4_ipc_t)(l4id_t to, l4id_t from, u32 flags);
 extern __l4_ipc_t __l4_ipc;
 int l4_ipc(l4id_t to, l4id_t from, u32 flags);
 
-typedef int (*__l4_kread_t)(u32 rd, void *addr);
-extern __l4_kread_t __l4_kread;
-int l4_kread(u32 rd, void *addr);
+typedef int (*__l4_capability_control_t)(unsigned int req, unsigned int flags, void *buf);
+extern __l4_capability_control_t __l4_capability_control;
+int l4_capability_control(unsigned int req, unsigned int flags, void *buf);
 
 typedef int (*__l4_map_t)(void *phys, void *virt,
 			  u32 npages, u32 flags, l4id_t tid);
@@ -70,9 +70,9 @@ typedef int (*__l4_exchange_registers_t)(void *exregs_struct, l4id_t tid);
 extern __l4_exchange_registers_t __l4_exchange_registers;
 int l4_exchange_registers(void *exregs_struct, l4id_t tid);
 
-typedef int (*__l4_kmem_control_t)(unsigned long pfn, int npages, int grant);
-extern __l4_kmem_control_t __l4_kmem_control;
-int l4_kmem_control(unsigned long pfn, int npages, int grant);
+typedef int (*__l4_container_control_t)(unsigned int req, unsigned int flags, void *buf);
+extern __l4_container_control_t __l4_container_control;
+int l4_container_control(unsigned int req, unsigned int flags, void *buf);
 
 typedef int (*__l4_time_t)(void *timeval, int set);
 extern __l4_time_t __l4_time;
