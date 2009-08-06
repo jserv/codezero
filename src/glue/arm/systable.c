@@ -22,13 +22,13 @@ void kip_init_syscalls(void)
 	kip.ipc_control = ARM_SYSCALL_PAGE + sys_ipc_control_offset;
 	kip.map = ARM_SYSCALL_PAGE + sys_map_offset;
 	kip.ipc = ARM_SYSCALL_PAGE + sys_ipc_offset;
-	kip.kread = ARM_SYSCALL_PAGE + sys_kread_offset;
+	kip.capability_control = ARM_SYSCALL_PAGE + sys_capability_control_offset;
 	kip.unmap = ARM_SYSCALL_PAGE + sys_unmap_offset;
 	kip.exchange_registers = ARM_SYSCALL_PAGE + sys_exchange_registers_offset;
 	kip.thread_switch = ARM_SYSCALL_PAGE + sys_thread_switch_offset;
 	kip.schedule = ARM_SYSCALL_PAGE + sys_schedule_offset;
 	kip.getid = ARM_SYSCALL_PAGE + sys_getid_offset;
-	kip.kmem_control = ARM_SYSCALL_PAGE + sys_kmem_control_offset;
+	kip.container_control = ARM_SYSCALL_PAGE + sys_container_control_offset;
 	kip.time = ARM_SYSCALL_PAGE + sys_time_offset;
 	kip.mutex_control = ARM_SYSCALL_PAGE + sys_mutex_control_offset;
 }
@@ -93,14 +93,18 @@ int arch_sys_map(syscall_context_t *regs)
 		       (unsigned int)regs->r4);
 }
 
-int arch_sys_kread(syscall_context_t *regs)
+int arch_sys_capability_control(syscall_context_t *regs)
 {
-	return sys_kread((int)regs->r0, (void *)regs->r1);
+	return sys_capability_control((unsigned int)regs->r0,
+				      (unsigned int)regs->r1,
+				      (void *)regs->r2);
 }
 
-int arch_sys_kmem_control(syscall_context_t *regs)
+int arch_sys_container_control(syscall_context_t *regs)
 {
-	return sys_kmem_control((unsigned long)regs->r0, (int)regs->r1, (int)regs->r2);
+	return sys_container_control((unsigned int)regs->r0,
+				     (unsigned int)regs->r1,
+				     (void *)regs->r2);
 }
 
 int arch_sys_time(syscall_context_t *regs)
@@ -130,8 +134,8 @@ void syscall_init()
 	syscall_table[sys_space_control_offset >> 2] 		= (syscall_fn_t)arch_sys_space_control;
 	syscall_table[sys_ipc_control_offset >> 2] 		= (syscall_fn_t)arch_sys_ipc_control;
 	syscall_table[sys_map_offset >> 2] 			= (syscall_fn_t)arch_sys_map;
-	syscall_table[sys_kread_offset >> 2]		 	= (syscall_fn_t)arch_sys_kread;
-	syscall_table[sys_kmem_control_offset >> 2]		= (syscall_fn_t)arch_sys_kmem_control;
+	syscall_table[sys_capability_control_offset >> 2]	= (syscall_fn_t)arch_sys_capability_control;
+	syscall_table[sys_container_control_offset >> 2]	= (syscall_fn_t)arch_sys_container_control;
 	syscall_table[sys_time_offset >> 2]			= (syscall_fn_t)arch_sys_time;
 	syscall_table[sys_mutex_control_offset >> 2]		= (syscall_fn_t)arch_sys_mutex_control;
 

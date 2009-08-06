@@ -170,42 +170,8 @@ int sys_getid(struct task_ids *ids)
 	return 0;
 }
 
-/*
- * Granted pages *must* be outside of the pages that are already owned and used
- * by the kernel, otherwise a hostile/buggy pager can attack kernel addresses by
- * fooling it to use them as freshly granted pages. Kernel owned pages are
- * defined as, "any page that has been used by the kernel prior to all free
- * physical memory is taken by a pager, and any other page that has been granted
- * so far by any such pager."
- */
-int validate_granted_pages(unsigned long pfn, int npages)
+int sys_container_control(unsigned int req, unsigned int flags, void *userbuf)
 {
-	/* FIXME: Fill this in */
-	return 0;
-}
-
-/*
- * Used by a pager to grant memory to kernel for its own use. Generally
- * this memory is used for thread creation and memory mapping, (e.g. new
- * page tables, page middle directories, per-task kernel stack etc.)
- */
-int sys_kmem_control(unsigned long pfn, int npages, int grant)
-{
-	/* Pager is granting us pages */
-	if (grant) {
-		/*
-		 * Check if given set of pages are outside the pages already
-		 * owned by the kernel.
-		 */
-		if (validate_granted_pages(pfn, npages) < 0)
-			return -EINVAL;
-
-		/* Add the granted pages to the allocator */
-	//	if (pgalloc_add_new_grant(pfn, npages))
-			BUG();
-	} else /* Reclaim not implemented yet */
-		BUG();
-
 	return 0;
 }
 

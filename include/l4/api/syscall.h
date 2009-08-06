@@ -22,8 +22,8 @@
 #define sys_ipc_control_offset			0x1C
 #define sys_map_offset				0x20
 #define sys_getid_offset			0x24
-#define sys_kread_offset			0x28
-#define sys_kmem_control_offset			0x2C
+#define sys_capability_control_offset		0x28
+#define sys_container_control_offset		0x2C
 #define sys_time_offset				0x30
 #define sys_mutex_control_offset		0x34
 #define syscalls_end_offset			sys_mutex_control_offset
@@ -42,8 +42,8 @@ int sys_ipc_control(void);
 int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
 	    unsigned long flags, unsigned int tid);
 int sys_getid(struct task_ids *ids);
-int sys_kread(int rd, void *addr);
-int sys_kmem_control(unsigned long pfn, int npages, int grant);
+int sys_capability_control(unsigned int req, unsigned int flags, void *addr);
+int sys_container_control(unsigned int req, unsigned int flags, void *addr);
 int sys_time(struct timeval *tv, int set);
 int sys_mutex_control(unsigned long mutex_address, int mutex_op);
 

@@ -32,7 +32,6 @@ struct container_info cinfo[] = {
 				.type = CAP_TYPE_MAP | CAP_RTYPE_VIRTMEM,
 				.access = CAP_MAP_READ | CAP_MAP_WRITE
 					| CAP_MAP_EXEC | CAP_MAP_UNMAP,
-				.access = 0,
 				.start = __pfn(0xE0000000),
 				.end = __pfn(0xF0000000),
 				.size = __pfn(0x10000000),
@@ -49,7 +48,6 @@ struct container_info cinfo[] = {
 				.type = CAP_TYPE_MAP | CAP_RTYPE_VIRTMEM,
 				.access = CAP_MAP_READ | CAP_MAP_WRITE
 					| CAP_MAP_EXEC | CAP_MAP_UNMAP,
-				.access = 0,
 				.start = __pfn(0x20000000),
 				.end = __pfn(0x30000000),
 				.size = __pfn(0x10000000),

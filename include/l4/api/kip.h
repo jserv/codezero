@@ -46,7 +46,7 @@ struct kip {
 	u8  api_version;
 	u32 api_flags;
 
-	u32 kmem_control;
+	u32 container_control;
 	u32 time;
 
 	u32 space_control;
@@ -54,7 +54,7 @@ struct kip {
 	u32 ipc_control;
 	u32 map;
 	u32 ipc;
-	u32 kread;
+	u32 capability_control;
 	u32 unmap;
 	u32 exchange_registers;
 	u32 thread_switch;
@@ -82,10 +82,6 @@ struct kip {
 #define __PAGERNAME__			"mm0"
 #define __VFSNAME__			"fs0"
 #define __BLKDEVNAME__			"blkdev0"
-
-#define KDATA_PAGE_MAP			0
-#define KDATA_BOOTDESC			1
-#define KDATA_BOOTDESC_SIZE		2
 
 #if defined (__KERNEL__)
 extern struct kip kip;
