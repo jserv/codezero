@@ -93,8 +93,9 @@ def generate_bootdesc(source, target, env):
 	os.system("cat " + original_template + " > " + str(target[0]))
 	os.system("cat " + autogen_templ + " >> " + str(target[0]))
 
+# Relocate to end of mm0 instead of end of kernel
 def relocate_bootdesc(source, target, env):
-	f = open("start.txt", "r")
+	f = open("mm0.txt", "r")
 	kernel_name = f.readline()[:-1]
 	[start, startval] = str.split(f.readline()[:-1])
 	[end, endval] = str.split(f.readline()[:-1])
