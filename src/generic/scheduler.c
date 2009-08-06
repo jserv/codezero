@@ -25,9 +25,6 @@
 #include INC_ARCH(exception.h)
 
 
-//static struct runqueue *rq_runnable, *rq_expired;
-//static int prio_total;			/* Total priority of all tasks */
-
 /* This is incremented on each irq or voluntarily by preempt_disable() */
 extern unsigned int current_irq_nest_count;
 
