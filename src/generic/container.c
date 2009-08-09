@@ -17,15 +17,19 @@
  * Add irqs, exceptions
  */
 
+#define CONFIG_CONT0_PAGER_START	0x40000
+#define CONFIG_CONT0_PHYS_END		0x1000000
+#define CONFIG_CONT0_PHYS_START		CONFIG_CONT0_PAGER_START
+
 struct container_info cinfo[] = {
 	[0] = {
 	.name = "Codezero POSIX Services",
 	.npagers = 1,
 	.pager = {
 		[0] = {
-			.pager_lma = __pfn(0x38000),
+			.pager_lma = __pfn(CONFIG_CONT0_PAGER_START),
 			.pager_vma = __pfn(0xE0000000),
-			.pager_size = __pfn(0x96000),
+			.pager_size = __pfn(0x9F000),
 			.ncaps = 14,
 			.caps = {
 			[0] = {
@@ -67,8 +71,8 @@ struct container_info cinfo[] = {
 				.access = CAP_MAP_CACHED | CAP_MAP_UNCACHED
 					| CAP_MAP_READ | CAP_MAP_WRITE
 					| CAP_MAP_EXEC | CAP_MAP_UNMAP,
-				.start = __pfn(0x38000),
-				.end = __pfn(0x1000000),	/* 16 MB for all posix services */
+				.start = __pfn(CONFIG_CONT0_PHYS_START),
+				.end = __pfn(CONFIG_CONT0_PHYS_END),	/* 16 MB for all posix services */
 			},
 			[5] = {
 				.type = CAP_TYPE_IPC | CAP_RTYPE_CONTAINER,
@@ -269,9 +273,13 @@ int init_first_pager(struct pager *pager,
 	mutex_init(&space->lock);
 	space->pgd = current_pgd;
 
+	/* Initialize container relationships */
 	task->space = space;
-	task->container = cont;
 	pager->tcb = task;
+	task->pager = pager;
+	task->container = cont;
+	link_init(&task->cap_list.caps);	/* TODO: Do this in tcb_alloc_init */
+	task->cap_list_ptr = &pager->cap_list;
 
 	/* Map the task's space */
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
@@ -314,9 +322,12 @@ int init_pager(struct pager *pager, struct container *cont)
 
 	task->space = address_space_create(0);
 
-	task->container = cont;
-
+	/* Initialize container relationships */
 	pager->tcb = task;
+	task->pager = pager;
+	task->container = cont;
+	link_init(&task->cap_list.caps);	/* TODO: Do this in tcb_alloc_init */
+	task->cap_list_ptr = &pager->cap_list;
 
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
 			page_align_up(pager->memsize),

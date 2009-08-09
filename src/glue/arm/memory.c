@@ -6,7 +6,6 @@
 #include <l4/lib/list.h>
 #include <l4/lib/string.h>
 #include <l4/lib/printk.h>
-#include <l4/generic/physmem.h>
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
 #include INC_SUBARCH(mm.h)

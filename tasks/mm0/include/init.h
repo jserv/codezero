@@ -9,16 +9,19 @@
 #include <l4/macros.h>
 #include <l4/config.h>
 #include <l4/types.h>
-#include <l4/generic/physmem.h>
 #include INC_PLAT(offsets.h)
 #include INC_GLUE(memory.h)
 #include INC_GLUE(memlayout.h)
-#include INC_ARCH(bootdesc.h)
+#include <bootdesc.h>
+#include <physmem.h>
 #include <vm_area.h>
+#include <capability.h>
 
 struct initdata {
+	struct capability *bootcaps;
+	struct capability *physmem;
 	struct bootdesc *bootdesc;
-	struct page_bitmap page_map;
+	struct page_bitmap *page_map;
 	unsigned long pager_utcb_virt;
 	unsigned long pager_utcb_phys;
 	struct link boot_file_list;
@@ -26,9 +29,9 @@ struct initdata {
 
 extern struct initdata initdata;
 
-int request_initdata(struct initdata *i);
+void init_pager(void);
 
-void initialise(void);
+/* TODO: Remove this stuff from here. */
 int init_devzero(void);
 struct vm_file *get_devzero(void);
 int init_boot_files(struct initdata *initdata);

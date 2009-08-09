@@ -7,7 +7,6 @@
 #include <vfs.h>
 #include <bdev.h>
 #include <task.h>
-#include <kdata.h>
 #include <stdio.h>
 #include <string.h>
 #include <l4/lib/list.h>
@@ -58,7 +57,7 @@ int initialise(void)
 	struct superblock *root_sb;
 
 	/* Get standard init data from microkernel */
-	request_initdata(&initdata);
+	// request_initdata(&initdata);
 
 	/* Register compiled-in filesystems with vfs core. */
 	vfs_register_filesystems();

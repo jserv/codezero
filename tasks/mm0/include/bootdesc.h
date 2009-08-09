@@ -15,11 +15,7 @@ struct bootdesc {
 	struct svc_image images[];
 } __attribute__((__packed__));
 
-#if defined (__KERNEL__)
-extern struct bootdesc *bootdesc;
-
-void read_bootdesc(void);
-void copy_bootdesc(void);
-#endif
+struct initdata;
+void read_bootdesc(struct initdata *initdata);
 
 #endif /* __BOOTDESC_H__ */

@@ -12,7 +12,6 @@
 #include <l4lib/ipcdefs.h>
 #include <fs.h>
 #include <init.h>
-#include <kdata.h>
 #include <syscalls.h>
 #include <task.h>
 #include <posix/sys/time.h>

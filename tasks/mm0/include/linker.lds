@@ -33,12 +33,19 @@ SECTIONS
 	{
 		*(.data)
 	}
-	. = ALIGN(4K);
-	_start_init = .;
-	.init : AT (ADDR(.init) - offset) { *(.init.stack) }
-	. = ALIGN(8);
-	__stack = .;	/* This is the preallocated boot stack */
-	_end_init = .;
 	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
+	. = ALIGN(4K);
+	. += 0x2000;	/* BSS doesnt increment link counter??? */
+	/* Below part is to be discarded after boot */
+	_start_init = .;
+	.init : AT (ADDR(.init) - offset)
+	{
+		*(.init.data)
+		*(.init.bootmem)
+		*(.init.stack)
+	}
+	_end_init = .;
+	__stack = .; /* This is the preallocated boot stack */
+	_end_init = .;
 	_end = .;
 }

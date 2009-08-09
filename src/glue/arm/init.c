@@ -8,7 +8,6 @@
 #include <l4/lib/string.h>
 #include <l4/lib/idpool.h>
 #include <l4/generic/platform.h>
-#include <l4/generic/physmem.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
@@ -17,7 +16,6 @@
 #include <l4/generic/container.h>
 #include INC_ARCH(linker.h)
 #include INC_ARCH(asm.h)
-#include INC_ARCH(bootdesc.h)
 #include INC_SUBARCH(mm.h)
 #include INC_SUBARCH(mmu_ops.h)
 #include INC_GLUE(memlayout.h)

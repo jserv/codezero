@@ -11,6 +11,7 @@
 #include <l4/lib/spinlock.h>
 #include <l4/generic/scheduler.h>
 #include <l4/generic/resource.h>
+#include <l4/generic/capability.h>
 #include <l4/generic/space.h>
 #include INC_GLUE(memory.h)
 #include INC_GLUE(syscall.h)
@@ -98,6 +99,11 @@ struct ktcb {
 
 	/* Container */
 	struct container *container;
+	struct pager *pager;
+
+	/* Capability list */
+	struct cap_list *cap_list_ptr;
+	struct cap_list cap_list;
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;

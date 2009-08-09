@@ -4,7 +4,7 @@
 Import('env')
 
 # The set of source files associated with this SConscript file.
-src_local = ['head.S', 'vectors.S', 'syscall.S', 'exception.c', 'bootdesc.c']
+src_local = ['head.S', 'vectors.S', 'syscall.S', 'exception.c']
 obj = env.Object(src_local)
 
 Return('obj')

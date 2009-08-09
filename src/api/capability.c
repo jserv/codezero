@@ -8,50 +8,79 @@
  */
 
 #include <l4/api/capability.h>
-#include <l4/generic/tcb.h>
-#include <l4/generic/physmem.h>
-#include <l4/generic/space.h>
+#include <l4/generic/capability.h>
+#include <l4/generic/container.h>
 #include <l4/api/errno.h>
 #include INC_API(syscall.h)
 
 
-
-/* Error-checked kernel data request call */
-int __sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
+int task_read_capabilities(void *userbuf)
 {
-	int err = 0;
-#if 0
+	int copy_size, copy_offset = 0;
+	struct capability *cap;
+	int err;
+
+	/*
+	 * Currently only pagers can
+	 * read their own capabilities
+	 */
+	if (current != current->pager->tcb)
+		return -EPERM;
+
+	/* Determine size of pager capabilities */
+	copy_size = current->cap_list_ptr->ncaps * sizeof(*cap);
+
+	/* Validate user buffer for this copy size */
+	if ((err = check_access((unsigned long)userbuf, copy_size,
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
+
+	/* Copy capabilities from list to buffer */
+	list_foreach_struct(cap,
+			    &current->cap_list_ptr->caps,
+			    list) {
+		memcpy(userbuf + copy_offset, cap, sizeof(*cap));
+		copy_offset += sizeof(*cap);
+	}
+
+	return 0;
+}
+
+/*
+ * Read, manipulate capabilities. Currently only capability read support.
+ */
+int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
+{
+	int err;
+
 	switch(req) {
-	case KDATA_PAGE_MAP:
-		// printk("Handling KDATA_PAGE_MAP request.\n");
-		if (check_access(vaddr, sizeof(page_map), MAP_USR_RW_FLAGS, 1) < 0)
-			return -EINVAL;
-		memcpy(dest, &page_map, sizeof(page_map));
+	/* Return number of capabilities the thread has */
+	case CAP_CONTROL_NCAPS:
+		if (current != current->pager->tcb)
+			return -EPERM;
+
+		if ((err = check_access((unsigned long)userbuf, sizeof(int),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
+
+		/* Copy ncaps value */
+		*((int *)userbuf) = current->cap_list_ptr->ncaps;
 		break;
-	case KDATA_BOOTDESC:
-		// printk("Handling KDATA_BOOTDESC request.\n");
-		if (check_access(vaddr, bootdesc->desc_size, MAP_USR_RW_FLAGS, 1) < 0)
-			return -EINVAL;
-		memcpy(dest, bootdesc, bootdesc->desc_size);
-		break;
-	case KDATA_BOOTDESC_SIZE:
-		// printk("Handling KDATA_BOOTDESC_SIZE request.\n");
-		if (check_access(vaddr, sizeof(unsigned int), MAP_USR_RW_FLAGS, 1) < 0)
-			return -EINVAL;
-		*(unsigned int *)dest = bootdesc->desc_size;
+
+	/* Return all capabilities as an array of capabilities */
+	case CAP_CONTROL_READ_CAPS:
+		err = task_read_capabilities(userbuf);
 		break;
 
 	default:
-		printk("Unsupported kernel data request.\n");
-		err = -1;
+		/* Invalid request id */
+		return -EINVAL;
 	}
-#endif
-	return err;
-
+	return 0;
 }
 
-int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
-{
-	return __sys_capability_control(req, flags, userbuf);
-}
+
+
+
+
 

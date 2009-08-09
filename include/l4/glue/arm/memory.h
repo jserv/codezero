@@ -7,7 +7,6 @@
 #ifndef __GLUE_ARM_MEMORY_H__
 #define __GLUE_ARM_MEMORY_H__
 
-#include INC_ARCH(bootdesc.h) /* Definition of last loaded svc image address */
 #include INC_GLUE(memlayout.h) /* Important generic definitions */
 #include INC_SUBARCH(mm.h)
 

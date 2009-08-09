@@ -19,9 +19,60 @@
 #include <test.h>
 #include <boot.h>
 #include <utcb.h>
+#include <bootm.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
 LINK_DECLARE(boot_file_list);
+
+/* Kernel data acquired during initialisation */
+__initdata struct initdata initdata;
+
+void print_bootdesc(struct bootdesc *bd)
+{
+	for (int i = 0; i < bd->total_images; i++) {
+		printf("Task Image: %d\n", i);
+		printf("Name: %s\n", bd->images[i].name);
+		printf("Start: 0x%x\n", bd->images[i].phys_start);
+		printf("End: 0x%x\n", bd->images[i].phys_end);
+	}
+}
+
+void print_pfn_range(int pfn, int size)
+{
+	unsigned int addr = pfn << PAGE_BITS;
+	unsigned int end = (pfn + size) << PAGE_BITS;
+	printf("Used: 0x%x - 0x%x\n", addr, end);
+}
+
+#if 0
+void print_page_map(struct page_bitmap *map)
+{
+	unsigned int start_pfn = 0;
+	unsigned int total_used = 0;
+	int numpages = 0;
+
+	// printf("Page map: 0x%x-0x%x\n", map->pfn_start << PAGE_BITS, map->pfn_end << PAGE_BITS);
+	for (int i = 0; i < (PHYSMEM_TOTAL_PAGES >> 5); i++) {
+		for (int x = 0; x < WORD_BITS; x++) {
+			if (map->map[i] & (1 << x)) { /* A used page found? */
+				if (!start_pfn) /* First such page found? */
+					start_pfn = (WORD_BITS * i) + x;
+				total_used++;
+				numpages++; /* Increase number of pages */
+			} else { /* Either used pages ended or were never found */
+				if (start_pfn) { /* We had a used page */
+					/* Finished end of used range.
+					 * Print and reset. */
+					//print_pfn_range(start_pfn, numpages);
+					start_pfn = 0;
+					numpages = 0;
+				}
+			}
+		}
+	}
+	printf("%s: Pagemap: Total of %d used physical pages. %d Kbytes used.\n", __TASKNAME__, total_used, total_used << 2);
+}
+#endif
 
 /*
  * A specialised function for setting up the task environment of mm0.
@@ -160,7 +211,10 @@ int start_boot_tasks(struct initdata *initdata)
 void init_mm(struct initdata *initdata)
 {
 	/* Initialise the page and bank descriptors */
-	init_physmem(initdata, membank);
+	init_physmem_primary(initdata);
+
+	init_physmem_secondary(initdata, membank);
+
 	// printf("%s: Initialised physmem.\n", __TASKNAME__);
 
 	/* Initialise the page allocator on first bank. */
@@ -190,14 +244,14 @@ void init_mm(struct initdata *initdata)
 	pager_address_pool_init();
 
 	// printf("%s: Initialised utcb address pool.\n", __TASKNAME__);
-
-	/* Give the kernel some memory to use for its allocators */
-	l4_kmem_control(__pfn(alloc_page(__pfn(SZ_1MB))), __pfn(SZ_1MB), 1);
 }
 
-void initialise(void)
+
+void init_pager(void)
 {
-	request_initdata(&initdata);
+	read_kernel_capabilities(&initdata);
+
+	read_bootdesc(&initdata);
 
 	init_mm(&initdata);
 

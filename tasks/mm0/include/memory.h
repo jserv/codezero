@@ -8,14 +8,7 @@
 
 #include <vm_area.h>
 #include <init.h>
-
-struct membank {
-	unsigned long start;
-	unsigned long end;
-	unsigned long free;
-	struct page *page_array;
-};
-extern struct membank membank[];
+#include <physmem.h>
 
 void init_mm_descriptors(struct page_bitmap *page_map,
 			 struct bootdesc *bootdesc, struct membank *membank);

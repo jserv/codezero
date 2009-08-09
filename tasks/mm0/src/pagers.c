@@ -12,7 +12,6 @@
 #include <globals.h>
 #include <file.h>
 #include <init.h>
-#include INC_ARCH(bootdesc.h)
 #include <l4/api/errno.h>
 
 struct page *page_init(struct page *page)
