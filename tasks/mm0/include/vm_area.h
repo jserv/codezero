@@ -13,6 +13,7 @@
 #include <task.h>
 #include <arch/mm.h>
 #include <lib/spinlock.h>
+#include <physmem.h>
 
 // #define DEBUG_FAULT_HANDLING
 #ifdef DEBUG_FAULT_HANDLING
@@ -76,10 +77,11 @@ struct devpage {
 
 #define page_refcnt(x)		((x)->count + 1)
 #define virtual(x)		((x)->virtual)
-#define phys_to_page(x)		(page_array + __pfn(x))
-#define page_to_phys(x)		__pfn_to_addr((((void *)x) - \
-					       (void *)page_array) \
-					      / sizeof(struct page))
+#define phys_to_page(x)		(page_array + __pfn((x) - membank[0].start))
+#define page_to_phys(x)		(__pfn_to_addr((((void *)(x)) - \
+						(void *)page_array) / \
+					       sizeof(struct page)) + \
+					       membank[0].start)
 
 /* Fault data specific to this task + ptr to kernel's data */
 struct fault_data {

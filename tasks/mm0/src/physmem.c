@@ -131,6 +131,9 @@ void init_physmem_secondary(struct initdata *initdata, struct membank *membank)
 
 	/* Set global page array to this bank's array */
 	page_array = membank[0].page_array;
+
+	/* Test that page/phys macros work */
+	BUG_ON(phys_to_page(page_to_phys(&page_array[5])) != &page_array[5])
 }
 
 
