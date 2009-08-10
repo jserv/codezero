@@ -65,11 +65,29 @@ def createKernelSFile(target, source, env):
 .incbin "%s"
 ''' % (os.path.splitext(image.name)[0], image.path))
 
+def createMainC(target, source, env):
+    with open(source[0].path) as inFile:
+        with open(target[0].path, 'w') as outFile:
+            externs = ''
+            declarations = ''
+            loads = ''
+            for item in source[1:]:
+                name = os.path.splitext(item.name)[0]
+                if name == 'start' : name = 'kernel'
+                externs += 'extern char _start_%s[];\nextern char _end_%s[];\n' % (name, name)
+                declarations += 'void *%s_entry = NULL;\n' % (name,)
+                loads += 'printf("Loading the %s...\\n");\nload_image(&%s_entry, _start_%s, _end_%s);\n' %(name, name, name, name)
+            text = inFile.read()
+            text = text.replace('__EXTERNAL_SYMBOLS_EDIT_MARKER__', externs)
+            text = text.replace('__DECLARATIONS_EDIT_MARKER__', declarations)
+            text = text.replace('__LOAD_STATEMENTS_EDIT_MARKER__', loads)
+            outFile.write(text)
+
 startAxfS = Command('start.axf.S', images[0], ksymToLds)
-
 kernelS = Command('kernel.S', images + [startAxfS], createKernelSFile)
+mainC = Command('main.c', ['main.c.in'] + images, createMainC)
 
-objects = environment.Object(Glob('*.c') + [kernelS, startAxfS])
+objects = environment.Object(Glob('*.c') + [kernelS, startAxfS, mainC])
 Depends(objects, environment['configFiles'])
 Depends(objects, images)
 program = environment.Program('final', objects + [environment['baremetal_crt0']])
