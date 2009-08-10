@@ -278,7 +278,6 @@ int init_first_pager(struct pager *pager,
 	pager->tcb = task;
 	task->pager = pager;
 	task->container = cont;
-	link_init(&task->cap_list.caps);	/* TODO: Do this in tcb_alloc_init */
 	task->cap_list_ptr = &pager->cap_list;
 
 	/* Map the task's space */
@@ -326,7 +325,6 @@ int init_pager(struct pager *pager, struct container *cont)
 	pager->tcb = task;
 	task->pager = pager;
 	task->container = cont;
-	link_init(&task->cap_list.caps);	/* TODO: Do this in tcb_alloc_init */
 	task->cap_list_ptr = &pager->cap_list;
 
 	add_mapping_pgd(pager->start_lma, pager->start_vma,

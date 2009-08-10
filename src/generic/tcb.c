@@ -16,11 +16,6 @@
 #include INC_SUBARCH(mm.h)
 #include INC_GLUE(memory.h)
 
-/* ID pools for threads and spaces. */
-struct id_pool *thread_id_pool;
-struct id_pool *space_id_pool;
-
-
 void init_ktcb_list(struct ktcb_list *ktcb_list)
 {
 	memset(ktcb_list, 0, sizeof(*ktcb_list));
@@ -35,6 +30,8 @@ void tcb_init(struct ktcb *new)
 
 	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
+
+	link_init(&new->cap_list.caps);
 
 	/* Initialise task's scheduling state and parameters. */
 	sched_init_task(new, TASK_PRIO_NORMAL);
@@ -92,7 +89,7 @@ void tcb_delete(struct ktcb *tcb)
 	address_space_reference_unlock();
 
 	/* Deallocate tcb ids */
-	id_del(thread_id_pool, tcb->tid);
+	id_del(&kernel_container.ktcb_ids, tcb->tid);
 
 	/* Free the tcb */
 	free_ktcb(tcb);

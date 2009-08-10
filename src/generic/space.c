@@ -83,7 +83,7 @@ void address_space_delete(struct address_space *space)
 	delete_page_tables(space);
 
 	/* Return the space id */
-	id_del(space_id_pool, space->spid);
+	id_del(&kernel_container.space_ids, space->spid);
 
 	/* Deallocate the space structure */
 	free_space(space);

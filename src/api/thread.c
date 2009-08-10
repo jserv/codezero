@@ -212,9 +212,6 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 	/* Skip lr_svc since it's not going to be used */
 	new->context.pc = orig->syscall_regs->lr_usr;
 
-	/* Copy other relevant fields from original ktcb */
-	new->pagerid = orig->pagerid;
-
 	/* Distribute original thread's ticks into two threads */
 	new->ticks_left = orig->ticks_left / 2;
 	orig->ticks_left /= 2;
@@ -229,9 +226,6 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 			 struct ktcb *new, struct ktcb *orig)
 {
-	/* Allocate a new id */
-	ids->tid = id_new(thread_id_pool);
-
 	/*
 	 * If thread space is new or copied,
 	 * thread gets same group id as its thread id
@@ -323,6 +317,16 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 			goto out_err;
 		}
 	}
+
+	/*
+	 * Setup container-generic fields from current task
+	 *
+	 * NOTE: If a new container is created, this needs
+	 * to assign the new pager and container
+	 */
+	new->pagerid = current->pagerid;
+	new->pager = current->pager;
+	new->container = current->container;
 
 	/* Set up new thread context by using parent ids and flags */
 	thread_setup_new_ids(ids, flags, new, parent);
