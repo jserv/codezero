@@ -254,9 +254,25 @@ else :
 
     Alias('bootdesc', bootdesc)
 
+##########  Do the packing / create loadable ########################
+
+    loaderEnvironment = baseEnvironment.Clone(
+        CC = 'arm-none-linux-gnueabi-gcc',
+        CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
+        LINKFLAGS = ['-nostdlib', '-Tloader/mylink.lds'],
+        PROGSUFFIX = '.axf',
+        LIBS = [libelf, libs['baremetal'], 'gcc', libs['baremetal']],
+        CPPPATH = ['#libs/elf/include', '#' + buildDirectory + '/loader'])
+
+    ####  TODO: Fix the tasks data structure so as to avoid all the assumptions.
+
+    loader = SConscript('loader/SConscript', variant_dir = buildDirectory + '/loader', duplicate = 0, exports = {'environment': loaderEnvironment, 'images':[startAxf, bootdesc] + tasks})
+
+    Alias('final', loader)
+
 ##########  Other rules. ########################
 
-    Default(crts.values() + libs.values() + [libelf, startAxf] + tasks + bootdesc)
+    Default(crts.values() + libs.values() + [libelf, startAxf] + tasks + bootdesc + loader)
     
     Clean('.', [buildDirectory])
 
@@ -272,6 +288,7 @@ Explicit targets are:
   tasklibs -- build all the support libraries for the tasks.
   tasks -- build all the tasks.
   bootdesc -- build the tasks and the boot descriptor.
+  final -- build the loadable.
 
 The default target is to compile everything and to do a final link.
 
