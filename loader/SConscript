@@ -69,9 +69,9 @@ startAxfS = Command('start.axf.S', images[0], ksymToLds)
 
 kernelS = Command('kernel.S', images + [startAxfS], createKernelSFile)
 
-objects = environment.Object(Glob('*.c') + [kernelS])
+objects = environment.Object(Glob('*.c') + [kernelS, startAxfS])
 Depends(objects, environment['configFiles'])
 Depends(objects, images)
-program = environment.Program('final', objects)
+program = environment.Program('final', objects + [environment['baremetal_crt0']])
 
 Return('program')

@@ -134,8 +134,10 @@ else :
         (libs[variant], crts[variant]) = SConscript('libs/c/SConscript', variant_dir = buildDirectory + '/lib/c/' + variant, duplicate = 0, exports = {'environment': libraryEnvironment, 'variant': variant})
         Depends((libs[variant], crts[variant]), libraryEnvironment['configFiles'])
 
-    baseEnvironment['libc'] = libs['userspace']
-    baseEnvironment['crt0'] = crts['userspace']
+    baseEnvironment['baremetal_libc'] = libs['baremetal']
+    baseEnvironment['baremetal_crt0'] = crts['baremetal']
+    baseEnvironment['userspace_libc'] = libs['userspace']
+    baseEnvironment['userspace_crt0'] = crts['userspace']
 
     libelf = SConscript('libs/elf/SConscript', variant_dir = buildDirectory + '/lib/elf', duplicate = 0, exports = {'environment': libraryEnvironment})
     Depends(libelf, libraryEnvironment['configFiles'])
@@ -198,9 +200,9 @@ else :
         if extraCppPath: e.Append(CPPPATH=extraCppPath)
         objects = e.StaticObject(sources)
         Depends(objects, e['configFiles'])
-        program = e.Program(programName, objects + ['#' + e['crt0'][0].name])
+        program = e.Program(programName, objects + ['#' + e['userspace_crt0'][0].name])
         physicalBaseLinkerScript = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
-        Depends(program, [physicalBaseLinkerScript, e['crt0']])
+        Depends(program, [physicalBaseLinkerScript, e['userspace_crt0']])
         return program
 
     tasksEnvironment = baseEnvironment.Clone(
