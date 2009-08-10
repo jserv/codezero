@@ -405,6 +405,10 @@ void init_finalize(struct kernel_container *kcont)
 	free_bootmem();
 
 	/*
+	 * Set up KIP UTCB ref
+	 */
+	kip.utcb = (u32)current->utcb_address;
+	/*
 	 * Start the scheduler, jumping to task
 	 */
 	scheduler_start();

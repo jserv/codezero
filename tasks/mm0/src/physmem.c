@@ -17,18 +17,18 @@
 #include <stdio.h>
 #include <init.h>
 #include <physmem.h>
+#include <bootm.h>
 
-struct page_bitmap page_map;	/* Bitmap of used/unused pages at bootup */
 struct memdesc physmem;		/* Initial, primitive memory descriptor */
 struct membank membank[1];	/* The memory bank */
 struct page *page_array;	/* The physical page array based on mem bank */
 
 
-static void init_page_map(unsigned long pfn_start, unsigned long pfn_end)
+static void init_page_map(struct page_bitmap *pmap, unsigned long pfn_start, unsigned long pfn_end)
 {
-	page_map.pfn_start = pfn_start;
-	page_map.pfn_end = pfn_end;
-	set_page_map(&page_map, pfn_start, pfn_end - pfn_start, 0);
+	pmap->pfn_start = pfn_start;
+	pmap->pfn_end = pfn_end;
+	set_page_map(pmap, pfn_start, pfn_end - pfn_start, 0);
 }
 
 /*
@@ -143,20 +143,26 @@ void init_physmem_primary(struct initdata *initdata)
 	unsigned long pfn_start, pfn_end, pfn_images_end = 0;
 	struct bootdesc *bootdesc = initdata->bootdesc;
 
-	/* Initialise page map from physmem capability */
-	init_page_map(initdata->physmem->start,
-		      initdata->physmem->end);
+	/* Allocate page map structure */
+	initdata->page_map = alloc_bootmem(sizeof(struct page_bitmap) +
+					   ((initdata->physmem->end -
+					     initdata->physmem->start)
+					    >> 5) + 1, 0);
 
-	/* Set initdata pointer to initialized page map */
-	initdata->page_map = &page_map;
+	/* Initialise page map from physmem capability */
+	init_page_map(initdata->page_map,
+		      initdata->physmem->start,
+		      initdata->physmem->end);
 
 	/* Mark pager and other boot task areas as used */
 	for (int i = 0; i < bootdesc->total_images; i++) {
-		pfn_start = __pfn(page_align_up(bootdesc->images[i].phys_start));
+		pfn_start =
+			__pfn(page_align_up(bootdesc->images[i].phys_start));
 		pfn_end = __pfn(page_align_up(bootdesc->images[i].phys_end));
 		if (pfn_end > pfn_images_end)
 			pfn_images_end = pfn_end;
-		set_page_map(&page_map, pfn_start, pfn_end - pfn_start, 1);
+		set_page_map(initdata->page_map, pfn_start,
+			     pfn_end - pfn_start, 1);
 	}
 
 	physmem.start = initdata->physmem->start;
