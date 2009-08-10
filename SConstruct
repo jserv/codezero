@@ -261,7 +261,7 @@ else :
     loaderEnvironment = baseEnvironment.Clone(
         CC = 'arm-none-linux-gnueabi-gcc',
         CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-Tloader/mylink.lds'],
+        LINKFLAGS = ['-nostdlib', '-T' + buildDirectory + '/loader/linker.lds'],
         PROGSUFFIX = '.axf',
         LIBS = [libelf, libs['baremetal'], 'gcc', libs['baremetal']],
         CPPPATH = ['#libs/elf/include', '#' + buildDirectory + '/loader'])

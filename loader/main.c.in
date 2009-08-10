@@ -1,3 +1,11 @@
+/****
+ ****  Template for generating a main.c.  Edit markers have replaced some items in the original file
+ ****
+ ****  Copyright © 2009  B Labs Ltd
+ ****
+ ****  Author: Russel Winder.
+ ****/
+
 /*******************************************************************************
 * Filename:    src/main.c                                                      *
 * Description: Elf-loader - ELF file kernel/application bootstraper, main      *
@@ -113,7 +121,7 @@ main(void)
 {
   /* Declarations added here.*/
 
-  __DECLARATIONS_EDIT_MARKER__
+__DECLARATIONS_EDIT_MARKER__
 
 	arch_init();
 
@@ -121,7 +129,7 @@ main(void)
 
   /*  Loader statements added here. */
 
-  __LOAD_STATEMENTS_EDIT_MARKER__
+__LOAD_STATEMENTS_EDIT_MARKER__
 
 	printf("elf-loader:\tkernel entry point is %p\n", kernel_entry);
 	arch_start_kernel(kernel_entry);

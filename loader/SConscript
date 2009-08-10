@@ -74,22 +74,44 @@ def createMainC(target, source, env):
             for item in source[1:]:
                 name = os.path.splitext(item.name)[0]
                 if name == 'start' : name = 'kernel'
-                externs += 'extern char _start_%s[];\nextern char _end_%s[];\n' % (name, name)
-                declarations += 'void *%s_entry = NULL;\n' % (name,)
-                loads += 'printf("Loading the %s...\\n");\nload_image(&%s_entry, _start_%s, _end_%s);\n' %(name, name, name, name)
+                externs += '''
+extern char _start_%s[];
+extern char _end_%s[];
+''' % (name, name)
+                declarations += '        void *%s_entry = NULL;\n' % (name,)
+                loads += '''
+        printf("Loading the %s...\\n");
+        load_image(&%s_entry, _start_%s, _end_%s);
+''' %(name, name, name, name)
             text = inFile.read()
             text = text.replace('__EXTERNAL_SYMBOLS_EDIT_MARKER__', externs)
             text = text.replace('__DECLARATIONS_EDIT_MARKER__', declarations)
             text = text.replace('__LOAD_STATEMENTS_EDIT_MARKER__', loads)
             outFile.write(text)
 
+def createLinkerScript(target, source, env):
+    with open(source[0].path) as inFile:
+        with open(target[0].path, 'w') as outFile:
+            linkerItems = ''
+            for item in source[1:]:
+                name = os.path.splitext(item.name)[0]
+                if name == 'start' : name = 'kernel'
+                linkerItems += '''
+		_start_%s = .;
+		*(.%s)
+		_end_%s = .;
+''' % (name, name, name)
+            outFile.write(inFile.read().replace('__LINKER_ITEMS_EDIT_MARKER__', linkerItems))
+
 startAxfS = Command('start.axf.S', images[0], ksymToLds)
 kernelS = Command('kernel.S', images + [startAxfS], createKernelSFile)
 mainC = Command('main.c', ['main.c.in'] + images, createMainC)
+linkerScript = Command('linker.lds', ['linker.lds.in'] + images, createLinkerScript)
 
 objects = environment.Object(['arch.c' , kernelS, startAxfS, mainC])
 Depends(objects, environment['configFiles'])
 Depends(objects, images)
 program = environment.Program('final', objects + [environment['baremetal_crt0']])
+Depends(program, linkerScript)
 
 Return('program')
