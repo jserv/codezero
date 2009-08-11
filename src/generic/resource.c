@@ -161,6 +161,7 @@ int memcap_unmap_range(struct capability *cap,
 	return 0;
 }
 
+
 /*
  * Unmaps given memory range from the list of capabilities
  * by either shrinking, splitting or destroying the
@@ -190,34 +191,56 @@ int memcap_unmap(struct cap_list *cap_list,
 }
 
 /*
- * Migrate any boot allocations to their relevant caches.
+ * TODO: Evaluate if access bits are needed and add new cap ranges
+ * only if their access bits match.
+ *
+ * Maps a memory range as a capability to a list of capabilities either by
+ * merging the given range to an existing capability or creating a new one.
  */
-void migrate_boot_resources(struct boot_resources *bootres,
-			    struct kernel_container *kcont)
+int memcap_map(struct cap_list *cap_list,
+	       const unsigned long map_start,
+	       const unsigned long map_end)
 {
-	/* Migrate boot page tables to new caches */
-	//	migrate_page_tables(kcont);
+	struct capability *cap, *n;
 
-	/* Migrate all boot-allocated capabilities */
-	// migrate_boot_caps(kcont);
+	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
+		if (cap->start == map_end) {
+			cap->start = map_start;
+			return 0;
+		} else if(cap->end == map_start) {
+			cap->end = map_end;
+			return 0;
+		}
+	}
+
+	/* No capability could be extended, we create a new one */
+	cap = alloc_capability();
+	cap->start = map_start;
+	cap->end = map_end;
+	link_init(&cap->list);
+	cap_list_insert(cap, cap_list);
+
+	return 0;
 }
 
 /* Delete all boot memory and add it to physical memory pool. */
-int free_boot_memory(struct boot_resources *bootres,
-		     struct kernel_container *kcont)
+int free_boot_memory(struct kernel_container *kcont)
 {
+	unsigned long pfn_start =
+		__pfn(virt_to_phys(_start_init));
+	unsigned long pfn_end =
+		__pfn(page_align_up(virt_to_phys(_end_init)));
+
 	/* Trim kernel used memory cap */
-	memcap_unmap(&kcont->physmem_used, (unsigned long)_start_init,
-		     (unsigned long)_end_init);
+	memcap_unmap(&kcont->physmem_used, pfn_start, pfn_end);
 
 	/* Add it to unused physical memory */
-	// memcap_map(&kcont->physmem_free, (unsigned long)_start_init,
-	//	(unsigned long)_end_init);
+	memcap_map(&kcont->physmem_free, pfn_start, pfn_end);
 
-       /*
-	* Freed physical area will be unmapped from virtual
-	* by not mapping it in the task page tables.
-	*/
+	/* Remove the init memory from the page tables */
+	for (unsigned long i = pfn_start; i < pfn_end; i++)
+		remove_mapping(phys_to_virt(__pfn_to_addr(i)));
+
 	return 0;
 }
 
@@ -536,7 +559,7 @@ void init_resource_allocators(struct boot_resources *bootres,
 	kcont->pmd_cache = init_resource_cache(bootres->npmds,
 					       PMD_SIZE, kcont, 1);
 
-	}
+}
 
 /*
  * Do all system accounting for a given capability info

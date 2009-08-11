@@ -249,9 +249,6 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 		new->tgid = new->tid;
 	}
 
-	/* Set all ids */
-	//set_task_ids(new, ids);
-
 	return 0;
 }
 
@@ -354,7 +351,11 @@ out_err:
  */
 int sys_thread_control(unsigned int flags, struct task_ids *ids)
 {
-	int ret = 0;
+	int err, ret = 0;
+
+	if ((err = check_access((unsigned long)ids, sizeof(*ids),
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
 
 	switch (flags & THREAD_ACTION_MASK) {
 	case THREAD_CREATE:

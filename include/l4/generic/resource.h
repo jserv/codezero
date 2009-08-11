@@ -98,6 +98,7 @@ struct ktcb *alloc_ktcb(void);
 struct capability *alloc_capability(void);
 struct container *alloc_container(void);
 struct mutex_queue *alloc_user_mutex(void);
+int free_boot_memory(struct kernel_container *kcont);
 
 int init_system_resources(struct kernel_container *kcont);
 

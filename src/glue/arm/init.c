@@ -369,11 +369,6 @@ void setup_dummy_current()
 	TASK_PGD(current) = &init_pgd;
 }
 
-void free_bootmem(void)
-{
-	/* TODO: Fill. */
-}
-
 void init_finalize(struct kernel_container *kcont)
 {
 	volatile register unsigned int stack asm("sp");
@@ -402,7 +397,7 @@ void init_finalize(struct kernel_container *kcont)
 	 * Unmap boot memory, and add it as
 	 * an unused kernel memcap
 	 */
-	free_bootmem();
+	free_boot_memory(&kernel_container);
 
 	/*
 	 * Set up KIP UTCB ref
@@ -443,9 +438,6 @@ void start_kernel(void)
 	/* Remap 1MB kernel sections as 4Kb pages. */
 	remap_as_pages((void *)page_align(_start_kernel),
 		       (void *)page_align_up(_end_kernel));
-
-	/* Move the initial pgd into a more convenient place, mapped as pages. */
-	// relocate_page_tables();
 
 	/* Initialise kip and map for userspace access */
 	kip_init();
