@@ -152,13 +152,6 @@ static inline void set_task_ids(struct ktcb *task, struct task_ids *ids)
 	task->tgid = ids->tgid;
 }
 
-#define THREAD_IDS_MAX		1024
-#define SPACE_IDS_MAX		1024
-
-
-extern struct id_pool *thread_id_pool;
-extern struct id_pool *space_id_pool;
-
 struct ktcb *tcb_find(l4id_t tid);
 void tcb_add(struct ktcb *tcb);
 void tcb_remove(struct ktcb *tcb);

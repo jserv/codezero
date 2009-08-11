@@ -10,6 +10,7 @@
 #include <l4/generic/preempt.h>
 #include <l4/generic/space.h>
 #include <l4/lib/idpool.h>
+#include <l4/api/ipc.h>
 #include <l4/api/kip.h>
 #include <l4/api/errno.h>
 #include INC_ARCH(exception.h)
@@ -25,8 +26,6 @@ void init_ktcb_list(struct ktcb_list *ktcb_list)
 
 void tcb_init(struct ktcb *new)
 {
-	new->tid = id_new(&kernel_container.ktcb_ids);
-	new->tgid = new->tid;
 
 	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
@@ -51,11 +50,19 @@ struct ktcb *tcb_alloc(void)
 struct ktcb *tcb_alloc_init(void)
 {
 	struct ktcb *tcb;
+	struct task_ids ids;
 
 	if (!(tcb = tcb_alloc()))
 		return 0;
 
+	ids.tid = id_new(&kernel_container.ktcb_ids);
+	ids.tgid = L4_NILTHREAD;
+	ids.spid = L4_NILTHREAD;
+
+	set_task_ids(tcb, &ids);
+
 	tcb_init(tcb);
+
 	return tcb;
 }
 

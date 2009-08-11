@@ -226,13 +226,17 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 			 struct ktcb *new, struct ktcb *orig)
 {
+	ids->tid = new->tid;
+
 	/*
 	 * If thread space is new or copied,
 	 * thread gets same group id as its thread id
 	 */
 	if (flags == THREAD_NEW_SPACE ||
-	    flags == THREAD_COPY_SPACE)
+	    flags == THREAD_COPY_SPACE) {
 		ids->tgid = ids->tid;
+		new->tgid = new->tid;
+	}
 
 	/*
 	 * If the tgid of original thread is supplied, that implies the
@@ -240,11 +244,13 @@ int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
 	 * it is. Otherwise the thread gets the same group id as its
 	 * unique thread id.
 	 */
-	if (flags == THREAD_SAME_SPACE && ids->tgid != orig->tgid)
+	if (flags == THREAD_SAME_SPACE && ids->tgid != orig->tgid) {
 		ids->tgid = ids->tid;
+		new->tgid = new->tid;
+	}
 
 	/* Set all ids */
-	set_task_ids(new, ids);
+	//set_task_ids(new, ids);
 
 	return 0;
 }
@@ -296,11 +302,10 @@ out:
 int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *new;
-	struct ktcb *parent;
+	struct ktcb *parent = 0;
 	int err;
 
 	flags &= THREAD_CREATE_MASK;
-	parent = 0;
 
 	if (!(new = tcb_alloc_init()))
 		return -ENOMEM;
@@ -337,7 +342,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	return 0;
 
 out_err:
-	/* Pre-mature tcb needs freeing by free_page */
+	/* Pre-mature tcb needs freeing by free_ktcb */
 	free_ktcb(new);
 	return err;
 }
