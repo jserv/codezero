@@ -17,6 +17,11 @@
 #
 #  Author: Russel Winder
 
+#  To support Python 2.5 we need the following, which seems to do no harm in Python 2.6.  Only if Python 2.6
+#  is the floor version supported can be dispensed with.
+
+from __future__ import with_statement
+
 import os
 
 includeDirectory = 'include'
