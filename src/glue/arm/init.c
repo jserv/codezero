@@ -416,7 +416,7 @@ void start_kernel(void)
 	printascii("\n"__KERNELNAME__": start kernel...\n");
 
 	/* Print section boundaries for kernel image */
-	print_sections();
+	// print_sections();
 
 	/* Initialise section mappings for the kernel area */
 	init_kernel_mappings();

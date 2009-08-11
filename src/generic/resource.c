@@ -241,6 +241,10 @@ int free_boot_memory(struct kernel_container *kcont)
 	for (unsigned long i = pfn_start; i < pfn_end; i++)
 		remove_mapping(phys_to_virt(__pfn_to_addr(i)));
 
+	printk("%s: Freed %lu KB init memory.\n",
+	       __KERNELNAME__,
+	       __pfn_to_addr((pfn_end - pfn_start)) / 1024);
+
 	return 0;
 }
 
@@ -596,12 +600,14 @@ int process_cap_info(struct cap_info *cap,
 		if ((ret = memcap_unmap(&kcont->virtmem_free,
 			     		cap->start, cap->end))) {
 			if (ret < 0)
-				printk("FATAL: Insufficient boot memory "
-				       "to split capability\n");
+				printk("%s: FATAL: Insufficient boot memory "
+				       "to split capability\n",
+				       __KERNELNAME__);
 			if (ret > 0)
-				printk("FATAL: Memory capability range "
+				printk("%s: FATAL: Memory capability range "
 				       "overlaps with another one. "
 				       "start=0x%lx, end=0x%lx\n",
+				       __KERNELNAME__,
 				       __pfn_to_addr(cap->start),
 				       __pfn_to_addr(cap->end));
 			BUG();
@@ -611,12 +617,14 @@ int process_cap_info(struct cap_info *cap,
 		if ((ret = memcap_unmap(&kcont->physmem_free,
 					cap->start, cap->end))) {
 			if (ret < 0)
-				printk("FATAL: Insufficient boot memory "
-				       "to split capability\n");
+				printk("%s: FATAL: Insufficient boot memory "
+				       "to split capability\n",
+				       __KERNELNAME__);
 			if (ret > 0)
-				printk("FATAL: Memory capability range "
+				printk("%s: FATAL: Memory capability range "
 				       "overlaps with another one. "
 				       "start=0x%lx, end=0x%lx\n",
+				       __KERNELNAME__,
 				       __pfn_to_addr(cap->start),
 				       __pfn_to_addr(cap->end));
 			BUG();

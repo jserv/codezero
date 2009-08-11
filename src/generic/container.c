@@ -285,7 +285,8 @@ int init_first_pager(struct pager *pager,
 			page_align_up(pager->memsize),
 			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
 
-	printk("Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
+	printk("%s: Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
+	       __KERNELNAME__,
 	       __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
 
@@ -331,8 +332,8 @@ int init_pager(struct pager *pager, struct container *cont)
 			page_align_up(pager->memsize),
 			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
 
-	printk("Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
-	       __pfn(page_align_up(pager->memsize)),
+	printk("%s: Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
+	       __KERNELNAME__, __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
 
 	/* Initialize task scheduler parameters */
