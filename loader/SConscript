@@ -42,23 +42,23 @@ def ksymToLds(target, source, env):
             asmFile.write( '''
 .section .text
 .align 4
-.global %s;
-.type	%s, function;
-.equ	%s, %s
+.global %s
+.type %s, function
+.equ %s, %s
 ''' % (symbol, symbol, symbol, (hex(int(address, 16) - 0xf0000000))))
 
 def createKernelSFile(target, source, env):
     with open(target[0].path, 'w') as asmFile:
         asmFile.write('''
 /* This file defines kernel symbols extracted from the kernel image in their physical address */
-.include "start.axf.S"
+.include "%s"
 
 .section .kernel
 
 .incbin "%s"
 
-''' % (source[0].path))
-        for image in source[1:]:
+''' % (source[0].path , source[1].path))
+        for image in source[2:]:
             asmFile.write('''
 .align 4
 .section .%s
@@ -104,7 +104,7 @@ def createLinkerScript(target, source, env):
             outFile.write(inFile.read().replace('__LINKER_ITEMS_EDIT_MARKER__', linkerItems))
 
 startAxfS = Command('start.axf.S', images[0], ksymToLds)
-kernelS = Command('kernel.S', images + [startAxfS], createKernelSFile)
+kernelS = Command('kernel.S', [startAxfS] + images, createKernelSFile) # Order of dependencies is crucial here.
 mainC = Command('main.c', ['main.c.in'] + images, createMainC)
 linkerScript = Command('linker.lds', ['linker.lds.in'] + images, createLinkerScript)
 
