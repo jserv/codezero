@@ -575,7 +575,7 @@ int process_cap_info(struct cap_info *cap,
 		     struct boot_resources *bootres,
 		     struct kernel_container *kcont)
 {
-	int ret;
+	int ret = 0;
 
 	switch (cap->type & CAP_RTYPE_MASK) {
 	case CAP_RTYPE_THREADPOOL:

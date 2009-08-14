@@ -114,7 +114,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
  */
 int pager_pagein_request(unsigned long addr, unsigned long size, unsigned int flags)
 {
-	u32 abort;
+	u32 abort = 0;
 	unsigned long npages = __pfn(align_up(size, PAGE_SIZE));
 	struct ipc_state ipc_state;
 
