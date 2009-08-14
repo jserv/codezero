@@ -157,7 +157,7 @@ else :
         # We don't use -nostdinc because sometimes we need standard headers, such as stdarg.h e.g. for variable
         # args, as in printk().
         CCFLAGS = ['-mcpu=arm926ej-s', '-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-T' +  includeDirectory + '/l4/arch/' + arch + '/mylink.lds'],
+        LINKFLAGS = ['-nostdlib', '-T' +  includeDirectory + '/l4/arch/' + arch + '/linker.lds'],
         ASFLAGS = ['-D__ASSEMBLY__'],
         PROGSUFFIX = '.axf',
         LIBS = ['gcc'],
