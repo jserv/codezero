@@ -1,9 +1,0 @@
-
-# Inherit global environment
-Import('env')
-
-# The set of source files associated with this SConscript file.
-src_local = ['main.c', 'test_kmalloc.c', 'test_memcache.c', 'test_allocpage.c', 'test_alloc_generic.c', 'debug.c', 'memory.c', 'clz.c']
-
-obj = env.Object(src_local)
-Return('obj')

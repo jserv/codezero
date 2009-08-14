@@ -19,6 +19,15 @@
 
 Import('environment')
 
-objects = environment.Object(Glob('*.c') + Glob('*.S'))
+e = environment.Clone()
+e.Append(CPPPATH = ['include', 'include/posix', '#tasks/libl4/include'])
 
-Return('objects')
+#  TODO:  There are errors in this code that -Werror gives problems with.
+
+e['CCFLAGS'] = ['-g', '-nostdlib', '-Wall', '-ffreestanding', '-std=gnu99']
+
+objects = e.StaticObject(Glob('*.c'))
+Depends(objects, e['configFiles'])
+library = e.StaticLibrary('posix', objects)
+
+Return('library')

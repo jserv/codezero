@@ -17,8 +17,6 @@
 #
 #  Author: Russel Winder
 
-Import('environment')
+# A sequence determining the order of tasks in the packing.
 
-objects = environment.Object(Glob('*.c') + Glob('*.S'))
-
-Return('objects')
+taskOrder = ('mm0', 'fs0', 'test0')

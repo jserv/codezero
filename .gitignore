@@ -1,1 +1,6 @@
 build
+*~
+.sconsign.dblite
+*.pyc
+config.log
+crt0.o

@@ -17,8 +17,8 @@
 #
 #  Author: Russel Winder
 
-Import('environment')
+Import('environment', 'previousImage')
 
-objects = environment.Object(Glob('*.c') + Glob('*.S'))
+program = environment['buildTask']('mm0', Glob('*.c') + [Glob(directory + '/*.c') for directory in [ 'src', 'src/lib', 'src/lib/elf', 'src/arch-' + environment['ARCH']]], environment, previousImage)
 
-Return('objects')
+Return('program')

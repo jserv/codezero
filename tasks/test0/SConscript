@@ -17,8 +17,8 @@
 #
 #  Author: Russel Winder
 
-Import('environment')
+Import('environment', 'previousImage')
 
-objects = environment.Object(Glob('*.c') + Glob('*.S'))
+program = environment['buildTask']('test0', Glob('*.c') + Glob('src/*.c'), environment, previousImage, ['#tasks/libposix/include/posix'])
 
-Return('objects')
+Return('program')

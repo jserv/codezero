@@ -1,3 +1,11 @@
+/****
+ ****  Template for generating a main.c.  Edit markers have replaced some items in the original file
+ ****
+ ****  Copyright © 2009  B Labs Ltd
+ ****
+ ****  Author: Russel Winder.
+ ****/
+
 /*******************************************************************************
 * Filename:    src/main.c                                                      *
 * Description: Elf-loader - ELF file kernel/application bootstraper, main      *
@@ -95,17 +103,10 @@
 * Extern symbols *
 *****************/
 
-/* These symbols are defined by the linker scripts. */
-extern char _start_kernel[];
-extern char _end_kernel[];
-extern char _start_mm0[];
-extern char _end_mm0[];
-extern char _start_fs0[];
-extern char _end_fs0[];
-extern char _start_test0[];
-extern char _end_test0[];
-extern char _start_bootdesc[];
-extern char _end_bootdesc[];
+/* Variable declarations added here for symbols defined by the linker scripts. */
+
+__EXTERNAL_SYMBOLS_EDIT_MARKER__
+
 /* This is a kernel symbol exported to loader's linker script from kernel build */
 extern char bkpt_phys_to_virt[];
 
@@ -118,29 +119,17 @@ static void load_image(void **entry, char *start, char *end);
 int
 main(void)
 {
-	void *kernel_entry = NULL;
-	void *mm0_entry = NULL;
-	void *fs0_entry = NULL;
-	void *test0_entry = NULL;
-	void *bootdesc_entry = NULL;
+  /* Declarations added here.*/
+
+__DECLARATIONS_EDIT_MARKER__
+
 	arch_init();
 
 	printf("elf-loader:\tStarted\n");
 
-	printf("Loading the kernel...\n");
-	load_image(&kernel_entry, _start_kernel, _end_kernel);
+  /*  Loader statements added here. */
 
-	printf("Loading the bootdesc\n");
-	load_image(&bootdesc_entry, _start_bootdesc, _end_bootdesc);
-
-	printf("Loading mm0\n");
-	load_image(&mm0_entry, _start_mm0, _end_mm0);
-
-	printf("Loading fs0\n");
-	load_image(&fs0_entry, _start_fs0, _end_fs0);
-
-	printf("Loading test0\n");
-	load_image(&test0_entry, _start_test0, _end_test0);
+__LOAD_STATEMENTS_EDIT_MARKER__
 
 	printf("elf-loader:\tkernel entry point is %p\n", kernel_entry);
 	arch_start_kernel(kernel_entry);

@@ -1,8 +1,0 @@
-
-TODO:
-1) The build system could auto-copy all images to here,
-then autogenerate kernel.S from these images.
-Then autogenerate a function that loads all given images in main.c
-
-This would allow you to, say, build a custom combination of images
-and not worry about how they will be loaded.

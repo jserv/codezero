@@ -19,6 +19,21 @@
 
 Import('environment')
 
-objects = environment.Object(Glob('*.c') + Glob('*.S'))
+e = environment.Clone()
+e.Append(CPPPATH = ['#tasks/libl4/include' , '.' ])
 
-Return('objects')
+mmObjects = e.StaticObject(Glob('mm/*.c'))
+Depends(mmObjects, e['configFiles'])
+mmLibrary = e.StaticLibrary('mm', mmObjects)
+
+kmObjects = e.StaticObject(Glob('kmalloc/*.c'))
+Depends(kmObjects, e['configFiles'])
+kmLibrary = e.StaticLibrary('km', kmObjects)
+
+mcObjects = e.StaticObject(Glob('memcache/*.c'))
+Depends(mcObjects, e['configFiles'])
+mcLibrary = e.StaticLibrary('mc', mcObjects)
+
+libraries = (mmLibrary, kmLibrary, mcLibrary)
+
+Return('libraries')
