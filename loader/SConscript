@@ -22,6 +22,15 @@ import subprocess
 
 Import('environment', 'images')
 
+def convertAddress(address):
+    '''Convert the string representation of the address given as parameter to a string representation of the
+    address without the top four bits set.  The issue here is that Python has a penchant for adding L to the
+    end to create a Python literal.  This is not wanted here.'''
+    value = hex(int(address, 16) - 0xf0000000)
+    if value[-1] in ['l', 'L']:
+        value = value[:-1]
+    return value
+
 def ksymToLds(target, source, env):
     symbols = ['break_virtual']
     with open(target[0].path, 'w') as asmFile:
@@ -45,7 +54,7 @@ def ksymToLds(target, source, env):
 .global %s
 .type %s, function
 .equ %s, %s
-''' % (symbol, symbol, symbol, (hex(int(address, 16) - 0xf0000000))))
+''' % (symbol, symbol, symbol, convertAddress(address)))
 
 def createKernelSFile(target, source, env):
     with open(target[0].path, 'w') as asmFile:
