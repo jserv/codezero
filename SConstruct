@@ -91,7 +91,8 @@ else :
     #
     #  TODO:  Decide if this is an issue or not.
 
-    configuration = Configure(baseEnvironment, config_h =  buildDirectory + '/l4/config.h')
+    configHPath = buildDirectory + '/l4/config.h'
+    configuration = Configure(baseEnvironment, config_h =  configHPath)
     configData = processCML2Config()
     arch = None
     platform = None
@@ -123,6 +124,7 @@ else :
     configuration.env['PLATFORM'] = platform
     configuration.env['SUBARCH'] = subarch
     baseEnvironment = configuration.Finish()
+    baseEnvironment.Append(configFiles = ('#' + configHPath,))
 
 ##########  Build the libraries ########################
 
