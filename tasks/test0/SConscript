@@ -19,6 +19,6 @@
 
 Import('environment', 'previousImage')
 
-program = environment['buildTask']('test0', Glob('*.c') + Glob('src/*.c'), environment, previousImage, ['#tasks/libposix/include/posix'])
+program = environment['buildTask']('test0', Glob('*.c') + Glob('*.S') + Glob('src/*.c'), environment, previousImage, ['#tasks/libposix/include/posix'])
 
 Return('program')
