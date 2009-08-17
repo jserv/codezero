@@ -209,8 +209,8 @@ else :
         objects = e.StaticObject(sources)
         Depends(objects, e['configFiles'])
         program = e.Program(programName, objects + ['#' + e['userspace_crt0'][0].name])
-        physicalBaseLinkerScript = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
-        Depends(program, [physicalBaseLinkerScript, e['userspace_crt0']])
+        environment['physicalBaseLinkerScript'] = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
+        Depends(program, [environment['physicalBaseLinkerScript'], e['userspace_crt0']])
         return program
 
     tasksEnvironment = baseEnvironment.Clone(
@@ -225,7 +225,7 @@ else :
         buildTask = buildTask)
 
 ####
-####  TODO: Why doe the linker require crt0.o to be in the current directory and named as such.  Is it
+####  TODO: Why does the linker require crt0.o to be in the current directory and named as such.  Is it
 ####  because of the text in the linker script?
 ####
 

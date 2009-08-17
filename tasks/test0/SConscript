@@ -19,6 +19,69 @@
 
 Import('environment', 'previousImage')
 
-program = environment['buildTask']('test0', Glob('*.c') + Glob('src/*.c'), environment, previousImage, ['#tasks/libposix/include/posix'])
+taskName = 'test0'
+
+def createTestExecLinkerScript(target, source, env):
+    with open(target[0].path, 'w') as outFile:
+        outFile.write('''
+/*
+ * Simple linker script for userspace or svc tasks.
+ *
+ * Copyright (C) 2007 Bahadir Balban
+ */
+
+/*
+ * The only catch with this linker script is that everything
+ * is linked starting at virtual_base, and loaded starting
+ * at physical_base. virtual_base is the predefined region
+ * of virtual memory for userland applications. physical_base
+ * is determined at build-time, it is one of the subsequent pages
+ * that come after the kernel image's load area.
+ */
+/* USER_AREA_START, see memlayout.h */
+virtual_base = 0x10000000;
+__stack = (0x20000000 - 0x1000 - 8); /* First page before the env/args */
+INCLUDE "%s"
+
+/* physical_base = 0x228000; */
+offset = virtual_base - physical_base;
+
+ENTRY(_start)
+
+SECTIONS
+{
+	. = virtual_base;
+	_start_text = .;
+	.text : AT (ADDR(.text) - offset) { crt0.o(.text) *(.text) }
+	/* rodata is needed else your strings will link at physical! */
+	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
+	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
+	. = ALIGN(4K);
+	.data : AT (ADDR(.data) - offset) { *(.data) }
+	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
+	_end = .;
+}
+''' % ( source[0].path ))
+
+def createTestExecS(target, source, env):
+    with open(target[0].path, 'w') as outFile:
+        outFile.write('''
+.section .testexec
+
+.align 4
+.incbin "%s"
+.align 4
+''' % ( source[0].path ))
+
+testTaskEnvironment = environment.Clone()
+testTaskEnvironment.Append(CPPPATH=['#tasks/libposix/include/posix'])
+testExecLinkerScript = Command('#build/tasks/' + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
+testExecEnvironment = testTaskEnvironment.Clone()
+testExecEnvironment.Append(LINKFLAGS=['-T' + testExecLinkerScript[0].path])
+testExec = testExecEnvironment.Program('test_exec', Glob('src/test_exec/*.c') + ['#' + environment['userspace_crt0'][0].name])
+Depends(testExec, testExecLinkerScript)
+testExecS = Command('#build/tasks/' + taskName + '/test_exec.S', testExec, createTestExecS)
+program = testTaskEnvironment['buildTask'](taskName, Glob('*.c') + Glob('src/*.c') + testExecS, testTaskEnvironment, previousImage)
+Depends(program, testExec)
 
 Return('program')
