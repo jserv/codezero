@@ -1,4 +1,4 @@
-cd build
+cd build/loader
 qemu-system-arm -s -kernel final.axf -nographic -m 128 -M versatilepb &
 arm-none-insight ; pkill qemu-system-arm
 cd ..

@@ -528,6 +528,14 @@ int do_close(struct tcb *task, int fd)
 	if ((err = vfs_close(task->tid, fd)) < 0)
 		return err;
 
+	/*
+	 * If there was no IO on it, we may not know the file,
+	 * we simply return here. Since we notify VFS about the
+	 * close, it can tell us if the fd was open or not.
+	 */
+	if (!task->files->fd[fd].vmfile)
+		return 0;
+
 	/* Reduce file refcount etc. */
 	vm_file_put(task->files->fd[fd].vmfile);
 
