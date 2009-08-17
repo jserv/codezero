@@ -77,15 +77,18 @@ def generateBootdesc(target, source, env):
 
 def relocateBootdesc(target, source, env):
     name, start, end = generateLocationData(source[1])
-    process = subprocess.Popen(executable='arm-none-linux-gnueabi-objcopy', args=(
-            '--adjust-section-vma .data=' + end,
-            source[0].path))
-    assert process.wait() == 0
+    print "Name: Start: End: ", name, start, end
+    print "arm-none-linux-gnueabi-objcopy" + " --adjust-section-vma .data=" + end + " " + source[0].path
+#    process = subprocess.Popen(executable='arm-none-linux-gnueabi-objcopy', args=(
+#           '--adjust-section-vma .data=' + end,
+#            source[0].path))
+#    assert process.wait() == 0
+    os.system("arm-none-linux-gnueabi-objcopy --adjust-section-vma .data=" + end + " " + source[0].path)
     shutil.copyfile(source[0].path, target[0].path)
 
 bootdescSource = environment.Command('bootdesc.c', images, generateBootdesc)
 objects = environment.Object(bootdescSource)
 Depends(objects, environment['configFiles'])
-bootdesc = environment.Command('bootdesc.axf', environment.Program('bootdesc_intermediate', objects) + [images[0]] , relocateBootdesc)
+bootdesc = environment.Command('bootdesc.axf', environment.Program('bootdesc_intermediate', objects) + [images[1]] , relocateBootdesc)
 
 Return('bootdesc')
