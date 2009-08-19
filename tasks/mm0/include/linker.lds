@@ -17,7 +17,7 @@ virtual_base = 0xE0000000;
 INCLUDE "include/physical_base.lds"
 
 /* physical_base = 0x228000; */
-offset = virtual_base - physical_base;
+pager_offset = virtual_base - physical_base;
 
 ENTRY(_start)
 
@@ -25,20 +25,20 @@ SECTIONS
 {
 	. = virtual_base;
 	_start_text = .;
-	.text : AT (ADDR(.text) - offset) { crt0.o(.text) *(.text) }
+	.text : AT (ADDR(.text) - pager_offset) { crt0.o(.text) *(.text) }
 	/* rodata is needed else your strings will link at physical! */
-	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
-	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
-	.data : AT (ADDR(.data) - offset)
+	.rodata : AT (ADDR(.rodata) - pager_offset) { *(.rodata) }
+	.rodata1 : AT (ADDR(.rodata1) - pager_offset) { *(.rodata1) }
+	.data : AT (ADDR(.data) - pager_offset)
 	{
 		*(.data)
 	}
-	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
+	.bss : AT (ADDR(.bss) - pager_offset) { *(.bss) }
 	. = ALIGN(4K);
 	. += 0x2000;	/* BSS doesnt increment link counter??? */
 	/* Below part is to be discarded after boot */
 	_start_init = .;
-	.init : AT (ADDR(.init) - offset)
+	.init : AT (ADDR(.init) - pager_offset)
 	{
 		*(.init.data)
 		*(.init.bootmem)

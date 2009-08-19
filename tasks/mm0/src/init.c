@@ -240,15 +240,15 @@ void init_mm(struct initdata *initdata)
 		BUG();
 	}
 
-	/* For supplying contiguous virtual addresses to pager */
-	pager_address_pool_init();
-
 	// printf("%s: Initialised utcb address pool.\n", __TASKNAME__);
 }
 
 
 void init_pager(void)
 {
+	/* For supplying contiguous virtual addresses to pager */
+	pager_address_pool_init();
+
 	read_kernel_capabilities(&initdata);
 
 	read_bootdesc(&initdata);

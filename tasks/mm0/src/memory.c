@@ -20,14 +20,39 @@
 
 struct address_pool pager_vaddr_pool;
 
-void *phys_to_virt(void *addr)
+/* Bitmap size to represent an address pool of 256 MB. */
+#define ADDRESS_POOL_256MB		2048
+
+/* Same as a regular id pool except that its bitmap size is fixed */
+static struct pager_virtual_address_id_pool {
+	int nwords;
+	int bitlimit;
+	u32 bitmap[ADDRESS_POOL_256MB];
+} pager_virtual_address_id_pool = {
+	.nwords = ADDRESS_POOL_256MB,
+	.bitlimit = ADDRESS_POOL_256MB * 32,
+};
+
+int pager_address_pool_init(void)
 {
-	return addr + INITTASK_OFFSET;
+	/* Initialise id pool for pager virtual address allocation */
+	address_pool_init_with_idpool(&pager_vaddr_pool,
+			  	      (struct id_pool *)
+				      &pager_virtual_address_id_pool,
+				      (unsigned long)0xD0000000,
+				      (unsigned long)0xE0000000);
+	return 0;
 }
 
-void *virt_to_phys(void *addr)
+void *l4_new_virtual(int npages)
 {
-	return addr - INITTASK_OFFSET;
+	return pager_new_address(npages);
+}
+
+void *l4_del_virtual(void *virt, int npages)
+{
+	pager_delete_address(virt, npages);
+	return 0;
 }
 
 /* Maps a page from a vm_file to the pager's address space */
@@ -49,20 +74,6 @@ void *pager_map_page(struct vm_file *f, unsigned long page_offset)
 void pager_unmap_page(void *addr)
 {
 	l4_unmap_helper(addr, 1);
-}
-
-int pager_address_pool_init(void)
-{
-	int err;
-
-	/* Initialise the global shm virtual address pool */
-	if ((err = address_pool_init(&pager_vaddr_pool,
-				     (unsigned long)0xD0000000,
-				     (unsigned long)0xE0000000)) < 0) {
-		printf("Pager virtual address pool initialisation failed.\n");
-		return err;
-	}
-	return 0;
 }
 
 void *pager_new_address(int npages)
@@ -110,9 +121,6 @@ void pager_unmap_pages(void *addr, unsigned long npages)
 
 	/* Unmap so many pages */
 	l4_unmap_helper(addr, npages);
-
-	/* Free the address range */
-	pager_delete_address(addr, npages);
 }
 
 /*

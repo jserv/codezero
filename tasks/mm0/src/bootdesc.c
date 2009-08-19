@@ -10,6 +10,7 @@
 #include <l4lib/arch/syslib.h>
 
 extern unsigned long _end[];
+extern unsigned long pager_offset;
 
 void read_bootdesc(struct initdata *initdata)
 {
@@ -21,15 +22,9 @@ void read_bootdesc(struct initdata *initdata)
 	 */
 	bootdesc = (struct bootdesc *)_end;
 
-	/* Check if bootdesc spans across pages, and how many */
-	npages = __pfn((((unsigned long)bootdesc +
-			 bootdesc->desc_size)
-			& ~PAGE_MASK) -
-		       ((unsigned long)bootdesc & ~PAGE_MASK));
-
-	if (npages > 0)
-		l4_map_helper(virt_to_phys((void *)page_align_up(_end)),
-			      PAGE_SIZE * npages);
+	/* Check if bootdesc is on an unmapped page */
+	if (is_page_aligned(bootdesc))
+		l4_map_helper(bootdesc - pager_offset, PAGE_SIZE);
 
 	/* Allocate bootdesc sized structure */
 	initdata->bootdesc = alloc_bootmem(bootdesc->desc_size, 0);

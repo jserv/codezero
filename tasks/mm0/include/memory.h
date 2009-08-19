@@ -25,4 +25,8 @@ void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
 			   unsigned long size);
 void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 				    unsigned long size, unsigned int vm_flags);
+
+void *l4_new_virtual(int npages);
+void *l4_del_virtual(void *virt, int npages);
+
 #endif /* __MEMORY_H__ */

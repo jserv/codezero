@@ -263,14 +263,18 @@ static inline int l4_ipc_return(int retval)
 	return l4_ipc(sender, L4_NILTHREAD, 0);
 }
 
+void *l4_new_virtual(int npages);
+void *l4_del_virtual(void *virt, int npages);
+
 /* A helper that translates and maps a physical address to virtual */
 static inline void *l4_map_helper(void *phys, int npages)
 {
 	struct task_ids ids;
+	void *virt = l4_new_virtual(npages);
 
 	l4_getid(&ids);
-	l4_map(phys, phys_to_virt(phys), npages, MAP_USR_RW_FLAGS, ids.tid);
-	return phys_to_virt(phys);
+	l4_map(phys, virt, npages, MAP_USR_RW_FLAGS, ids.tid);
+	return virt;
 }
 
 
@@ -281,7 +285,8 @@ static inline void *l4_unmap_helper(void *virt, int npages)
 
 	l4_getid(&ids);
 	l4_unmap(virt, npages, ids.tid);
-	return virt_to_phys(virt);
+	l4_del_virtual(virt, npages);
+	return 0;
 }
 
 #endif /* __L4LIB_SYSLIB_H__ */

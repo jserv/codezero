@@ -11,6 +11,21 @@
 #include <lib/addr.h>
 #include <stdio.h>
 
+/*
+ * Initializes an address pool, but uses an already
+ * allocated id pool for it.
+ */
+int address_pool_init_with_idpool(struct address_pool *pool,
+				  struct id_pool *idpool,
+				  unsigned long start, unsigned long end)
+{
+	pool->idpool = idpool;
+	pool->start = start;
+	pool->end = end;
+
+	return 0;
+}
+
 int address_pool_init(struct address_pool *pool, unsigned long start, unsigned long end)
 {
 	if ((pool->idpool = id_pool_new_init(__pfn(end - start))) < 0)
