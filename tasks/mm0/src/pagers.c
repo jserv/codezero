@@ -304,7 +304,11 @@ int init_boot_files(struct initdata *initdata)
 	for (int i = 0; i < bd->total_images; i++) {
 		img = &bd->images[i];
 		boot_file = vm_file_create();
-		boot_file->priv_data = img;
+
+		/* Allocate private data */
+		boot_file->priv_data = kzalloc(sizeof(*img));
+		memcpy(boot_file->priv_data, img, sizeof(*img));
+
 		boot_file->length = img->phys_end - img->phys_start;
 		boot_file->type = VM_FILE_BOOTFILE;
 		boot_file->destroy_priv_data =

@@ -207,6 +207,33 @@ int start_boot_tasks(struct initdata *initdata)
 	return 0;
 }
 
+extern unsigned long _start_init[];
+extern unsigned long _end_init[];
+
+/*
+ * Copy all necessary data from initmem to real memory,
+ * release initdata and any init memory used
+ */
+void copy_release_initdata(struct initdata *initdata)
+{
+	/*
+	 * Copy boot capabilities to a list of
+	 * real capabilities
+	 */
+	copy_boot_capabilities(initdata);
+
+	/* Free and unmap init memory:
+	 *
+	 * FIXME: We can and do safely unmap the boot
+	 * memory here, but because we don't utilize it yet,
+	 * it remains as if it is a used block
+	 */
+
+	l4_unmap(_start_init,
+		 __pfn(page_align_up(_end_init - _start_init)),
+		 self_tid());
+}
+
 
 void init_mm(struct initdata *initdata)
 {
@@ -256,6 +283,9 @@ void init_pager(void)
 	init_mm(&initdata);
 
 	start_boot_tasks(&initdata);
+
+	/* Copy necessary initdata info */
+	copy_release_initdata(&initdata);
 
 	mm0_test_global_vm_integrity();
 }

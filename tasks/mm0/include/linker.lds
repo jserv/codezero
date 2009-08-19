@@ -36,16 +36,20 @@ SECTIONS
 	.bss : AT (ADDR(.bss) - pager_offset) { *(.bss) }
 	. = ALIGN(4K);
 	. += 0x2000;	/* BSS doesnt increment link counter??? */
+	.stack : AT (ADDR(.stack) - pager_offset)
+	{
+		*(.stack)
+	}
+	. = ALIGN(4K);
+	__stack = .; /* This is the preallocated boot stack */
+
 	/* Below part is to be discarded after boot */
 	_start_init = .;
 	.init : AT (ADDR(.init) - pager_offset)
 	{
 		*(.init.data)
 		*(.init.bootmem)
-		*(.init.stack)
 	}
-	_end_init = .;
-	__stack = .; /* This is the preallocated boot stack */
 	_end_init = .;
 	_end = .;
 }

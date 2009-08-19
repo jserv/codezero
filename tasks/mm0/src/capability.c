@@ -5,14 +5,36 @@
  */
 #include <bootm.h>
 #include <init.h>
+#include <l4/lib/list.h>
 #include <capability.h>
 #include <l4/api/capability.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
+#include <lib/malloc.h>
 
-extern struct cap_list capability_list;
+struct cap_list capability_list;
 
 __initdata static struct capability *caparray;
+__initdata static int total_caps = 0;
+
+/* Copy all init-memory allocated capabilities */
+void copy_boot_capabilities(struct initdata *initdata)
+{
+	struct capability *cap;
+
+	for (int i = 0; i < total_caps; i++) {
+		cap = kzalloc(sizeof(struct capability));
+
+		/* This copies kernel-allocated unique cap id as well */
+		memcpy(cap, &caparray[i], sizeof(struct capability));
+
+		/* Initialize capability list */
+		link_init(&cap->list);
+
+		/* Add capability to global cap list */
+		list_insert(&capability_list.caps, &cap->list);
+	}
+}
 
 int read_kernel_capabilities(struct initdata *initdata)
 {
@@ -25,6 +47,7 @@ int read_kernel_capabilities(struct initdata *initdata)
 		       "Could not complete CAP_CONTROL_NCAPS request.\n");
 		goto error;
 	}
+	total_caps = ncaps;
 
 	/* Allocate array of caps from boot memory */
 	caparray = alloc_bootmem(sizeof(struct capability) * ncaps, 0);

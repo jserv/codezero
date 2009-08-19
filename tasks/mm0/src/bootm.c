@@ -20,7 +20,7 @@
 #define BOOTMEM_SIZE		SZ_32K
 
 SECTION(".init.bootmem") char bootmem[BOOTMEM_SIZE];
-SECTION(".init.stack") char stack[4096];
+SECTION(".stack") char stack[4096];
 // SECTION("init.data")
 
 extern unsigned long __stack[];		/* Linker defined */

@@ -37,5 +37,6 @@ extern struct cap_list capability_list;
 
 struct initdata;
 int read_kernel_capabilities(struct initdata *);
+void copy_boot_capabilities(struct initdata *initdata);
 
 #endif /* __MM0_CAPABILITY_H__ */
