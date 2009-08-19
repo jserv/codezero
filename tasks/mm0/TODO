@@ -11,3 +11,5 @@ MM0 TODO List:
     with those regions.
 5.) read_file_pages()/write_file_pages() needs to be tested and improved in
     terms of syscalls to microkernel.
+
+(1,3,4) Done.

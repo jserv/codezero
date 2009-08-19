@@ -43,6 +43,7 @@ static struct pager_virtual_address_id_pool {
 /* End of pager image */
 extern unsigned char _end[];
 
+/* For supplying contiguous virtual addresses to pager */
 int pager_address_pool_init(void)
 {
 	/*

@@ -97,7 +97,8 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 	task->spid = ids->spid;
 	task->tgid = ids->tgid;
 
-	if ((err = boottask_setup_regions(f, task, task_start, task_end)) < 0)
+	if ((err = boottask_setup_regions(f, task,
+					  task_start, task_end)) < 0)
 		return err;
 
 	if ((err =  boottask_mmap_regions(task, f)) < 0)
@@ -115,7 +116,8 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 	BUG_ON(task->utcb_address != UTCB_AREA_START);
 
 	/* Pager must prefault its utcb */
-	prefault_page(task, task->utcb_address, VM_READ | VM_WRITE);
+	prefault_page(task, task->utcb_address,
+		      VM_READ | VM_WRITE);
 
 	/* Add the task to the global task list */
 	global_add_task(task);
@@ -129,8 +131,9 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 struct vm_file *initdata_next_bootfile(struct initdata *initdata)
 {
 	struct vm_file *file, *n;
-	list_foreach_removable_struct(file, n, &initdata->boot_file_list,
-				 list) {
+	list_foreach_removable_struct(file, n,
+				      &initdata->boot_file_list,
+				      list) {
 		list_remove_init(&file->list);
 		return file;
 	}
@@ -175,7 +178,8 @@ int start_boot_tasks(struct initdata *initdata)
 	ids.spid = PAGER_TID;
 	ids.tgid = PAGER_TID;
 
-	if (mm0_task_init(mm0_file, INITTASK_AREA_START, INITTASK_AREA_END, &ids) < 0)
+	if (mm0_task_init(mm0_file, INITTASK_AREA_START,
+			  INITTASK_AREA_END, &ids) < 0)
 		BUG();
 	total++;
 
@@ -185,22 +189,24 @@ int start_boot_tasks(struct initdata *initdata)
 	ids.tgid = VFS_TID;
 
 	// printf("%s: Initialising fs0\n",__TASKNAME__);
-	BUG_ON((IS_ERR(fs0_task = boottask_exec(fs0_file, USER_AREA_START, USER_AREA_END, &ids))));
+	BUG_ON((IS_ERR(fs0_task = boottask_exec(fs0_file, USER_AREA_START,
+						USER_AREA_END, &ids))));
 	total++;
 
 	/* Initialise other tasks */
 	list_foreach_removable_struct(file, n, &other_files, list) {
-		// printf("%s: Initialising new boot task.\n", __TASKNAME__);
 		ids.tid = TASK_ID_INVALID;
 		ids.spid = TASK_ID_INVALID;
 		ids.tgid = TASK_ID_INVALID;
 		list_remove_init(&file->list);
-		BUG_ON(IS_ERR(boottask_exec(file, USER_AREA_START, USER_AREA_END, &ids)));
+		BUG_ON(IS_ERR(boottask_exec(file, USER_AREA_START,
+					    USER_AREA_END, &ids)));
 		total++;
 	}
 
 	if (!total) {
-		printf("%s: Could not start any tasks.\n", __TASKNAME__);
+		printf("%s: Could not start any tasks.\n",
+		       __TASKNAME__);
 		BUG();
 	}
 
@@ -242,38 +248,29 @@ void init_mm(struct initdata *initdata)
 
 	init_physmem_secondary(initdata, membank);
 
-	// printf("%s: Initialised physmem.\n", __TASKNAME__);
-
 	/* Initialise the page allocator on first bank. */
 	init_page_allocator(membank[0].free, membank[0].end);
-	// printf("%s: Initialised page allocator.\n", __TASKNAME__);
 
 	/* Initialise the zero page */
 	init_devzero();
-	// printf("%s: Initialised devzero.\n", __TASKNAME__);
 
 	/* Initialise in-memory boot files */
 	init_boot_files(initdata);
-	// printf("%s: Initialised in-memory boot files.\n", __TASKNAME__);
 
 	if (shm_pool_init() < 0) {
 		printf("SHM initialisation failed.\n");
 		BUG();
 	}
-	// printf("%s: Initialised shm structures.\n", __TASKNAME__);
 
 	if (utcb_pool_init() < 0) {
 		printf("SHM initialisation failed.\n");
 		BUG();
 	}
-
-	// printf("%s: Initialised utcb address pool.\n", __TASKNAME__);
 }
 
 
 void init_pager(void)
 {
-	/* For supplying contiguous virtual addresses to pager */
 	pager_address_pool_init();
 
 	read_kernel_capabilities(&initdata);
@@ -284,7 +281,6 @@ void init_pager(void)
 
 	start_boot_tasks(&initdata);
 
-	/* Copy necessary initdata info */
 	copy_release_initdata(&initdata);
 
 	mm0_test_global_vm_integrity();
