@@ -20,6 +20,13 @@
 
 struct address_pool pager_vaddr_pool;
 
+/* FIXME:
+ * ID pool id allocation size (i.e. bitlimit/nwords parameters)
+ * must be in sync with address pool allocation range. Here, since
+ * the id pool needs to be determined at compile time, the two
+ * parameters don't match yet.
+ */
+
 /* Bitmap size to represent an address pool of 256 MB. */
 #define ADDRESS_POOL_256MB		2048
 
@@ -33,14 +40,22 @@ static struct pager_virtual_address_id_pool {
 	.bitlimit = ADDRESS_POOL_256MB * 32,
 };
 
+/* End of pager image */
+extern unsigned char _end[];
+
 int pager_address_pool_init(void)
 {
-	/* Initialise id pool for pager virtual address allocation */
+	/*
+	 * Initialise id pool for pager virtual address
+	 * allocation. This spans from end of pager image
+	 * until the end of the virtual address range
+	 * allocated for the pager
+	 */
 	address_pool_init_with_idpool(&pager_vaddr_pool,
 			  	      (struct id_pool *)
 				      &pager_virtual_address_id_pool,
-				      (unsigned long)0xD0000000,
-				      (unsigned long)0xE0000000);
+				      page_align_up((unsigned long)_end + PAGE_SIZE),
+				      (unsigned long)0xF0000000);
 	return 0;
 }
 
