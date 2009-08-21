@@ -14,7 +14,7 @@
 #include INC_API(syscall.h)
 
 
-int task_read_capabilities(void *userbuf)
+int read_task_capabilities(void *userbuf)
 {
 	int copy_size, copy_offset = 0;
 	struct capability *cap;
@@ -69,7 +69,7 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 
 	/* Return all capabilities as an array of capabilities */
 	case CAP_CONTROL_READ_CAPS:
-		err = task_read_capabilities(userbuf);
+		err = read_task_capabilities(userbuf);
 		break;
 
 	default:

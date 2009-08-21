@@ -30,6 +30,8 @@ struct capability {
 	unsigned long start;	/* Resource start value */
 	unsigned long end;	/* Resource end value */
 	unsigned long size;	/* Resource size */
+
+	unsigned long used;	/* Resource used size */
 };
 
 

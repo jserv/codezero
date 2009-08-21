@@ -9,13 +9,6 @@
 #include <l4/api/errno.h>
 #include <l4/api/space.h>
 
-/* NOTE:
- * For lazy mm switching, a list of newly created mappings that are common to
- * all tasks (e.g. any mapping done in the kernel) can be kept here so that when
- * a new task is scheduled, the same mappings are copied to its page tables as
- * well. struct link new_mappings;
- */
-
 int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
 	    unsigned long flags, unsigned int tid)
 {

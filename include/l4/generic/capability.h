@@ -59,6 +59,9 @@ struct capability {
 	unsigned long start;	/* Resource start value */
 	unsigned long end;	/* Resource end value */
 	unsigned long size;	/* Resource size */
+
+	/* Used amount on resource */
+	unsigned long used;
 };
 
 struct cap_list {

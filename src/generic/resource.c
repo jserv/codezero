@@ -313,6 +313,7 @@ void init_kernel_container(struct kernel_container *kcont)
 	 */
 }
 
+
 /*
  * Copies cinfo structures to real capabilities for each pager.
  *
@@ -340,6 +341,33 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 		cap->size = cap_info->size;
 
 		cap_list_insert(cap, &pager->cap_list);
+	}
+
+	/*
+	 * Find pager's capability capability, check its
+	 * current use count and initialize it
+	 *
+	 * FIXME: We may want to do this capability checking
+	 * in a more generic and straightforward place.
+	 */
+
+	list_foreach_struct(cap, &pager->cap_list.caps, list) {
+		/* Find capability pool capability */
+		if ((cap->type & CAP_RTYPE_MASK) == CAP_RTYPE_CAPPOOL) {
+			/* Verify that we did not excess allocated */
+			if (cap->size < pinfo->ncaps) {
+				printk("FATAL: Pager needs more capabilities "
+				       "than allocated for initialization.\n");
+				BUG();
+			}
+
+			/*
+			 * Initialize used count. The rest of the checking
+			 * of spending on this cap will be done in the
+			 * cap syscall
+			 */
+			cap->used = pinfo->ncaps;
+		}
 	}
 	return 0;
 }
