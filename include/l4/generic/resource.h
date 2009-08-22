@@ -25,7 +25,6 @@ struct boot_resources {
 	/* Kernel resource usage */
 	int nkpmds;
 	int nkpgds;
-	int nkmemcaps;
 	int nkcaps;
 };
 
@@ -73,7 +72,7 @@ struct kernel_container {
 	struct cap_list devmem_free;
 
 	/* All other caps that belong to the kernel */
-	struct cap_list other_caps;
+	struct cap_list non_memory_caps;
 
 	struct mem_cache *pgd_cache;
 	struct mem_cache *pmd_cache;

@@ -103,8 +103,8 @@ struct mutex_queue *alloc_user_mutex(void)
 {
 	struct capability *cap;
 
-	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
-					     CAP_RTYPE_UMUTEX)))
+	if (!(cap = capability_find_by_rtype(current->pager->tcb->cap_list_ptr,
+					     CAP_RTYPE_MUTEXPOOL)))
 		return 0;
 
 	if (capability_consume(cap, 1) < 0)
@@ -171,8 +171,8 @@ void free_user_mutex(void *addr)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
-						CAP_RTYPE_UMUTEX)));
+	BUG_ON(!(cap = capability_find_by_rtype(current->pager->tcb->cap_list_ptr,
+						CAP_RTYPE_MUTEXPOOL)));
 	capability_free(cap, 1);
 
 	BUG_ON(mem_cache_free(kernel_container.mutex_cache, addr) < 0);
@@ -372,7 +372,7 @@ void init_kernel_container(struct kernel_container *kcont)
 	cap_list_init(&kcont->virtmem_free);
 	cap_list_init(&kcont->devmem_used);
 	cap_list_init(&kcont->devmem_free);
-	cap_list_init(&kcont->other_caps);
+	cap_list_init(&kcont->non_memory_caps);
 
 	/* Set up total physical memory as single capability */
 	physmem = alloc_bootmem(sizeof(*physmem), 0);
@@ -502,6 +502,7 @@ void setup_containers(struct boot_resources *bootres,
 	 * since we want to avoid allocating an uncertain
 	 * amount of memory from the boot allocators.
 	 */
+	current_pgd = realloc_page_tables();
 
 	/* Create all containers but leave pagers */
 	for (int i = 0; i < bootres->nconts; i++) {
@@ -514,7 +515,6 @@ void setup_containers(struct boot_resources *bootres,
 		/* Add it to kernel container list */
 		kcont_insert_container(container, kcont);
 	}
-	current_pgd = realloc_page_tables();
 
 	/* Initialize pagers */
 	container_init_pagers(kcont, current_pgd);
@@ -559,6 +559,31 @@ void copy_boot_capabilities(struct cap_list *caplist)
 void kcont_setup_capabilities(struct boot_resources *bootres,
 			      struct kernel_container *kcont)
 {
+	struct capability *cap;
+
+	/* First initialize the list of non-memory capabilities */
+	cap = boot_capability_create();
+	cap->type = CAP_TYPE_QUANTITY | CAP_RTYPE_MAPPOOL;
+	cap->size = bootres->nkpmds;
+	cap->owner = kcont->cid;
+	cap_list_insert(cap, &kcont->non_memory_caps);
+
+	cap = boot_capability_create();
+	cap->type = CAP_TYPE_QUANTITY | CAP_RTYPE_SPACEPOOL;
+	cap->size = bootres->nkpgds;
+	cap->owner = kcont->cid;
+	cap_list_insert(cap, &kcont->non_memory_caps);
+
+	cap = boot_capability_create();
+	cap->type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL;
+	cap->size = bootres->nkcaps;
+	cap->owner = kcont->cid;
+	cap->used = 3;
+	cap_list_insert(cap, &kcont->non_memory_caps);
+
+	/* Set up dummy current cap-list for below functions to use */
+	current->cap_list_ptr = &kcont->non_memory_caps;
+
 	copy_boot_capabilities(&kcont->physmem_used);
 	copy_boot_capabilities(&kcont->physmem_free);
 	copy_boot_capabilities(&kcont->virtmem_used);
@@ -635,6 +660,7 @@ void init_resource_allocators(struct boot_resources *bootres,
 	 * in case all containers quit
 	 */
 	bootres->nspaces++;
+	bootres->nkpgds++;
 
 	/* Initialise PGD cache */
 	kcont->pgd_cache = init_resource_cache(bootres->nspaces,
@@ -660,13 +686,17 @@ void init_resource_allocators(struct boot_resources *bootres,
 						kcont, 0);
 
 	/*
-	 * Add all caps used by the kernel + two extra in case
-	 * more memcaps get split after cap cache init below.
+	 * Add all caps used by the kernel
+	 * Two extra in case more memcaps get split after cap cache init below.
+	 * Three extra for quantitative kernel caps for pmds, pgds, caps.
 	 */
-	bootres->ncaps += kcont->virtmem_used.ncaps +
-			  kcont->virtmem_free.ncaps +
-			  kcont->physmem_used.ncaps +
-			  kcont->physmem_free.ncaps + 2;
+	bootres->nkcaps += kcont->virtmem_used.ncaps +
+			   kcont->virtmem_free.ncaps +
+			   kcont->physmem_used.ncaps +
+			   kcont->physmem_free.ncaps + 2 + 3;
+
+	/* Add that to all cap count */
+	bootres->ncaps += bootres->nkcaps;
 
 	/* Initialise capability cache */
 	kcont->cap_cache = init_resource_cache(bootres->ncaps,
@@ -674,16 +704,19 @@ void init_resource_allocators(struct boot_resources *bootres,
 					       kcont, 0);
 
 	/* Count boot pmds used so far and add them */
-	bootres->npmds += pgd_count_pmds(&init_pgd);
+	bootres->nkpmds += pgd_count_pmds(&init_pgd);
 
 	/*
 	 * Calculate maximum possible pmds
 	 * that may be used during this pmd
 	 * cache init and add them.
 	 */
-	bootres->npmds += ((bootres->npmds * PMD_SIZE) / PMD_MAP_SIZE);
+	bootres->nkpmds += ((bootres->npmds * PMD_SIZE) / PMD_MAP_SIZE);
 	if (!is_aligned(bootres->npmds * PMD_SIZE, PMD_MAP_SIZE))
-		bootres->npmds++;
+		bootres->nkpmds++;
+
+	/* Add kernel pmds to all pmd count */
+	bootres->npmds += bootres->nkpmds;
 
 	/* Initialise PMD cache */
 	kcont->pmd_cache = init_resource_cache(bootres->npmds,
@@ -814,9 +847,9 @@ int init_system_resources(struct kernel_container *kcont)
 
 	init_resource_allocators(&bootres, kcont);
 
-	setup_containers(&bootres, kcont);
-
 	kcont_setup_capabilities(&bootres, kcont);
+
+	setup_containers(&bootres, kcont);
 
 	return 0;
 }

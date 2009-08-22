@@ -41,8 +41,9 @@ int capability_consume(struct capability *cap, int quantity)
 {
 	if (cap->size < cap->used + quantity)
 		return -ENOCAP;
-	else
-		cap->used += quantity;
+
+	cap->used += quantity;
+
 	return 0;
 }
 

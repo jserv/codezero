@@ -26,7 +26,7 @@
 #define CAP_RTYPE_TGROUP	(1 << 17)
 #define CAP_RTYPE_SPACE		(1 << 18)
 #define CAP_RTYPE_CONTAINER	(1 << 19)
-#define CAP_RTYPE_UMUTEX	(1 << 20)
+#define CAP_RTYPE_UMUTEX	(1 << 20) /* Don't mix with pool version */
 #define CAP_RTYPE_VIRTMEM	(1 << 21)
 #define CAP_RTYPE_PHYSMEM	(1 << 22)
 #define CAP_RTYPE_CPUPOOL	(1 << 23)

@@ -256,23 +256,20 @@ int init_first_pager(struct pager *pager,
 {
 	struct ktcb *task;
 	struct address_space *space;
-	struct capability *ktcb_cap;
-
-	/*
-	 * Find capability from pager's list, since
-	 * there is no ktcb, no standard path to check
-	 * per-task capability list yet.
-	 */
-	ktcb_cap = capability_find_by_rtype(&pager->cap_list,
-					    CAP_RTYPE_THREADPOOL);
-	/* Use it to allocate ktcb */
-	task = tcb_alloc_init_use_capability(ktcb_cap);
 
 	/*
 	 * Initialize dummy current capability list pointer
 	 * so that capability accounting can be done as normal
 	 */
 	current->cap_list_ptr = &pager->cap_list;
+
+	/*
+	 * Find capability from pager's list, since
+	 * there is no ktcb, no standard path to check
+	 * per-task capability list yet.
+	 */
+	/* Use it to allocate ktcb */
+	task = tcb_alloc_init();
 
 	/* Initialize ktcb */
 	task_init_registers(task, pager->start_vma);
@@ -331,24 +328,15 @@ int init_first_pager(struct pager *pager,
 int init_pager(struct pager *pager, struct container *cont)
 {
 	struct ktcb *task;
-	struct capability *ktcb_cap;
-
-	/*
-	 * Find capability from pager's list, since
-	 * there is no ktcb, no standard path to check
-	 * per-task capability list yet.
-	 */
-	ktcb_cap = capability_find_by_rtype(&pager->cap_list,
-					    CAP_RTYPE_THREADPOOL);
-
-	/* Use it to allocate ktcb */
-	task = tcb_alloc_init_use_capability(ktcb_cap);
 
 	/*
 	 * Initialize dummy current capability list pointer
 	 * so that capability accounting can be done as normal
 	 */
 	current->cap_list_ptr = &pager->cap_list;
+
+	/* Use it to allocate ktcb */
+	task = tcb_alloc_init();
 
 	task_init_registers(task, pager->start_vma);
 

@@ -158,7 +158,6 @@ void tcb_remove(struct ktcb *tcb);
 
 void tcb_init(struct ktcb *tcb);
 struct ktcb *tcb_alloc_init(void);
-struct ktcb *tcb_alloc_init_use_capability(struct capability *cap);
 void tcb_delete(struct ktcb *tcb);
 
 void init_ktcb_list(struct ktcb_list *ktcb_list);
