@@ -71,6 +71,7 @@ struct cap_list {
 
 void capability_init(struct capability *cap);
 struct capability *capability_create(void);
+struct capability *boot_capability_create(void);
 
 
 static inline void cap_list_init(struct cap_list *clist)
@@ -85,6 +86,12 @@ static inline void cap_list_insert(struct capability *cap,
 	list_insert(&cap->list, &clist->caps);
 	clist->ncaps++;
 }
+
+/* Capability checking for quantitative capabilities */
+int capability_consume(struct capability *cap, int quantity);
+int capability_free(struct capability *cap, int quantity);
+struct capability *capability_find_by_rtype(struct cap_list *clist,
+					    unsigned int rtype);
 
 #if 0
 /* Virtual memory space allocated to container */

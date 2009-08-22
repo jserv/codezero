@@ -612,7 +612,7 @@ out_error:
 extern pmd_table_t *pmd_array;
 
 /*
- * Jumps from boot page tables to tables allocated from the cache.
+ * Jumps from boot pmd/pgd page tables to tables allocated from the cache.
  */
 pgd_table_t *realloc_page_tables(void)
 {

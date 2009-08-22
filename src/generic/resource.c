@@ -22,21 +22,75 @@ pgd_table_t *alloc_pgd(void)
 
 pmd_table_t *alloc_pmd(void)
 {
+	struct capability *cap;
+
+	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+					     CAP_RTYPE_MAPPOOL)))
+		return 0;
+
+	if (capability_consume(cap, 1) < 0)
+		return 0;
+
 	return mem_cache_zalloc(kernel_container.pmd_cache);
 }
 
 struct address_space *alloc_space(void)
 {
+	struct capability *cap;
+
+	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+					     CAP_RTYPE_SPACEPOOL)))
+		return 0;
+
+	if (capability_consume(cap, 1) < 0)
+		return 0;
+
 	return mem_cache_zalloc(kernel_container.space_cache);
+}
+
+struct ktcb *alloc_ktcb_use_capability(struct capability *cap)
+{
+	if (capability_consume(cap, 1) < 0)
+		return 0;
+
+	return mem_cache_zalloc(kernel_container.ktcb_cache);
 }
 
 struct ktcb *alloc_ktcb(void)
 {
+	struct capability *cap;
+
+	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+					     CAP_RTYPE_THREADPOOL)))
+		return 0;
+
+	if (capability_consume(cap, 1) < 0)
+		return 0;
+
 	return mem_cache_zalloc(kernel_container.ktcb_cache);
+}
+
+/*
+ * This version is boot-time only and it has no
+ * capability checking. Imagine the case where the
+ * initial capabilities are created.
+ */
+struct capability *boot_alloc_capability(void)
+{
+	return mem_cache_zalloc(kernel_container.cap_cache);
 }
 
 struct capability *alloc_capability(void)
 {
+	struct capability *cap;
+
+	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+					     CAP_RTYPE_CAPPOOL)))
+		return 0;
+
+	if (capability_consume(cap, 1) < 0)
+		return 0;
+
 	return mem_cache_zalloc(kernel_container.cap_cache);
 }
 
@@ -47,6 +101,15 @@ struct container *alloc_container(void)
 
 struct mutex_queue *alloc_user_mutex(void)
 {
+	struct capability *cap;
+
+	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+					     CAP_RTYPE_UMUTEX)))
+		return 0;
+
+	if (capability_consume(cap, 1) < 0)
+		return 0;
+
 	return mem_cache_zalloc(kernel_container.mutex_cache);
 }
 
@@ -57,21 +120,45 @@ void free_pgd(void *addr)
 
 void free_pmd(void *addr)
 {
+	struct capability *cap;
+
+	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+						CAP_RTYPE_MAPPOOL)));
+	capability_free(cap, 1);
+
 	BUG_ON(mem_cache_free(kernel_container.pmd_cache, addr) < 0);
 }
 
 void free_space(void *addr)
 {
+	struct capability *cap;
+
+	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+						CAP_RTYPE_SPACEPOOL)));
+	capability_free(cap, 1);
+
 	BUG_ON(mem_cache_free(kernel_container.space_cache, addr) < 0);
 }
 
 void free_ktcb(void *addr)
 {
+	struct capability *cap;
+
+	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+						CAP_RTYPE_THREADPOOL)));
+	capability_free(cap, 1);
+
 	BUG_ON(mem_cache_free(kernel_container.ktcb_cache, addr) < 0);
 }
 
 void free_capability(void *addr)
 {
+	struct capability *cap;
+
+	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+						CAP_RTYPE_CAPPOOL)));
+	capability_free(cap, 1);
+
 	BUG_ON(mem_cache_free(kernel_container.cap_cache, addr) < 0);
 }
 
@@ -82,6 +169,12 @@ void free_container(void *addr)
 
 void free_user_mutex(void *addr)
 {
+	struct capability *cap;
+
+	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+						CAP_RTYPE_UMUTEX)));
+	capability_free(cap, 1);
+
 	BUG_ON(mem_cache_free(kernel_container.mutex_cache, addr) < 0);
 }
 
@@ -160,7 +253,6 @@ int memcap_unmap_range(struct capability *cap,
 
 	return 0;
 }
-
 
 /*
  * Unmaps given memory range from the list of capabilities
@@ -280,6 +372,7 @@ void init_kernel_container(struct kernel_container *kcont)
 	cap_list_init(&kcont->virtmem_free);
 	cap_list_init(&kcont->devmem_used);
 	cap_list_init(&kcont->devmem_free);
+	cap_list_init(&kcont->other_caps);
 
 	/* Set up total physical memory as single capability */
 	physmem = alloc_bootmem(sizeof(*physmem), 0);
@@ -316,8 +409,6 @@ void init_kernel_container(struct kernel_container *kcont)
 
 /*
  * Copies cinfo structures to real capabilities for each pager.
- *
- * FIXME: Check if pager has enough resources to create its caps.
  */
 int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 {
@@ -330,7 +421,7 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 
 	/* Copy all cinfo structures into real capabilities */
 	for (int i = 0; i < pinfo->ncaps; i++) {
-		cap = capability_create();
+		cap = boot_capability_create();
 
 		cap_info = &pinfo->caps[i];
 
@@ -344,31 +435,27 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 	}
 
 	/*
+ 	 * Check if pager has enough resources to create its caps:
+	 *
 	 * Find pager's capability capability, check its
 	 * current use count and initialize it
-	 *
-	 * FIXME: We may want to do this capability checking
-	 * in a more generic and straightforward place.
 	 */
+	cap = capability_find_by_rtype(&pager->cap_list,
+				       CAP_RTYPE_CAPPOOL);
 
-	list_foreach_struct(cap, &pager->cap_list.caps, list) {
-		/* Find capability pool capability */
-		if ((cap->type & CAP_RTYPE_MASK) == CAP_RTYPE_CAPPOOL) {
-			/* Verify that we did not excess allocated */
-			if (cap->size < pinfo->ncaps) {
-				printk("FATAL: Pager needs more capabilities "
-				       "than allocated for initialization.\n");
-				BUG();
-			}
-
-			/*
-			 * Initialize used count. The rest of the checking
-			 * of spending on this cap will be done in the
-			 * cap syscall
-			 */
-			cap->used = pinfo->ncaps;
-		}
+	/* Verify that we did not excess allocated */
+	if (!cap || cap->size < pinfo->ncaps) {
+		printk("FATAL: Pager needs more capabilities "
+		       "than allocated for initialization.\n");
+			BUG();
 	}
+
+	/*
+	 * Initialize used count. The rest of the spending
+	 * checks on this cap will be done in the cap syscall
+	 */
+	cap->used = pinfo->ncaps;
+
 	return 0;
 }
 
@@ -388,6 +475,17 @@ int copy_container_info(struct container *c, struct container_info *cinfo)
 }
 
 /*
+ * TODO:
+ *
+ * Rearrange as follows:
+ * 1.) Move realloc_page_tables to before container_init_pagers()
+ * 2.) Set up dummy current cap_list_ptr right after real capability list
+ * has been created. -> Think! since there are many containers!!!!!!!
+ * 3.) At this point, no need to do alloc_boot_pmd(), and current->cap_list_ptr
+ * is valid, so no custom alloc functions.
+ */
+
+/*
  * Create real containers from compile-time created cinfo structures
  */
 void setup_containers(struct boot_resources *bootres,
@@ -404,7 +502,6 @@ void setup_containers(struct boot_resources *bootres,
 	 * since we want to avoid allocating an uncertain
 	 * amount of memory from the boot allocators.
 	 */
-	current_pgd = realloc_page_tables();
 
 	/* Create all containers but leave pagers */
 	for (int i = 0; i < bootres->nconts; i++) {
@@ -417,6 +514,7 @@ void setup_containers(struct boot_resources *bootres,
 		/* Add it to kernel container list */
 		kcont_insert_container(container, kcont);
 	}
+	current_pgd = realloc_page_tables();
 
 	/* Initialize pagers */
 	container_init_pagers(kcont, current_pgd);
@@ -697,7 +795,6 @@ int setup_boot_resources(struct boot_resources *bootres,
 	return 0;
 }
 
-
 /*
  * FIXME: Add error handling
  *
@@ -717,13 +814,10 @@ int init_system_resources(struct kernel_container *kcont)
 
 	init_resource_allocators(&bootres, kcont);
 
-	/* Create system containers */
 	setup_containers(&bootres, kcont);
 
-	/* Create real capabilities */
 	kcont_setup_capabilities(&bootres, kcont);
 
 	return 0;
 }
-
 

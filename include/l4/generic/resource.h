@@ -17,7 +17,6 @@
 struct boot_resources {
 	int nconts;
 	int ncaps;
-	int nids;
 	int nthreads;
 	int nspaces;
 	int npmds;
@@ -27,6 +26,7 @@ struct boot_resources {
 	int nkpmds;
 	int nkpgds;
 	int nkmemcaps;
+	int nkcaps;
 };
 
 /* List of containers */
@@ -72,6 +72,9 @@ struct kernel_container {
 	struct cap_list devmem_used;
 	struct cap_list devmem_free;
 
+	/* All other caps that belong to the kernel */
+	struct cap_list other_caps;
+
 	struct mem_cache *pgd_cache;
 	struct mem_cache *pmd_cache;
 	struct mem_cache *ktcb_cache;
@@ -95,6 +98,8 @@ pgd_table_t *alloc_pgd(void);
 pmd_table_t *alloc_pmd(void);
 struct address_space *alloc_space(void);
 struct ktcb *alloc_ktcb(void);
+struct ktcb *alloc_ktcb_use_capability(struct capability *cap);
+struct capability *boot_alloc_capability(void);
 struct capability *alloc_capability(void);
 struct container *alloc_container(void);
 struct mutex_queue *alloc_user_mutex(void);

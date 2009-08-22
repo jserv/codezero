@@ -42,9 +42,24 @@ void tcb_init(struct ktcb *new)
 	waitqueue_head_init(&new->wqh_pager);
 }
 
-struct ktcb *tcb_alloc(void)
+
+struct ktcb *tcb_alloc_init_use_capability(struct capability *cap)
 {
-	return alloc_ktcb();
+	struct ktcb *tcb;
+	struct task_ids ids;
+
+	if (!(tcb = alloc_ktcb_use_capability(cap)))
+		return 0;
+
+	ids.tid = id_new(&kernel_container.ktcb_ids);
+	ids.tgid = L4_NILTHREAD;
+	ids.spid = L4_NILTHREAD;
+
+	set_task_ids(tcb, &ids);
+
+	tcb_init(tcb);
+
+	return tcb;
 }
 
 struct ktcb *tcb_alloc_init(void)
@@ -52,7 +67,7 @@ struct ktcb *tcb_alloc_init(void)
 	struct ktcb *tcb;
 	struct task_ids ids;
 
-	if (!(tcb = tcb_alloc()))
+	if (!(tcb = alloc_ktcb()))
 		return 0;
 
 	ids.tid = id_new(&kernel_container.ktcb_ids);
