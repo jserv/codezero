@@ -24,7 +24,7 @@ from __future__ import with_statement
 
 import os
 
-
+posixServicesDirectory = "containers/posix/"
 includeDirectory = 'include'
 toolsDirectory = 'tools'
 cml2ToolsDirectory = toolsDirectory + '/cml2-tools'
@@ -78,7 +78,7 @@ else :
                 if len(item) == 2:
                     configItems[item[0].strip()] = (item[1].strip() == 'y')
         return configItems
-                
+
     baseEnvironment = Environment(tools = ['gnulink', 'gcc', 'gas', 'ar'],
                                     ENV = {'PATH': os.environ['PATH']},
                                     configFiles = ('#' + cml2CompileRulesFile,  '#' + cml2ConfigPropertiesFile,  '#' + cml2ConfigHeaderFile))
@@ -133,7 +133,7 @@ else :
         CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
         LINKFLAGS = ['-nostdlib'],
         LIBS = ['gcc'],
-        ARCH = arch, 
+        ARCH = arch,
         PLATFORM = platform)
 
     libs = {}
@@ -170,13 +170,13 @@ else :
         ####
 
         CPPFLAGS = ['-include', 'config.h', '-include', 'cml2Config.h', '-include', 'macros.h', '-include', 'types.h', '-D__KERNEL__'])
-    
+
     kernelComponents = []
     for scriptPath in ['src/' + path for path in kernelSConscriptPaths]:
         kernelComponents.append(SConscript(scriptPath + '/SConscript', variant_dir = buildDirectory + '/' + scriptPath, duplicate = 0, exports = {'environment': kernelEnvironment}))
     startAxf = kernelEnvironment.Program(buildDirectory + '/start.axf', kernelComponents)
     Depends(kernelComponents + [startAxf], kernelEnvironment['configFiles'])
-    
+
     Alias('kernel', startAxf)
 
 ##########  Build the task libraries ########################
@@ -189,11 +189,11 @@ else :
         LIBS = ['gcc'],
         CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory])
 
-    taskLibraryNames = [f.name for f in Glob('tasks/lib*')]
+    taskLibraryNames = [f.name for f in Glob(posixServicesDirectory + 'lib*')]
 
     taskLibraries = []
     for library in taskLibraryNames:
-        taskLibraries.append(SConscript('tasks/' + library + '/SConscript', variant_dir = buildDirectory + '/tasks/' + library, duplicate = 0, exports = {'environment': taskSupportLibraryEnvironment}))
+        taskLibraries.append(SConscript(posixServicesDirectory + library + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + library, duplicate = 0, exports = {'environment': taskSupportLibraryEnvironment, 'posixServicesDirectory': posixServicesDirectory}))
 
     Depends(taskLibraries, taskSupportLibraryEnvironment['configFiles'])
 
@@ -203,8 +203,8 @@ else :
 
     def buildTask(programName, sources, environment, previousImage, extraCppPath=None):
         e = environment.Clone()
-        e.Append(LINKFLAGS=['-Ttasks/' + programName + '/include/linker.lds'])
-        e.Append(LIBPATH=['#build/tasks/' + programName, '#build/lib/c/userspace/crt/sys-userspace/arch-arm'])
+        e.Append(LINKFLAGS=['-T' + posixServicesDirectory + programName + '/include/linker.lds'])
+        e.Append(LIBPATH=['#build/' + posixServicesDirectory + programName, '#build/lib/c/userspace/crt/sys-userspace/arch-arm'])
         if extraCppPath: e.Append(CPPPATH=extraCppPath)
         objects = e.StaticObject(sources)
         Depends(objects, e['configFiles'])
@@ -221,7 +221,8 @@ else :
         LIBS =  [libs['userspace']] + taskLibraries + ['gcc', libs['userspace']], #### TODO:  Why have the userspace C library twice?
         PROGSUFFIX = '.axf',
         CPPDEFINES = ['__USERSPACE__'],
-        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', '#tasks/libl4/include', '#tasks/libmem', '#tasks/libposix/include'],
+        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', \
+	'#' + posixServicesDirectory + 'libl4/include', '#' + posixServicesDirectory + 'libmem', '#' + posixServicesDirectory + 'libposix/include'],
         buildTask = buildTask)
 
 ####
@@ -229,16 +230,16 @@ else :
 ####  because of the text in the linker script?
 ####
 
-    userspaceRuntime = Command(crts['userspace'][0].name, crts['userspace'][0], 'ln -s $SOURCE.path $TARGET') 
+    userspaceRuntime = Command(crts['userspace'][0].name, crts['userspace'][0], 'ln -s $SOURCE.path $TARGET')
 
-    execfile('tasks/taskOrder.py')
+    execfile(posixServicesDirectory + 'taskOrder.py')
     imageOrderData = [(taskName, []) for taskName in taskOrder]
     imageOrderData[0][1].append(startAxf)
     tasks = []
     for i in range(len(imageOrderData)):
         taskName = imageOrderData[i][0]
         dependency = imageOrderData[i][1]
-        program = SConscript('tasks/' + taskName + '/SConscript', variant_dir = buildDirectory + '/tasks/' + taskName, duplicate = 0, exports = {'environment': tasksEnvironment, 'previousImage': dependency[0]})
+        program = SConscript(posixServicesDirectory + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + taskName, duplicate = 0, exports = {'environment': tasksEnvironment, 'previousImage': dependency[0], 'posixServicesDirectory':posixServicesDirectory})
         Depends(program, userspaceRuntime)
         tasks.append(program)
         if i < len(imageOrderData) - 1:
@@ -254,13 +255,13 @@ else :
     bootdescEnvironment = baseEnvironment.Clone(
         CC = 'arm-none-linux-gnueabi-gcc',
         CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-Ttasks/' + taskName + '/linker.lds'],
+        LINKFLAGS = ['-nostdlib', '-T' + posixServicesDirectory + taskName + '/linker.lds'],
         ASFLAGS = ['-D__ASSEMBLY__'],
         PROGSUFFIX = '.axf',
         LIBS = ['gcc'],
         CPPPATH = ['#' + includeDirectory])
 
-    bootdesc = SConscript('tasks/' + taskName + '/SConscript', variant_dir = buildDirectory + '/tasks/' + taskName, duplicate = 0, exports = {'environment': bootdescEnvironment, 'images': [startAxf] + tasks}) 
+    bootdesc = SConscript(posixServicesDirectory + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + taskName, duplicate = 0, exports = {'environment': bootdescEnvironment, 'images': [startAxf] + tasks})
 
     Alias('bootdesc', bootdesc)
 
@@ -276,14 +277,14 @@ else :
 
     ####  TODO: Fix the tasks data structure so as to avoid all the assumptions.
 
-    loader = SConscript('loader/SConscript', variant_dir = buildDirectory + '/loader', duplicate = 0, exports = {'environment': loaderEnvironment, 'images':[startAxf, bootdesc] + tasks})
+    loader = SConscript('loader/SConscript', variant_dir = buildDirectory + '/loader', duplicate = 0, exports = {'environment': loaderEnvironment, 'images':[startAxf, bootdesc] + tasks, 'posixServicesDirectory': posixServicesDirectory})
 
     Alias('final', loader)
 
 ##########  Other rules. ########################
 
     Default(crts.values() + libs.values() + [libelf, startAxf] + tasks + bootdesc + loader)
-    
+
     Clean('.', [buildDirectory])
 
 ##########  Be helpful ########################

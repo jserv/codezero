@@ -20,7 +20,7 @@
 import os.path
 import subprocess
 
-Import('environment', 'images')
+Import('environment', 'images', 'posixServicesDirectory')
 
 def convertAddress(address):
     '''Convert the string representation of the address given as parameter to a string representation of the

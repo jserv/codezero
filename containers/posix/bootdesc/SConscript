@@ -77,7 +77,6 @@ def generateBootdesc(target, source, env):
 
 def relocateBootdesc(target, source, env):
     name, start, end = generateLocationData(source[1])
-    print "Name: Start: End: ", name, start, end
     print "arm-none-linux-gnueabi-objcopy" + " --adjust-section-vma .data=" + end + " " + source[0].path
 #    process = subprocess.Popen(executable='arm-none-linux-gnueabi-objcopy', args=(
 #           '--adjust-section-vma .data=' + end,

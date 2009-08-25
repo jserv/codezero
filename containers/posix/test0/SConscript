@@ -17,7 +17,7 @@
 #
 #  Author: Russel Winder
 
-Import('environment', 'previousImage')
+Import('environment', 'previousImage', 'posixServicesDirectory')
 
 taskName = 'test0'
 
@@ -74,13 +74,13 @@ def createTestExecS(target, source, env):
 ''' % ( source[0].path ))
 
 testTaskEnvironment = environment.Clone()
-testTaskEnvironment.Append(CPPPATH=['#tasks/libposix/include/posix'])
-testExecLinkerScript = Command('#build/tasks/' + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
+testTaskEnvironment.Append(CPPPATH=['#' + posixServicesDirectory +'libposix/include/posix'])
+testExecLinkerScript = Command('#build/' + posixServicesDirectory + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
 testExecEnvironment = testTaskEnvironment.Clone()
 testExecEnvironment.Append(LINKFLAGS=['-T' + testExecLinkerScript[0].path])
 testExec = testExecEnvironment.Program('test_exec', Glob('src/test_exec/*.c') + ['#' + environment['userspace_crt0'][0].name])
 Depends(testExec, testExecLinkerScript)
-testExecS = Command('#build/tasks/' + taskName + '/test_exec.S', testExec, createTestExecS)
+testExecS = Command('#build/' + posixServicesDirectory + taskName + '/test_exec.S', testExec, createTestExecS)
 program = testTaskEnvironment['buildTask'](taskName, Glob('*.c') + Glob('src/*.c') + testExecS, testTaskEnvironment, previousImage)
 Depends(program, testExec)
 
