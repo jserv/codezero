@@ -19,6 +19,26 @@
 
 Import('environment')
 
-objects = environment.Object(Glob('*.c') + Glob('*.S'))
+#  The fixed sources and easily selected ones.
 
-Return('objects')
+sources = \
+        Glob('api/*.[cS]') + \
+        Glob('generic/*.[cS]') + \
+        Glob('lib/*.[cS]') + \
+        Glob('arch/' + environment['ARCH'] + '/*.[cS]') + \
+        Glob('arch/' + environment['ARCH'] + '/' + environment['SUBARCH'] +'/*.[cS]') + \
+        Glob('glue/' + environment['ARCH'] + '/*.[cS]') + \
+        Glob('platform/' + environment['PLATFORM'] + '/*.[cS]')
+
+#  The not so easily selected sources.
+
+for item in environment['driverList'] :
+    sources += Glob('drivers/' + item + '/*.[cS]')
+
+objects = environment.Object(sources)
+Depends(objects, environment['configFiles'])
+
+startAxf = environment.Program('start.axf', objects)
+Depends(startAxf, environment['configFiles'])
+
+Return('startAxf')

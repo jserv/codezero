@@ -83,8 +83,6 @@ else :
                                     ENV = {'PATH': os.environ['PATH']},
                                     configFiles = ('#' + cml2CompileRulesFile,  '#' + cml2ConfigPropertiesFile,  '#' + cml2ConfigHeaderFile))
 
-    kernelSConscriptPaths = ['generic', 'api', 'lib']
-
     #  It is assumed that the C code is assuming that the configuration file will be found at l4/config.h so create it there.
     #
     #  Kernel code include config.h in a different way to all the other bits of code.
@@ -111,15 +109,10 @@ else :
                 if items[1] == 'SUBARCH':
                     subarch = items[2].lower()
             if items[0] == 'DRIVER':
-                kernelSConscriptPaths.append('drivers/' + ('irq' if items[1] == 'IRQCTRL' else items[1].lower()) + '/' + items[2].lower())
+                configuration.env.Append(driverList = [('irq' if items[1] == 'IRQCTRL' else items[1].lower()) + '/' + items[2].lower()])
     configuration.Define('__ARCH__', arch)
     configuration.Define('__PLATFORM__', platform)
     configuration.Define('__SUBARCH__', subarch)
-    kernelSConscriptPaths += [
-        'arch/' + arch,
-        'glue/' + arch,
-        'platform/' + platform,
-        'arch/' + arch + '/' + subarch]
     configuration.env['ARCH'] = arch
     configuration.env['PLATFORM'] = platform
     configuration.env['SUBARCH'] = subarch
@@ -169,11 +162,8 @@ else :
 
         CPPFLAGS = ['-include', 'config.h', '-include', 'cml2Config.h', '-include', 'macros.h', '-include', 'types.h', '-D__KERNEL__'])
 
-    kernelComponents = []
-    for scriptPath in ['src/' + path for path in kernelSConscriptPaths]:
-        kernelComponents.append(SConscript(scriptPath + '/SConscript', variant_dir = buildDirectory + '/' + scriptPath, duplicate = 0, exports = {'environment': kernelEnvironment}))
-    startAxf = kernelEnvironment.Program(buildDirectory + '/start.axf', kernelComponents)
-    Depends(kernelComponents + [startAxf], kernelEnvironment['configFiles'])
+    startAxf = SConscript('src/SConscript' , variant_dir = buildDirectory + '/kernel' , duplicate = 0, exports = {'environment': kernelEnvironment})
+    Depends(startAxf, kernelEnvironment['configFiles'])
 
     Alias('kernel', startAxf)
 
@@ -275,6 +265,13 @@ else :
     loader = SConscript('loader/SConscript', variant_dir = buildDirectory + '/loader', duplicate = 0, exports = {'environment': loaderEnvironment, 'images':[startAxf, bootdesc] + tasks, 'posixServicesDirectory': posixServicesDirectory})
 
     Alias('final', loader)
+
+    #  The test does not terminate and Ctrl-C and Ctrl-Z have no effect.  Run the job in the background so
+    #  the initiating terminal retains control and allows the process to be killed from this terminal.  Add
+    #  the sleep to force SCons to wait until the test has run before it decides all targets are built and
+    #  return to the prompt.  Remind the user they have a running process in the background.
+
+    Command('runTest', loader, "qemu-system-arm -kernel $SOURCE -nographic -m 128 -M versatilepb & sleep 10 ; echo '####\\n#### You will need to kill the qemu-system-arm process\\n#### that is running in the background.\\n####\\n'")
 
 ##########  Other rules. ########################
 
