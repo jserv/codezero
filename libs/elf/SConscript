@@ -25,5 +25,6 @@ e.Append(CPPPATH = ['include', '#libs/c/include', '#libs/c/include/arch/' + e['A
 objects = e.StaticObject(Glob('src/*.c'))
 Depends(objects, e['configFiles'])
 library = e.StaticLibrary('elf', objects)
+Depends(library, e['configFiles'])
 
 Return('library')

@@ -25,14 +25,17 @@ e.Append(CPPPATH = ['#' + posixServicesDirectory + 'libl4/include' , '.' ])
 mmObjects = e.StaticObject(Glob('mm/*.c'))
 Depends(mmObjects, e['configFiles'])
 mmLibrary = e.StaticLibrary('mm', mmObjects)
+Depends(mmLibrary, e['configFiles'])
 
 kmObjects = e.StaticObject(Glob('kmalloc/*.c'))
 Depends(kmObjects, e['configFiles'])
 kmLibrary = e.StaticLibrary('km', kmObjects)
+Depends(kmLibrary, e['configFiles'])
 
 mcObjects = e.StaticObject(Glob('memcache/*.c'))
 Depends(mcObjects, e['configFiles'])
 mcLibrary = e.StaticLibrary('mc', mcObjects)
+Depends(mcLibrary, e['configFiles'])
 
 libraries = (mmLibrary, kmLibrary, mcLibrary)
 

@@ -89,5 +89,6 @@ bootdescSource = environment.Command('bootdesc.c', images, generateBootdesc)
 objects = environment.Object(bootdescSource)
 Depends(objects, environment['configFiles'])
 bootdesc = environment.Command('bootdesc.axf', environment.Program('bootdesc_intermediate', objects) + [images[1]] , relocateBootdesc)
+Depends(bootdesc, environment['configFiles'])
 
 Return('bootdesc')

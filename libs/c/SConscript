@@ -32,10 +32,11 @@ e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + environment
 
 objects = e.StaticObject(source)
 Depends (objects, e['configFiles'])
+library = e.StaticLibrary('c-' + variant, objects)
+Depends (library, e['configFiles'])
+runTime = e.StaticObject('crt/sys-' + variant + '/arch-' + e['ARCH'] + '/crt0.S')
+Depends (runTime, e['configFiles'])
 
-result = (
-    e.StaticLibrary('c-' + variant, objects),
-    e.StaticObject('crt/sys-' + variant + '/arch-' + e['ARCH'] + '/crt0.S')
-    )
+result = (library, runTime)
 
 Return('result')

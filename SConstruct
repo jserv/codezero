@@ -133,13 +133,11 @@ else :
     crts = {}
     for variant in ['baremetal']:
         (libs[variant], crts[variant]) = SConscript('libs/c/SConscript', variant_dir = buildDirectory + '/lib/c/' + variant, duplicate = 0, exports = {'environment': libraryEnvironment, 'variant': variant})
-        Depends((libs[variant], crts[variant]), libraryEnvironment['configFiles'])
 
     baseEnvironment['baremetal_libc'] = libs['baremetal']
     baseEnvironment['baremetal_crt0'] = crts['baremetal']
 
     libelf = SConscript('libs/elf/SConscript', variant_dir = buildDirectory + '/lib/elf', duplicate = 0, exports = {'environment': libraryEnvironment})
-    Depends(libelf, libraryEnvironment['configFiles'])
 
     Alias('libs', crts.values() + libs.values() + [libelf])
 
@@ -163,7 +161,6 @@ else :
         CPPFLAGS = ['-include', 'config.h', '-include', 'cml2Config.h', '-include', 'macros.h', '-include', 'types.h', '-D__KERNEL__'])
 
     startAxf = SConscript('src/SConscript' , variant_dir = buildDirectory + '/kernel' , duplicate = 0, exports = {'environment': kernelEnvironment})
-    Depends(startAxf, kernelEnvironment['configFiles'])
 
     Alias('kernel', startAxf)
 
@@ -182,8 +179,6 @@ else :
     taskLibraries = []
     for library in taskLibraryNames:
         taskLibraries.append(SConscript(posixServicesDirectory + library + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + library, duplicate = 0, exports = {'environment': taskSupportLibraryEnvironment, 'posixServicesDirectory': posixServicesDirectory}))
-
-    Depends(taskLibraries, taskSupportLibraryEnvironment['configFiles'])
 
     Alias ('tasklibs', taskLibraries)
 
@@ -229,7 +224,6 @@ else :
         tasks.append(program)
         if i < len(imageOrderData) - 1:
             imageOrderData[i+1][1].append(program)
-    Depends(tasks, tasksEnvironment['configFiles'])
 
     Alias ('tasks', tasks)
 

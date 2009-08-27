@@ -29,5 +29,6 @@ e['CCFLAGS'] = ['-g', '-nostdlib', '-Wall', '-ffreestanding', '-std=gnu99']
 objects = e.StaticObject(Glob('src/*.c') + Glob('src/' + e['ARCH'] + '/*.[cS]'))
 Depends(objects, e['configFiles'])
 library = e.StaticLibrary('l4', objects)
+Depends(library, e['configFiles'])
 
 Return('library')
