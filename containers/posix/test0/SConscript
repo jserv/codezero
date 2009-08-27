@@ -52,7 +52,7 @@ SECTIONS
 {
 	. = virtual_base;
 	_start_text = .;
-	.text : AT (ADDR(.text) - offset) { crt0.o(.text) *(.text) }
+	.text : AT (ADDR(.text) - offset) { *(.text.init) *(.text) }
 	/* rodata is needed else your strings will link at physical! */
 	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
@@ -78,10 +78,10 @@ testTaskEnvironment.Append(CPPPATH=['#' + posixServicesDirectory +'libposix/incl
 testExecLinkerScript = Command('#build/' + posixServicesDirectory + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
 testExecEnvironment = testTaskEnvironment.Clone()
 testExecEnvironment.Append(LINKFLAGS=['-T' + testExecLinkerScript[0].path])
-testExec = testExecEnvironment.Program('test_exec', Glob('src/test_exec/*.c') + ['#' + environment['userspace_crt0'][0].name])
+testExec = testExecEnvironment.Program('test_exec', Glob('src/test_exec/*.[cS]'))
 Depends(testExec, testExecLinkerScript)
 testExecS = Command('#build/' + posixServicesDirectory + taskName + '/test_exec.S', testExec, createTestExecS)
-program = testTaskEnvironment['buildTask'](taskName, Glob('*.c') + Glob('src/*.c') + testExecS, testTaskEnvironment, previousImage)
+program = testTaskEnvironment['buildTask'](taskName, Glob('*.c') + Glob('src/*.[cS]') + testExecS, testTaskEnvironment, previousImage)
 Depends(program, testExec)
 
 Return('program')

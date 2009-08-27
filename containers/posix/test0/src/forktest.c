@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <tests.h>
 #include <l4/macros.h>
+#include <printf.h>
 
 int global = 0;
 

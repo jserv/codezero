@@ -19,6 +19,6 @@
 
 Import('environment', 'previousImage')
 
-program = environment['buildTask']('fs0', Glob('*.c') + [Glob(directory + '/*.c') for directory in [ 'src', 'src/lib', 'src/lib/elf', 'src/memfs']], environment, previousImage)
+program = environment['buildTask']('fs0', Glob('*.c') + [Glob(directory + '/*.[cS]') for directory in [ 'src', 'src/lib', 'src/lib/elf', 'src/memfs']], environment, previousImage)
 
 Return('program')

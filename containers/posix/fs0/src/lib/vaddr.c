@@ -8,7 +8,7 @@
 #include <l4/types.h>
 #include INC_GLUE(memory.h)
 #include <lib/vaddr.h>
-#include <stdio.h>
+#include <printf.h>
 
 void vaddr_pool_init(struct id_pool *pool, unsigned long start, unsigned long end)
 {

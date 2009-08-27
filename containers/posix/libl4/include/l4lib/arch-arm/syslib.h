@@ -7,7 +7,7 @@
 #ifndef __L4LIB_SYSLIB_H__
 #define __L4LIB_SYSLIB_H__
 
-#include <stdio.h>
+#include <printf.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4/macros.h>
 

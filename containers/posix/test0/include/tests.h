@@ -3,13 +3,14 @@
 
 #define __TASKNAME__			"test0"
 
-//#define TEST_VERBOSE_PRINT
+#define TEST_VERBOSE_PRINT
 #if defined (TEST_VERBOSE_PRINT)
 #define test_printf(...)	printf(__VA_ARGS__)
 #else
 #define test_printf(...)
 #endif
 
+#include <printf.h>
 #include <sys/types.h>
 extern pid_t parent_of_all;
 

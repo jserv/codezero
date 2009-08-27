@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
+#include <printf.h>
 
 extern char _start_test_exec[];
 extern char _end_test_exec[];

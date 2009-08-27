@@ -192,7 +192,7 @@ struct superblock *memfs_get_superblock(void *block)
 		return 0;
 	}
 	if (sb->magic != MEMFS_MAGIC) {
-		printf("%s: Magic number not match: %s\n", __FUNCTION__, sb->magic);
+		printf("%s: Magic number not match: %u\n", __FUNCTION__, sb->magic);
 		return 0;
 	}
 

@@ -239,8 +239,8 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	/* Get total file pages, check if mapping is within file size */
 	file_npages = __pfn(page_align_up(mapfile->length));
 	if (npages > file_npages - file_offset) {
-		printf("%s: Trying to map %d pages from page %d, "
-		       "but file length is %d\n", __FUNCTION__,
+		printf("%s: Trying to map %d pages from page %lu, "
+		       "but file length is %lu\n", __FUNCTION__,
 		       npages, file_offset, file_npages);
 		return PTR_ERR(-EINVAL);
 	}

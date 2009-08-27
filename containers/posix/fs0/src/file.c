@@ -8,7 +8,7 @@
 #include <l4/lib/list.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
-#include <stdio.h>
+#include <printf.h>
 
 /*
  * This reads contents of a file in pages, calling the fs-specific file read function to read-in

@@ -138,14 +138,12 @@ else :
 
     libs = {}
     crts = {}
-    for variant in ['baremetal', 'userspace']:
+    for variant in ['baremetal']:
         (libs[variant], crts[variant]) = SConscript('libs/c/SConscript', variant_dir = buildDirectory + '/lib/c/' + variant, duplicate = 0, exports = {'environment': libraryEnvironment, 'variant': variant})
         Depends((libs[variant], crts[variant]), libraryEnvironment['configFiles'])
 
     baseEnvironment['baremetal_libc'] = libs['baremetal']
     baseEnvironment['baremetal_crt0'] = crts['baremetal']
-    baseEnvironment['userspace_libc'] = libs['userspace']
-    baseEnvironment['userspace_crt0'] = crts['userspace']
 
     libelf = SConscript('libs/elf/SConscript', variant_dir = buildDirectory + '/lib/elf', duplicate = 0, exports = {'environment': libraryEnvironment})
     Depends(libelf, libraryEnvironment['configFiles'])
@@ -204,13 +202,13 @@ else :
     def buildTask(programName, sources, environment, previousImage, extraCppPath=None):
         e = environment.Clone()
         e.Append(LINKFLAGS=['-T' + posixServicesDirectory + programName + '/include/linker.lds'])
-        e.Append(LIBPATH=['#build/' + posixServicesDirectory + programName, '#build/lib/c/userspace/crt/sys-userspace/arch-arm'])
+        e.Append(LIBPATH=['#build/' + posixServicesDirectory + programName])
         if extraCppPath: e.Append(CPPPATH=extraCppPath)
         objects = e.StaticObject(sources)
         Depends(objects, e['configFiles'])
-        program = e.Program(programName, objects + ['#' + e['userspace_crt0'][0].name])
+        program = e.Program(programName, objects)
         environment['physicalBaseLinkerScript'] = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
-        Depends(program, [environment['physicalBaseLinkerScript'], e['userspace_crt0']])
+        Depends(program, [environment['physicalBaseLinkerScript']])
         return program
 
     tasksEnvironment = baseEnvironment.Clone(
@@ -218,20 +216,18 @@ else :
         CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
         LINKFLAGS = ['-nostdlib'],
         ASFLAGS = ['-D__ASSEMBLY__'],
-        LIBS =  [libs['userspace']] + taskLibraries + ['gcc', libs['userspace']], #### TODO:  Why have the userspace C library twice?
+        LIBS =  taskLibraries + ['gcc'] + taskLibraries,
         PROGSUFFIX = '.axf',
         CPPDEFINES = ['__USERSPACE__'],
         CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', \
-	'#' + posixServicesDirectory + 'libl4/include', '#' + posixServicesDirectory + 'libmem', '#' + posixServicesDirectory + 'libposix/include'],
+	'#' + posixServicesDirectory + 'libl4/include', '#' + posixServicesDirectory + 'libc/include', \
+	'#' + posixServicesDirectory + 'libmem', '#' + posixServicesDirectory + 'libposix/include'],
         buildTask = buildTask)
 
 ####
 ####  TODO: Why does the linker require crt0.o to be in the current directory and named as such.  Is it
 ####  because of the text in the linker script?
 ####
-
-    userspaceRuntime = Command(crts['userspace'][0].name, crts['userspace'][0], 'ln -s $SOURCE.path $TARGET')
-
     execfile(posixServicesDirectory + 'taskOrder.py')
     imageOrderData = [(taskName, []) for taskName in taskOrder]
     imageOrderData[0][1].append(startAxf)
@@ -240,7 +236,6 @@ else :
         taskName = imageOrderData[i][0]
         dependency = imageOrderData[i][1]
         program = SConscript(posixServicesDirectory + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + taskName, duplicate = 0, exports = {'environment': tasksEnvironment, 'previousImage': dependency[0], 'posixServicesDirectory':posixServicesDirectory})
-        Depends(program, userspaceRuntime)
         tasks.append(program)
         if i < len(imageOrderData) - 1:
             imageOrderData[i+1][1].append(program)

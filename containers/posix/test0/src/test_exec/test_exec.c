@@ -26,7 +26,7 @@ void main(void)
 {
 	wait_pager(0);
 	if (getpid() == 2) {
-		printf("EXECVE TEST         -- PASSED --\n", getpid());
+		printf("EXECVE TEST         -- PASSED --\n");
 		printf("\nThread (%d): Continues to sync with the pager...\n\n", getpid());
 		while (1)
 			wait_pager(0);

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <tests.h>
 #include <errno.h>
+#include <printf.h>
 
 #define PAGE_SIZE		0x1000
 

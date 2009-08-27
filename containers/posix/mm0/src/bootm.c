@@ -13,7 +13,7 @@
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
 
-#include <stdio.h>
+#include <printf.h>
 
 /* All memory allocated here is discarded after boot */
 

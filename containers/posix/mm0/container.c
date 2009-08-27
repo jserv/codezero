@@ -16,9 +16,13 @@
  */
 
 void main(void);
+void uart_init(void);
 
 void __container_init(void)
 {
+	/* Initialize uarts */
+	uart_init();
+
 	/* Generic L4 initialisation */
 	__l4_init();
 

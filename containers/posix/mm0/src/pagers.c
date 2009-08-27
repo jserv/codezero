@@ -71,8 +71,8 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 
 	/* Check first if the file has such a page at all */
 	if (__pfn(page_align_up(f->length) <= page_offset)) {
-		printf("%s: %s: Trying to look up page %d, but file length "
-		       "is %d bytes.\n", __TASKNAME__, __FUNCTION__,
+		printf("%s: %s: Trying to look up page %lu, but file length "
+		       "is %lu bytes.\n", __TASKNAME__, __FUNCTION__,
 		       page_offset, f->length);
 		BUG();
 	}
@@ -123,8 +123,8 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 
 	/* Check first if the file has such a page at all */
 	if (__pfn(page_align_up(f->length) <= page_offset)) {
-		printf("%s: %s: Trying to look up page %d, but file length "
-		       "is %d bytes.\n", __TASKNAME__, __FUNCTION__,
+		printf("%s: %s: Trying to look up page %lu, but file length "
+		       "is %lu bytes.\n", __TASKNAME__, __FUNCTION__,
 		       page_offset, f->length);
 		BUG();
 	}
@@ -253,8 +253,8 @@ struct page *bootfile_page_in(struct vm_object *vm_obj,
 
 	/* Check first if the file has such a page at all */
 	if (__pfn(page_align_up(boot_file->length) <= offset)) {
-		printf("%s: %s: Trying to look up page %d, but file length "
-		       "is %d bytes.\n", __TASKNAME__, __FUNCTION__,
+		printf("%s: %s: Trying to look up page %lu, but file length "
+		       "is %lu bytes.\n", __TASKNAME__, __FUNCTION__,
 		       offset, boot_file->length);
 		BUG();
 	}
