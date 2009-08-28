@@ -19,8 +19,6 @@
 
 Import('environment')
 
-#  The fixed sources and easily selected ones.
-
 sources = \
         Glob('api/*.[cS]') + \
         Glob('generic/*.[cS]') + \
@@ -29,8 +27,6 @@ sources = \
         Glob('arch/' + environment['ARCH'] + '/' + environment['SUBARCH'] +'/*.[cS]') + \
         Glob('glue/' + environment['ARCH'] + '/*.[cS]') + \
         Glob('platform/' + environment['PLATFORM'] + '/*.[cS]')
-
-#  The not so easily selected sources.
 
 for item in environment['driverList'] :
     sources += Glob('drivers/' + item + '/*.[cS]')
