@@ -18,7 +18,7 @@
 #  Author: Russel Winder
 
 #  To support Python 2.5 we need the following, which seems to do no harm in Python 2.6.  Only if Python 2.6
-#  is the floor version supported can be dispensed with.
+#  is the floor version supported can this be dispensed with.
 
 from __future__ import with_statement
 
@@ -57,7 +57,7 @@ if 'configure' in COMMAND_LINE_TARGETS  :
         os.system(cml2ToolsDirectory +  '/cmlconfigure.py -c -o ' + cml2ConfigPropertiesFile + ' ' + cml2CompileRulesFile)
         os.system(toolsDirectory +  '/cml2header.py -o ' + cml2ConfigHeaderFile + ' -i ' + cml2ConfigPropertiesFile)
 
-    if len ( COMMAND_LINE_TARGETS ) != 1:
+    if len(COMMAND_LINE_TARGETS) != 1:
         print '#### Warning####: configure is part of the command line, all the other targets are being ignored as this is a configure step.'
     Command('configure',  ['#configs/arm.cml'], performCML2Configuration)
     Clean('configure', buildDirectory)
@@ -109,6 +109,7 @@ else :
                 if items[1] == 'SUBARCH':
                     subarch = items[2].lower()
             if items[0] == 'DRIVER':
+                #  Add data to the environment about which driver paths to include in the build.
                 configuration.env.Append(driverList = [('irq' if items[1] == 'IRQCTRL' else items[1].lower()) + '/' + items[2].lower()])
     configuration.Define('__ARCH__', arch)
     configuration.Define('__PLATFORM__', platform)
@@ -213,6 +214,9 @@ else :
 ####  TODO: Why does the linker require crt0.o to be in the current directory and named as such.  Is it
 ####  because of the text in the linker script?
 ####
+    
+    #### taskNameList = [ f.name for f in Glob(posixServicesDirectory + '*') if f.name not in taskLibraryNames + ['bootdesc'] ]
+    #### imageOrderData = [(taskName, []) for taskName in taskNameList]
     execfile(posixServicesDirectory + 'taskOrder.py')
     imageOrderData = [(taskName, []) for taskName in taskOrder]
     imageOrderData[0][1].append(startAxf)
