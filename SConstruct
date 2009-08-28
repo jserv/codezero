@@ -80,8 +80,19 @@ else :
         return configItems
 
     baseEnvironment = Environment(tools = ['gnulink', 'gcc', 'gas', 'ar'],
-                                    ENV = {'PATH': os.environ['PATH']},
-                                    configFiles = ('#' + cml2CompileRulesFile,  '#' + cml2ConfigPropertiesFile,  '#' + cml2ConfigHeaderFile))
+                                  ENV = {'PATH': os.environ['PATH']},
+                                  configFiles = ('#' + cml2CompileRulesFile,  '#' + cml2ConfigPropertiesFile,  '#' + cml2ConfigHeaderFile),
+                                  CCFLAGS =  ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
+                                  ASFLAGS = ['-D__ASSEMBLY__'],
+                                  LINKFLAGS = ['-nostdlib'],
+                                  PROGSUFFIX = '.axf',
+                                  toolChains = {
+                                      'arm926': {
+                                          'mainCompiler': 'arm-none-linux-gnueabi-gcc',
+                                          'kernelCompiler': 'arm-none-eabi-gcc',
+                                          'cpuOption': 'arm926ej-s'}
+                                      },
+                                  )
 
     #  It is assumed that the C code is assuming that the configuration file will be found at l4/config.h so create it there.
     #
@@ -115,14 +126,14 @@ else :
     configuration.Define('__SUBARCH__', configuration.env['SUBARCH'])
     baseEnvironment = configuration.Finish()
     baseEnvironment.Append(configFiles = ('#' + configHPath,))
+    baseEnvironment['CC'] = baseEnvironment['toolChains'][configuration.env['CPU']]['mainCompiler']
+    #baseEnvironment.Append(CCFLAGS = ['-mcpu=' + baseEnvironment['toolChains'][baseEnvironment['CPU']]['cpuOption']])
 
 ##########  Build the libraries ########################
 
-    libraryEnvironment = baseEnvironment.Clone(
-        CC = 'arm-none-linux-gnueabi-gcc',
-        CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib'],
-        LIBS = ['gcc'])
+    libraryEnvironment = baseEnvironment.Clone()
+    libraryEnvironment.Append(CCFLAGS = '-nostdinc')
+    libraryEnvironment.Append(LIBS = ['gcc'])
 
     libs = {}
     crts = {}
@@ -138,22 +149,15 @@ else :
 
 ##########  Build the kernel ########################
 
-    kernelEnvironment = baseEnvironment.Clone(
-        CC = 'arm-none-eabi-gcc',
-        # We don't use -nostdinc because sometimes we need standard headers, such as stdarg.h e.g. for variable
-        # args, as in printk().
-        CCFLAGS = ['-mcpu=arm926ej-s', '-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-T' +  includeDirectory + '/l4/arch/' + baseEnvironment['ARCH'] + '/linker.lds'],
-        ASFLAGS = ['-D__ASSEMBLY__'],
-        PROGSUFFIX = '.axf',
-        LIBS = ['gcc'],
-        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, '#' + includeDirectory + '/l4'],
-
-        ####
-        ####  TODO:  Why are these files forcibly included, why not just leave it up to the C code to include things?
-        ####
-
-        CPPFLAGS = ['-include', 'config.h', '-include', 'cml2Config.h', '-include', 'macros.h', '-include', 'types.h', '-D__KERNEL__'])
+    kernelEnvironment = baseEnvironment.Clone()
+    kernelEnvironment['CC'] = baseEnvironment['toolChains'][baseEnvironment['CPU']]['kernelCompiler']
+    kernelEnvironment.Append(LINKFLAGS = ['-T' +  includeDirectory + '/l4/arch/' + baseEnvironment['ARCH'] + '/linker.lds'])
+    kernelEnvironment.Append(LIBS = ['gcc'])
+    kernelEnvironment.Append(CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, '#' + includeDirectory + '/l4'])
+    ####
+    ####  TODO:  Why are these files forcibly included, why not just leave it up to the C code to include things?
+    ####
+    kernelEnvironment.Append(CPPFLAGS = ['-include', 'config.h', '-include', 'cml2Config.h', '-include', 'macros.h', '-include', 'types.h', '-D__KERNEL__'])
 
     startAxf = SConscript('src/SConscript' , variant_dir = buildDirectory + '/kernel' , duplicate = 0, exports = {'environment': kernelEnvironment})
 
@@ -161,13 +165,9 @@ else :
 
 ##########  Build the task libraries ########################
 
-    taskSupportLibraryEnvironment = baseEnvironment.Clone(
-        CC = 'arm-none-linux-gnueabi-gcc',
-        CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib'],
-        ASFLAGS = ['-D__ASSEMBLY__'],
-        LIBS = ['gcc'],
-        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory])
+    taskSupportLibraryEnvironment = baseEnvironment.Clone()
+    taskSupportLibraryEnvironment.Append(LIBS = ['gcc'])
+    taskSupportLibraryEnvironment.Append(CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory])
 
     taskLibraryNames = [f.name for f in Glob(posixServicesDirectory + 'lib*')]
 
@@ -191,18 +191,13 @@ else :
         Depends(program, [environment['physicalBaseLinkerScript']])
         return program
 
-    tasksEnvironment = baseEnvironment.Clone(
-        CC = 'arm-none-linux-gnueabi-gcc',
-        CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib'],
-        ASFLAGS = ['-D__ASSEMBLY__'],
-        LIBS =  taskLibraries + ['gcc'] + taskLibraries,
-        PROGSUFFIX = '.axf',
-        CPPDEFINES = ['__USERSPACE__'],
-        CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', \
+    tasksEnvironment = baseEnvironment.Clone()
+    tasksEnvironment.Append(LIBS =  taskLibraries + ['gcc'] + taskLibraries)
+    tasksEnvironment.Append(CPPDEFINES = ['__USERSPACE__'])
+    tasksEnvironment.Append(CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', \
 	'#' + posixServicesDirectory + 'libl4/include', '#' + posixServicesDirectory + 'libc/include', \
-	'#' + posixServicesDirectory + 'libmem', '#' + posixServicesDirectory + 'libposix/include'],
-        buildTask = buildTask)
+	'#' + posixServicesDirectory + 'libmem', '#' + posixServicesDirectory + 'libposix/include'])
+    tasksEnvironment.Append(buildTask = buildTask)
 
 ####
 ####  TODO: Why does the linker require crt0.o to be in the current directory and named as such.  Is it
@@ -229,14 +224,10 @@ else :
 
     taskName = 'bootdesc'
 
-    bootdescEnvironment = baseEnvironment.Clone(
-        CC = 'arm-none-linux-gnueabi-gcc',
-        CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-T' + posixServicesDirectory + taskName + '/linker.lds'],
-        ASFLAGS = ['-D__ASSEMBLY__'],
-        PROGSUFFIX = '.axf',
-        LIBS = ['gcc'],
-        CPPPATH = ['#' + includeDirectory])
+    bootdescEnvironment = baseEnvironment.Clone()
+    bootdescEnvironment.Append(LINKFLAGS = ['-T' + posixServicesDirectory + taskName + '/linker.lds'])
+    bootdescEnvironment.Append(LIBS = ['gcc'])
+    bootdescEnvironment.Append(CPPPATH = ['#' + includeDirectory])
 
     bootdesc = SConscript(posixServicesDirectory + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + taskName, duplicate = 0, exports = {'environment': bootdescEnvironment, 'images': [startAxf] + tasks})
 
@@ -244,13 +235,10 @@ else :
 
 ##########  Do the packing / create loadable ########################
 
-    loaderEnvironment = baseEnvironment.Clone(
-        CC = 'arm-none-linux-gnueabi-gcc',
-        CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-T' + buildDirectory + '/loader/linker.lds'],
-        PROGSUFFIX = '.axf',
-        LIBS = [libelf, libs['baremetal'], 'gcc', libs['baremetal']],
-        CPPPATH = ['#libs/elf/include', '#' + buildDirectory + '/loader'])
+    loaderEnvironment = baseEnvironment.Clone()
+    loaderEnvironment.Append(LINKFLAGS = ['-T' + buildDirectory + '/loader/linker.lds'])
+    loaderEnvironment.Append(LIBS = [libelf, libs['baremetal'], 'gcc', libs['baremetal']])
+    loaderEnvironment.Append(CPPPATH = ['#libs/elf/include', '#' + buildDirectory + '/loader'])
 
     ####  TODO: Fix the tasks data structure so as to avoid all the assumptions.
 
