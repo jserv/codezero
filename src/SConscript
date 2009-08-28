@@ -17,6 +17,8 @@
 #
 #  Author: Russel Winder
 
+import os.path
+
 Import('environment')
 
 sources = \
@@ -29,6 +31,10 @@ sources = \
         Glob('platform/' + environment['PLATFORM'] + '/*.[cS]')
 
 for item in environment['driverList'] :
+    path = 'drivers/' + item
+    if not os.path.isdir(path):
+        feature , device = item.split ( '/' )
+        raise ValueError, 'Driver ' + device + ' for ' + feature + ' not available.'
     sources += Glob('drivers/' + item + '/*.[cS]')
 
 objects = environment.Object(sources)
