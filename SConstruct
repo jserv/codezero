@@ -92,31 +92,22 @@ else :
     configHPath = buildDirectory + '/l4/config.h'
     configuration = Configure(baseEnvironment, config_h =  configHPath)
     configData = processCML2Config()
-    arch = None
-    platform = None
-    subarch = None
     for key, value in configData.items():
         if value:
             items = key.split('_')
             if items[0] == 'ARCH':
-                arch = items[1].lower()
+                configuration.env['ARCH'] = items[1].lower()
     for key, value in configData.items():
         if value:
             items = key.split('_')
-            if items[0] == arch.upper():
-                if items[1] == 'PLATFORM':
-                    platform = items[2].lower()
-                if items[1] == 'SUBARCH':
-                    subarch = items[2].lower()
-            if items[0] == 'DRIVER':
+            if items[0] == configuration.env['ARCH'].upper():
+                configuration.env[items[1]] = items[2].lower()
+            elif items[0] == 'DRIVER':
                 #  Add data to the environment about which driver paths to include in the build.
                 configuration.env.Append(driverList = [items[1].lower() + '/' + items[2].lower()])
-    configuration.Define('__ARCH__', arch)
-    configuration.Define('__PLATFORM__', platform)
-    configuration.Define('__SUBARCH__', subarch)
-    configuration.env['ARCH'] = arch
-    configuration.env['PLATFORM'] = platform
-    configuration.env['SUBARCH'] = subarch
+    configuration.Define('__ARCH__', configuration.env['ARCH'])
+    configuration.Define('__PLATFORM__', configuration.env['PLATFORM'])
+    configuration.Define('__SUBARCH__', configuration.env['SUBARCH'])
     baseEnvironment = configuration.Finish()
     baseEnvironment.Append(configFiles = ('#' + configHPath,))
 
@@ -126,9 +117,7 @@ else :
         CC = 'arm-none-linux-gnueabi-gcc',
         CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
         LINKFLAGS = ['-nostdlib'],
-        LIBS = ['gcc'],
-        ARCH = arch,
-        PLATFORM = platform)
+        LIBS = ['gcc'])
 
     libs = {}
     crts = {}
@@ -149,7 +138,7 @@ else :
         # We don't use -nostdinc because sometimes we need standard headers, such as stdarg.h e.g. for variable
         # args, as in printk().
         CCFLAGS = ['-mcpu=arm926ej-s', '-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
-        LINKFLAGS = ['-nostdlib', '-T' +  includeDirectory + '/l4/arch/' + arch + '/linker.lds'],
+        LINKFLAGS = ['-nostdlib', '-T' +  includeDirectory + '/l4/arch/' + baseEnvironment['ARCH'] + '/linker.lds'],
         ASFLAGS = ['-D__ASSEMBLY__'],
         PROGSUFFIX = '.axf',
         LIBS = ['gcc'],
