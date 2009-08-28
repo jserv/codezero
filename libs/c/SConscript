@@ -19,16 +19,17 @@
 
 Import('environment', 'variant')
 
+e = environment.Clone()
+e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + environment['ARCH']])
+e.Append(CCFLAGS = '-nostdinc')
+
 source = \
         Glob('src/*.c') + \
         Glob('src/sys-' + variant + '/*.c') + \
-        Glob('src/sys-' + variant + '/arch-' + environment['ARCH'] + '/*.c') + \
-        Glob('src/sys-' + variant + '/arch-' + environment['ARCH'] + '/plat-' + environment['PLATFORM'] + '/*.c') + \
-        Glob('src/arch-' + environment['ARCH'] + '/*.c') + \
-        Glob('src/arch-' + environment['ARCH'] + '/*.S')
-
-e = environment.Clone()
-e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + environment['ARCH']])
+        Glob('src/sys-' + variant + '/arch-' + e['ARCH'] + '/*.c') + \
+        Glob('src/sys-' + variant + '/arch-' + e['ARCH'] + '/plat-' + e['PLATFORM'] + '/*.c') + \
+        Glob('src/arch-' + e['ARCH'] + '/*.c') + \
+        Glob('src/arch-' + e['ARCH'] + '/*.S')
 
 objects = e.StaticObject(source)
 Depends (objects, e['configFiles'])

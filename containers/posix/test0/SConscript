@@ -17,13 +17,13 @@
 #
 #  Author: Russel Winder
 
-Import('environment', 'previousImage', 'posixServicesDirectory')
+Import('environment', 'previousImage')
 
 taskName = 'test0'
 
 def createTestExecLinkerScript(target, source, env):
     with open(target[0].path, 'w') as outFile:
-        outFile.write('''
+        outFile.write("""
 /*
  * Simple linker script for userspace or svc tasks.
  *
@@ -61,7 +61,7 @@ SECTIONS
 	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
 	_end = .;
 }
-''' % ( source[0].path ))
+""" % ( source[0].path ))
 
 def createTestExecS(target, source, env):
     with open(target[0].path, 'w') as outFile:
@@ -74,13 +74,13 @@ def createTestExecS(target, source, env):
 ''' % ( source[0].path ))
 
 testTaskEnvironment = environment.Clone()
-testTaskEnvironment.Append(CPPPATH=['#' + posixServicesDirectory +'libposix/include/posix'])
-testExecLinkerScript = Command('#build/' + posixServicesDirectory + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
+testTaskEnvironment.Append(CPPPATH=['#' + testTaskEnvironment['posixServicesDirectory'] +'/libposix/include/posix'])
+testExecLinkerScript = Command('#build/' + testTaskEnvironment['posixServicesDirectory'] +'/' + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
 testExecEnvironment = testTaskEnvironment.Clone()
 testExecEnvironment.Append(LINKFLAGS=['-T' + testExecLinkerScript[0].path])
 testExec = testExecEnvironment.Program('test_exec', Glob('src/test_exec/*.[cS]'))
 Depends(testExec, testExecLinkerScript)
-testExecS = Command('#build/' + posixServicesDirectory + taskName + '/test_exec.S', testExec, createTestExecS)
+testExecS = Command('#build/' + testTaskEnvironment['posixServicesDirectory'] + '/' + taskName + '/test_exec.S', testExec, createTestExecS)
 program = testTaskEnvironment['buildTask'](taskName, Glob('*.c') + Glob('src/*.[cS]') + testExecS, testTaskEnvironment, previousImage)
 Depends(program, testExec)
 

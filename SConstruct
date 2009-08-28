@@ -24,8 +24,9 @@ from __future__ import with_statement
 
 import os
 
-posixServicesDirectory = "containers/posix/"
 includeDirectory = 'include'
+containersDirectory = 'containers'
+posixServicesDirectory = containersDirectory + '/posix'
 toolsDirectory = 'tools'
 cml2ToolsDirectory = toolsDirectory + '/cml2-tools'
 buildDirectory = 'build'
@@ -92,6 +93,12 @@ else :
                                           'kernelCompiler': 'arm-none-eabi-gcc',
                                           'cpuOption': 'arm926ej-s'}
                                       },
+                                  includeDirectory = includeDirectory,
+                                  containersDirectory = containersDirectory,
+                                  posixServicesDirectory = posixServicesDirectory,
+                                  toolsDirectory = toolsDirectory,
+                                  cml2ToolsDirectory = cml2ToolsDirectory,
+                                  buildDirectory = buildDirectory,
                                   )
 
     #  It is assumed that the C code is assuming that the configuration file will be found at l4/config.h so create it there.
@@ -127,53 +134,43 @@ else :
     baseEnvironment = configuration.Finish()
     baseEnvironment.Append(configFiles = ('#' + configHPath,))
     baseEnvironment['CC'] = baseEnvironment['toolChains'][configuration.env['CPU']]['mainCompiler']
+    ##
+    ##  Using the cpu option changes the behaviour of the test execution, it generates an illegal instruction exception :-(
+    ##
     #baseEnvironment.Append(CCFLAGS = ['-mcpu=' + baseEnvironment['toolChains'][baseEnvironment['CPU']]['cpuOption']])
 
 ##########  Build the libraries ########################
 
-    libraryEnvironment = baseEnvironment.Clone()
-    libraryEnvironment.Append(CCFLAGS = '-nostdinc')
-    libraryEnvironment.Append(LIBS = ['gcc'])
-
     libs = {}
     crts = {}
     for variant in ['baremetal']:
-        (libs[variant], crts[variant]) = SConscript('libs/c/SConscript', variant_dir = buildDirectory + '/lib/c/' + variant, duplicate = 0, exports = {'environment': libraryEnvironment, 'variant': variant})
+        (libs[variant], crts[variant]) = SConscript('libs/c/SConscript', variant_dir = buildDirectory + '/lib/c/' + variant, duplicate = 0,
+                                                    exports = {'environment': baseEnvironment, 'variant': variant})
 
     baseEnvironment['baremetal_libc'] = libs['baremetal']
     baseEnvironment['baremetal_crt0'] = crts['baremetal']
 
-    libelf = SConscript('libs/elf/SConscript', variant_dir = buildDirectory + '/lib/elf', duplicate = 0, exports = {'environment': libraryEnvironment})
+    libelf = SConscript('libs/elf/SConscript', variant_dir = buildDirectory + '/lib/elf', duplicate = 0, exports = {'environment': baseEnvironment})
 
     Alias('libs', crts.values() + libs.values() + [libelf])
 
 ##########  Build the kernel ########################
 
-    kernelEnvironment = baseEnvironment.Clone()
-    kernelEnvironment['CC'] = baseEnvironment['toolChains'][baseEnvironment['CPU']]['kernelCompiler']
-    kernelEnvironment.Append(LINKFLAGS = ['-T' +  includeDirectory + '/l4/arch/' + baseEnvironment['ARCH'] + '/linker.lds'])
-    kernelEnvironment.Append(LIBS = ['gcc'])
-    kernelEnvironment.Append(CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, '#' + includeDirectory + '/l4'])
-    ####
-    ####  TODO:  Why are these files forcibly included, why not just leave it up to the C code to include things?
-    ####
-    kernelEnvironment.Append(CPPFLAGS = ['-include', 'config.h', '-include', 'cml2Config.h', '-include', 'macros.h', '-include', 'types.h', '-D__KERNEL__'])
-
-    startAxf = SConscript('src/SConscript' , variant_dir = buildDirectory + '/kernel' , duplicate = 0, exports = {'environment': kernelEnvironment})
+    startAxf = SConscript('src/SConscript' , variant_dir = buildDirectory + '/kernel' , duplicate = 0, exports = {'environment': baseEnvironment})
 
     Alias('kernel', startAxf)
 
 ##########  Build the task libraries ########################
 
     taskSupportLibraryEnvironment = baseEnvironment.Clone()
-    taskSupportLibraryEnvironment.Append(LIBS = ['gcc'])
     taskSupportLibraryEnvironment.Append(CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory])
 
-    taskLibraryNames = [f.name for f in Glob(posixServicesDirectory + 'lib*')]
+    taskLibraryNames = [f.name for f in Glob(posixServicesDirectory + '/lib*')]
 
     taskLibraries = []
     for library in taskLibraryNames:
-        taskLibraries.append(SConscript(posixServicesDirectory + library + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + library, duplicate = 0, exports = {'environment': taskSupportLibraryEnvironment, 'posixServicesDirectory': posixServicesDirectory}))
+        taskLibraries.append(SConscript(posixServicesDirectory + '/' + library + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + '/' + library,
+                                        duplicate = 0, exports = {'environment': taskSupportLibraryEnvironment}))
 
     Alias ('tasklibs', taskLibraries)
 
@@ -181,8 +178,8 @@ else :
 
     def buildTask(programName, sources, environment, previousImage, extraCppPath=None):
         e = environment.Clone()
-        e.Append(LINKFLAGS=['-T' + posixServicesDirectory + programName + '/include/linker.lds'])
-        e.Append(LIBPATH=['#build/' + posixServicesDirectory + programName])
+        e.Append(LINKFLAGS=['-T' + e['posixServicesDirectory'] + '/' + programName + '/include/linker.lds'])
+        e.Append(LIBPATH=['#build/' + e['posixServicesDirectory'] + '/' + programName])
         if extraCppPath: e.Append(CPPPATH=extraCppPath)
         objects = e.StaticObject(sources)
         Depends(objects, e['configFiles'])
@@ -195,8 +192,8 @@ else :
     tasksEnvironment.Append(LIBS =  taskLibraries + ['gcc'] + taskLibraries)
     tasksEnvironment.Append(CPPDEFINES = ['__USERSPACE__'])
     tasksEnvironment.Append(CPPPATH = ['#' + buildDirectory, '#' + buildDirectory + '/l4', '#' + includeDirectory, 'include', \
-	'#' + posixServicesDirectory + 'libl4/include', '#' + posixServicesDirectory + 'libc/include', \
-	'#' + posixServicesDirectory + 'libmem', '#' + posixServicesDirectory + 'libposix/include'])
+	'#' + posixServicesDirectory + '/libl4/include', '#' + posixServicesDirectory + '/libc/include', \
+	'#' + posixServicesDirectory + '/libmem', '#' + posixServicesDirectory + '/libposix/include'])
     tasksEnvironment.Append(buildTask = buildTask)
 
 ####
@@ -206,14 +203,15 @@ else :
     
     #### taskNameList = [ f.name for f in Glob(posixServicesDirectory + '*') if f.name not in taskLibraryNames + ['bootdesc'] ]
     #### imageOrderData = [(taskName, []) for taskName in taskNameList]
-    execfile(posixServicesDirectory + 'taskOrder.py')
+    execfile(posixServicesDirectory + '/taskOrder.py')
     imageOrderData = [(taskName, []) for taskName in taskOrder]
     imageOrderData[0][1].append(startAxf)
     tasks = []
     for i in range(len(imageOrderData)):
         taskName = imageOrderData[i][0]
         dependency = imageOrderData[i][1]
-        program = SConscript(posixServicesDirectory + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + taskName, duplicate = 0, exports = {'environment': tasksEnvironment, 'previousImage': dependency[0], 'posixServicesDirectory':posixServicesDirectory})
+        program = SConscript(posixServicesDirectory + '/' + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + '/' + taskName,
+                             duplicate = 0, exports = {'environment': tasksEnvironment, 'previousImage': dependency[0]})
         tasks.append(program)
         if i < len(imageOrderData) - 1:
             imageOrderData[i+1][1].append(program)
@@ -222,27 +220,15 @@ else :
 
 ##########  Create the boot description ########################
 
-    taskName = 'bootdesc'
-
-    bootdescEnvironment = baseEnvironment.Clone()
-    bootdescEnvironment.Append(LINKFLAGS = ['-T' + posixServicesDirectory + taskName + '/linker.lds'])
-    bootdescEnvironment.Append(LIBS = ['gcc'])
-    bootdescEnvironment.Append(CPPPATH = ['#' + includeDirectory])
-
-    bootdesc = SConscript(posixServicesDirectory + taskName + '/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + taskName, duplicate = 0, exports = {'environment': bootdescEnvironment, 'images': [startAxf] + tasks})
+    bootdesc = SConscript(posixServicesDirectory + '/bootdesc/SConscript', variant_dir = buildDirectory + '/' + posixServicesDirectory + '/bootdesc',
+                          duplicate = 0, exports = {'environment': baseEnvironment, 'images': [startAxf] + tasks})
 
     Alias('bootdesc', bootdesc)
 
 ##########  Do the packing / create loadable ########################
 
-    loaderEnvironment = baseEnvironment.Clone()
-    loaderEnvironment.Append(LINKFLAGS = ['-T' + buildDirectory + '/loader/linker.lds'])
-    loaderEnvironment.Append(LIBS = [libelf, libs['baremetal'], 'gcc', libs['baremetal']])
-    loaderEnvironment.Append(CPPPATH = ['#libs/elf/include', '#' + buildDirectory + '/loader'])
-
-    ####  TODO: Fix the tasks data structure so as to avoid all the assumptions.
-
-    loader = SConscript('loader/SConscript', variant_dir = buildDirectory + '/loader', duplicate = 0, exports = {'environment': loaderEnvironment, 'images':[startAxf, bootdesc] + tasks, 'posixServicesDirectory': posixServicesDirectory})
+    loader = SConscript('loader/SConscript', variant_dir = buildDirectory + '/loader', duplicate = 0,
+                        exports = {'environment': baseEnvironment, 'images': [startAxf, bootdesc] + tasks, 'libsInOrder':  [libelf, libs['baremetal'], 'gcc', libs['baremetal']]})
 
     Alias('final', loader)
 

@@ -17,7 +17,7 @@
 #
 #  Author: Russel Winder
 
-Import('environment', 'posixServicesDirectory')
+Import('environment')
 
 e = environment.Clone()
 e.Append(CPPPATH = ['include', 'include/arch'])

@@ -17,10 +17,10 @@
 #
 #  Author: Russel Winder
 
-Import('environment', 'posixServicesDirectory')
+Import('environment')
 
 e = environment.Clone()
-e.Append(CPPPATH = ['#' + posixServicesDirectory + 'libl4/include' , '.' ])
+e.Append(CPPPATH = ['#' + environment['posixServicesDirectory'] + '/libl4/include' , '.' ])
 
 mmObjects = e.StaticObject(Glob('mm/*.c'))
 Depends(mmObjects, e['configFiles'])

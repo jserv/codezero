@@ -20,7 +20,12 @@
 import os.path
 import subprocess
 
-Import('environment', 'images', 'posixServicesDirectory')
+Import('environment', 'images', 'libsInOrder')
+
+e = environment.Clone()
+e.Append(LINKFLAGS = ['-T' + e['buildDirectory'] + '/loader/linker.lds'])
+e.Append(LIBS = libsInOrder)
+e.Append(CPPPATH = ['#libs/elf/include', '#' + e['buildDirectory'] + '/loader'])
 
 def convertAddress(address):
     '''Convert the string representation of the address given as parameter to a string representation of the
@@ -129,10 +134,10 @@ linkerScript = Command('linker.lds', ['linker.lds.in'] + images, createLinkerScr
 
 ##  TODO:  deal with the situation where there are other .c and .S files in the directory.
 
-objects = environment.Object(['arch.c' , kernelS, startAxfS, mainC])
-Depends(objects, environment['configFiles'])
+objects = e.Object(['arch.c' , kernelS, startAxfS, mainC])
+Depends(objects, e['configFiles'])
 Depends(objects, images)
-program = environment.Program('final', objects + [environment['baremetal_crt0']])
+program = e.Program('final', objects + [e['baremetal_crt0']])
 Depends(program, linkerScript)
 
 Return('program')

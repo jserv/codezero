@@ -21,6 +21,7 @@ Import('environment')
 
 e = environment.Clone()
 e.Append(CPPPATH = ['include', '#libs/c/include', '#libs/c/include/arch/' + e['ARCH']])
+e.Append(CCFLAGS = '-nostdinc')
 
 objects = e.StaticObject(Glob('src/*.c'))
 Depends(objects, e['configFiles'])
