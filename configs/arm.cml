@@ -25,7 +25,7 @@ ARM_PLATFORM_PB926	'Versatile PB926 Platform'
 
 DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
 DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
-DRIVER_IRQCTRL_PL190	'ARM Vectored Interrupt Controller PL190'
+DRIVER_IRQ_PL190		'ARM Vectored Interrupt Controller PL190'
 
 main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
@@ -62,7 +62,7 @@ choices arm_platform_type
 menu drivers_menu
 	DRIVER_UART_PL011
 	DRIVER_TIMER_SP804
-	DRIVER_IRQCTRL_PL190
+	DRIVER_IRQ_PL190
 menu arm_menu
 	arm_cpu_type
 	arm_subarch_type
@@ -84,10 +84,10 @@ menu main_menu
 unless ARCH_ARM suppress arm_menu
 unless ARM_PLATFORM_PB926 suppress DRIVER_UART_PL011
 unless ARM_PLATFORM_PB926 suppress DRIVER_TIMER_SP804
-unless ARM_PLATFORM_PB926 suppress DRIVER_IRQCTRL_PL190
+unless ARM_PLATFORM_PB926 suppress DRIVER_IRQ_PL190
 default DRIVER_UART_PL011 from y
 default DRIVER_TIMER_SP804 from y
-default DRIVER_IRQCTRL_PL190 from y
+default DRIVER_IRQ_PL190 from y
 # USELESS!! This doesnt force it to define invisible symbols as says in the manual.
 #when ARCH_TEST save SUBARCH_TEST PLATFORM_TEST
 #derive SUBARCH_TEST from ARCH_TEST

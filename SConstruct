@@ -110,7 +110,7 @@ else :
                     subarch = items[2].lower()
             if items[0] == 'DRIVER':
                 #  Add data to the environment about which driver paths to include in the build.
-                configuration.env.Append(driverList = [('irq' if items[1] == 'IRQCTRL' else items[1].lower()) + '/' + items[2].lower()])
+                configuration.env.Append(driverList = [items[1].lower() + '/' + items[2].lower()])
     configuration.Define('__ARCH__', arch)
     configuration.Define('__PLATFORM__', platform)
     configuration.Define('__SUBARCH__', subarch)
