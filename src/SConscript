@@ -30,12 +30,12 @@ sources = \
         Glob('glue/' + environment['ARCH'] + '/*.[cS]') + \
         Glob('platform/' + environment['PLATFORM'] + '/*.[cS]')
 
-for item in environment['driverList'] :
+for item in environment['DRIVER'] :
     path = 'drivers/' + item
     if not os.path.isdir(path):
         feature , device = item.split ( '/' )
         raise ValueError, 'Driver ' + device + ' for ' + feature + ' not available.'
-    sources += Glob('drivers/' + item + '/*.[cS]')
+    sources += Glob(path + '/*.[cS]')
 
 objects = environment.Object(sources)
 Depends(objects, environment['configFiles'])

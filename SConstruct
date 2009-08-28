@@ -100,11 +100,16 @@ else :
     for key, value in configData.items():
         if value:
             items = key.split('_')
+            if items[0] == 'ARCH': continue
             if items[0] == configuration.env['ARCH'].upper():
                 configuration.env[items[1]] = items[2].lower()
-            elif items[0] == 'DRIVER':
-                #  Add data to the environment about which driver paths to include in the build.
-                configuration.env.Append(driverList = [items[1].lower() + '/' + items[2].lower()])
+            else:
+                path = items[1].lower() + '/' + items[2].lower()
+                try:
+                    configuration.env[items[0]]
+                except KeyError:
+                    configuration.env[items[0]] = []
+                configuration.env[items[0]].append(path)
     configuration.Define('__ARCH__', configuration.env['ARCH'])
     configuration.Define('__PLATFORM__', configuration.env['PLATFORM'])
     configuration.Define('__SUBARCH__', configuration.env['SUBARCH'])
