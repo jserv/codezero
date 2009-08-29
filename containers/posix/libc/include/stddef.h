@@ -78,27 +78,42 @@
  */
 
 /*
- Authors: Ben Leslie
- Description:
-  Errors as per 7.5
- Status: Complete
- Restrictions: Single threaded
+  Authors: Ben Leslie
 */
 
-#ifndef _ERRNO_H_
-#define _ERRNO_H_
+#ifndef _STDDEF_H_
+#define _STDDEF_H_
 
-#define EDOM 1
-#define EILSEQ 2
-#define ERANGE 3
+/* See C99 spec 7.17 */
 
-#include <l4/thread.h>
- 
-#ifndef THREAD_SAFE
-extern int errno;
-#else
-#define errno (*((int *)__L4_TCR_ThreadLocalStorage()))
+/* We rely on the compiler telling us the right types to go in 
+   here -- this makes a lot of sense, the compiler knows how big
+   these things are
+*/
+
+#ifndef __SIZE_TYPE__
+#ifdef __mips__
+#define __SIZE_TYPE__ long unsigned int
+#endif
 #endif
 
-#endif /* _ERRNO_H_ */
+#ifndef __PTRDIFF_TYPE__
+#ifdef __mips__
+#define __PTRDIFF_TYPE__ long int
+#endif
+#endif
 
+typedef __PTRDIFF_TYPE__ ptrdiff_t ;
+typedef __SIZE_TYPE__ size_t;
+#ifndef __cplusplus /* FIXME: This is the one concession to C++ programmers that I make.
+		       Allowing them to compile and use the standard C library. This is
+		       more because C++ people shouldn't be restricted from using wonderful
+		       things such as varargs and printf */
+typedef __WCHAR_TYPE__ wchar_t;
+#endif
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+#define offsetof(type, member) ((size_t) &((type *)0)->member)
+
+#endif /* _STDDEF_H_ */

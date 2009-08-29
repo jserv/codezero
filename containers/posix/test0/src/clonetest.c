@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <sched.h>
+#include <bits/sched.h>
 #include <errno.h>
 #include <tests.h>
 

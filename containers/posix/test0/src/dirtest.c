@@ -16,7 +16,7 @@
 
 void print_fsize(struct stat *s)
 {
-	printf("%d", s->st_size);
+	printf("%lu", s->st_size);
 }
 
 void print_flink(struct stat *s)

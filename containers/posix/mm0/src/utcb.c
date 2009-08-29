@@ -140,7 +140,7 @@ out:
 		if (IS_ERR(err = do_mmap(0, 0, task, slot,
 					 VMA_ANONYMOUS | VMA_PRIVATE |
 					 VMA_FIXED | VM_READ | VM_WRITE, 1))) {
-			printf("UTCB: mmapping failed with %d\n", err);
+			printf("UTCB: mmapping failed with %d\n", (int)err);
 			return (int)err;
 		}
 	}
