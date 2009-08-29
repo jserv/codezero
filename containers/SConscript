@@ -1,0 +1,103 @@
+# -*- mode: python; coding: utf-8; -*-
+
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+#
+#  This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+#  General Public License as published by the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+#  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+#  License for more details.
+#
+#  You should have received a copy of the GNU General Public License along with this program.  If not, see
+#  <http://www.gnu.org/licenses/>.
+#
+#  Author: Russel Winder
+
+Import('environment', 'startAxf')
+
+posixServicesDirectory = 'posix'
+
+compilationProducts = []
+
+##########  Build the task libraries ########################
+
+taskSupportLibraryEnvironment = environment.Clone()
+taskSupportLibraryEnvironment.Append(CPPPATH = ['#' + environment['buildDirectory'], '#' + environment['buildDirectory'] + '/l4', '#' + environment['includeDirectory']])
+
+taskSupportLibraryEnvironment['posixServicesDirectory'] = 'containers/' + posixServicesDirectory
+
+taskLibraryNames = [f.name for f in Glob(posixServicesDirectory + '/lib*')]
+
+taskLibraries = []
+for library in taskLibraryNames:
+    taskLibraries.append(SConscript(posixServicesDirectory + '/' + library + '/SConscript', exports = {'environment': taskSupportLibraryEnvironment}))
+
+Alias ('tasklibs', taskLibraries)
+environment['targetHelpEntries']['tasklibs'] = 'build the support libraries for the tasks in the containers.'
+
+##########  Build the tasks ########################
+
+def buildTask(programName, sources, environment, previousImage, extraCppPath=None):
+    e = environment.Clone()
+    e.Append(LINKFLAGS=['-T' + e['posixServicesDirectory'] + '/' + programName + '/include/linker.lds'])
+    e.Append(LIBPATH=['#' + e['buildDirectory'] + '/' + e['posixServicesDirectory'] + '/' + programName])
+    if extraCppPath: e.Append(CPPPATH=extraCppPath)
+    objects = e.StaticObject(sources)
+    Depends(objects, e['configFiles'])
+    program = e.Program(programName, objects)
+    environment['physicalBaseLinkerScript'] = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
+    Depends(program, [environment['physicalBaseLinkerScript']])
+    return program
+
+tasksEnvironment = environment.Clone()
+tasksEnvironment.Append(LIBS =  taskLibraries + ['gcc'] + taskLibraries)
+tasksEnvironment.Append(CPPDEFINES = ['__USERSPACE__'])
+tasksEnvironment.Append(CPPPATH = ['#' + environment['buildDirectory'], '#' + environment['buildDirectory'] + '/l4', '#' + environment['includeDirectory'], 'include', \
+                                   '#containers/' +posixServicesDirectory + '/libl4/include', '#containers/' + posixServicesDirectory + '/libc/include', \
+                                   '#containers/' + posixServicesDirectory + '/libmem', '#containers/' + posixServicesDirectory + '/libposix/include'])
+tasksEnvironment.Append(buildTask = buildTask)
+
+tasksEnvironment['posixServicesDirectory'] = 'containers/' + posixServicesDirectory
+
+####
+####  TODO: Why does the linker require crt0.o to be in the current directory and named as such.  Is it
+####  because of the text in the linker script?
+####
+    
+#### taskNameList = [ f.name for f in Glob(posixServicesDirectory + '*') if f.name not in taskLibraryNames + ['bootdesc'] ]
+#### imageOrderData = [(taskName, []) for taskName in taskNameList]
+
+#  Have to know the build is in build/containers, can't use '#' here.
+execfile('../../containers/' + posixServicesDirectory + '/taskOrder.py')
+imageOrderData = [(taskName, []) for taskName in taskOrder]
+imageOrderData[0][1].append(startAxf)
+tasks = []
+for i in range(len(imageOrderData)):
+    taskName = imageOrderData[i][0]
+    dependency = imageOrderData[i][1]
+    program = SConscript(posixServicesDirectory + '/' + taskName + '/SConscript', exports = {'environment': tasksEnvironment, 'previousImage': dependency[0]})
+    tasks.append(program)
+    if i < len(imageOrderData) - 1:
+        imageOrderData[i+1][1].append(program)
+        
+Alias ('tasks', tasks)
+environment['targetHelpEntries']['tasks'] = 'build the tasks for the containers.'
+
+##########  Create the boot description ########################
+
+bootdescEnvironment = environment.Clone()
+
+bootdescEnvironment['posixServicesDirectory'] = 'containers/' + posixServicesDirectory
+
+bootdesc = SConscript(posixServicesDirectory + '/bootdesc/SConscript', exports = {'environment': bootdescEnvironment, 'images': [startAxf] + tasks})
+
+Alias('bootdesc', bootdesc)
+environment['targetHelpEntries']['bootdesc'] = 'build the boot descriptions of the tasks for the containers.'
+
+compilationProducts = tasks + [bootdesc]
+
+Return('compilationProducts')

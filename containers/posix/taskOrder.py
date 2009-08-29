@@ -19,4 +19,11 @@
 
 # A sequence determining the order of tasks in the packing.
 
+####
+####  TODO: Why do the tests only run when the load order is mm0, fs0, test0 -- any other order and the tests
+####  do not run.  Worse if test0 is not last then there are problems with the compilation du to issues with
+####  linker scripts.
+####
+
 taskOrder = ('mm0', 'fs0', 'test0')
+#taskOrder = ('fs0', 'mm0', 'test0')
