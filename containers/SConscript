@@ -71,9 +71,8 @@ tasksEnvironment['posixServicesDirectory'] = 'containers/' + posixServicesDirect
 #### taskNameList = [ f.name for f in Glob(posixServicesDirectory + '*') if f.name not in taskLibraryNames + ['bootdesc'] ]
 #### imageOrderData = [(taskName, []) for taskName in taskNameList]
 
-taskOrder = ('mm0', 'fs0', 'test0')
-
-#execfile('containers/' + posixServicesDirectory + '/taskOrder.py')
+#  Have to know the build is in build/containers, can't use '#' here.
+execfile('../../containers/' + posixServicesDirectory + '/taskOrder.py')
 imageOrderData = [(taskName, []) for taskName in taskOrder]
 imageOrderData[0][1].append(startAxf)
 tasks = []
