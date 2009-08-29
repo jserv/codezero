@@ -99,5 +99,6 @@ bootdesc = SConscript(posixServicesDirectory + '/bootdesc/SConscript', exports =
 Alias('bootdesc', bootdesc)
 environment['targetHelpEntries']['bootdesc'] = 'build the boot descriptions of the tasks for the containers.'
 
+compilationProducts = tasks + [bootdesc]
 
 Return('compilationProducts')
