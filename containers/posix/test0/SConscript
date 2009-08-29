@@ -75,7 +75,7 @@ def createTestExecS(target, source, env):
 
 testTaskEnvironment = environment.Clone()
 testTaskEnvironment.Append(CPPPATH=['#' + testTaskEnvironment['posixServicesDirectory'] +'/libposix/include/posix'])
-testExecLinkerScript = Command('#build/' + testTaskEnvironment['posixServicesDirectory'] +'/' + taskName + '/include/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
+testExecLinkerScript = Command('#build/' + testTaskEnvironment['posixServicesDirectory'] +'/' + taskName + '/test_exec_linker.lds', testTaskEnvironment['physicalBaseLinkerScript'], createTestExecLinkerScript)
 testExecEnvironment = testTaskEnvironment.Clone()
 testExecEnvironment.Append(LINKFLAGS=['-T' + testExecLinkerScript[0].path])
 testExec = testExecEnvironment.Program('test_exec', Glob('src/test_exec/*.[cS]'))

@@ -43,13 +43,13 @@ environment['targetHelpEntries']['tasklibs'] = 'build the support libraries for 
 
 def buildTask(programName, sources, environment, previousImage, extraCppPath=None):
     e = environment.Clone()
-    e.Append(LINKFLAGS=['-T' + e['posixServicesDirectory'] + '/' + programName + '/include/linker.lds'])
+    e.Append(LINKFLAGS=['-T' + e['posixServicesDirectory'] + '/' + programName + '/linker.lds'])
     e.Append(LIBPATH=['#' + e['buildDirectory'] + '/' + e['posixServicesDirectory'] + '/' + programName])
     if extraCppPath: e.Append(CPPPATH=extraCppPath)
     objects = e.StaticObject(sources)
     Depends(objects, e['configFiles'])
     program = e.Program(programName, objects)
-    environment['physicalBaseLinkerScript'] = Command('include/physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
+    environment['physicalBaseLinkerScript'] = Command('physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
     Depends(program, [environment['physicalBaseLinkerScript']])
     return program
 

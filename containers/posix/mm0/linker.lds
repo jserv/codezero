@@ -14,7 +14,7 @@
  */
 /* INITTASK_AREA_START, see memlayout.h */
 virtual_base = 0xE0000000;
-INCLUDE "include/physical_base.lds"
+INCLUDE "physical_base.lds"
 
 /* physical_base = 0x228000; */
 pager_offset = virtual_base - physical_base;

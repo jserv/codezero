@@ -14,8 +14,8 @@
  */
 /* USER_AREA_START, see memlayout.h */
 virtual_base = 0x10000000;
-__stack = (0x20000000 - 0x1000 - 8); /* First page before env/args page */
-INCLUDE "include/physical_base.lds"
+__stack = (0x20000000 - 0x1000 - 8); /* First page before the env/args */
+INCLUDE "physical_base.lds"
 
 /* physical_base = 0x228000; */
 offset = virtual_base - physical_base;
@@ -32,17 +32,12 @@ SECTIONS
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
 	.data : AT (ADDR(.data) - offset)
 	{
-		. = ALIGN(4K);	/* Align UTCB to page boundary */
-		_start_utcb = .;
-		*(.utcb)
-		_end_utcb = .;
 		. = ALIGN(4K);
-		_start_bdev = .;
-		*(.data.memfs)
-		_end_bdev = .;
+		_start_test_exec = .;
+		*(.testexec)
+		_end_test_exec = .;
 		*(.data)
 	}
 	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
-
 	_end = .;
 }
