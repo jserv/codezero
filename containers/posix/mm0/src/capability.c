@@ -11,7 +11,6 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
 #include <lib/malloc.h>
-#include <printf.h>
 
 struct cap_list capability_list;
 

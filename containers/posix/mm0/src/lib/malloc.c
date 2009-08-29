@@ -18,7 +18,6 @@ Messages that indicate a software error will contain three asterisks (***).
 *****************************************************************************/
 #include <string.h> /* memcpy(), memset() */
 #include <stdio.h> /* printf() */
-#include <printf.h>
 #include <l4/macros.h>
 #define	_32BIT	1
 

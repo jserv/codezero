@@ -6,7 +6,7 @@
 #include <lib/bit.h>
 #include <l4/macros.h>
 #include <l4/config.h>
-#include <printf.h>
+#include <stdio.h>
 #include INC_GLUE(memory.h)
 
 /* Emulation of ARM's CLZ (count leading zeroes) instruction */

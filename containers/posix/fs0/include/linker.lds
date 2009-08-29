@@ -26,7 +26,7 @@ SECTIONS
 {
 	. = virtual_base;
 	_start_text = .;
-	.text : AT (ADDR(.text) - offset) { *(.text.head) *(.text) }
+	.text : AT (ADDR(.text) - offset) { crt0.o(.text) *(.text) }
 	/* rodata is needed else your strings will link at physical! */
 	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }

@@ -7,7 +7,7 @@
 #include <lib/malloc.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
-#include <printf.h>
+#include <stdio.h>
 #include <l4/api/errno.h>
 
 struct id_pool *id_pool_new_init(int totalbits)

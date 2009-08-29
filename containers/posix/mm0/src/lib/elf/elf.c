@@ -10,7 +10,7 @@
 #include <lib/elf/elfprg.h>
 #include <lib/elf/elfsym.h>
 #include <lib/elf/elfsect.h>
-#include <printf.h>
+
 
 int elf_probe(struct elf_header *header)
 {

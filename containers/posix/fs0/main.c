@@ -122,7 +122,7 @@ void handle_fs_requests(void)
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "
 		       "received from tid: %d. Ignoring.\n", __TASKNAME__,
-		       mr[MR_TAG], senderid);
+		       mr[MR_TAG], sender);
 	}
 
 	/* Reply */

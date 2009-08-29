@@ -3,12 +3,6 @@
 
 #include <stddef.h>
 #include <string.h>
-#ifndef NULL
-#define NULL	0
-#endif
-#ifndef size_t
-#define size_t int
-#endif
 
 void *kmalloc(size_t size);
 void kfree(void *blk);

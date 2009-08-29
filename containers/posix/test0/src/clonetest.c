@@ -2,7 +2,6 @@
  * Clone test.
  */
 #include <stdio.h>
-#include <printf.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>

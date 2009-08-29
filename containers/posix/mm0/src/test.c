@@ -10,7 +10,6 @@
 #include <mmap.h>
 #include <shm.h>
 #include <globals.h>
-#include <printf.h>
 
 struct vm_statistics {
 	int tasks;		/* All tasks counted on the system */

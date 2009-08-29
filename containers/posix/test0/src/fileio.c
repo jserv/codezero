@@ -7,7 +7,6 @@
 #include <string.h>
 #include <tests.h>
 #include <errno.h>
-#include <printf.h>
 
 int fileio(void)
 {

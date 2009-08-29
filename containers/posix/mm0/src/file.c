@@ -348,7 +348,7 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 							 f_offset);
 		if (IS_ERR(page)) {
 			printf("%s: %s:Could not read page %d "
-			       "from file with vnum: 0x%lx\n", __TASKNAME__,
+			       "from file with vnum: 0x%x\n", __TASKNAME__,
 			       __FUNCTION__, f_offset, vm_file_to_vnum(vmfile));
 			return (int)page;
 		}
@@ -460,7 +460,7 @@ int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 		err = f->vm_obj.pager->ops.page_out(&f->vm_obj, f_offset);
 		if (err < 0) {
 			printf("%s: %s:Could not write page %d "
-			       "to file with vnum: 0x%lx\n", __TASKNAME__,
+			       "to file with vnum: 0x%x\n", __TASKNAME__,
 			       __FUNCTION__, f_offset, vm_file_to_vnum(f));
 			return err;
 		}

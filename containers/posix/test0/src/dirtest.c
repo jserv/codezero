@@ -11,13 +11,12 @@
 #include <dirent.h>
 #include <l4lib/os/posix/readdir.h>
 #include <tests.h>
-#include <printf.h>
 
 #define DENTS_TOTAL	50
 
 void print_fsize(struct stat *s)
 {
-	printf("%lu", s->st_size);
+	printf("%d", s->st_size);
 }
 
 void print_flink(struct stat *s)

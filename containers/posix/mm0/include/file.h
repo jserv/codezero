@@ -6,10 +6,6 @@
 #include <posix/sys/types.h>
 #include <task.h>
 
-#define SEEK_CUR 0
-#define SEEK_END 1
-#define SEEK_SET 2
-
 int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
 	     void *pagebuf);
 int vfs_write(unsigned long vnum, unsigned long f_offset, unsigned long npages,

@@ -9,7 +9,7 @@
 #include <l4/types.h>
 #include INC_GLUE(memory.h)
 #include <lib/addr.h>
-#include <printf.h>
+#include <stdio.h>
 
 /*
  * Initializes an address pool, but uses an already
