@@ -50,7 +50,7 @@ def buildTask(programName, sources, environment, previousImage, extraCppPath=Non
     Depends(objects, e['configFiles'])
     program = e.Program(programName, objects)
     environment['physicalBaseLinkerScript'] = Command('physical_base.lds', previousImage, 'tools/pyelf/readelf.py --first-free-page ' + previousImage[0].path + ' >> $TARGET')
-    Depends(program, [environment['physicalBaseLinkerScript']])
+    Depends(program, environment['physicalBaseLinkerScript'])
     return program
 
 tasksEnvironment = environment.Clone()
@@ -67,12 +67,25 @@ tasksEnvironment['posixServicesDirectory'] = 'containers/' + posixServicesDirect
 ####  TODO: Why does the linker require crt0.o to be in the current directory and named as such.  Is it
 ####  because of the text in the linker script?
 ####
-    
-#### taskNameList = [ f.name for f in Glob(posixServicesDirectory + '*') if f.name not in taskLibraryNames + ['bootdesc'] ]
-#### imageOrderData = [(taskName, []) for taskName in taskNameList]
 
-#  Have to know the build is in build/containers, can't use '#' here.
+## If the ordering of tasks is not important then we should just be able to pull in all non-library
+## directories that are not bootdesc.  If there needs to be a policy then either the directory names need to
+## provide an order or a policy file presenting an order is needed.  For now we have a policy file.  Since
+## we need to guarantee the ordering across many containers and many builds.
+
+## taskNameList = [ f.name for f in Glob(posixServicesDirectory + '*') if f.name not in taskLibraryNames + ['bootdesc'] ]
+## imageOrderData = [(taskName, []) for taskName in taskNameList]
+
+#  To get the policy file, we have to know the build is being executed in the build/containers directory,
+#  and that we can't use '#' as this is Python not SCons.
+
+####
+####  TODO: Task order (mm0, fs0, test0) works, but no other order does.  This implies a bug in the SCons
+####  code.
+####
+
 execfile('../../containers/' + posixServicesDirectory + '/taskOrder.py')
+
 imageOrderData = [(taskName, []) for taskName in taskOrder]
 imageOrderData[0][1].append(startAxf)
 tasks = []

@@ -34,7 +34,7 @@ cml2CompileRulesFile = buildDirectory + '/cml2Rules.out'
 cml2ConfigPropertiesFile = buildDirectory + '/cml2Config.out'
 cml2ConfigHeaderFile = buildDirectory + '/cml2Config.h'
 
-configureHelpEntry = 'configure the build.'
+configureHelpEntry = 'configure the build. This must be done before any other action is possible.'
 
 #  The choice of which parts of the kernel to compile and include in the build depends on the configuration
 #  which is managed using CML2.  CML2 uses a base configuration file (currently #configs/arm.cml) to drive

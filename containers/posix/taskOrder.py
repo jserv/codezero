@@ -20,10 +20,12 @@
 # A sequence determining the order of tasks in the packing.
 
 ####
-####  TODO: Why do the tests only run when the load order is mm0, fs0, test0 -- any other order and the tests
-####  do not run.  Worse if test0 is not last then there are problems with the compilation du to issues with
-####  linker scripts.
+####  TODO: Why do the tests only run when mm0 precedes fs0 in the load list?
 ####
 
-taskOrder = ('mm0', 'fs0', 'test0')
-#taskOrder = ('fs0', 'mm0', 'test0')
+# NB test0 cannot be the first task in the list because of the processing of test_exec_linker.lds.in.
+
+#taskOrder = ('mm0', 'fs0', 'test0')#  Works fine.
+#taskOrder = ('fs0', 'mm0', 'test0')#  Compiles, loads and executes fine, but does not execute the tests.
+#taskOrder = ('fs0', 'test0', 'mm0')#  Compiles, loads and executes fine, but does not execute the tests.
+taskOrder = ('mm0', 'test0', 'fs0')#  Works fine.

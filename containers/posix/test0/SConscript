@@ -36,6 +36,16 @@ def createTestExecS(target, source, env):
 .align 4
 ''' % ( source[0].path ))
 
+try:
+    environment['physicalBaseLinkerScript']
+except KeyError:
+    print '''
+####
+####  The test0 task cannot be the first task in the list of tasks.
+####
+'''
+    Exit ( 1 )
+
 testTaskEnvironment = environment.Clone()
 testTaskEnvironment.Append(CPPPATH=['#' + testTaskEnvironment['posixServicesDirectory'] +'/libposix/include/posix'])
 testExecLinkerScript = Command('#build/' + testTaskEnvironment['posixServicesDirectory'] +'/' + taskName + '/test_exec_linker.lds', ['test_exec_linker.lds.in', testTaskEnvironment['physicalBaseLinkerScript']], createTestExecLinkerScript)
