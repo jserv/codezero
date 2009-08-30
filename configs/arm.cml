@@ -9,7 +9,7 @@ ARCH_ARM		'ARM'
 
 arm_cpu_type		'ARM Processor Type'
 ARM_CPU_ARM1136		'ARM1136 - To be added'
-ARM_CPU_ARM11MPCore	'ARM11 MPCore - To be added'
+ARM_CPU_ARM11MPCORE	'ARM11 MPCore - To be added'
 ARM_CPU_ARM926		'ARM926EJ-S'
 ARM_CPU_CORTEXA8	'ARM Cortex-A8 - Not supported'
 
@@ -54,7 +54,7 @@ choices arm_subarch_type
 choices arm_cpu_type
 	ARM_CPU_ARM926
 	ARM_CPU_ARM1136
-	ARM_CPU_ARM11MPCore
+	ARM_CPU_ARM11MPCORE
 	ARM_CPU_CORTEXA8
         default ARM_CPU_ARM926
 
@@ -96,18 +96,31 @@ menu main_menu
 #   RULES   #
 #############
 
+#Platform rules:
+unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
+unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_AB926
+unless ARM_SUBARCH_V6 suppress ARM_PLATFORM_PBMPCORE
+unless ARM_SUBARCH_V7 suppress ARM_PLATFORM_PBA8
+
+#CPU rules:
+unless ARM_SUBARCH_V5 suppress ARM_CPU_ARM926
+unless ARM_SUBARCH_V6 suppress ARM_CPU_ARM1136
+unless ARM_SUBARCH_V6 suppress ARM_CPU_ARM11MPCORE
+unless ARM_SUBARCH_V7 suppress ARM_CPU_CORTEXA8
+
 # NOTE: Unlike menus, choices dont take { sym } model of visibility
 # dependencies. Instead, a choice symbol is declared in a menu, and
 # suppress statement is used to make sym visible, instead of a
 # { sym } model under the choices.
 unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
 unless ARCH_ARM suppress arm_menu
-unless ARM_PLATFORM_PB926 suppress DRIVER_UART_PL011
-unless ARM_PLATFORM_PB926 suppress DRIVER_TIMER_SP804
-unless ARM_PLATFORM_PB926 suppress DRIVER_IRQ_PL190
+unless ARM_PLATFORM_PB926 or ARM_PLATFORM_AB926 suppress DRIVER_IRQ_PL190
+unless ARM_PLATFORM_EB or ARM_PLATFORM_PBA8 or ARM_PLATFORM_PBMPCORE suppress DRIVER_IRQ_GIC
 default DRIVER_UART_PL011 from y
 default DRIVER_TIMER_SP804 from y
 default DRIVER_IRQ_PL190 from y
+default DRIVER_IRQ_GIC from y
+
 # USELESS!! This doesnt force it to define invisible symbols as says in the manual.
 #when ARCH_TEST save SUBARCH_TEST PLATFORM_TEST
 #derive SUBARCH_TEST from ARCH_TEST
