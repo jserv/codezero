@@ -111,7 +111,8 @@ unless ARM_SUBARCH_V7 suppress ARM_CPU_CORTEXA8
 # NOTE: Unlike menus, choices dont take { sym } model of visibility
 # dependencies. Instead, a choice symbol is declared in a menu, and
 # suppress statement is used to make sym visible, instead of a
-# { sym } model under the choices.
+# { sym } model under the choices. (See manual for { sym } usage).
+
 unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
 unless ARCH_ARM suppress arm_menu
 unless ARM_PLATFORM_PB926 or ARM_PLATFORM_AB926 suppress DRIVER_IRQ_PL190
