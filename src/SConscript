@@ -22,7 +22,7 @@ import os.path
 Import('environment')
 
 e = environment.Clone()
-e['CC'] = e['toolChains'][e['CPU']]['kernelCompiler']
+e['CC'] = e['toolchains'][e['ARCH']][e['CPU']]['kernelCompiler']
 e.Append(CPPPATH = ['#' + e['buildDirectory'], '#' + e['buildDirectory'] + '/l4', '#' + e['includeDirectory'], '#' + e['includeDirectory'] + '/l4'])
 e.Append(LINKFLAGS = ['-T' +  e['includeDirectory'] + '/l4/arch/' + e['ARCH'] + '/linker.lds'])
 ####

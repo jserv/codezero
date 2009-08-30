@@ -93,6 +93,11 @@ configuration data.  'scons -h' will then print the project help.
                     configItems[item[0].strip()] = (item[1].strip() == 'y')
         return configItems
 
+    #  Read in the toolchains data.  This defines the variable toolchains which is a dictionary of
+    #  dictionaries.
+
+    execfile('toolchains.py')
+
     baseEnvironment = Environment(tools = ['gnulink', 'gcc', 'gas', 'ar'],
                                   ENV = {'PATH': os.environ['PATH']},
                                   configFiles = ('#' + cml2CompileRulesFile,  '#' + cml2ConfigPropertiesFile,  '#' + cml2ConfigHeaderFile),
@@ -100,12 +105,7 @@ configuration data.  'scons -h' will then print the project help.
                                   ASFLAGS = ['-D__ASSEMBLY__'],
                                   LINKFLAGS = ['-nostdlib'],
                                   PROGSUFFIX = '.axf',
-                                  toolChains = {
-                                      'arm926': {
-                                          'mainCompiler': 'arm-none-linux-gnueabi-gcc',
-                                          'kernelCompiler': 'arm-none-eabi-gcc',
-                                          'cpuOption': 'arm926ej-s'}
-                                      },
+                                  toolchains = toolchains,
                                   includeDirectory = includeDirectory,
                                   containersDirectory = containersDirectory,
                                   toolsDirectory = toolsDirectory,
@@ -146,11 +146,11 @@ configuration data.  'scons -h' will then print the project help.
     configuration.Define('__SUBARCH__', configuration.env['SUBARCH'])
     baseEnvironment = configuration.Finish()
     baseEnvironment.Append(configFiles = ('#' + configHPath,))
-    baseEnvironment['CC'] = baseEnvironment['toolChains'][configuration.env['CPU']]['mainCompiler']
+    baseEnvironment['CC'] = baseEnvironment['toolchains'][configuration.env['ARCH']][configuration.env['CPU']]['mainCompiler']
     ##
     ##  Using the cpu option changes the behaviour of the test execution, it generates an illegal instruction exception :-(
     ##
-    #baseEnvironment.Append(CCFLAGS = ['-mcpu=' + baseEnvironment['toolChains'][baseEnvironment['CPU']]['cpuOption']])
+    #baseEnvironment.Append(CCFLAGS = ['-mcpu=' + baseEnvironment['toolchains'][configuration.env['ARCH']][baseEnvironment['CPU']]['cpuOption']])
 
 ##########  Build the libraries ########################
 
