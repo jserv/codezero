@@ -22,7 +22,7 @@ int shmtest(void)
 	test_printf("Initiating shmget()\n");
 	for (int i = 0; i < 2; i++) {
 		if ((shmids[i] = shmget(keys[i], 27, IPC_CREAT | 0666)) < 0) {
-			test_printf("SHMGET: %d", errno);
+			test_printf("SHMGET", errno);
 			goto out_err;
 		} else
 			test_printf("SHMID returned: %d\n", shmids[i]);
@@ -30,7 +30,7 @@ int shmtest(void)
 	test_printf("Now shmat()\n");
 	for (int i = 0; i < 2; i++) {
 		if ((int)(bases[i] = shmat(shmids[i], NULL, 0)) == -1) {
-			test_printf("SHMAT: %d", errno);
+			test_printf("SHMAT", errno);
 			goto out_err;
 		} else
 			test_printf("SHM base address returned: %p\n", bases[i]);
@@ -42,7 +42,7 @@ int shmtest(void)
 	test_printf("Now shmdt()\n");
 	for (int i = 0; i < 2; i++) {
 		if (shmdt(bases[i]) < 0) {
-			test_printf("SHMDT: %d", errno);
+			test_printf("SHMDT", errno);
 			goto out_err;
 		} else
 			test_printf("SHM detached OK.\n");

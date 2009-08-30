@@ -20,9 +20,9 @@
 
 #ifndef __need_schedparam
 
-#ifndef _SCHED_H
-# error "Never include <bits/sched.h> directly; use <sched.h> instead."
-#endif
+//#ifndef _SCHED_H
+//# error "Never include <bits/sched.h> directly; use <sched.h> instead."
+//#endif
 
 
 /* Scheduling algorithms.  */

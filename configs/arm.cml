@@ -5,89 +5,124 @@ start main_menu
 #############
 symbols
 
-DUMMY			'DUMMY'
 ARCH_ARM		'ARM'
-ARCH_TEST		'TEST'
 
 arm_cpu_type		'ARM Processor Type'
-ARM_CPU_ARM920T		'ARM920T Not supported yet'
-ARM_CPU_ARM925		'ARM925 Not supported yet'
+ARM_CPU_ARM1136		'ARM1136 - To be added'
+ARM_CPU_ARM11MPCORE	'ARM11 MPCore - To be added'
 ARM_CPU_ARM926		'ARM926EJ-S'
+ARM_CPU_CORTEXA8	'ARM Cortex-A8 - Not supported'
 
 arm_subarch_type	'ARM Architecture Family'
-ARM_SUBARCH_V5		'ARM V5 Architecture'
-ARM_SUBARCH_V6		'ARM V6 Architecture, Unsupported yet'
+ARM_SUBARCH_V5		'ARM v5 Architecture'
+ARM_SUBARCH_V6		'ARM v6 Architecture, To be added'
+ARM_SUBARCH_V7		'ARM v7 Architecture, To be added'
 
 arm_platform_type	'ARM Platform Type'
 ARM_PLATFORM_EB		'Realview EB Platform, Unsupported yet'
 ARM_PLATFORM_AB926	'Versatile AB926 Platform, Unsupported yet'
 ARM_PLATFORM_PB926	'Versatile PB926 Platform'
+ARM_PLATFORM_PBMPCORE	'Realview PB11MPCore Platform'
+ARM_PLATFORM_PBA8	'Realview PB-A8 Platform'
 
 DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
 DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
-DRIVER_IRQ_PL190		'ARM Vectored Interrupt Controller PL190'
+DRIVER_IRQ_PL190	'ARM Vectored Interrupt Controller PL190'
+DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
 
 main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
+#arm_subarch_menu	'ARM Architecture Version'
+arm_cpu_menu		'ARM CPU type'
+arm_platform_menu	'ARM Platform Type'
 drivers_menu		'Platform Drivers'
 arch_type		'Main architecture'
+
 #############
 #  CHOICES  #
 #############
 choices arch_type
-	ARCH_TEST
 	ARCH_ARM
 	default ARCH_ARM
 
 choices arm_subarch_type
 	ARM_SUBARCH_V5
 	ARM_SUBARCH_V6
+	ARM_SUBARCH_V7
 	default ARM_SUBARCH_V5
 
 choices arm_cpu_type
-        ARM_CPU_ARM920T
 	ARM_CPU_ARM926
-	ARM_CPU_ARM925
+	ARM_CPU_ARM1136
+	ARM_CPU_ARM11MPCORE
+	ARM_CPU_CORTEXA8
         default ARM_CPU_ARM926
 
 choices arm_platform_type
         ARM_PLATFORM_EB
 	ARM_PLATFORM_AB926
 	ARM_PLATFORM_PB926
+	ARM_PLATFORM_PBMPCORE
+	ARM_PLATFORM_PBA8
         default ARM_PLATFORM_PB926
 
 #############
 #   MENUS   #
 #############
+
+menu arm_cpu_menu
+	arm_cpu_type
+
+menu arm_platform_menu
+	arm_platform_type
+
 menu drivers_menu
 	DRIVER_UART_PL011
 	DRIVER_TIMER_SP804
 	DRIVER_IRQ_PL190
+	DRIVER_IRQ_GIC
+
 menu arm_menu
-	arm_cpu_type
 	arm_subarch_type
-	arm_platform_type
+	arm_cpu_menu
+	arm_platform_menu
 	drivers_menu
 
 menu main_menu
 	arch_type
 	arm_menu
-	DUMMY
+
 #############
 #   RULES   #
 #############
 
+#Platform rules:
+unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
+unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_AB926
+unless ARM_SUBARCH_V6 suppress ARM_PLATFORM_PBMPCORE
+unless ARM_SUBARCH_V7 suppress ARM_PLATFORM_PBA8
+
+#CPU rules:
+unless ARM_SUBARCH_V5 suppress ARM_CPU_ARM926
+unless ARM_SUBARCH_V6 suppress ARM_CPU_ARM1136
+unless ARM_SUBARCH_V6 suppress ARM_CPU_ARM11MPCORE
+unless ARM_SUBARCH_V7 suppress ARM_CPU_CORTEXA8
+
 # NOTE: Unlike menus, choices dont take { sym } model of visibility
 # dependencies. Instead, a choice symbol is declared in a menu, and
 # suppress statement is used to make sym visible, instead of a
-# { sym } model under the choices.
+# { sym } model under the choices. (See manual for { sym } usage).
+
+unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
 unless ARCH_ARM suppress arm_menu
-unless ARM_PLATFORM_PB926 suppress DRIVER_UART_PL011
-unless ARM_PLATFORM_PB926 suppress DRIVER_TIMER_SP804
-unless ARM_PLATFORM_PB926 suppress DRIVER_IRQ_PL190
+unless ARM_PLATFORM_PB926 or ARM_PLATFORM_AB926 suppress DRIVER_IRQ_PL190
+unless ARM_PLATFORM_EB suppress ARM_CPU_ARM1136
+unless ARM_PLATFORM_EB or ARM_PLATFORM_PBA8 or ARM_PLATFORM_PBMPCORE suppress DRIVER_IRQ_GIC
 default DRIVER_UART_PL011 from y
 default DRIVER_TIMER_SP804 from y
 default DRIVER_IRQ_PL190 from y
+default DRIVER_IRQ_GIC from y
+
 # USELESS!! This doesnt force it to define invisible symbols as says in the manual.
 #when ARCH_TEST save SUBARCH_TEST PLATFORM_TEST
 #derive SUBARCH_TEST from ARCH_TEST

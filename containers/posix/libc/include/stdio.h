@@ -136,9 +136,15 @@ typedef long fpos_t; /* same */
 #define FILENAME_MAX 37
 #define L_tmpnam 37
 
-//#define SEEK_CUR 0
-//#define SEEK_END 1
-//#define SEEK_SET 2
+#ifndef SEEK_CUR
+#define SEEK_CUR 0
+#endif
+#ifndef SEEK_END
+#define SEEK_END 1
+#endif
+#ifndef SEEK_SET
+#define SEEK_SET 2
+#endif
 
 #define TMP_MAX 37
 
@@ -161,7 +167,7 @@ int setvbuf(FILE *, char *, int, size_t);
 /* 7.19.6 Format i/o functions */
 int fprintf(FILE *, const char *, ...);
 int fscanf(FILE *, const char *, ...);
-//int printf(const char *format, ...) __attribute__((format (printf, 1, 2)));
+int printf(const char *format, ...) __attribute__((format (printf, 1, 2)));
 int scanf(const char *, ...);
 int snprintf(char *, size_t , const char *, ...);
 int sprintf(char *, const char *, ...);
@@ -177,7 +183,7 @@ int vsscanf(const char *s, const char *format, va_list arg);
 /* 7.19.7 Character i/o functions */
 int fgetc(FILE *);
 char *fgets(char *, int, FILE *);
-//int fputc(int, FILE *);
+int fputc(int, FILE *);
 int fputs(const char *, FILE *);
 
 /* getc is specified to be the same as fgetc, so it makes
@@ -189,7 +195,7 @@ char *gets(char *);
 
 /* putc is specified to be the same as fputc, so it makes
    the most sense to implement as a macro here */
-//#define putc fputc /*int fetc(int, FILE *); */
+#define putc fputc /*int fetc(int, FILE *); */
 
 int putchar(int);
 int puts(const char *);

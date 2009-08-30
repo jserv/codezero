@@ -79,20 +79,12 @@
 /*
 Author: Ben Leslie <benjl@cse.unsw.edu.au>
 */
-#ifndef NULL
-#define NULL 0
-#endif
 
 #include <stdio.h>
 #include "format.h"
 
 #include <assert.h>
 
-int
-vsprintf(char *s, const char *format, va_list arg)
-{
-	return format_string(s, NULL, 0, -1, format, arg);
-}
 int
 sprintf(char *s, const char *format, ...)
 {
@@ -105,3 +97,8 @@ sprintf(char *s, const char *format, ...)
 	return ret;
 }
 
+int
+vsprintf(char *s, const char *format, va_list arg)
+{
+	return format_string(s, NULL, 0, -1, format, arg);
+}

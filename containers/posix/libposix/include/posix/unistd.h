@@ -277,9 +277,15 @@ extern int faccessat (int __fd, __const char *__file, int __type, int __flag)
 
 /* Values for the WHENCE argument to lseek.  */
 #ifndef	_STDIO_H		/* <stdio.h> has the same definitions.  */
+#ifndef SEEK_SET
 # define SEEK_SET	0	/* Seek from beginning of file.  */
+#endif
+#ifndef SEEK_CUR
 # define SEEK_CUR	1	/* Seek from current position.  */
+#endif
+#ifndef SEEK_END
 # define SEEK_END	2	/* Seek from end of file.  */
+#endif
 #endif
 
 #if defined __USE_BSD && !defined L_SET

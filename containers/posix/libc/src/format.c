@@ -80,11 +80,10 @@
   Authors: Cristan Szmadja, Ben Leslie
 */
 #include <stdint.h>
-#include "stdio.h"
+#include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 #include "format.h"
-#define fputc putc
 /*
  * lookup tables for umaxtostr 
  */

@@ -9,7 +9,6 @@
 #include <l4/api/errno.h>
 #include <lib/malloc.h>
 #include <globals.h>
-#include <printf.h>
 
 /* Global list of all in-memory files on the system */
 struct global_list global_vm_files = {

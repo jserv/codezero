@@ -11,7 +11,6 @@
 #include <dirent.h>
 #include <l4lib/os/posix/readdir.h>
 #include <tests.h>
-#include <printf.h>
 
 #define DENTS_TOTAL	50
 

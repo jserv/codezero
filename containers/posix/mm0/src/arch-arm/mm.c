@@ -4,7 +4,6 @@
 #include <arch/mm.h>
 #include <task.h>
 #include <vm_area.h>
-#include <printf.h>
 
 /* Extracts generic protection flags from architecture-specific pte */
 unsigned int vm_prot_flags(pte_t pte)
