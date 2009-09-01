@@ -60,7 +60,6 @@ tasksEnvironment.Append(CPPPATH = ['#' + environment['buildDirectory'], '#' + en
                                    '#containers/' +posixServicesDirectory + '/libl4/include', '#containers/' + posixServicesDirectory + '/libc/include', \
                                    '#containers/' + posixServicesDirectory + '/libmem', '#containers/' + posixServicesDirectory + '/libposix/include'])
 tasksEnvironment.Append(buildTask = buildTask)
-
 tasksEnvironment['posixServicesDirectory'] = 'containers/' + posixServicesDirectory
 
 ####
