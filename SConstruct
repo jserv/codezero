@@ -199,7 +199,7 @@ configuration data.  'scons -h' will then print the project help.
 
 ##########  Other rules. ########################
 
-    Default(loader)
+    Default(crts.values() + libs.values() + [libelf, startAxf, containers, loader])
 
     Clean('.', [buildDirectory])
 
