@@ -1,0 +1,3 @@
+[submodule "./containers/linux/linux-2.6.28.10"]
+	path = ./containers/linux/linux-2.6.28.10
+	url = ssh://www.b-labs.co.uk/var/git/linux-2.6.28.10.git
