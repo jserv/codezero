@@ -17,9 +17,7 @@
  * Add irqs, exceptions
  */
 
-#define CONFIG_CONT0_PAGER_START	0x40000
-#define CONFIG_CONT0_PHYS_END		0x1000000
-#define CONFIG_CONT0_PHYS_START		CONFIG_CONT0_PAGER_START
+#define CONFIG_CONT0_PAGER_START	CONFIG_CONT0_PHYS_START
 
 struct container_info cinfo[] = {
 	[0] = {

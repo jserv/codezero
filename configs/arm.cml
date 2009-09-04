@@ -37,6 +37,43 @@ arm_cpu_menu		'ARM CPU type'
 arm_platform_menu	'ARM Platform Type'
 drivers_menu		'Platform Drivers'
 arch_type		'Main architecture'
+containers_menu		'Container Setup'
+
+CONFIG_CONTAINERS	'Number of containers'
+CONFIG_CONT0_PHYS_START 'Cont0 Physical Start Address' text
+Physical address that this containers starts
+.
+
+CONFIG_CONT0_PHYS_END   'Cont0 Physical End Address' text
+Physical address that this container ends
+.
+
+CONFIG_CONT1_PHYS_START 'Cont1 Physical Start Address' text
+Physical address that this containers starts
+.
+
+CONFIG_CONT1_PHYS_END   'Cont1 Physical End Address' text
+Physical address that this container ends
+.
+
+CONFIG_CONT2_PHYS_START 'Cont2 Physical Start Address' text
+physical address that this containers starts
+.
+
+CONFIG_CONT2_PHYS_END   'Cont2 Physical End Address' text
+Physical address that this container ends
+.
+
+CONFIG_CONT3_PHYS_START 'Cont3 Physical Start Address' text
+physical address that this containers starts
+.
+
+CONFIG_CONT3_PHYS_END   'Cont3 Physical End Address' text
+Physical address that this container ends
+.
+
+
+
 
 #############
 #  CHOICES  #
@@ -69,6 +106,15 @@ choices arm_platform_type
 #############
 #   MENUS   #
 #############
+menu containers_menu
+	CONFIG_CONT0_PHYS_START@
+	CONFIG_CONT0_PHYS_END@
+	CONFIG_CONT1_PHYS_START@
+	CONFIG_CONT1_PHYS_END@
+	CONFIG_CONT2_PHYS_START@
+	CONFIG_CONT2_PHYS_END@
+	CONFIG_CONT3_PHYS_START@
+	CONFIG_CONT3_PHYS_END@
 
 menu arm_cpu_menu
 	arm_cpu_type
@@ -91,6 +137,8 @@ menu arm_menu
 menu main_menu
 	arch_type
 	arm_menu
+	CONFIG_CONTAINERS%
+	containers_menu
 
 #############
 #   RULES   #
@@ -122,6 +170,22 @@ default DRIVER_UART_PL011 from y
 default DRIVER_TIMER_SP804 from y
 default DRIVER_IRQ_PL190 from y
 default DRIVER_IRQ_GIC from y
+
+# Container Rules
+default CONFIG_CONTAINERS from 1
+unless CONFIG_CONTAINERS > 1 suppress CONFIG_CONT1_PHYS_START CONFIG_CONT1_PHYS_END
+unless CONFIG_CONTAINERS > 2 suppress CONFIG_CONT2_PHYS_START CONFIG_CONT2_PHYS_END
+unless CONFIG_CONTAINERS > 3 suppress CONFIG_CONT3_PHYS_START CONFIG_CONT3_PHYS_END
+
+default	CONFIG_CONT0_PHYS_START	from 0x40000
+default	CONFIG_CONT0_PHYS_END	from 0x1000000
+default	CONFIG_CONT1_PHYS_START from 0x1000000
+default	CONFIG_CONT1_PHYS_END	from 0x2000000
+default	CONFIG_CONT2_PHYS_START	from 0x2000000
+default	CONFIG_CONT2_PHYS_END	from 0x3000000
+default	CONFIG_CONT3_PHYS_START from 0x3000000
+default	CONFIG_CONT3_PHYS_END	from 0x4000000
+
 
 # USELESS!! This doesnt force it to define invisible symbols as says in the manual.
 #when ARCH_TEST save SUBARCH_TEST PLATFORM_TEST
