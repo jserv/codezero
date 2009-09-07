@@ -25,7 +25,7 @@ from __future__ import with_statement
 import os
 
 includeDirectory = 'include'
-containersDirectory = 'containers'
+containersDirectory = 'conts'
 toolsDirectory = 'tools'
 cml2ToolsDirectory = toolsDirectory + '/cml2-tools'
 buildDirectory = 'build'
@@ -177,7 +177,7 @@ configuration data.  'scons -h' will then print the project help.
 
 ##########  Handle all the container creation #######################
 
-    containers = SConscript('containers/SConscript', variant_dir = buildDirectory + '/containers', duplicate = 0, exports = {'environment': baseEnvironment, 'startAxf': startAxf})
+    containers = SConscript(containersDirectory + '/linux/SConscript', variant_dir = buildDirectory + '/' + containersDirectory, duplicate = 0, exports = {'environment': baseEnvironment, 'startAxf': startAxf})
 
     Alias('containers', containers)
     baseEnvironment['targetHelpEntries']['containers'] = 'build all the containers.'
