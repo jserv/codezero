@@ -181,6 +181,7 @@ configuration data.  'scons -h' will then print the project help.
 
     Alias('containers', containers)
     baseEnvironment['targetHelpEntries']['containers'] = 'build all the containers.'
+    #containers = []
 
 ##########  Do the packing / create loadable ########################
 
