@@ -7,8 +7,6 @@
 import os, shelve
 from configure import configure_kernel
 
-
-
 env = Environment(CC = 'arm-none-eabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().

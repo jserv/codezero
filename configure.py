@@ -34,8 +34,14 @@ def cml2_process(cml2_conf_props):
                 config_items[item[0].strip()] = (item[1].strip() == 'y')
     return config_items
 
-def cml2_config_to_symbols():
+def cml2_update_config_h(configuration):
     config_h_path = BUILDDIR + '/l4/config.h'
+    with open(config_h_path, "a") as config_h:
+        config_h.write("#define __ARCH__ " + configuration['ARCH'] + '\n')
+        config_h.write("#define __PLATFORM__ " + configuration['PLATFORM'] + '\n')
+        config_h.write("#define __SUBARCH__ " + configuration['SUBARCH'] + '\n')
+
+def cml2_parse_configuration(configuration):
     config_data = cml2_process(CML2_CONFIG_PROPERTIES)
 
     for key, value in config_data.items():
@@ -56,11 +62,6 @@ def cml2_config_to_symbols():
                 except KeyError:
                     configuration[items[0]] = []
                 configuration[items[0]].append(path)
-    with open(config_h_path, "a") as config_h:
-        config_h.write("#define __ARCH__ " + configuration['ARCH'] + '\n')
-        config_h.write("#define __PLATFORM__ " + configuration['PLATFORM'] + '\n')
-        config_h.write("#define __SUBARCH__ " + configuration['SUBARCH'] + '\n')
-    return configuration
 
 def cml2_configure(cml2_config_file):
     os.system(CML2TOOLSDIR + '/cmlcompile.py -o ' + CML2RULES + ' ' + cml2_config_file)
@@ -75,8 +76,13 @@ def configure_kernel(cml_file):
         os.mkdir(BUILDDIR)
 
     cml2_configure(cml_file)
-    configuration = cml2_config_to_symbols()
+
+    cml2_parse_configuration(configuration)
+
+    cml2_update_config_h(configuration)
+
     save_configuration(configuration)
+
     return configuration
 
 if __name__ == "__main__":
