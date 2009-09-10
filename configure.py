@@ -41,9 +41,7 @@ def cml2_update_config_h(configuration):
         config_h.write("#define __PLATFORM__ " + configuration['PLATFORM'] + '\n')
         config_h.write("#define __SUBARCH__ " + configuration['SUBARCH'] + '\n')
 
-def cml2_parse_configuration(configuration):
-    config_data = cml2_process(CML2_CONFIG_PROPERTIES)
-
+def cml2_parse_configuration(configuration, config_data):
     for key, value in config_data.items():
         if value:
             items = key.split('_')
@@ -77,7 +75,9 @@ def configure_kernel(cml_file):
 
     cml2_configure(cml_file)
 
-    cml2_parse_configuration(configuration)
+    config_data = cml2_process(CML2_CONFIG_PROPERTIES)
+
+    cml2_parse_configuration(configuration, config_data)
 
     cml2_update_config_h(configuration)
 
