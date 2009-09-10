@@ -5,30 +5,30 @@ start main_menu
 #############
 symbols
 
-ARCH_ARM		'ARM'
+CONFIG_ARCH_ARM			'ARM'
 
-arm_cpu_type		'ARM Processor Type'
-ARM_CPU_ARM1136		'ARM1136 - To be added'
-ARM_CPU_ARM11MPCORE	'ARM11 MPCore - To be added'
-ARM_CPU_ARM926		'ARM926EJ-S'
-ARM_CPU_CORTEXA8	'ARM Cortex-A8 - Not supported'
+arm_cpu_type			'ARM Processor Type'
+CONFIG_CPU_ARM1136		'ARM1136 - To be added'
+CONFIG_CPU_ARM11MPCORE		'ARM11 MPCore - To be added'
+CONFIG_CPU_ARM926		'ARM926EJ-S'
+CONFIG_CPU_CORTEXA8		'ARM Cortex-A8 - Not supported'
 
-arm_subarch_type	'ARM Architecture Family'
-ARM_SUBARCH_V5		'ARM v5 Architecture'
-ARM_SUBARCH_V6		'ARM v6 Architecture, To be added'
-ARM_SUBARCH_V7		'ARM v7 Architecture, To be added'
+arm_subarch_type		'ARM Architecture Family'
+CONFIG_SUBARCH_V5		'ARM v5 Architecture'
+CONFIG_SUBARCH_V6		'ARM v6 Architecture, To be added'
+CONFIG_SUBARCH_V7		'ARM v7 Architecture, To be added'
 
-arm_platform_type	'ARM Platform Type'
-ARM_PLATFORM_EB		'Realview EB Platform, Unsupported yet'
-ARM_PLATFORM_AB926	'Versatile AB926 Platform, Unsupported yet'
-ARM_PLATFORM_PB926	'Versatile PB926 Platform'
-ARM_PLATFORM_PB11MPCORE	'Realview PB11MPCore Platform'
-ARM_PLATFORM_PBA8	'Realview PB-A8 Platform'
+arm_platform_type		'ARM Platform Type'
+CONFIG_PLATFORM_EB		'Realview EB Platform, Unsupported yet'
+CONFIG_PLATFORM_AB926		'Versatile AB926 Platform, Unsupported yet'
+CONFIG_PLATFORM_PB926		'Versatile PB926 Platform'
+CONFIG_PLATFORM_PB11MPCORE	'Realview PB11MPCore Platform'
+CONFIG_PLATFORM_PBA8		'Realview PB-A8 Platform'
 
-DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
-DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
-DRIVER_IRQ_PL190	'ARM Vectored Interrupt Controller PL190'
-DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
+CONFIG_DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
+CONFIG_DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
+CONFIG_DRIVER_IRQ_PL190		'ARM Vectored Interrupt Controller PL190'
+CONFIG_DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
 
 main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
@@ -79,29 +79,29 @@ Physical address that this container ends
 #  CHOICES  #
 #############
 choices arch_type
-	ARCH_ARM
-	default ARCH_ARM
+	CONFIG_ARCH_ARM
+	default CONFIG_ARCH_ARM
 
 choices arm_subarch_type
-	ARM_SUBARCH_V5
-	ARM_SUBARCH_V6
-	ARM_SUBARCH_V7
-	default ARM_SUBARCH_V5
+	CONFIG_SUBARCH_V5
+	CONFIG_SUBARCH_V6
+	CONFIG_SUBARCH_V7
+	default CONFIG_SUBARCH_V5
 
 choices arm_cpu_type
-	ARM_CPU_ARM926
-	ARM_CPU_ARM1136
-	ARM_CPU_ARM11MPCORE
-	ARM_CPU_CORTEXA8
-        default ARM_CPU_ARM926
+	CONFIG_CPU_ARM926
+	CONFIG_CPU_ARM1136
+	CONFIG_CPU_ARM11MPCORE
+	CONFIG_CPU_CORTEXA8
+        default CONFIG_CPU_ARM926
 
 choices arm_platform_type
-        ARM_PLATFORM_EB
-	ARM_PLATFORM_AB926
-	ARM_PLATFORM_PB926
-	ARM_PLATFORM_PB11MPCORE
-	ARM_PLATFORM_PBA8
-        default ARM_PLATFORM_PB926
+        CONFIG_PLATFORM_EB
+	CONFIG_PLATFORM_AB926
+	CONFIG_PLATFORM_PB926
+	CONFIG_PLATFORM_PB11MPCORE
+	CONFIG_PLATFORM_PBA8
+        default CONFIG_PLATFORM_PB926
 
 #############
 #   MENUS   #
@@ -123,10 +123,10 @@ menu arm_platform_menu
 	arm_platform_type
 
 menu drivers_menu
-	DRIVER_UART_PL011
-	DRIVER_TIMER_SP804
-	DRIVER_IRQ_PL190
-	DRIVER_IRQ_GIC
+	CONFIG_DRIVER_UART_PL011
+	CONFIG_DRIVER_TIMER_SP804
+	CONFIG_DRIVER_IRQ_PL190
+	CONFIG_DRIVER_IRQ_GIC
 
 menu arm_menu
 	arm_subarch_type
@@ -145,31 +145,31 @@ menu main_menu
 #############
 
 #Platform rules:
-unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
-unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_AB926
-unless ARM_SUBARCH_V6 suppress ARM_PLATFORM_PB11MPCORE
-unless ARM_SUBARCH_V7 suppress ARM_PLATFORM_PBA8
+unless CONFIG_SUBARCH_V5 suppress CONFIG_PLATFORM_PB926
+unless CONFIG_SUBARCH_V5 suppress CONFIG_PLATFORM_AB926
+unless CONFIG_SUBARCH_V6 suppress CONFIG_PLATFORM_PB11MPCORE
+unless CONFIG_SUBARCH_V7 suppress CONFIG_PLATFORM_PBA8
 
 #CPU rules:
-unless ARM_SUBARCH_V5 suppress ARM_CPU_ARM926
-unless ARM_SUBARCH_V6 suppress ARM_CPU_ARM1136
-unless ARM_SUBARCH_V6 suppress ARM_CPU_ARM11MPCORE
-unless ARM_SUBARCH_V7 suppress ARM_CPU_CORTEXA8
+unless CONFIG_SUBARCH_V5 suppress CONFIG_CPU_ARM926
+unless CONFIG_SUBARCH_V6 suppress CONFIG_CPU_ARM1136
+unless CONFIG_SUBARCH_V6 suppress CONFIG_CPU_ARM11MPCORE
+unless CONFIG_SUBARCH_V7 suppress CONFIG_CPU_CORTEXA8
 
 # NOTE: Unlike menus, choices dont take { sym } model of visibility
 # dependencies. Instead, a choice symbol is declared in a menu, and
 # suppress statement is used to make sym visible, instead of a
 # { sym } model under the choices. (See manual for { sym } usage).
 
-unless ARM_SUBARCH_V5 suppress ARM_PLATFORM_PB926
-unless ARCH_ARM suppress arm_menu
-unless ARM_PLATFORM_PB926 or ARM_PLATFORM_AB926 suppress DRIVER_IRQ_PL190
-unless ARM_PLATFORM_EB suppress ARM_CPU_ARM1136
-unless ARM_PLATFORM_EB or ARM_PLATFORM_PBA8 or ARM_PLATFORM_PB11MPCORE suppress DRIVER_IRQ_GIC
-default DRIVER_UART_PL011 from y
-default DRIVER_TIMER_SP804 from y
-default DRIVER_IRQ_PL190 from y
-default DRIVER_IRQ_GIC from y
+unless CONFIG_SUBARCH_V5 suppress CONFIG_PLATFORM_PB926
+unless CONFIG_ARCH_ARM suppress arm_menu
+unless CONFIG_PLATFORM_PB926 or CONFIG_PLATFORM_AB926 suppress CONFIG_DRIVER_IRQ_PL190
+unless CONFIG_PLATFORM_EB suppress CONFIG_CPU_ARM1136
+unless CONFIG_PLATFORM_EB or CONFIG_PLATFORM_PBA8 or CONFIG_PLATFORM_PB11MPCORE suppress CONFIG_DRIVER_IRQ_GIC
+default CONFIG_DRIVER_UART_PL011 from y
+default CONFIG_DRIVER_TIMER_SP804 from y
+default CONFIG_DRIVER_IRQ_PL190 from y
+default CONFIG_DRIVER_IRQ_GIC from y
 
 # Container Rules
 default CONFIG_CONTAINERS from 1

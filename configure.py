@@ -16,6 +16,7 @@ CONFIG_DATA_DIR = join(BUILDDIR, "configdata")
 CONFIG_DATA_FILENAME = "configuration"
 CONFIG_DATA = join(CONFIG_DATA_DIR, CONFIG_DATA_FILENAME)
 configuration = {}
+config_data = {}
 
 def save_configuration(configuration):
     if not os.path.exists(CONFIG_DATA_DIR):
@@ -25,14 +26,55 @@ def save_configuration(configuration):
     config_shelve["cml2_config"] = configuration
     config_shelve.close()
 
-def cml2_process(cml2_conf_props):
-    config_items = {}
-    with file(cml2_conf_props) as config_file:
-        for line in config_file:
-            item = line.split('=')
-            if len(item) == 2:
-                config_items[item[0].strip()] = (item[1].strip() == 'y')
-    return config_items
+'''
+def cml2_parse_config_symbol(name, value):
+     sname, sval = line.split('=')
+        if len(config_sym_pair) == 2: # This means it is a valid symbol
+            cml2_parse_config_symbol(name, value)
+    config, rest = name.split("_", 1)
+    print symparts
+'''
+
+class config_symbols:
+    arch = None
+    subarch = None
+    platform = None
+    kbuild = []
+    all = []
+
+    # Get all name value symbols
+    def get_all(self, name, val):
+        self.all.append([name, val])
+
+    # Convert line to name value pair, if possible
+    def line_to_name_value(self, line):
+        parts = line.split()
+        if len(parts) > 0:
+            if parts[0] == "#define":
+                return parts[1], parts[2]
+        return None
+
+    # Extract architecture from a name value pair
+    def get_arch(self, name, val):
+        if name[:len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
+            parts = name.split("_", 3)
+            print parts
+            self.arch = parts[2].lower()
+
+
+symbols = config_symbols()
+
+def cml2_header_to_symbols(cml2_header):
+    with file(cml2_header) as header_file:
+        for line in header_file:
+            pair = symbols.line_to_name_value(line)
+            if pair is not None:
+                print pair
+                name, value = pair
+                symbols.get_all(name,value)
+                symbols.get_arch(name,value)
+    print symbols.all
+    print symbols.arch
 
 def cml2_update_config_h(configuration):
     config_h_path = BUILDDIR + '/l4/config.h'
@@ -40,26 +82,6 @@ def cml2_update_config_h(configuration):
         config_h.write("#define __ARCH__ " + configuration['ARCH'] + '\n')
         config_h.write("#define __PLATFORM__ " + configuration['PLATFORM'] + '\n')
         config_h.write("#define __SUBARCH__ " + configuration['SUBARCH'] + '\n')
-
-def cml2_parse_configuration(configuration, config_data):
-    for key, value in config_data.items():
-        if value:
-            items = key.split('_')
-            if items[0] == 'ARCH':
-                configuration['ARCH'] = items[1].lower()
-    for key, value in config_data.items():
-        if value:
-            items = key.split('_')
-            if items[0] == 'ARCH': continue
-            if items[0] == configuration['ARCH'].upper():
-                configuration[items[1]] = items[2].lower()
-            else:
-                path = items[1].lower() + '/' + items[2].lower()
-                try:
-                    configuration[items[0]]
-                except KeyError:
-                    configuration[items[0]] = []
-                configuration[items[0]].append(path)
 
 def cml2_configure(cml2_config_file):
     os.system(CML2TOOLSDIR + '/cmlcompile.py -o ' + CML2RULES + ' ' + cml2_config_file)
@@ -74,13 +96,9 @@ def configure_kernel(cml_file):
         os.mkdir(BUILDDIR)
 
     cml2_configure(cml_file)
-
-    config_data = cml2_process(CML2_CONFIG_PROPERTIES)
-
-    cml2_parse_configuration(configuration, config_data)
-
-    cml2_update_config_h(configuration)
-
+    cml2_header_to_symbols(CML2_CONFIG_H)
+    #cml2_parse_config_data(configuration, config_data)
+    #cml2_update_config_h(configuration)
     save_configuration(configuration)
 
     return configuration
