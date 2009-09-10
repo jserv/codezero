@@ -58,8 +58,19 @@ class config_symbols:
     def get_arch(self, name, val):
         if name[:len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
             parts = name.split("_", 3)
-            print parts
             self.arch = parts[2].lower()
+
+    # Extract subarch from a name value pair
+    def get_subarch(self, name, val):
+        if name[:len("CONFIG_SUBARCH_")] == "CONFIG_SUBARCH_":
+            parts = name.split("_", 3)
+            self.subarch = parts[2].lower()
+
+    # Extract platform from a name value pair
+    def get_platform(self, name, val):
+        if name[:len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
+            parts = name.split("_", 3)
+            self.platform = parts[2].lower()
 
 
 symbols = config_symbols()
@@ -69,12 +80,15 @@ def cml2_header_to_symbols(cml2_header):
         for line in header_file:
             pair = symbols.line_to_name_value(line)
             if pair is not None:
-                print pair
                 name, value = pair
                 symbols.get_all(name,value)
                 symbols.get_arch(name,value)
+                symbols.get_subarch(name,value)
+                symbols.get_platform(name,value)
     print symbols.all
     print symbols.arch
+    print symbols.subarch
+    print symbols.platform
 
 def cml2_update_config_h(configuration):
     config_h_path = BUILDDIR + '/l4/config.h'
