@@ -1,0 +1,17 @@
+import glob
+
+Import("env", "symbols")
+
+src_local = []
+
+for name, val in symbols:
+    if "CONFIG_DRIVER_UART_PL011" == name:
+        src_local.append(glob.glob("uart/pl011/*.c"))
+    if "CONFIG_DRIVER_TIMER_SP804" == name:
+        src_local.append(glob.glob("timer/sp804/*.c"))
+    if "CONFIG_DRIVER_IRQ_PL190" == name:
+        src_local.append(glob.glob("irq/pl190/*.c"))
+
+obj = env.Object(src_local)
+
+Return('obj')

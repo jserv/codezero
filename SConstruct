@@ -38,36 +38,37 @@ sources = \
         Glob('src/arch/' + arch + '/' + subarch +'/*.[cS]') + \
         Glob('src/glue/' + arch + '/*.[cS]') + \
         Glob('src/platform/' + platform + '/*.[cS]')
+print sources
 '''
-drivers = SConscript('src/drivers/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
-drivers = SConscript('src/generic/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
-drivers = SConscript('src/arch/' + arch + '/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
-drivers = SConscript('src/' + platform + '/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
-drivers = SConscript('src/' + arch + '/' + subarch + '/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
-drivers = SConscript('src/glue' + 'arch' + '/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
-drivers = SConscript('src/platform' + platform + '/SConscript', duplicate = 0, \
-                     exports = {'symbols' : all_syms, 'env' : env})
 
+driver_objs = SConscript('src/drivers/SConscript', duplicate = 0, \
+                         variant_dir = BUILD
+                         exports = {'symbols' : all_syms, 'env' : env})
+generic_objs = SConscript('src/generic/SConscript', duplicate = 0, \
+                         variant_dir = BUILDDIR + "/src/generic", \
+                         exports = {'symbols' : all_syms, 'env' : env})
+arch_objs = SConscript('src/arch/' + arch + '/SConscript', duplicate = 0, \
+                         variant_dir = BUILDDIR + "/src/arch/" + arch, \
+                         exports = {'symbols' : all_syms, 'env' : env})
+plat_objs = SConscript('src/platform/' + platform + '/SConscript', duplicate = 0, \
+                         variant_dir = BUILDDIR + "/src/platform/" + platform, \
+                         exports = {'symbols' : all_syms, 'env' : env})
+subarch_objs = SConscript('src/arch/' + arch + '/' + subarch + '/SConscript',  \
+                         variant_dir = BUILDDIR + '/src/arch/' + arch + '/' + subarch, \
+                         exports = {'symbols' : all_syms, 'env' : env})
+glue_objs = SConscript('src/glue/' + arch + '/SConscript', duplicate = 0, \
+                         variant_dir = BUILDDIR + '/src/glue/' + arch, \
+                         exports = {'symbols' : all_syms, 'env' : env})
+lib_objs = SConscript('src/lib/SConscript', duplicate = 0, \
+                         variant_dir = BUILDDIR + '/src/lib', \
+                         exports = {'symbols' : all_syms, 'env' : env})
+api_objs = SConscript('src/api/SConscript', duplicate = 0, \
+                         variant_dir = BUILDDIR + '/src/api', \
+                         exports = {'symbols' : all_syms, 'env' : env})
 
+objects = driver_objs + generic_objs + arch_objs + plat_objs + subarch_objs + \
+          glue_objs + lib_objs + api_objs
 
+kernel_elf = env.Program('kernel.elf', objects)
 
-
-
-
-
-#for item in cf['DRIVER'] :
-#    path = 'src/drivers/' + item
-#    if not os.path.isdir(path):
-#        feature , device = item.split ( '/' )
-#        raise ValueError, 'Driver ' + device + ' for ' + feature + ' not available.'
-#    sources += Glob(path + '/*.[cS]')
-
-objects = env.Object(sources + drivers)
-#startAxf = env.Program('start.axf', objects)
 
