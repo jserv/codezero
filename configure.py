@@ -12,9 +12,9 @@ CML2RULES = join(BUILDDIR, "cml2_rules.out")
 CML2_CONFIG_PROPERTIES = join(BUILDDIR, "cml2_config.out")
 CML2_CONFIG_H = join(BUILDDIR, "cml2_config.h")
 CONFIG_H = join("include/l4/config.h")
-CONFIG_DATA_DIR = join(BUILDDIR, "configdata")
-CONFIG_DATA_FILENAME = "configuration"
-CONFIG_DATA = join(CONFIG_DATA_DIR, CONFIG_DATA_FILENAME)
+CONFIG_SHELVE_DIR = join(BUILDDIR, "configdata")
+CONFIG_SHELVE_FILENAME = "configuration"
+CONFIG_SHELVE = join(CONFIG_SHELVE_DIR, CONFIG_SHELVE_FILENAME)
 configuration = {}
 
 class config_symbols:
@@ -87,12 +87,16 @@ def cml2_configure(cml2_config_file):
         os.mkdir("build/l4")
     shutil.copy(CML2_CONFIG_H, CONFIG_H)
 
-def save_configuration(configuration):
-    if not os.path.exists(CONFIG_DATA_DIR):
-        os.mkdir(CONFIG_DATA_DIR)
+def save_configuration():
+    if not os.path.exists(CONFIG_SHELVE_DIR):
+        os.mkdir(CONFIG_SHELVE_DIR)
 
-    config_shelve = shelve.open(CONFIG_DATA)
-    config_shelve["config_symbols"] = symbols
+    config_shelve = shelve.open(CONFIG_SHELVE)
+    #config_shelve["config_symbols"] = symbols
+    config_shelve["arch"] = symbols.arch
+    config_shelve["subarch"] = symbols.subarch
+    config_shelve["platform"] = symbols.platform
+    config_shelve["all_symbols"] = symbols.all
     config_shelve.close()
 
 def configure_kernel(cml_file):
@@ -102,9 +106,7 @@ def configure_kernel(cml_file):
     cml2_configure(cml_file)
     cml2_header_to_symbols(CML2_CONFIG_H)
     cml2_update_config_h(symbols, CONFIG_H)
-    save_configuration(configuration)
-
-    return configuration
+    save_configuration()
 
 if __name__ == "__main__":
     configure_kernel("configs/arm.cml")

@@ -5,7 +5,8 @@
 #  Copyright © 2009  B Labs Ltd
 #
 import os, shelve
-from configure import configure_kernel
+import configure
+from configure import *
 
 env = Environment(CC = 'arm-none-eabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
@@ -20,26 +21,33 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  CPPPATH = "#include",
 		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h -D__KERNEL__')
 
-config_shelve = shelve.open("build/configdata/configuration")
-configuration = config_shelve["cml2_config"]
-cf = configuration
+config_shelve = shelve.open(CONFIG_SHELVE)
+#symbols = config_shelve["config_symbols"]
+arch = config_shelve["arch"]
+subarch = config_shelve["subarch"]
+platform = config_shelve["platform"]
+all_syms = config_shelve["all_symbols"]
 
+print all_syms
 sources = \
         Glob('src/api/*.[cS]') + \
         Glob('src/generic/*.[cS]') + \
         Glob('src/lib/*.[cS]') + \
-        Glob('src/arch/' + cf['ARCH'] + '/*.[cS]') + \
-        Glob('src/arch/' + cf['ARCH'] + '/' + cf['SUBARCH'] +'/*.[cS]') + \
-        Glob('src/glue/' + cf['ARCH'] + '/*.[cS]') + \
-        Glob('src/platform/' + cf['PLATFORM'] + '/*.[cS]')
+        Glob('src/arch/' + arch + '/*.[cS]') + \
+        Glob('src/arch/' + arch + '/' + subarch +'/*.[cS]') + \
+        Glob('src/glue/' + arch + '/*.[cS]') + \
+        Glob('src/platform/' + platform + '/*.[cS]')
 
-for item in cf['DRIVER'] :
-    path = 'src/drivers/' + item
-    if not os.path.isdir(path):
-        feature , device = item.split ( '/' )
-        raise ValueError, 'Driver ' + device + ' for ' + feature + ' not available.'
-    sources += Glob(path + '/*.[cS]')
+drivers = SConscript('src/drivers/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
 
-objects = env.Object(sources)
-startAxf = env.Program('start.axf', objects)
+#for item in cf['DRIVER'] :
+#    path = 'src/drivers/' + item
+#    if not os.path.isdir(path):
+#        feature , device = item.split ( '/' )
+#        raise ValueError, 'Driver ' + device + ' for ' + feature + ' not available.'
+#    sources += Glob(path + '/*.[cS]')
+
+objects = env.Object(sources + drivers)
+#startAxf = env.Program('start.axf', objects)
 
