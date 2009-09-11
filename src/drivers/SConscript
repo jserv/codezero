@@ -11,6 +11,8 @@ for name, val in symbols:
         src_local.append(glob.glob("timer/sp804/*.c"))
     if "CONFIG_DRIVER_IRQ_PL190" == name:
         src_local.append(glob.glob("irq/pl190/*.c"))
+    if "CONFIG_DRIVER_IRQ_GIC" == name:
+        src_local.append(glob.glob("irq/gic/*.c"))
 
 obj = env.Object(src_local)
 

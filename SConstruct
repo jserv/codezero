@@ -27,48 +27,18 @@ arch = config_shelve["arch"]
 subarch = config_shelve["subarch"]
 platform = config_shelve["platform"]
 all_syms = config_shelve["all_symbols"]
-
 print all_syms
-'''
-sources = \
-        Glob('src/api/*.[cS]') + \
-        Glob('src/generic/*.[cS]') + \
-        Glob('src/lib/*.[cS]') + \
-        Glob('src/arch/' + arch + '/*.[cS]') + \
-        Glob('src/arch/' + arch + '/' + subarch +'/*.[cS]') + \
-        Glob('src/glue/' + arch + '/*.[cS]') + \
-        Glob('src/platform/' + platform + '/*.[cS]')
-print sources
-'''
 
-driver_objs = SConscript('src/drivers/SConscript', duplicate = 0, \
-                         variant_dir = BUILD
-                         exports = {'symbols' : all_syms, 'env' : env})
-generic_objs = SConscript('src/generic/SConscript', duplicate = 0, \
-                         variant_dir = BUILDDIR + "/src/generic", \
-                         exports = {'symbols' : all_syms, 'env' : env})
-arch_objs = SConscript('src/arch/' + arch + '/SConscript', duplicate = 0, \
-                         variant_dir = BUILDDIR + "/src/arch/" + arch, \
-                         exports = {'symbols' : all_syms, 'env' : env})
-plat_objs = SConscript('src/platform/' + platform + '/SConscript', duplicate = 0, \
-                         variant_dir = BUILDDIR + "/src/platform/" + platform, \
-                         exports = {'symbols' : all_syms, 'env' : env})
-subarch_objs = SConscript('src/arch/' + arch + '/' + subarch + '/SConscript',  \
-                         variant_dir = BUILDDIR + '/src/arch/' + arch + '/' + subarch, \
-                         exports = {'symbols' : all_syms, 'env' : env})
-glue_objs = SConscript('src/glue/' + arch + '/SConscript', duplicate = 0, \
-                         variant_dir = BUILDDIR + '/src/glue/' + arch, \
-                         exports = {'symbols' : all_syms, 'env' : env})
-lib_objs = SConscript('src/lib/SConscript', duplicate = 0, \
-                         variant_dir = BUILDDIR + '/src/lib', \
-                         exports = {'symbols' : all_syms, 'env' : env})
-api_objs = SConscript('src/api/SConscript', duplicate = 0, \
-                         variant_dir = BUILDDIR + '/src/api', \
-                         exports = {'symbols' : all_syms, 'env' : env})
+objects = []
+objects += SConscript('src/drivers/SConscript', exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/generic/SConscript',exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/arch/' + arch + '/SConscript', exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/platform/' + platform + '/SConscript', exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/arch/' + arch + '/' + subarch + '/SConscript', exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/glue/' + arch + '/SConscript', exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/lib/SConscript', exports = {'symbols' : all_syms, 'env' : env})
+objects += SConscript('src/api/SConscript', exports = {'symbols' : all_syms, 'env' : env})
 
-objects = driver_objs + generic_objs + arch_objs + plat_objs + subarch_objs + \
-          glue_objs + lib_objs + api_objs
-
-kernel_elf = env.Program('kernel.elf', objects)
+kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
 
 
