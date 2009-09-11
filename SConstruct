@@ -29,6 +29,7 @@ platform = config_shelve["platform"]
 all_syms = config_shelve["all_symbols"]
 
 print all_syms
+'''
 sources = \
         Glob('src/api/*.[cS]') + \
         Glob('src/generic/*.[cS]') + \
@@ -37,9 +38,28 @@ sources = \
         Glob('src/arch/' + arch + '/' + subarch +'/*.[cS]') + \
         Glob('src/glue/' + arch + '/*.[cS]') + \
         Glob('src/platform/' + platform + '/*.[cS]')
-
+'''
 drivers = SConscript('src/drivers/SConscript', duplicate = 0, \
                      exports = {'symbols' : all_syms, 'env' : env})
+drivers = SConscript('src/generic/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
+drivers = SConscript('src/arch/' + arch + '/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
+drivers = SConscript('src/' + platform + '/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
+drivers = SConscript('src/' + arch + '/' + subarch + '/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
+drivers = SConscript('src/glue' + 'arch' + '/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
+drivers = SConscript('src/platform' + platform + '/SConscript', duplicate = 0, \
+                     exports = {'symbols' : all_syms, 'env' : env})
+
+
+
+
+
+
+
 
 #for item in cf['DRIVER'] :
 #    path = 'src/drivers/' + item
