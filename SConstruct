@@ -27,7 +27,6 @@ arch = config_shelve["arch"]
 subarch = config_shelve["subarch"]
 platform = config_shelve["platform"]
 all_syms = config_shelve["all_symbols"]
-print all_syms
 
 objects = []
 objects += SConscript('src/drivers/SConscript', exports = {'symbols' : all_syms, 'env' : env})

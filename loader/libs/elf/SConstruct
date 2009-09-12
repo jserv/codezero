@@ -1,0 +1,42 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+
+import os, sys, shelve
+
+# Get global paths
+PROJRELROOT="../../../"
+cwd = os.getcwd()
+os.chdir(PROJRELROOT)
+execfile("configure.py")
+os.chdir(cwd)
+
+# Get configuration information
+config_shelve = shelve.open(CONFIG_SHELVE)
+#symbols = config_shelve["config_symbols"]
+arch = config_shelve["arch"]
+subarch = config_shelve["subarch"]
+platform = config_shelve["platform"]
+all_syms = config_shelve["all_symbols"]
+
+
+# Locally important paths are here
+LIBC_PATH = '../c'
+LIBC_LIBPATH = LIBC_PATH
+LIBC_INCPATH = [join(LIBC_PATH, 'include'), \
+                join(LIBC_PATH, 'include/arch/' + arch)]
+
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+		  CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding'],
+		  LINKFLAGS = ['-nostdlib'],
+		  ENV = {'PATH' : os.environ['PATH']},
+		  LIBS = ['gcc','c-baremetal'],
+		  LIBPATH = LIBC_LIBPATH,
+		  CPPPATH = ['#include', LIBC_INCPATH] )
+
+src = Glob("src/*.c")
+
+libelf = env.StaticLibrary('elf', src)
+
