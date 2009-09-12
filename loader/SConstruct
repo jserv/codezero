@@ -5,31 +5,21 @@
 #  Copyright © 2009  B Labs Ltd
 
 import os, sys, shelve
+from os.path import join
 
 # Get global paths
 PROJRELROOT = '../'
 
-cwd = os.getcwd()
-os.chdir(PROJRELROOT)
-execfile("configdata.py")
-os.chdir(cwd)
-
-# Get configuration information
-config_shelve = shelve.open(CONFIG_SHELVE)
-
-#symbols = config_shelve["config_symbols"]
-arch = config_shelve["arch"]
-subarch = config_shelve["subarch"]
-platform = config_shelve["platform"]
-all_syms = config_shelve["all_symbols"]
+arch = 'arm'
+platform = 'pb926'
 
 # Locally important paths are here
-LIBC_PATH = '../libs/c'
+LIBC_PATH = 'libs/c'
 LIBC_LIBPATH = LIBC_PATH
 LIBC_INCPATH = [join(LIBC_PATH, 'include'), \
                 join(LIBC_PATH, 'include/arch/' + arch)]
 LIBC_CRT_PATH = join(LIBC_PATH, "crt/sys-baremetal/arch-" + arch + "/crt0.o")
-LIBELF_PATH = '../libs/elf'
+LIBELF_PATH = 'libs/elf'
 LIBELF_LIBPATH = LIBELF_PATH
 LIBELF_INCPATH = join(LIBELF_PATH, 'include')
 
@@ -38,7 +28,7 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
 			     '-std=gnu99', '-Wall', '-Werror'],
-		  LINKFLAGS = ['-nostdlib', '-T' + "linker.lds"],
+		  LINKFLAGS = ['-nostdlib', '-T' + "linker.lds", "-u_start"],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',
 		  ENV = {'PATH' : os.environ['PATH']},
@@ -46,15 +36,7 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  LIBPATH = [LIBC_LIBPATH, LIBELF_LIBPATH],
 		  CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
 
-config_shelve = shelve.open(CONFIG_SHELVE)
-#symbols = config_shelve["config_symbols"]
-arch = config_shelve["arch"]
-subarch = config_shelve["subarch"]
-platform = config_shelve["platform"]
-all_syms = config_shelve["all_symbols"]
-
 src = Glob('*.[cS]')
-crt0 = Glob(LIBC_CRT_PATH)
 
 objs = env.Object(src)
-env.Program('final.elf', objs + crt0)
+env.Program('final.elf', objs)

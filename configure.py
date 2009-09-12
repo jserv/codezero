@@ -6,9 +6,8 @@ from os.path import join
 from config.projpaths import *
 from config.configuration import *
 
-symbols = config_symbols()
 
-def cml2_header_to_symbols(cml2_header):
+def cml2_header_to_symbols(cml2_header, symbols):
     with file(cml2_header) as header_file:
         for line in header_file:
             pair = symbols.line_to_name_value(line)
@@ -20,11 +19,11 @@ def cml2_header_to_symbols(cml2_header):
                 symbols.get_platform(name, value)
                 symbols.get_ncontainers(name, value)
 
-def cml2_update_config_h(symbols, config_h_path):
+def cml2_update_config_h(config_h_path, config):
     with open(config_h_path, "a") as config_h:
-        config_h.write("#define __ARCH__ " + symbols.arch + '\n')
-        config_h.write("#define __PLATFORM__ " + symbols.platform + '\n')
-        config_h.write("#define __SUBARCH__ " + symbols.subarch + '\n')
+        config_h.write("#define __ARCH__ " + config.arch + '\n')
+        config_h.write("#define __PLATFORM__ " + config.platform + '\n')
+        config_h.write("#define __SUBARCH__ " + config.subarch + '\n')
 
 def cml2_configure(cml2_config_file):
     os.system(CML2TOOLSDIR + '/cmlcompile.py -o ' + CML2RULES + ' ' + cml2_config_file)
@@ -34,26 +33,29 @@ def cml2_configure(cml2_config_file):
         os.mkdir("build/l4")
     shutil.copy(CML2_CONFIG_H, CONFIG_H)
 
-def save_configuration():
+def save_configuration(configuration):
     if not os.path.exists(CONFIG_SHELVE_DIR):
         os.mkdir(CONFIG_SHELVE_DIR)
 
     config_shelve = shelve.open(CONFIG_SHELVE)
-    config_shelve["config_symbols"] = symbols
-    config_shelve["arch"] = symbols.arch
-    config_shelve["subarch"] = symbols.subarch
-    config_shelve["platform"] = symbols.platform
-    config_shelve["all_symbols"] = symbols.all
+    config_shelve["configuration"] = configuration
+    config_shelve["arch"] = configuration.arch
+    config_shelve["subarch"] = configuration.subarch
+    config_shelve["platform"] = configuration.platform
+    config_shelve["all_symbols"] = configuration.all
     config_shelve.close()
 
 def configure_kernel(cml_file):
+    config = configuration()
+
     if not os.path.exists(BUILDDIR):
         os.mkdir(BUILDDIR)
 
     cml2_configure(cml_file)
-    cml2_header_to_symbols(CML2_CONFIG_H)
-    cml2_update_config_h(symbols, CONFIG_H)
-    save_configuration()
+    cml2_header_to_symbols(CML2_CONFIG_H, config)
+    cml2_update_config_h(CONFIG_H, config)
+    save_configuration(config)
 
 if __name__ == "__main__":
     configure_kernel(join(CML2_CONFIG_SRCDIR, "arm.cml"))
+

@@ -1,15 +1,23 @@
 #! /usr/bin/env python2.6
 # -*- mode: python; coding: utf-8; -*-
-
 import os, sys, shelve, shutil
+from projpaths import *
 
-class config_symbols:
+class container:
+    name = None
+    type = None
+    id = None
+    lma_start = None
+    lma_end = None
+    vma_start = None
+    vma_end = None
+
+class configuration:
     arch = None
     subarch = None
     platform = None
-    kbuild = []
     all = []
-
+    containers = []
     # Get all name value symbols
     def get_all(self, name, val):
         self.all.append([name, val])
@@ -45,3 +53,8 @@ class config_symbols:
         if name[:len("CONFIG_CONTAINERS")] == "CONFIG_CONTAINERS":
             self.ncontainers = val
 
+def configuration_retrieve():
+    # Get configuration information
+    config_shelve = shelve.open(CONFIG_SHELVE)
+    configuration = config_shelve["configuration"]
+    return configuration
