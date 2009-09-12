@@ -127,47 +127,77 @@ default CONFIG_DRIVER_IRQ_GIC from y
 
 # Container Rules
 symbols
-CONFIG_CONT_TYPE_LINUX		'Linux Container'
-CONFIG_CONT_TYPE_BARE		'Bare Container'
-CONFIG_CONT_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
 CONFIG_CONTAINERS		'Number of containers'
-CONFIG_CONT0_PHYS_START		'Cont0 Physical Start Address'
-CONFIG_CONT0_PHYS_END		'Cont0 Physical End Address'
-CONFIG_CONT0_VIRT_START		'Cont0 Virtual Start Address'
-CONFIG_CONT0_VIRT_END		'Cont0 Virtual End Address'
+CONFIG_CONT0_TYPE_LINUX		'Linux Container'
+CONFIG_CONT0_TYPE_BARE		'Bare Container'
+CONFIG_CONT0_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
+CONFIG_CONT0_PHYS_START		'Container 0 physical start address'
+CONFIG_CONT0_PHYS_END		'Container 0 physical end address'
+CONFIG_CONT0_VIRT_START		'Container 0 virtual start address'
+CONFIG_CONT0_VIRT_END		'Container 0 virtual end address'
+
+CONFIG_CONT1_TYPE_LINUX		'Linux Container'
+CONFIG_CONT1_TYPE_BARE		'Bare Container'
+CONFIG_CONT1_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
+CONFIG_CONT1_PHYS_START		'Container 1 physical start address'
+CONFIG_CONT1_PHYS_END		'Container 1 physical end address'
+CONFIG_CONT1_VIRT_START		'Container 1 virtual start address'
+CONFIG_CONT1_VIRT_END		'Container 1 virtual end address'
+
 
 default CONFIG_CONTAINERS from 1
 default	CONFIG_CONT0_PHYS_START	from 0x40000
 default	CONFIG_CONT0_PHYS_END	from 0x1000000
-default	CONFIG_CONT0_VIRT_START	from 0x40000
-default	CONFIG_CONT0_VIRT_END	from 0x1000000
+default	CONFIG_CONT0_VIRT_START	from 0x0
+default	CONFIG_CONT0_VIRT_END	from 0x0
+
+default	CONFIG_CONT1_PHYS_START	from 0x1000000
+default	CONFIG_CONT1_PHYS_END	from 0x2000000
+default	CONFIG_CONT1_VIRT_START	from 0
+default	CONFIG_CONT1_VIRT_END	from 0
+
+unless CONFIG_CONTAINERS > 1 suppress cont1_menu
 
 symbols
 containers_menu		'Configure Containers'
-cont0_menu		'Configure Container 0 Parameters'
-container_type		'Configure Container type'
+cont0_menu		'Container 0 Parameters'
+cont1_menu		'Container 1 Parameters'
+container0_type		'Container 0 Type'
+container1_type		'Container 1 Type'
 
-choices container_type
-        CONFIG_CONT_TYPE_LINUX
-	CONFIG_CONT_TYPE_BARE
-	CONFIG_CONT_TYPE_C0_POSIX
-        default CONFIG_CONT_TYPE_LINUX
+choices container0_type
+        CONFIG_CONT0_TYPE_LINUX
+	CONFIG_CONT0_TYPE_BARE
+	CONFIG_CONT0_TYPE_C0_POSIX
+        default CONFIG_CONT0_TYPE_LINUX
+
+choices container1_type
+        CONFIG_CONT1_TYPE_LINUX
+	CONFIG_CONT1_TYPE_BARE
+	CONFIG_CONT1_TYPE_C0_POSIX
+        default CONFIG_CONT1_TYPE_LINUX
 
 menu cont0_menu
-	container_type
+	container0_type
 	CONFIG_CONT0_PHYS_START@
 	CONFIG_CONT0_PHYS_END@
 	CONFIG_CONT0_VIRT_START@
 	CONFIG_CONT0_VIRT_END@
 
+menu cont1_menu
+	container1_type
+	CONFIG_CONT1_PHYS_START@
+	CONFIG_CONT1_PHYS_END@
+	CONFIG_CONT1_VIRT_START@
+	CONFIG_CONT1_VIRT_END@
+
 menu containers_menu
 	cont0_menu
+	cont1_menu
 
 
 # Checklist for correct CML2
 # 1) Have you defined a prompt for each menu, choice_type?
 # 2) Have you defined a default for each symbol?
-# 3) Have you put 'symbols' keyword before each symbol, menu or choice?
-
-
+# 3) Have you put 'symbols' keyword before each symbol, menu and choice?
 
