@@ -145,7 +145,7 @@ CONFIG_CONT1_VIRT_START		'Container 1 virtual start address'
 CONFIG_CONT1_VIRT_END		'Container 1 virtual end address'
 
 
-default CONFIG_CONTAINERS from 1
+default CONFIG_CONTAINERS from 2
 default	CONFIG_CONT0_PHYS_START	from 0x40000
 default	CONFIG_CONT0_PHYS_END	from 0x1000000
 default	CONFIG_CONT0_VIRT_START	from 0x0

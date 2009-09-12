@@ -1,9 +1,9 @@
 #! /usr/bin/env python2.6
 # -*- mode: python; coding: utf-8; -*-
-import os, sys, shelve, shutil
+import os, sys, shelve, shutil, re
 from projpaths import *
 
-class container:
+class Container:
     name = None
     type = None
     id = None
@@ -52,6 +52,57 @@ class configuration:
     def get_ncontainers(self, name, val):
         if name[:len("CONFIG_CONTAINERS")] == "CONFIG_CONTAINERS":
             self.ncontainers = val
+
+    # TODO: Carry this over to Container() as static method???
+    def get_container_parameter(self, id, param, val):
+        if param[:len("VIRT_START")] == "VIRT_START":
+            self.containers[id].vma_start = val
+        elif param[:len("VIRT_END")] == "VIRT_END":
+            self.containers[id].vma_end = val
+        elif param[:len("PHYS_START")] == "PHYS_START":
+            self.containers[id].lma_start = val
+        elif param[:len("PHYS_END")] == "PHYS_END":
+            self.containers[id].lma_end = val
+        else:
+            param1, param2 = param.split("_", 2)
+            if param1 == "TYPE":
+                if param2 == "LINUX":
+                    self.containers[id].type = "linux"
+                elif param2 == "C0_POSIX":
+                    self.containers[id].type = "cps"
+                elif param2 == "BARE":
+                    self.containers[id].type = "bare"
+
+    # Extract parameters for containers
+    def get_container_parameters(self, name, val):
+        matchobj = re.match(r"(CONFIG_CONT){1}([0-9]){1}(\w+)", name)
+        if not matchobj:
+            return None
+
+        prefix, idstr, param = matchobj.groups()
+        id = int(idstr)
+
+        # Create and add new container if this id was not seen
+        self.check_add_container(id)
+
+        # Get rid of '_' in front
+        param = param[1:]
+
+        # Check and store info on this parameter
+        self.get_container_parameter(id, param, val)
+
+    def check_add_container(self, id):
+        for cont in self.containers:
+            if id == cont.id:
+                return
+
+        # New container created. TODO: Pass id to constructor
+        container = Container()
+        container.id = id
+        self.containers.append(container)
+
+        # Make sure elements in order for indexed accessing
+        self.containers.sort()
 
 def configuration_retrieve():
     # Get configuration information
