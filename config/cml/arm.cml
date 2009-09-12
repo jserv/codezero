@@ -32,52 +32,15 @@ CONFIG_DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
 
 main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
-#arm_subarch_menu	'ARM Architecture Version'
 arm_cpu_menu		'ARM CPU type'
 arm_platform_menu	'ARM Platform Type'
 drivers_menu		'Platform Drivers'
 arch_type		'Main architecture'
-containers_menu		'Container Setup'
-
-CONFIG_CONTAINERS	'Number of containers'
-CONFIG_CONT0_PHYS_START 'Cont0 Physical Start Address' text
-Physical address that this containers starts
-.
-
-CONFIG_CONT0_PHYS_END   'Cont0 Physical End Address' text
-Physical address that this container ends
-.
-
-CONFIG_CONT1_PHYS_START 'Cont1 Physical Start Address' text
-Physical address that this containers starts
-.
-
-CONFIG_CONT1_PHYS_END   'Cont1 Physical End Address' text
-Physical address that this container ends
-.
-
-CONFIG_CONT2_PHYS_START 'Cont2 Physical Start Address' text
-physical address that this containers starts
-.
-
-CONFIG_CONT2_PHYS_END   'Cont2 Physical End Address' text
-Physical address that this container ends
-.
-
-CONFIG_CONT3_PHYS_START 'Cont3 Physical Start Address' text
-physical address that this containers starts
-.
-
-CONFIG_CONT3_PHYS_END   'Cont3 Physical End Address' text
-Physical address that this container ends
-.
-
-
-
 
 #############
 #  CHOICES  #
 #############
+
 choices arch_type
 	CONFIG_ARCH_ARM
 	default CONFIG_ARCH_ARM
@@ -106,15 +69,6 @@ choices arm_platform_type
 #############
 #   MENUS   #
 #############
-menu containers_menu
-	CONFIG_CONT0_PHYS_START@
-	CONFIG_CONT0_PHYS_END@
-	CONFIG_CONT1_PHYS_START@
-	CONFIG_CONT1_PHYS_END@
-	CONFIG_CONT2_PHYS_START@
-	CONFIG_CONT2_PHYS_END@
-	CONFIG_CONT3_PHYS_START@
-	CONFIG_CONT3_PHYS_END@
 
 menu arm_cpu_menu
 	arm_cpu_type
@@ -172,22 +126,48 @@ default CONFIG_DRIVER_IRQ_PL190 from y
 default CONFIG_DRIVER_IRQ_GIC from y
 
 # Container Rules
-default CONFIG_CONTAINERS from 1
-unless CONFIG_CONTAINERS > 1 suppress CONFIG_CONT1_PHYS_START CONFIG_CONT1_PHYS_END
-unless CONFIG_CONTAINERS > 2 suppress CONFIG_CONT2_PHYS_START CONFIG_CONT2_PHYS_END
-unless CONFIG_CONTAINERS > 3 suppress CONFIG_CONT3_PHYS_START CONFIG_CONT3_PHYS_END
+symbols
+CONFIG_CONT_TYPE_LINUX		'Linux Container'
+CONFIG_CONT_TYPE_BARE		'Bare Container'
+CONFIG_CONT_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
+CONFIG_CONTAINERS		'Number of containers'
+CONFIG_CONT0_PHYS_START		'Cont0 Physical Start Address'
+CONFIG_CONT0_PHYS_END		'Cont0 Physical End Address'
+CONFIG_CONT0_VIRT_START		'Cont0 Virtual Start Address'
+CONFIG_CONT0_VIRT_END		'Cont0 Virtual End Address'
 
+default CONFIG_CONTAINERS from 1
 default	CONFIG_CONT0_PHYS_START	from 0x40000
 default	CONFIG_CONT0_PHYS_END	from 0x1000000
-default	CONFIG_CONT1_PHYS_START from 0x1000000
-default	CONFIG_CONT1_PHYS_END	from 0x2000000
-default	CONFIG_CONT2_PHYS_START	from 0x2000000
-default	CONFIG_CONT2_PHYS_END	from 0x3000000
-default	CONFIG_CONT3_PHYS_START from 0x3000000
-default	CONFIG_CONT3_PHYS_END	from 0x4000000
+default	CONFIG_CONT0_VIRT_START	from 0x40000
+default	CONFIG_CONT0_VIRT_END	from 0x1000000
+
+symbols
+containers_menu		'Configure Containers'
+cont0_menu		'Configure Container 0 Parameters'
+container_type		'Configure Container type'
+
+choices container_type
+        CONFIG_CONT_TYPE_LINUX
+	CONFIG_CONT_TYPE_BARE
+	CONFIG_CONT_TYPE_C0_POSIX
+        default CONFIG_CONT_TYPE_LINUX
+
+menu cont0_menu
+	container_type
+	CONFIG_CONT0_PHYS_START@
+	CONFIG_CONT0_PHYS_END@
+	CONFIG_CONT0_VIRT_START@
+	CONFIG_CONT0_VIRT_END@
+
+menu containers_menu
+	cont0_menu
 
 
-# USELESS!! This doesnt force it to define invisible symbols as says in the manual.
-#when ARCH_TEST save SUBARCH_TEST PLATFORM_TEST
-#derive SUBARCH_TEST from ARCH_TEST
-#derive PLATFORM_TEST from ARCH_TEST
+# Checklist for correct CML2
+# 1) Have you defined a prompt for each menu, choice_type?
+# 2) Have you defined a default for each symbol?
+# 3) Have you put 'symbols' keyword before each symbol, menu or choice?
+
+
+
