@@ -19,14 +19,6 @@ def cml2_header_to_symbols(cml2_header, symbols):
                 symbols.get_platform(name, value)
                 symbols.get_ncontainers(name, value)
                 symbols.get_container_parameters(name, value)
-    for cont in symbols.containers:
-        print "Container", cont.id
-        print "vma start:", cont.vma_start
-        print "vma end:", cont.vma_end
-        print "lma start:", cont.lma_start
-        print "lma end:", cont.lma_end
-        print "type:", cont.type
-        print "\n"
 
 def cml2_update_config_h(config_h_path, config):
     with open(config_h_path, "a") as config_h:
