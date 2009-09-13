@@ -104,8 +104,33 @@ class configuration:
         # Make sure elements in order for indexed accessing
         self.containers.sort()
 
+def configuration_save(config):
+    if not os.path.exists(CONFIG_SHELVE_DIR):
+        os.mkdir(CONFIG_SHELVE_DIR)
+
+    config_shelve = shelve.open(CONFIG_SHELVE)
+    config_shelve["configuration"] = config
+
+    # Save containers explicitly
+    for i, c in zip(range(len(config.containers)), config.containers):
+        config_shelve["container" + str(i)] = c
+
+#    config_shelve["arch"] = configuration.arch
+#    config_shelve["subarch"] = configuration.subarch
+#    config_shelve["platform"] = configuration.platform
+#    config_shelve["all_symbols"] = configuration.all
+    config_shelve.close()
+
+
 def configuration_retrieve():
     # Get configuration information
     config_shelve = shelve.open(CONFIG_SHELVE)
-    configuration = config_shelve["configuration"]
-    return configuration
+    config = config_shelve["configuration"]
+
+    # Retrieve and append containers explicitly
+    for i in range(int(config.ncontainers)):
+        config.containers.append(config_shelve["container" + str(i)])
+
+    config.containers.sort()
+
+    return config

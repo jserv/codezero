@@ -34,18 +34,6 @@ def cml2_configure(cml2_config_file):
         os.mkdir("build/l4")
     shutil.copy(CML2_CONFIG_H, CONFIG_H)
 
-def save_configuration(configuration):
-    if not os.path.exists(CONFIG_SHELVE_DIR):
-        os.mkdir(CONFIG_SHELVE_DIR)
-
-    config_shelve = shelve.open(CONFIG_SHELVE)
-    config_shelve["configuration"] = configuration
-    config_shelve["arch"] = configuration.arch
-    config_shelve["subarch"] = configuration.subarch
-    config_shelve["platform"] = configuration.platform
-    config_shelve["all_symbols"] = configuration.all
-    config_shelve.close()
-
 def configure_kernel(cml_file):
     config = configuration()
 
@@ -55,7 +43,12 @@ def configure_kernel(cml_file):
     cml2_configure(cml_file)
     cml2_header_to_symbols(CML2_CONFIG_H, config)
     cml2_update_config_h(CONFIG_H, config)
-    save_configuration(config)
+    configuration_save(config)
+#    config2 = configuration_retrieve()
+#    print "containers: " + config2.ncontainers
+#    for c in config2.containers:
+#        print c.type
+#        print c.id
 
 if __name__ == "__main__":
     configure_kernel(join(CML2_CONFIG_SRCDIR, "arm.cml"))

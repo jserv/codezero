@@ -23,3 +23,9 @@ LINUXDIR = join(PROJROOT, 'conts/linux')
 LINUX_KERNELDIR = join(LINUXDIR, 'linux-2.6.28.10')
 LINUX_ROOTFSDIR = join(LINUXDIR, 'rootfs')
 
+projpaths = {   \
+    'LINUX_ROOTFSDIR' : LINUX_ROOTFSDIR, \
+    'LINUX_KERNELDIR' : LINUX_KERNELDIR, \
+    'LINUXDIR' : LINUXDIR, \
+    'BUILDDIR' : BUILDDIR, \
+}

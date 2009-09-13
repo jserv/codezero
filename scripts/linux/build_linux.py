@@ -18,36 +18,52 @@ from config.configuration import *
 
 LINUX_KERNEL_BUILDDIR = join(BUILDDIR, os.path.relpath(LINUX_KERNELDIR, PROJROOT))
 
+# Create linux kernel build directory path as:
+# conts/linux -> build/cont[0-9]/linux
+def source_to_builddir(srcdir, id):
+    cont_builddir = \
+        os.path.relpath(srcdir, \
+                        PROJROOT).replace("conts", \
+                                          "cont" + str(id))
+    return join(BUILDDIR, cont_builddir)
+
 class LinuxBuilder:
-    @staticmethod
-    def build_linux(container):
+    LINUX_KERNEL_BUILDDIR = None
+    LINUX_KERNELDIR = None
+
+    def __init__(self, pathdict, container):
+        self.LINUX_KERNELDIR = pathdict["LINUX_KERNELDIR"]
+
+        # Calculate linux kernel build directory
+        self.LINUX_KERNEL_BUILDDIR = \
+            source_to_builddir(LINUX_KERNELDIR, container.id)
+
+    def build_linux(self):
         print '\nBuilding the linux kernel...'
-
-        # Create linux kernel build directory path
-        cont_builddir = join(BUILDDIR, "cont" + str(container.id))
-        LINUX_KERNEL_BUILDDIR = join(cont_builddir, \
-                                     os.path.relpath(LINUX_KERNELDIR, \
-                                                     PROJROOT))
-
-        os.chdir(LINUX_KERNELDIR)
-        if not os.path.exists(LINUX_KERNEL_BUILDDIR):
-            os.makedirs(LINUX_KERNEL_BUILDDIR)
-        os.system("make defconfig ARCH=arm O=" + LINUX_KERNEL_BUILDDIR)
+        os.chdir(self.LINUX_KERNELDIR)
+        if not os.path.exists(self.LINUX_KERNEL_BUILDDIR):
+            os.makedirs(self.LINUX_KERNEL_BUILDDIR)
+        os.system("make defconfig ARCH=arm O=" + self.LINUX_KERNEL_BUILDDIR)
         os.system("make ARCH=arm " + \
                   "CROSS_COMPILE=arm-none-linux-gnueabi- O=" + \
-                  LINUX_KERNEL_BUILDDIR)
+                  self.LINUX_KERNEL_BUILDDIR)
+        print 'Done...'
 
-    @staticmethod
     def clean(self):
-        if os.path.exists(LINUX_KERNEL_BUILDDIR):
-            shutil.rmtree(LINUX_KERNEL_BUILDDIR)
+        print 'Cleaning linux kernel build...'
+        if os.path.exists(self.LINUX_KERNEL_BUILDDIR):
+            shutil.rmtree(self.LINUX_KERNEL_BUILDDIR)
+        print 'Done...'
 
 if __name__ == "__main__":
+    # This is only a default test case
     container = Container()
     container.id = 0
+    linux_builder = LinuxBuilder(projpaths, container)
+
     if len(sys.argv) == 1:
-        LinuxBuilder.build_linux(container)
+        linux_builder.build_linux()
     elif "clean" == sys.argv[1]:
-        LinuxBuilder.clean()
+        linux_builder.clean()
     else:
         print " Usage: %s [clean]" % (sys.argv[0])

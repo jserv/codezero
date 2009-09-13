@@ -15,34 +15,62 @@ sys.path.append(os.path.abspath(PROJRELROOT))
 from config.projpaths import *
 from config.configuration import *
 
-LINUX_ROOTFS_BUILDDIR = join(BUILDDIR, os.path.relpath(LINUX_ROOTFSDIR, PROJROOT))
 
-rootfs_lds_in = join(LINUX_ROOTFSDIR, "rootfs.lds.in")
-rootfs_lds_out = join(LINUX_ROOTFS_BUILDDIR, "rootfs.lds")
-rootfs_elf_out = join(LINUX_ROOTFS_BUILDDIR, "rootfs.elf")
+# Create linux kernel build directory path as:
+# conts/linux -> build/cont[0-9]/linux
+def source_to_builddir(srcdir, id):
+    cont_builddir = \
+        os.path.relpath(srcdir, \
+                        PROJROOT).replace("conts", \
+                                          "cont" + str(id))
+    return join(BUILDDIR, cont_builddir)
 
-class BuildRootfs:
-    @staticmethod
-    def build_rootfs():
+class RootfsBuilder:
+    LINUX_ROOTFS_BUILDDIR = None
+    LINUX_ROOTFSDIR = None
+    rootfs_lds_in = None
+    rootfs_lds_out = None
+    rootfs_elf_out = None
+
+    def __init__(self, pathdict, container):
+        self.LINUX_ROOTFSDIR = pathdict["LINUX_ROOTFSDIR"]
+
+        # Determine build directory
+        self.LINUX_ROOTFS_BUILDDIR = \
+            source_to_builddir(self.LINUX_ROOTFSDIR, container.id)
+
+    def build_rootfs(self):
         print 'Building the root filesystem...'
+        # IO files from this build
+        rootfs_lds_in = join(self.LINUX_ROOTFSDIR, "rootfs.lds.in")
+        rootfs_lds_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.lds")
+        rootfs_elf_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.elf")
+
         os.chdir(LINUX_ROOTFSDIR)
-        config_symbols = configuration_retrieve()
-        if not os.path.exists(LINUX_ROOTFS_BUILDDIR):
-            os.makedirs(LINUX_ROOTFS_BUILDDIR)
+        if not os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
+            os.makedirs(self.LINUX_ROOTFS_BUILDDIR)
         os.system("arm-none-linux-gnueabi-cpp -P " + \
                   "%s > %s" % (rootfs_lds_in, rootfs_lds_out))
         os.system("arm-none-linux-gnueabi-gcc " + \
                   "-nostdlib -o %s -T%s rootfs.S" % (rootfs_elf_out, rootfs_lds_out))
+        print "Done..."
+        return rootfs_lds_out
 
-    @staticmethod
-    def clean():
-        if os.path.exists(LINUX_ROOTFS_BUILDDIR):
-            shutil.rmtree(LINUX_ROOTFS_BUILDDIR)
+    def clean(self):
+        print 'Cleaning the built root filesystem...'
+        if os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
+            shutil.rmtree(self.LINUX_ROOTFS_BUILDDIR)
+        print 'Done...'
 
 if __name__ == "__main__":
+    # This is only a default test case
+    container = Container()
+    container.id = 0
+    rootfs_builder = RootfsBuilder(projpaths, container)
+
     if len(sys.argv) == 1:
-        BuildRootfs.build_rootfs()
+        rootfs_builder.build_rootfs()
     elif "clean" == sys.argv[1]:
-        BuildRootfs.clean()
+        rootfs_builder.clean()
     else:
         print " Usage: %s [clean]" % (sys.argv[0])
