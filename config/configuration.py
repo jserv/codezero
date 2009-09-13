@@ -4,20 +4,24 @@ import os, sys, shelve, shutil, re
 from projpaths import *
 
 class Container:
-    name = None
-    type = None
-    id = None
-    lma_start = None
-    lma_end = None
-    vma_start = None
-    vma_end = None
+    def __init__(self):
+        self.name = None
+        self.type = None
+        self.id = None
+        self.lma_start = None
+        self.lma_end = None
+        self.vma_start = None
+        self.vma_end = None
 
 class configuration:
-    arch = None
-    subarch = None
-    platform = None
-    all = []
-    containers = []
+
+    def __init__(self):
+        self.containers = []
+        self.arch = None
+        self.subarch = None
+        self.platform = None
+        self.all = []
+
     # Get all name value symbols
     def get_all(self, name, val):
         self.all.append([name, val])
@@ -112,8 +116,8 @@ def configuration_save(config):
     config_shelve["configuration"] = config
 
     # Save containers explicitly
-    for i, c in zip(range(len(config.containers)), config.containers):
-        config_shelve["container" + str(i)] = c
+#    for i, c in zip(range(len(config.containers)), config.containers):
+ #       config_shelve["container" + str(i)] = c
 
 #    config_shelve["arch"] = configuration.arch
 #    config_shelve["subarch"] = configuration.subarch
@@ -128,9 +132,10 @@ def configuration_retrieve():
     config = config_shelve["configuration"]
 
     # Retrieve and append containers explicitly
-    for i in range(int(config.ncontainers)):
-        config.containers.append(config_shelve["container" + str(i)])
+    #  for i in range(int(config.ncontainers)):
+    #     config.containers.append(config_shelve["container" + str(i)])
 
-    config.containers.sort()
+    #config.containers.sort()
+ 
 
     return config
