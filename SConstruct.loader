@@ -1,0 +1,45 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+
+import os, sys, shelve
+from os.path import join
+
+from config.configuration import *
+from config.projpaths import *
+
+config = configuration_retrieve()
+arch = config.arch
+platform = config.platform
+
+# Locally important paths are here
+LIBC_PATH = 'loader/libs/c'
+LIBC_LIBPATH = LIBC_PATH
+LIBC_INCPATH = ['#' + join(LIBC_PATH, 'include'), \
+                '#' + join(LIBC_PATH, 'include/arch/' + arch)]
+LIBC_CRT_PATH = '#' + join(LIBC_PATH, "crt/sys-baremetal/arch-" + arch + "/crt0.o")
+LIBELF_PATH = 'loader/libs/elf'
+LIBELF_LIBPATH = LIBELF_PATH
+LIBELF_INCPATH = '#' + join(LIBELF_PATH, 'include')
+
+
+env = Environment(CC = 'arm-none-eabi-gcc',
+		  # We don't use -nostdinc because sometimes we need standard headers,
+		  # such as stdarg.h e.g. for variable args, as in printk().
+		  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
+			     '-std=gnu99', '-Wall', '-Werror'],
+		  LINKFLAGS = ['-nostdlib', '-T' + "loader/linker.lds", "-u_start"],
+		  ASFLAGS = ['-D__ASSEMBLY__'],
+		  PROGSUFFIX = '.elf',
+		  ENV = {'PATH' : os.environ['PATH']},
+		  LIBS = ['gcc', 'c-baremetal', 'gcc'],
+          LIBPATH = [LIBC_LIBPATH, LIBELF_LIBPATH],
+          CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
+
+#e.Append(LIBPATH = [LIBC_LIBPATH, LIBELF_LIBPATH])
+#e.Append(CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
+loader_objs = SConscript('loader/SConscript', exports = { 'env' : env }, duplicate = 0, variant_dir = 'build/loader')
+
+env.Program('build/final.elf', loader_objs)

@@ -1,0 +1,24 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+
+import os, sys, shelve
+from os.path import join
+
+Import('env')
+
+# Get global paths
+PROJRELROOT = '../'
+
+sys.path.append(PROJRELROOT)
+
+
+e = env.Clone()
+
+src = Glob('*.[cS]')
+
+objs = e.Object(src)
+
+Return('objs')
