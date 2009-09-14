@@ -7,6 +7,7 @@
 import os, shelve
 import configure
 from configure import *
+from os.path import *
 
 env = Environment(CC = 'arm-none-eabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
@@ -21,12 +22,12 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  CPPPATH = "#include",
 		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h -D__KERNEL__')
 
-config_shelve = shelve.open(CONFIG_SHELVE)
-#symbols = config_shelve["config_symbols"]
-arch = config_shelve["arch"]
-subarch = config_shelve["subarch"]
-platform = config_shelve["platform"]
-all_syms = config_shelve["all_symbols"]
+
+config = configuration_retrieve()
+arch = config.arch
+subarch = config.subarch
+platform = config.platform
+all_syms = config.all
 
 objects = []
 objects += SConscript('src/drivers/SConscript', exports = {'symbols' : all_syms, 'env' : env})
@@ -40,4 +41,6 @@ objects += SConscript('src/api/SConscript', exports = {'symbols' : all_syms, 'en
 
 kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
 
-
+#libl4 = SConscript('conts/libl4/SConscript', \
+#                   exports = { 'arch' : arch }, duplicate = 0, \
+#                   variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))

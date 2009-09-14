@@ -16,11 +16,11 @@ class Container:
 class configuration:
 
     def __init__(self):
-        self.containers = []
         self.arch = None
         self.subarch = None
         self.platform = None
         self.all = []
+        self.containers = []
 
     # Get all name value symbols
     def get_all(self, name, val):
@@ -115,14 +115,10 @@ def configuration_save(config):
     config_shelve = shelve.open(CONFIG_SHELVE)
     config_shelve["configuration"] = config
 
-    # Save containers explicitly
-#    for i, c in zip(range(len(config.containers)), config.containers):
- #       config_shelve["container" + str(i)] = c
-
-#    config_shelve["arch"] = configuration.arch
-#    config_shelve["subarch"] = configuration.subarch
-#    config_shelve["platform"] = configuration.platform
-#    config_shelve["all_symbols"] = configuration.all
+    config_shelve["arch"] = config.arch
+    config_shelve["subarch"] = config.subarch
+    config_shelve["platform"] = config.platform
+    config_shelve["all_symbols"] = config.all
     config_shelve.close()
 
 
@@ -130,12 +126,4 @@ def configuration_retrieve():
     # Get configuration information
     config_shelve = shelve.open(CONFIG_SHELVE)
     config = config_shelve["configuration"]
-
-    # Retrieve and append containers explicitly
-    #  for i in range(int(config.ncontainers)):
-    #     config.containers.append(config_shelve["container" + str(i)])
-
-    #config.containers.sort()
- 
-
     return config
