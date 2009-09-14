@@ -33,7 +33,7 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = 'gcc',
-		  CPPPATH = ['#include', '#include/l4lib/arch', join(PROJROOT,'include') ])
+		  CPPPATH = ['include', 'include/l4lib/arch', join(PROJROOT, 'include') ])
 
 
 def create_symlinks(arch):

@@ -4,28 +4,16 @@
 #
 #  Copyright © 2009  B Labs Ltd
 #
-#  This program is free software: you can redistribute it and/or modify it under the terms of the GNU
-#  General Public License as published by the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
-#  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-#  License for more details.
-#
-#  You should have received a copy of the GNU General Public License along with this program.  If not, see
-#  <http://www.gnu.org/licenses/>.
-#
-#  Author: Russel Winder
 
-Import('environment')
+Import('env')
 
-e = environment.Clone()
-e.Append(CPPPATH = ['include', '#libs/c/include', '#libs/c/include/arch/' + e['ARCH']])
+arch = 'arm'
+e = env.Clone()
+#e.Append(CPPPATH = ['include', '#libs/c/include', '#libs/c/include/arch/' + arch])
+e.Append(CPPPATH = ['include'])
 e.Append(CCFLAGS = '-nostdinc')
 
 objects = e.StaticObject(Glob('src/*.c'))
-Depends(objects, e['configFiles'])
 library = e.StaticLibrary('elf', objects)
-Depends(library, e['configFiles'])
 
 Return('library')

@@ -41,6 +41,6 @@ objects += SConscript('src/api/SConscript', exports = {'symbols' : all_syms, 'en
 
 kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
 
-#libl4 = SConscript('conts/libl4/SConscript', \
-#                   exports = { 'arch' : arch }, duplicate = 0, \
-#                   variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))
+libl4 = SConscript('conts/libl4/SConscript', \
+                   exports = { 'arch' : arch }, duplicate = 0, \
+                   variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))
