@@ -7,9 +7,7 @@
 
 Import('env')
 
-arch = 'arm'
 e = env.Clone()
-#e.Append(CPPPATH = ['include', '#libs/c/include', '#libs/c/include/arch/' + arch])
 e.Append(CPPPATH = ['include'])
 e.Append(CCFLAGS = '-nostdinc')
 

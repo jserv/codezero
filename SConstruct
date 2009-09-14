@@ -44,3 +44,6 @@ kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
 libl4 = SConscript('conts/libl4/SConscript', \
                    exports = { 'arch' : arch }, duplicate = 0, \
                    variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))
+
+Alias('libl4', libl4)
+Alias('kernel', kernel_elf)

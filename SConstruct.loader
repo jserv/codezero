@@ -38,8 +38,13 @@ env = Environment(CC = 'arm-none-eabi-gcc',
           LIBPATH = [LIBC_LIBPATH, LIBELF_LIBPATH],
           CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
 
-libc = SConscript('loader/libs/c/SConscript', exports = { 'env' : env }, duplicate = 0, variant_dir = 'build/loader/libs/c')
-libelf = SConscript('loader/libs/elf/SConscript', exports = { 'env' : env }, duplicate = 0, variant_dir = 'build/loader/libs/elf')
-loader_objs = SConscript('loader/SConscript', exports = { 'env' : env }, duplicate = 0, variant_dir = 'build/loader')
+libc = SConscript('loader/libs/c/SConscript', \
+                  exports = { 'env' : env, 'arch' : arch, 'platform' : platform }, \
+                  duplicate = 0, variant_dir = 'build/loader/libs/c')
+libelf = SConscript('loader/libs/elf/SConscript', exports = { 'env' : env }, \
+                    duplicate = 0, variant_dir = 'build/loader/libs/elf')
+
+loader_objs = SConscript('loader/SConscript', exports = { 'env' : env }, \
+                         duplicate = 0, variant_dir = 'build/loader')
 
 env.Program('build/final.elf', [loader_objs + libc + libelf])
