@@ -26,35 +26,29 @@ def source_to_builddir(srcdir, id):
     return join(BUILDDIR, cont_builddir)
 
 class RootfsBuilder:
-    LINUX_ROOTFS_BUILDDIR = None
-    LINUX_ROOTFSDIR = None
-    rootfs_lds_in = None
-    rootfs_lds_out = None
-    rootfs_elf_out = None
 
     def __init__(self, pathdict, container):
         self.LINUX_ROOTFSDIR = pathdict["LINUX_ROOTFSDIR"]
-
-        # Determine build directory
         self.LINUX_ROOTFS_BUILDDIR = \
             source_to_builddir(self.LINUX_ROOTFSDIR, container.id)
+
+        self.rootfs_lds_in = join(self.LINUX_ROOTFSDIR, "rootfs.lds.in")
+        self.rootfs_lds_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.lds")
+        self.rootfs_elf_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.elf")
 
     def build_rootfs(self):
         print 'Building the root filesystem...'
         # IO files from this build
-        rootfs_lds_in = join(self.LINUX_ROOTFSDIR, "rootfs.lds.in")
-        rootfs_lds_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.lds")
-        rootfs_elf_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.elf")
 
         os.chdir(LINUX_ROOTFSDIR)
         if not os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
             os.makedirs(self.LINUX_ROOTFS_BUILDDIR)
         os.system("arm-none-linux-gnueabi-cpp -P " + \
-                  "%s > %s" % (rootfs_lds_in, rootfs_lds_out))
+                  "%s > %s" % (self.rootfs_lds_in, self.rootfs_lds_out))
         os.system("arm-none-linux-gnueabi-gcc " + \
-                  "-nostdlib -o %s -T%s rootfs.S" % (rootfs_elf_out, rootfs_lds_out))
+                  "-nostdlib -o %s -T%s rootfs.S" % (self.rootfs_elf_out, \
+                                                     self.rootfs_lds_out))
         print "Done..."
-        return rootfs_lds_out
 
     def clean(self):
         print 'Cleaning the built root filesystem...'

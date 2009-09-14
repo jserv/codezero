@@ -28,8 +28,6 @@ def source_to_builddir(srcdir, id):
     return join(BUILDDIR, cont_builddir)
 
 class LinuxBuilder:
-    LINUX_KERNEL_BUILDDIR = None
-    LINUX_KERNELDIR = None
 
     def __init__(self, pathdict, container):
         self.LINUX_KERNELDIR = pathdict["LINUX_KERNELDIR"]
@@ -37,6 +35,8 @@ class LinuxBuilder:
         # Calculate linux kernel build directory
         self.LINUX_KERNEL_BUILDDIR = \
             source_to_builddir(LINUX_KERNELDIR, container.id)
+
+        self.kernel_image = None
 
     def build_linux(self):
         print '\nBuilding the linux kernel...'
@@ -47,6 +47,12 @@ class LinuxBuilder:
         os.system("make ARCH=arm " + \
                   "CROSS_COMPILE=arm-none-linux-gnueabi- O=" + \
                   self.LINUX_KERNEL_BUILDDIR)
+
+        # Get the kernel image path
+        self.kernel_image = \
+            join(self.LINUX_KERNEL_BUILDDIR, \
+                 'arch/arm/boot/compressed/vmlinux')
+
         print 'Done...'
 
     def clean(self):
