@@ -13,7 +13,7 @@ Import('env')
 PROJRELROOT = '../../'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(sys.modules['__main__'].__file__), PROJRELROOT)))
 
-from config import projpaths
+from config.projpaths import *
 from scripts.loader.generate_break_virtual import *
 
 #loader_ksyms = generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \
