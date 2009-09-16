@@ -1,7 +1,7 @@
 /*
- * Linker script that packs all containers in loader image.
+ * Loader linker script that contains kernel and container images
  *
- * Copyright (C) 2007-2009 B Labs Ltd.
+ * Copyright (C) 2008-2009 B Labs Ltd.
  */
 ENTRY(_start)
 
@@ -13,17 +13,15 @@ SECTIONS
 	.rodata1 : { *(.rodata1) }
 	.data :
 	{
-        *(.data)
+        	*(.data)
 		_start_kernel = .;
 		*(.kernel)
 		_end_kernel = .;
+
+		_start_containers = .;
+		*(.containers)
+		_end_containers = .;
 	}
-	_start_containers = .;
-
-	.cont.0 : { *(.cont.0) }
-	.cont.1 : { *(.cont.1) }
-
-	_end_containers = .;
 	.got : { *(.got) *(.got.plt) }
 	.bss : { *(.bss) }
 }
