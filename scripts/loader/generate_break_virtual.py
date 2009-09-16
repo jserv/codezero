@@ -45,20 +45,26 @@ assembler_symbol_definition = \
 
 def generate_ksym_to_loader(target_path, source_path):
     symbols = ['break_virtual']
-    with open(target_path, 'w') as asmFile:
-        asmFile.write(ksym_header % (target_path, source_path, __name__))
+    with open(target_path, 'w') as asm_file:
+        asm_file.write(ksym_header % (target_path, source_path, sys.argv[0]))
         for symbol in symbols:
-            process = subprocess.Popen('arm-none-eabi-objdump -d ' + source_path + ' | grep "<' + symbol + '>"', shell=True, stdout=subprocess.PIPE)
+            process = subprocess.Popen('arm-none-eabi-objdump -d ' + \
+                                        source_path + ' | grep "<' + \
+                                        symbol + '>"', shell=True, \
+                                        stdout=subprocess.PIPE)
             assert process.wait() == 0
             address, name = process.stdout.read().split()
             assert '<' + symbol + '>:' == name
-            asmFile.write( '''
-.section .text
-.align 4
-.global %s
-.type %s, function
-.equ %s, %s
-''' % (symbol, symbol, symbol, address_remove_literal(address)))
+            asm_file.write(assembler_symbol_definition % \
+                           (symbol, symbol, symbol, \
+                            address_remove_literal(address)))
 
 if __name__ == "__main__":
-    generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), join(BUILDDIR, 'kernel.elf'))
+    if len(sys.argv) == 1:
+        generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \
+                                join(BUILDDIR, 'kernel.elf'))
+    elif len(sys.argv) == 3:
+        generate_ksym_to_loader(sys.argv[1], sys.argv[1])
+    else:
+        print "Usage: %s <asm filename> <kernel image filename>" % sys.argv[0]
+
