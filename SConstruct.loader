@@ -19,11 +19,10 @@ LIBC_PATH = 'loader/libs/c'
 LIBC_LIBPATH = LIBC_PATH
 LIBC_INCPATH = ['#' + join(LIBC_PATH, 'include'), \
                 '#' + join(LIBC_PATH, 'include/arch/' + arch)]
-LIBC_CRT_PATH = '#' + join(LIBC_PATH, "crt/sys-baremetal/arch-" + arch + "/crt0.o")
+
 LIBELF_PATH = 'loader/libs/elf'
 LIBELF_LIBPATH = LIBELF_PATH
 LIBELF_INCPATH = '#' + join(LIBELF_PATH, 'include')
-
 
 env = Environment(CC = 'arm-none-eabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
