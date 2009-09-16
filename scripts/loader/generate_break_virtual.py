@@ -10,8 +10,7 @@ from os.path import join
 
 PROJRELROOT = '../../'
 
-SCRIPTROOT = os.path.abspath(os.path.dirname("."))
-sys.path.append(os.path.abspath(PROJRELROOT))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 
 from config.projpaths import *
 from config.configuration import *
@@ -44,6 +43,9 @@ assembler_symbol_definition = \
 '''
 
 def generate_ksym_to_loader(target_path, source_path):
+    print "Source: ", source_path
+    print "Target: ", target_path
+
     symbols = ['break_virtual']
     with open(target_path, 'w') as asm_file:
         asm_file.write(ksym_header % (target_path, source_path, sys.argv[0]))

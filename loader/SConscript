@@ -9,7 +9,25 @@ from os.path import join
 
 Import('env')
 
+
+PROJRELROOT = '../../'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(sys.modules['__main__'].__file__), PROJRELROOT)))
+
+from config import projpaths
+from scripts.loader.generate_break_virtual import *
+
+#loader_ksyms = generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \
+#                                       join(BUILDDIR, 'kernel.elf'))
+
+#loader_ksyms = Command([]'ksyms.S', 'kernel.elf', ksym_to_loader)
+
+def ksym_to_loader(target, source, env):
+    generate_ksym_to_loader(target[0].path, source[0].path)
+
+loader_ksyms = Command(join(PROJROOT, 'loader/ksyms.S'), join(BUILDDIR, 'kernel.elf'), ksym_to_loader)
+
 src = Glob('*.[cS]')
 objs = env.Object(src)
 
+Depends(src, loader_ksyms)
 Return('objs')
