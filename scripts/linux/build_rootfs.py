@@ -10,7 +10,7 @@ from os.path import join
 
 PROJRELROOT = "../.."
 SCRIPTROOT = os.path.abspath(os.path.dirname("."))
-sys.path.append(os.path.abspath(PROJRELROOT))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 
 from config.projpaths import *
 from config.configuration import *
