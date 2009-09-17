@@ -36,17 +36,19 @@ def build_container(container):
               "container of type: %s" % (container.type)
         Exit(1)
 
-def main():
+def build_all_containers():
     container_images = []
 
     config = configuration_retrieve()
+
+    # config.config_print()
     for container in config.containers:
         container_images.append(build_container(container))
 
     all_cont_packer = AllContainerPacker(container_images, config.containers)
 
-    all_cont_packer.pack_all()
+    return all_cont_packer.pack_all()
 
 if __name__ == "__main__":
-    main()
+    build_all_containers()
 

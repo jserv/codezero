@@ -62,7 +62,6 @@ class AllContainerPacker:
             file_body = ""
             img_i = 0
             for img in self.cont_images_in:
-                print img
                 file_body += containers_assembler_body % (img_i, img)
                 img_i += 1
 
@@ -86,10 +85,8 @@ class AllContainerPacker:
                      self.containers_lds_out,
                      self.containers_S_out))
 
-#        oldwd = os.getcwd()
-#        os.chdir(PROJROOT)
-#        os.system("scons -f SConstruct.loader")
-#        os.chdir(oldwd)
+        # Return the final image to calling script
+        return self.containers_elf_out
 
     def clean(self):
         if os.path.exists(self.containers_elf_out):

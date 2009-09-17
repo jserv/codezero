@@ -44,9 +44,6 @@ assembler_symbol_definition = \
 '''
 
 def generate_ksym_to_loader(target_path, source_path):
-    print "Source: ", source_path
-    print "Target: ", target_path
-
     symbols = ['break_virtual']
     with open(target_path, 'w') as asm_file:
         asm_file.write(ksym_header % (target_path, source_path, sys.argv[0]))
@@ -76,7 +73,6 @@ def generate_image_S(target_path, images):
     fbody = ''
     with open(target_path, 'w+') as images_S:
         for img in images:
-#            print img[:-len(kern_fname)]
             print os.path.basename(img.path)
             if os.path.basename(img.path) == kern_fname:
                 fbody += decl_sect_asm % ('.kernel', img)

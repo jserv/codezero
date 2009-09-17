@@ -1,6 +1,6 @@
 #! /usr/bin/env python2.6
 # -*- mode: python; coding: utf-8; -*-
-import os, sys, shelve, shutil, re
+import os, sys, shelve, shutil, re, string
 from projpaths import *
 
 class Container:
@@ -107,6 +107,23 @@ class configuration:
 
         # Make sure elements in order for indexed accessing
         self.containers.sort()
+
+
+    def containers_print(self, containers):
+        for c in containers:
+            print '\nContainer %d' % c.id
+            print 'Container type: %s' % string.ljust(c.type, 10)
+            print 'Container lma: %s' % string.ljust('%s - %s' % (c.lma_start, c.lma_end), 10)
+            print 'Container vma: %s' % string.ljust('%s - %s' % (c.vma_start, c.vma_end), 10)
+
+    def config_print(self):
+        print 'Configuration\n'
+        print '-------------\n'
+        print 'Arch: %s' % string.ljust('%s, %s' % (self.arch, self.subarch), 16)
+        print 'Platform: %s' % string.ljust(self.platform, 16)
+        print 'Symbols:\n %s' % self.all
+        print 'Containers: %s' % self.ncontainers
+        self.containers_print(self.containers)
 
 def configuration_save(config):
     if not os.path.exists(CONFIG_SHELVE_DIR):
