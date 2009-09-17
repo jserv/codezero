@@ -33,8 +33,7 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',
 		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = ['gcc', 'c-baremetal', 'gcc'],
-          LIBPATH = [LIBC_LIBPATH, LIBELF_LIBPATH],
+		  LIBS = ['gcc'],
           CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
 
 libc = SConscript('loader/libs/c/SConscript', \
