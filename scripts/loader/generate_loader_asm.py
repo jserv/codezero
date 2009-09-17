@@ -62,6 +62,28 @@ def generate_ksym_to_loader(target_path, source_path):
                            (symbol, symbol, symbol, \
                             address_remove_literal(address)))
 
+decl_sect_asm = \
+'''
+.align 4
+.section %s
+.incbin "%s"
+'''
+
+
+def generate_image_S(target_path, images):
+    kern_fname = 'kernel.elf'
+    conts_fname = 'containers.elf'
+    fbody = ''
+    with open(target_path, 'w+') as images_S:
+        for img in images:
+#            print img[:-len(kern_fname)]
+            print os.path.basename(img.path)
+            if os.path.basename(img.path) == kern_fname:
+                fbody += decl_sect_asm % ('.kernel', img)
+            if os.path.basename(img.path) == conts_fname:
+                fbody += decl_sect_asm % ('.containers', img)
+        images_S.write(fbody)
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \

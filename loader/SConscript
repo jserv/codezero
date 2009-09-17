@@ -11,10 +11,12 @@ Import('env')
 
 
 PROJRELROOT = '../../'
+
+# FIXME This may be the scons binary path! But how does the below imports work then?
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(sys.modules['__main__'].__file__), PROJRELROOT)))
 
 from config.projpaths import *
-from scripts.loader.generate_break_virtual import *
+from scripts.loader.generate_loader_asm import *
 
 #loader_ksyms = generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \
 #                                       join(BUILDDIR, 'kernel.elf'))
@@ -24,10 +26,18 @@ from scripts.loader.generate_break_virtual import *
 def ksym_to_loader(target, source, env):
     generate_ksym_to_loader(target[0].path, source[0].path)
 
+def gen_loader_images_S(target, source, env):
+        generate_image_S(target[0].path, source)
+
 loader_ksyms = Command(join(PROJROOT, 'loader/ksyms.S'), join(BUILDDIR, 'kernel.elf'), ksym_to_loader)
+loader_image_S = Command(join(PROJROOT, 'loader/images.S'), \
+                         [join(BUILDDIR, 'kernel.elf'), \
+                          join(BUILDDIR, 'conts/containers.elf')], \
+                          gen_loader_images_S)
 
 src = Glob('*.[cS]')
 objs = env.Object(src)
 
 Depends(src, loader_ksyms)
+Depends(src, loader_image_S)
 Return('objs')
