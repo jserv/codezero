@@ -1,4 +1,5 @@
 #include <elf/elf.h>
+#include <elf/elf32.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "arch.h"
@@ -22,24 +23,41 @@ void load_container_images(unsigned long start, unsigned long end)
 
 }
 */
+
+int load_elf_image(unsigned long **entry, void *filebuf)
+{
+	if (!elf32_checkFile((struct Elf32_Header *)filebuf)) {
+		**entry = (unsigned long)elf32_getEntryPoint((struct Elf32_Header *)filebuf);
+		printf("Entry point: %lx\n", **entry);
+	} else {
+		printf("Not a valid elf image.\n");
+		return -1;
+	}
+	if (!elf_loadFile(filebuf, 1)) {
+		printf("Elf image seems valid, but unable to load.\n");
+		return -1;
+	}
+	return 0;
+}
+
 int main(void)
 {
-	void *kernel_entry = 0;
+	unsigned long *kernel_entry;
 
 	arch_init();
 
 	printf("ELF Loader: Started.\n");
 
 	printf("Loading the kernel...\n");
-//	load_elf_image(&kernel_entry, _start_kernel, _end_kernel);
+	load_elf_image(&kernel_entry, (void *)_start_kernel);
 
 	printf("Loading containers...\n");
 //	load_container_images(_start_containers, _end_containers)
 
-	printf("elf-loader:\tkernel entry point is %p\n", kernel_entry);
+	printf("elf-loader:\tkernel entry point is %lx\n", *kernel_entry);
 //	arch_start_kernel(kernel_entry);
 
-	printf("elf-loader:\tKernel start failed!\n");
+//	printf("elf-loader:\tKernel start failed!\n");
 
 	return -1;
 }

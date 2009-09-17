@@ -13,7 +13,6 @@ SECTIONS
 	.rodata1 : { *(.rodata1) }
 	.data :
 	{
-        	*(.data)
 		_start_kernel = .;
 		*(.kernel)
 		_end_kernel = .;
@@ -21,6 +20,7 @@ SECTIONS
 		_start_containers = .;
 		*(.containers)
 		_end_containers = .;
+        	*(.data)
 	}
 	.got : { *(.got) *(.got.plt) }
 	.bss : { *(.bss) }

@@ -33,7 +33,8 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',
 		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = ['gcc'],
+		  LIBS = ['gcc', 'elf', 'c-baremetal', 'gcc'],
+          LIBPATH = [join('build', LIBELF_PATH), join('build', LIBC_PATH)],
           CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
 
 libc = SConscript('loader/libs/c/SConscript', \
@@ -45,4 +46,6 @@ libelf = SConscript('loader/libs/elf/SConscript', exports = { 'env' : env }, \
 loader_objs = SConscript('loader/SConscript', exports = { 'env' : env }, \
                          duplicate = 0, variant_dir = 'build/loader')
 
-env.Program('build/final.elf', [loader_objs + libc + libelf])
+env.Program('build/final.elf', [libelf + libc + loader_objs])
+Depends(loader_objs, libelf)
+Depends(loader_objs, libc)
