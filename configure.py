@@ -5,20 +5,21 @@ import os, sys, shelve, shutil
 from os.path import join
 from config.projpaths import *
 from config.configuration import *
+from scripts.bare.bare_generator import *
 
 
-def cml2_header_to_symbols(cml2_header, symbols):
+def cml2_header_to_symbols(cml2_header, config):
     with file(cml2_header) as header_file:
         for line in header_file:
-            pair = symbols.line_to_name_value(line)
+            pair = config.line_to_name_value(line)
             if pair is not None:
                 name, value = pair
-                symbols.get_all(name, value)
-                symbols.get_arch(name, value)
-                symbols.get_subarch(name, value)
-                symbols.get_platform(name, value)
-                symbols.get_ncontainers(name, value)
-                symbols.get_container_parameters(name, value)
+                config.get_all(name, value)
+                config.get_arch(name, value)
+                config.get_subarch(name, value)
+                config.get_platform(name, value)
+                config.get_ncontainers(name, value)
+                config.get_container_parameters(name, value)
 
 def cml2_update_config_h(config_h_path, config):
     with open(config_h_path, "a") as config_h:
@@ -43,7 +44,13 @@ def configure_kernel(cml_file):
     cml2_configure(cml_file)
     cml2_header_to_symbols(CML2_CONFIG_H, config)
     cml2_update_config_h(CONFIG_H, config)
+
     configuration_save(config)
+
+    # Generate bare container files if new ones defined
+    bare_cont_gen = BareContGenerator()
+    bare_cont_gen.bare_container_generate(config)
+
     #config.config_print()
 
 if __name__ == "__main__":

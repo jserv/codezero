@@ -5,6 +5,7 @@ from projpaths import *
 
 class Container:
     def __init__(self):
+        self.dirname = None
         self.name = None
         self.type = None
         self.id = None
@@ -67,6 +68,10 @@ class configuration:
             self.containers[id].lma_start = val
         elif param[:len("PHYS_END")] == "PHYS_END":
             self.containers[id].lma_end = val
+        elif param[:len("OPT_DIRNAME")] == "OPT_DIRNAME":
+            dirname = val[1:-1].lower()
+            self.containers[id].dirname = dirname
+            self.containers[id].name = dirname
         else:
             param1, param2 = param.split("_", 1)
             if param1 == "TYPE":

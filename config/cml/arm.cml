@@ -187,7 +187,7 @@ choices container1_type
         CONFIG_CONT1_TYPE_LINUX
 	CONFIG_CONT1_TYPE_BARE
 	CONFIG_CONT1_TYPE_C0_POSIX
-        default CONFIG_CONT1_TYPE_LINUX
+        default CONFIG_CONT1_TYPE_BARE
 
 menu cont0_menu
 	container0_type
