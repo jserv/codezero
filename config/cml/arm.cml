@@ -135,6 +135,7 @@ CONFIG_CONT0_PHYS_START		'Container 0 physical start address'
 CONFIG_CONT0_PHYS_END		'Container 0 physical end address'
 CONFIG_CONT0_VIRT_START		'Container 0 virtual start address'
 CONFIG_CONT0_VIRT_END		'Container 0 virtual end address'
+CONFIG_CONT0_OPT_DIRNAME	'Containers directory name under conts/'
 
 CONFIG_CONT1_TYPE_LINUX		'Linux Container'
 CONFIG_CONT1_TYPE_BARE		'Bare Container'
@@ -143,6 +144,7 @@ CONFIG_CONT1_PHYS_START		'Container 1 physical start address'
 CONFIG_CONT1_PHYS_END		'Container 1 physical end address'
 CONFIG_CONT1_VIRT_START		'Container 1 virtual start address'
 CONFIG_CONT1_VIRT_END		'Container 1 virtual end address'
+CONFIG_CONT1_OPT_DIRNAME	'Containers directory name under conts/'
 
 
 default CONFIG_CONTAINERS from 2
@@ -156,6 +158,10 @@ default	CONFIG_CONT1_PHYS_END	from 0x2000000
 default	CONFIG_CONT1_VIRT_START	from 0
 default	CONFIG_CONT1_VIRT_END	from 0
 
+
+default CONFIG_CONT0_OPT_DIRNAME	from	"Linux"
+default CONFIG_CONT1_OPT_DIRNAME	from	"Linux"
+
 unless CONFIG_CONTAINERS > 1 suppress cont1_menu
 
 symbols
@@ -164,6 +170,14 @@ cont0_menu		'Container 0 Parameters'
 cont1_menu		'Container 1 Parameters'
 container0_type		'Container 0 Type'
 container1_type		'Container 1 Type'
+container0_options	'Container 0 Options'
+container1_options	'Container 1 Options'
+
+menu container0_options
+	CONFIG_CONT0_OPT_DIRNAME$
+
+menu container1_options
+	CONFIG_CONT1_OPT_DIRNAME$
 
 choices container0_type
         CONFIG_CONT0_TYPE_LINUX
@@ -179,6 +193,7 @@ choices container1_type
 
 menu cont0_menu
 	container0_type
+	container0_options
 	CONFIG_CONT0_PHYS_START@
 	CONFIG_CONT0_PHYS_END@
 	CONFIG_CONT0_VIRT_START@
@@ -186,6 +201,7 @@ menu cont0_menu
 
 menu cont1_menu
 	container1_type
+	container1_options
 	CONFIG_CONT1_PHYS_START@
 	CONFIG_CONT1_PHYS_END@
 	CONFIG_CONT1_VIRT_START@
