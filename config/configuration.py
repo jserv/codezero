@@ -1,6 +1,6 @@
 #! /usr/bin/env python2.6
 # -*- mode: python; coding: utf-8; -*-
-import os, sys, shelve, shutil, re, string
+import os, sys, shelve, shutil, re
 from projpaths import *
 
 class Container:
@@ -68,7 +68,7 @@ class configuration:
         elif param[:len("PHYS_END")] == "PHYS_END":
             self.containers[id].lma_end = val
         else:
-            param1, param2 = param.split("_", 2)
+            param1, param2 = param.split("_", 1)
             if param1 == "TYPE":
                 if param2 == "LINUX":
                     self.containers[id].type = "linux"
