@@ -21,15 +21,12 @@ file for your reference, and it can be optionally removed.
 .
 |-- SConstruct
 |-- build.readme
-|-- container.desc
+|-- .container
 |-- include
 |   `-- linker.lds.example
 |-- main.c
 `-- src
     |-- test.c
-    |-- test1.c
-    |-- test2.c
-    `-- test3.c
 
 In the above directory tree:
 

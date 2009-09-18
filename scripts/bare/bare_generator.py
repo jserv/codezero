@@ -34,7 +34,7 @@ class BareContGenerator:
 
         self.build_script_name = 'SConstruct'
         self.build_readme_name = 'build.readme'
-        self.build_desc_name = 'cont.desc'
+        self.build_desc_name = '.container'
 
         self.build_script_out = None
         self.build_readme_out = None
@@ -46,11 +46,23 @@ class BareContGenerator:
         shutil.copytree(self.EXAMPLE_PROJ_SRC_DIR, self.CONT_SRC_DIR)
 
     def copy_bare_build_desc(self, config, cont):
-        with open(self.build_desc_in) as fin:
-            str = fin.read()
-            with open(self.build_desc_out, 'w+') as fout:
-                # Make any manipulations here
-                fout.write(str)
+        id_header = '[Container ID]\n'
+        type_header = '\n[Container Type]\n'
+        name_header = '\n[Container Name]\n'
+        lma_header = '\n[Container LMA]\n'
+        vma_header = '\n[Container VMA]\n'
+
+        with open(self.build_desc_out, 'w+') as fout:
+            fout.write(id_header)
+            fout.write('\t' + str(cont.id) + '\n')
+            fout.write(type_header)
+            fout.write('\t' + cont.type + '\n')
+            fout.write(name_header)
+            fout.write('\t' + cont.name + '\n')
+            fout.write(lma_header)
+            fout.write('\t' + cont.lma_start + ' - ' + cont.lma_end + '\n')
+            fout.write(vma_header)
+            fout.write('\t' + cont.vma_start + ' - ' + cont.vma_end + '\n')
 
     def copy_bare_build_readme(self, config, cont):
         with open(self.build_readme_in) as fin:
