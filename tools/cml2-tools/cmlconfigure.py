@@ -1119,7 +1119,7 @@ class WindowBaton:
 class curses_style_menu:
     "Command interpreter for line-oriented configurator."
     input_nmatch = re.compile(r">>>.*\(([0-9]+)\)$")
-    valwidth = 8	# This is a constant
+    valwidth = 32	# This is a constant
 
     def __init__(self, stdscr, config, mybanner):
         if mybanner and configuration.banner.find("%s") > -1:
