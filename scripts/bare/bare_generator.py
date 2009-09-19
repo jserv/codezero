@@ -31,10 +31,12 @@ class BareContGenerator:
         self.build_script_in = join(SCRIPTROOT, 'SConstruct.in')
         self.build_readme_in = join(SCRIPTROOT, 'build.readme.in')
         self.build_desc_in = join(SCRIPTROOT, 'container.desc.in')
+        self.linker_lds_in = join(SCRIPTROOT, 'linker.lds.in')
 
         self.build_script_name = 'SConstruct'
         self.build_readme_name = 'build.readme'
         self.build_desc_name = '.container'
+        self.linker_lds_name = 'linker.lds'
 
         self.build_script_out = None
         self.build_readme_out = None
@@ -82,16 +84,26 @@ class BareContGenerator:
 
         self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
         self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
+        self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
+                                   self.linker_lds_name)
 
         self.create_bare_srctree(config, cont)
         self.copy_bare_build_readme(config, cont)
         self.copy_bare_build_desc(config, cont)
+        self.generate_linker_script(config, cont)
 
     def check_create_bare_sources(self, config):
         for cont in config.containers:
             if cont.type == "bare":
                 if not os.path.exists(join(self.BARE_SRC_BASEDIR, cont.dirname)):
                     self.create_bare_sources(config, cont)
+
+    def generate_linker_script(self, config, cont):
+         with open(self.linker_lds_in) as fin:
+            str = fin.read()
+            with open(self.linker_lds_out, 'w+') as fout:
+                fout.write(str % (cont.vma_start, \
+                                  cont.lma_start))
 
     def bare_container_generate(self, config):
         self.check_create_bare_sources(config)

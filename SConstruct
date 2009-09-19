@@ -1,6 +1,6 @@
 # -*- mode: python; coding: utf-8; -*-
 #
-#  Codezero -- a microkernel for embedded systems.
+#  Codezero -- Virtualization microkernel for embedded systems.
 #
 #  Copyright © 2009  B Labs Ltd
 #
@@ -40,10 +40,4 @@ objects += SConscript('src/lib/SConscript', exports = {'symbols' : all_syms, 'en
 objects += SConscript('src/api/SConscript', exports = {'symbols' : all_syms, 'env' : env})
 
 kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
-
-libl4 = SConscript('conts/libl4/SConscript', \
-                   exports = { 'arch' : arch }, duplicate = 0, \
-                   variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))
-
-Alias('libl4', libl4)
 Alias('kernel', kernel_elf)
