@@ -111,3 +111,63 @@ class LinuxContainerPacker:
         if os.path.exists(self.container_S_out):
             shutil.rmtree(self.container_S_out)
 
+
+class DefaultContainerPacker:
+    def __init__(self, container, images_in):
+
+        # Here, we simply attempt to get PROJROOT/conts as
+        # PROJROOT/build/cont[0-9]
+        self.CONTAINER_BUILDDIR_BASE = \
+            source_to_builddir(join(PROJROOT,'conts'), container.id)
+
+        if not os.path.exists(self.CONTAINER_BUILDDIR_BASE):
+            os.mkdir(self.CONTAINER_BUILDDIR_BASE)
+
+        self.container_lds_out = join(self.CONTAINER_BUILDDIR_BASE, \
+                                      'container.lds')
+        self.container_S_out = join(self.CONTAINER_BUILDDIR_BASE, 'container.S')
+        self.container_elf_out = join(self.CONTAINER_BUILDDIR_BASE, \
+                                      'container' + str(container.id) + '.elf')
+        self.images_in = images_in
+
+    def generate_container_assembler(self, source):
+        with open(self.container_S_out, 'w+') as f:
+            file_body = ""
+            img_i = 0
+            for img in source:
+                file_body += container_assembler_body % (img_i, img)
+                img_i += 1
+
+            f.write(file_body)
+            f.close()
+
+    def generate_container_lds(self, source):
+        with open(self.container_lds_out, 'w+') as f:
+            img_i = 0
+            file_body = container_lds_start
+            for img in source:
+                file_body += container_lds_body % (img_i, img_i)
+                img_i += 1
+            file_body += container_lds_end
+            f.write(file_body)
+            f.close()
+
+    def pack_container(self):
+        self.generate_container_lds(self.images_in)
+        self.generate_container_assembler(self.images_in)
+        os.system("arm-none-linux-gnueabi-gcc " + "-nostdlib -o %s -T%s %s" \
+                  % (self.container_elf_out, \
+                     self.container_lds_out,
+                     self.container_S_out))
+        # Final file is returned so that the final packer needn't
+        # get the packer object for this information
+        return self.container_elf_out
+
+    def clean(self):
+        if os.path.exists(self.container_elf_out):
+            shutil.rmtree(self.container_elf_out)
+        if os.path.exists(self.container_lds_out):
+            shutil.rmtree(self.container_lds_out)
+        if os.path.exists(self.container_S_out):
+            shutil.rmtree(self.container_S_out)
+

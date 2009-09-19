@@ -28,10 +28,10 @@ class BareContGenerator:
         self.main_configurator_name = 'configure.py'
         self.mailing_list_url = 'http://lists.l4dev.org/mailman/listinfo/codezero-devel'
 
-        self.build_script_in = join(SCRIPTROOT, 'SConstruct.in')
-        self.build_readme_in = join(SCRIPTROOT, 'build.readme.in')
-        self.build_desc_in = join(SCRIPTROOT, 'container.desc.in')
-        self.linker_lds_in = join(SCRIPTROOT, 'linker.lds.in')
+        self.build_script_in = join(SCRIPTROOT, 'files/SConstruct.in')
+        self.build_readme_in = join(SCRIPTROOT, 'files/build.readme.in')
+        self.build_desc_in = join(SCRIPTROOT, 'files/container.desc.in')
+        self.linker_lds_in = join(SCRIPTROOT, 'files/linker.lds.in')
 
         self.build_script_name = 'SConstruct'
         self.build_readme_name = 'build.readme'

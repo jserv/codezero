@@ -51,5 +51,4 @@ src = Glob('*.[cS]')
 src += Glob('src/*.[cS]')
 
 objs = env.Object(src)
-
-env.Program('main.elf', objs)
+prog = env.Program('main.elf', objs)

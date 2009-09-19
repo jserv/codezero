@@ -20,32 +20,53 @@ from scripts.linux.build_rootfs import *
 from pack import *
 from packall import *
 
-def build_container(container):
-    if container.type == "linux":
-        linux_builder = LinuxBuilder(projpaths, container)
-        linux_builder.build_linux()
-        rootfs_builder = RootfsBuilder(projpaths, container)
-        rootfs_builder.build_rootfs()
-        linux_container_packer = LinuxContainerPacker(container, \
-                                                      linux_builder, \
-                                                      rootfs_builder)
-        return linux_container_packer.pack_container()
+def build_linux_container(projpaths, container):
+    linux_builder = LinuxBuilder(projpaths, container)
+    linux_builder.build_linux()
+    rootfs_builder = RootfsBuilder(projpaths, container)
+    rootfs_builder.build_rootfs()
+    linux_container_packer = LinuxContainerPacker(container, \
+                                                  linux_builder, \
+                                                  rootfs_builder)
+    return linux_container_packer.pack_container()
 
-    else:
-        print "Error: Don't know how to build " + \
-              "container of type: %s" % (container.type)
-        Exit(1)
+
+def glob_by_walk(arg, dirname, names):
+    ext, imglist = arg
+    files = glob.glob(join(dirname, ext))
+    imglist.extend(files)
+
+
+# This simply calls SCons on a given container, and collects
+# all images with .elf extension, instead of using whole classes
+# for building and packing.
+def build_default_container(projpaths, container):
+    images = []
+    cwd = os.getcwd()
+    projdir = join(join(PROJROOT, 'conts'), container.name)
+    os.chdir(projdir)
+    os.system("scons")
+    os.path.walk(projdir, glob_by_walk, ['*.elf', images])
+    container_packer = DefaultContainerPacker(container, images)
+    return container_packer.pack_container()
+
 
 def build_all_containers():
-    container_images = []
-
     config = configuration_retrieve()
 
-    # config.config_print()
+    cont_images = []
     for container in config.containers:
-        container_images.append(build_container(container))
+        if container.type == 'linux':
+            pass
+            #cont_images.append(build_linux_container(projpaths, container))
+        elif container.type == 'bare':
+            cont_images.append(build_default_container(projpaths, container))
+        else:
+            print "Error: Don't know how to build " + \
+                  "container of type: %s" % (container.type)
+            exit(1)
 
-    all_cont_packer = AllContainerPacker(container_images, config.containers)
+    all_cont_packer = AllContainerPacker(cont_images, config.containers)
 
     return all_cont_packer.pack_all()
 

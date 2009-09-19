@@ -26,20 +26,29 @@ def main():
     configure_kernel(join(CML2_CONFIG_SRCDIR, 'arm.cml'))
 
     #
-    # Build the kernel and libl4
+    # Build the kernel
     #
+    print "\nBuilding the kernel..."
     os.chdir(PROJROOT)
     os.system("scons")
 
     #
+    # Build userspace libraries
+    #
+    print "\nBuilding userspace libraries..."
+    os.system('scons -f SConstruct.userlibs')
+
+    #
     # Build containers
     #
+    print "\nBuilding containers..."
     containers.build_all_containers()
 
     #
     # Build libs and loader
     #
     os.chdir(PROJROOT)
+    print "\nBuilding the loader and packing..."
     os.system("scons -f SConstruct.loader")
 
 if __name__ == "__main__":
