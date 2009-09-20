@@ -29,8 +29,13 @@ def cml2_update_config_h(config_h_path, config):
 
 def cml2_configure(cml2_config_file):
     os.system(CML2TOOLSDIR + '/cmlcompile.py -o ' + CML2RULES + ' ' + cml2_config_file)
-    os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + CML2_CONFIG_PROPERTIES + ' ' + CML2RULES)
-    os.system(TOOLSDIR + '/cml2header.py -o ' + CML2_CONFIG_H + ' -i ' + CML2_CONFIG_PROPERTIES)
+    if not os.path.exists(CML2_CONFIG_FILE):
+        os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + \
+                  CML2_CONFIG_FILE + ' ' + CML2RULES)
+    else:
+        os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + CML2_CONFIG_FILE + \
+                  ' -i ' + CML2_CONFIG_FILE +  ' ' + CML2RULES)
+    os.system(TOOLSDIR + '/cml2header.py -o ' + CML2_CONFIG_H + ' -i ' + CML2_CONFIG_FILE)
     if not os.path.exists("build/l4"):
         os.mkdir("build/l4")
     shutil.copy(CML2_CONFIG_H, CONFIG_H)

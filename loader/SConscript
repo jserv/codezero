@@ -12,9 +12,6 @@ Import('env')
 
 PROJRELROOT = '../../'
 
-# FIXME This may be the scons binary path! But how does the below imports work then?
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(sys.modules['__main__'].__file__), PROJRELROOT)))
-
 from config.projpaths import *
 from scripts.loader.generate_loader_asm import *
 
