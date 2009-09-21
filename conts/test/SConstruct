@@ -42,7 +42,7 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'], \
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable\
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path\
-		  LIBS = ['gcc', 'libl4', 'c-userspace', 'gcc'],	# libgcc.a - This is required for division routines.
+		  LIBS = ['gcc', 'libl4', 'c-userspace', 'gcc', 'c-userspace'],	# libgcc.a - This is required for division routines.
 		  CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBC_INCLUDE],
           LIBPATH = [LIBL4_LIBPATH, LIBC_LIBPATH],
 		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
