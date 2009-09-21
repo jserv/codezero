@@ -58,7 +58,7 @@ def build_all_containers():
     for container in config.containers:
         if container.type == 'linux':
             pass
-            #cont_images.append(build_linux_container(projpaths, container))
+            cont_images.append(build_linux_container(projpaths, container))
         elif container.type == 'bare':
             cont_images.append(build_default_container(projpaths, container))
         else:
