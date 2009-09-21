@@ -37,8 +37,8 @@ get involved in core development.
 
 The current release is distributed under GNU General Public License Version 3.
 For contributions we ask for a copyright share agreement and you may freely
-contribute to the project this way. This is our current model, but if you
-object to this, feel free to mention your ideas in our mailing list.
+contribute to the project this way. This is our current model, but if you feel
+this is too restrictive, feel free to mention your ideas in our mailing list.
 
 The third party source code under the directories loader/ tools/ libs/c
 libs/elf have their own copyright and licenses, separate from this project. All

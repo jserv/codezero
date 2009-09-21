@@ -1,0 +1,42 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009 B Labs Ltd
+#
+import os, shelve
+import configure
+from configure import *
+from os.path import *
+
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+                  # We don't use -nostdinc because sometimes we need standard headers,
+                  # such as stdarg.h e.g. for variable args, as in printk().
+                  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
+                  '-std=gnu99', '-Wall', '-Werror'],
+                  LINKFLAGS = ['-nostdlib'],
+                  ASFLAGS = ['-D__ASSEMBLY__'],
+                  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
+                  LIBS = 'gcc',				# libgcc.a - This is required for division routines.
+                  CPPPATH = "#include",
+                  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+
+config = configuration_retrieve()
+arch = config.arch
+subarch = config.subarch
+platform = config.platform
+all_syms = config.all
+
+
+libl4 = SConscript('conts/libl4/SConscript', \
+                   exports = { 'arch' : arch }, duplicate = 0, \
+                   variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))
+
+libc = SConscript('conts/libc/SConscript', \
+                  exports = { 'env' : env, 'arch' : arch, 'platform' : platform }, \
+                  duplicate = 0, variant_dir = \
+                  join(BUILDDIR, os.path.relpath('conts/libc', PROJROOT)))
+
+Alias('libl4', libl4)
+Alias('libc', libc)
+
