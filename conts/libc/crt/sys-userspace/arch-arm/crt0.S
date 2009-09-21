@@ -80,7 +80,7 @@
 #ifdef __thumb__
 #define	bl  blx
 #endif
-
+	.section .text.head
 	.code 32
 	.global _start;
 	.align;
