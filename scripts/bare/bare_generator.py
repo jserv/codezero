@@ -51,8 +51,11 @@ class BareContGenerator:
         id_header = '[Container ID]\n'
         type_header = '\n[Container Type]\n'
         name_header = '\n[Container Name]\n'
-        lma_header = '\n[Container LMA]\n'
-        vma_header = '\n[Container VMA]\n'
+        pager_lma_header = '\n[Container Pager LMA]\n'
+        pager_vma_header = '\n[Container Pager VMA]\n'
+        pager_size_header = '\n[Container Pager Size]\n'
+        pager_virtmem_header = '\n[Container Virtmem Region %s]\n'
+        pager_physmem_header = '\n[Container Physmem Region %s]\n'
 
         with open(self.build_desc_out, 'w+') as fout:
             fout.write(id_header)
@@ -61,10 +64,18 @@ class BareContGenerator:
             fout.write('\t' + cont.type + '\n')
             fout.write(name_header)
             fout.write('\t' + cont.name + '\n')
-            fout.write(lma_header)
-            fout.write('\t' + cont.lma_start + ' - ' + cont.lma_end + '\n')
-            fout.write(vma_header)
-            fout.write('\t' + cont.vma_start + ' - ' + cont.vma_end + '\n')
+            fout.write(pager_lma_header)
+            fout.write('\t' + cont.pager_lma + '\n')
+            fout.write(pager_size_header)
+            fout.write('\t' + cont.pager_size + '\n')
+            fout.write(pager_vma_header)
+            fout.write('\t' + cont.pager_vma + '\n')
+            for ireg in range(cont.virt_regions):
+                fout.write(pager_virtmem_header % ireg)
+                fout.write('\t' + cont.virtmem["START"][ireg] + ' - ' + cont.virtmem["END"][ireg] + '\n')
+            for ireg in range(cont.phys_regions):
+                fout.write(pager_physmem_header % ireg)
+                fout.write('\t' + cont.physmem["START"][ireg] + ' - ' + cont.physmem["END"][ireg] + '\n')
 
     def copy_bare_build_readme(self, config, cont):
         with open(self.build_readme_in) as fin:
@@ -102,8 +113,8 @@ class BareContGenerator:
          with open(self.linker_lds_in) as fin:
             str = fin.read()
             with open(self.linker_lds_out, 'w+') as fout:
-                fout.write(str % (cont.vma_start, \
-                                  cont.lma_start))
+                fout.write(str % (cont.pager_vma, \
+                                  cont.pager_lma))
 
     def bare_container_generate(self, config):
         self.check_create_bare_sources(config)
