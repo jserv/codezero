@@ -56,8 +56,6 @@ def configure_kernel(cml_file):
     bare_cont_gen = BareContGenerator()
     bare_cont_gen.bare_container_generate(config)
 
-    #config.config_print()
-
 if __name__ == "__main__":
     configure_kernel(join(CML2_CONFIG_SRCDIR, "arm.cml"))
 

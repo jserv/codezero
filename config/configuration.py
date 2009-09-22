@@ -4,11 +4,11 @@ import os, sys, shelve, shutil, re
 from projpaths import *
 
 class Container:
-    def __init__(self):
+    def __init__(self, id):
         self.dirname = None
         self.name = None
         self.type = None
-        self.id = None
+        self.id = id
         self.pager_lma = None
         self.pager_vma = None
         self.pager_size = None
@@ -124,33 +124,48 @@ class configuration:
 
         # Check and store info on this parameter
         self.get_container_parameter(id, param, val)
+        #self.containers_print(self.containers)
+
+    # Used for sorting container members,
+    # with this we are sure containers are sorted by id value
+    @staticmethod
+    def compare_containers(cont, cont2):
+        if cont.id < cont2.id:
+            return -1
+        if cont.id == cont2.id:
+            print "compare_containers: Error, containers have same id."
+            exit(1)
+        if cont.id > cont2.id:
+            return 1
 
     def check_add_container(self, id):
         for cont in self.containers:
             if id == cont.id:
                 return
 
-        # New container created. TODO: Pass id to constructor
-        container = Container()
-        container.id = id
+        container = Container(id)
         self.containers.append(container)
 
         # Make sure elements in order for indexed accessing
-        self.containers.sort()
+        self.containers.sort(self.compare_containers)
 
 
     def containers_print(self, containers):
         for c in containers:
             print '\nContainer %d' % c.id
-            print 'Container type: %s' % string.ljust(c.type, 10)
-            print 'Container lma: %s' % string.ljust('%s - %s' % (c.lma_start, c.lma_end), 10)
-            print 'Container vma: %s' % string.ljust('%s - %s' % (c.vma_start, c.vma_end), 10)
+            print 'Container type: %s' % c.type
+            print 'Container Name: %s' % c.name
+            print 'Container Pager lma: %s' % c.pager_lma
+            print 'Container Pager vma: %s' % c.pager_vma
+            print 'Container Pager size: %s' % c.pager_size
+            print 'Container Virtual regions: %s' % c.virt_regions
+            print 'Container Physical regions: %s' % c.phys_regions
 
     def config_print(self):
         print 'Configuration\n'
         print '-------------\n'
-        print 'Arch: %s' % string.ljust('%s, %s' % (self.arch, self.subarch), 16)
-        print 'Platform: %s' % string.ljust(self.platform, 16)
+        print 'Arch: %s, %s' % (self.arch, self.subarch)
+        print 'Platform: %s' % self.platform
         print 'Symbols:\n %s' % self.all
         print 'Containers: %s' % self.ncontainers
         self.containers_print(self.containers)
@@ -158,6 +173,8 @@ class configuration:
 def configuration_save(config):
     if not os.path.exists(CONFIG_SHELVE_DIR):
         os.mkdir(CONFIG_SHELVE_DIR)
+    if os.path.exists(CONFIG_SHELVE):
+        shutil.rmtree(CONFIG_SHELVE)
 
     config_shelve = shelve.open(CONFIG_SHELVE)
     config_shelve["configuration"] = config
@@ -167,7 +184,6 @@ def configuration_save(config):
     config_shelve["platform"] = config.platform
     config_shelve["all_symbols"] = config.all
     config_shelve.close()
-
 
 def configuration_retrieve():
     # Get configuration information
