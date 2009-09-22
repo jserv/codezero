@@ -6,7 +6,7 @@ from os.path import join
 from config.projpaths import *
 from config.configuration import *
 from scripts.bare.bare_generator import *
-
+from scripts.conts.generate_kernel_cinfo import *
 
 def cml2_header_to_symbols(cml2_header, config):
     with file(cml2_header) as header_file:
@@ -55,6 +55,9 @@ def configure_kernel(cml_file):
     # Generate bare container files if new ones defined
     bare_cont_gen = BareContGenerator()
     bare_cont_gen.bare_container_generate(config)
+
+    # Generate kernel cinfo structure for container definitions
+    generate_kernel_cinfo(config.containers, KERNEL_CINFO_PATH)
 
 if __name__ == "__main__":
     configure_kernel(join(CML2_CONFIG_SRCDIR, "arm.cml"))

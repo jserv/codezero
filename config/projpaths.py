@@ -18,6 +18,7 @@ CONFIG_H = join("include/l4/config.h")
 CONFIG_SHELVE_DIR = join(BUILDDIR, "configdata")
 CONFIG_SHELVE_FILENAME = "configuration"
 CONFIG_SHELVE = join(CONFIG_SHELVE_DIR, CONFIG_SHELVE_FILENAME)
+KERNEL_CINFO_PATH = join(PROJROOT, "src/generic/cinfo.c")
 
 LINUXDIR = join(PROJROOT, 'conts/linux')
 LINUX_KERNELDIR = join(LINUXDIR, 'linux-2.6.28.10')

@@ -8,7 +8,7 @@
 import os, sys, shelve, glob
 from os.path import join
 
-PROJRELROOT = '.'
+PROJRELROOT = '../..'
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 sys.path.append(os.path.abspath("../"))
@@ -98,7 +98,6 @@ def generate_kernel_cinfo(containers, cinfo_path):
     with open(cinfo_path, 'w+') as cinfo_file:
         fbody = cinfo_file_start
         for c in containers:
-            print "Container %s: %s" % (c.id, c.name)
             # Currently only these are considered as capabilities
             total_caps = c.virt_regions + c.phys_regions
             fbody += cinfo_start % (c.id, c.name)
@@ -125,7 +124,7 @@ def generate_kernel_cinfo(containers, cinfo_path):
 
 if __name__ == "__main__":
     config = configuration_retrieve()
-    config.config_print()
+    #config.config_print()
     containers = config.containers
     containers.sort()
     if len(sys.argv) > 1:
