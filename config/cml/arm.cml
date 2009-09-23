@@ -201,6 +201,7 @@ CONFIG_CONT1_LINUX_PAGE_OFFSET	'Container 1 Linux PAGE_OFFSET parameter'
 CONFIG_CONT1_LINUX_TEXT_OFFSET  'Container 1 Linux TEXT_OFFSET parameter'
 CONFIG_CONT1_LINUX_PHYS_OFFSET	'Container 1 Linux PHYS_OFFSET parameter'
 
+
 default CONFIG_CONT0_PAGER_LMA	 from 0x0
 default CONFIG_CONT0_PAGER_VMA	 from 0x0
 default CONFIG_CONT0_PAGER_SIZE  from 0x0
@@ -279,10 +280,6 @@ when CONFIG_CONT1_PHYSMEM_REGIONS < 3 suppress CONFIG_CONT1_PHYS2_START CONFIG_C
 when CONFIG_CONT1_PHYSMEM_REGIONS < 3 suppress CONFIG_CONT1_PHYS3_START CONFIG_CONT1_PHYS3_END
 when CONFIG_CONT1_PHYSMEM_REGIONS < 4 suppress CONFIG_CONT1_PHYS3_START CONFIG_CONT1_PHYS3_END
 
-
-
-
-
 default CONFIG_CONT0_PHYS0_START from 0x0
 default CONFIG_CONT0_PHYS0_END	 from 0x0
 default CONFIG_CONT0_PHYS1_START from 0x0
@@ -328,8 +325,8 @@ default CONFIG_CONT1_VIRT4_END	 from 0x0
 default CONFIG_CONT1_VIRT5_START from 0x0
 default CONFIG_CONT1_VIRT5_END	 from 0x0
 
-default CONFIG_CONT0_OPT_DIRNAME from (CONFIG_CONT0_TYPE_LINUX==y) ? "Linux" : ((CONFIG_CONT0_TYPE_BARE==y) ? "Bare" : "Noname")
-default CONFIG_CONT1_OPT_DIRNAME from (CONFIG_CONT1_TYPE_LINUX==y) ? "Linux" : ((CONFIG_CONT1_TYPE_BARE==y) ? "Bare" : "Noname")
+default CONFIG_CONT0_OPT_DIRNAME from (CONFIG_CONT0_TYPE_LINUX==y) ? "linux" : ((CONFIG_CONT0_TYPE_BARE==y) ? "bare" : "noname")
+default CONFIG_CONT1_OPT_DIRNAME from (CONFIG_CONT1_TYPE_LINUX==y) ? "linux" : ((CONFIG_CONT1_TYPE_BARE==y) ? "bare" : "noname")
 
 unless CONFIG_CONTAINERS > 1 suppress cont1_menu
 
@@ -337,6 +334,11 @@ when CONFIG_CONT0_TYPE_LINUX==y suppress cont0_bare_pager_params
 when CONFIG_CONT0_TYPE_BARE==y suppress cont0_linux_pager_params
 when CONFIG_CONT1_TYPE_LINUX==y suppress cont1_bare_pager_params
 when CONFIG_CONT1_TYPE_BARE==y suppress cont1_linux_pager_params
+
+derive CONFIG_CONT0_PAGER_LMA__ from CONFIG_CONT0_LINUX_PHYS_OFFSET + CONFIG_CONT0_LINUX_TEXT_OFFSET
+derive CONFIG_CONT0_PAGER_VMA__ from CONFIG_CONT0_LINUX_PAGE_OFFSET
+#derive CONFIG_CONT0_PAGER_LMA__ from CONFIG_CONT0_PAGER_LMA
+#derive CONFIG_CONT0_PAGER_VMA__ from CONFIG_CONT0_LINUX_VMA
 
 symbols
 containers_menu		'Configure Containers'
@@ -472,3 +474,8 @@ menu containers_menu
 # 2) Have you defined a default for each symbol?
 # 3) Have you put 'symbols' keyword before each symbol, menu and choice?
 
+
+# Important note on derived symbols
+# DO NOT place any declaration for derived symbols like normal symbols,
+# otherwise the derivation will be silently ignored, and you will be left
+# wondering why.
