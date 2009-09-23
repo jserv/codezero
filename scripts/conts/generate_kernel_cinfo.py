@@ -96,6 +96,66 @@ cap_physmem = \
 \t\t\t},
 '''
 
+cap_all_others = \
+'''
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_IPC | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_IPC_SEND | CAP_IPC_RECV
+\t\t\t\t          | CAP_IPC_FULL | CAP_IPC_SHORT
+\t\t\t\t          | CAP_IPC_EXTENDED,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_TCTRL | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_TCTRL_CREATE | CAP_TCTRL_DESTROY
+\t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RESUME
+\t\t\t\t          | CAP_TCTRL_RECYCLE,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_EXREGS | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_EXREGS_RW_PAGER
+\t\t\t\t          | CAP_EXREGS_RW_UTCB | CAP_EXREGS_RW_SP
+\t\t\t\t          | CAP_EXREGS_RW_PC | CAP_EXREGS_RW_REGS,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_QUANTITY
+\t\t\t\t	  | CAP_RTYPE_THREADPOOL,
+\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.size = 64,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_SPACEPOOL,
+\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.size = 64,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CPUPOOL,
+\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.size = 50,	/* Percentage */
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MUTEXPOOL,
+\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.size = 100,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t/* For pmd accounting */
+\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MAPPOOL,
+\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t/* Function of mem regions, nthreads etc. */
+\t\t\t\t.size = (64 * 30 + 100),
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t/* For cap spliting, creating, etc. */
+\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL,
+\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t/* This may be existing caps X 2 etc. */
+\t\t\t\t.size = 30,
+\t\t\t},
+'''
+
 pager_ifdefs_todotext = \
 '''
 /*
@@ -108,26 +168,32 @@ pager_ifdefs_todotext = \
 pager_ifdefs = \
 '''
 #if defined(CONFIG_CONT%d_TYPE_LINUX)
-    #define CONFIG_CONT%d_PAGER_LMA  CONFIG_CONT%d_LINUX_PHYS_OFFSET + CONFIG_CONT%d_TEXT_OFFSET
-    #define CONFIG_CONT%d_PAGER_VMA  CONFIG_CONT%d_LINUX_PAGE_OFFSET + CONFIG_CONT%d_TEXT_OFFSET
+    #define CONFIG_CONT%d_PAGER_LMA  (CONFIG_CONT%d_LINUX_PHYS_OFFSET + CONFIG_CONT%d_LINUX_TEXT_OFFSET)
+    #define CONFIG_CONT%d_PAGER_VMA  (CONFIG_CONT%d_LINUX_PAGE_OFFSET + CONFIG_CONT%d_LINUX_TEXT_OFFSET)
     #define CONFIG_CONT%d_PAGER_SIZE CONFIG_CONT%d_LINUX_MAPSIZE
 #endif
 '''
 def generate_pager_memory_ifdefs(containers):
-    pager_ifdef_string = pager_ifdefs_todotext
+    pager_ifdef_string = ""
+    linux = 0
     for c in containers:
-        pager_ifdef_string += pager_ifdefs % (c.id, c.id, \
-                                              c.id, c.id, \
-                                              c.id, c.id, \
-                                              c.id, c.id, c.id)
+        if c.type == "linux":
+            if linux == 0:
+                pager_ifdef_string += pager_ifdefs_todotext
+                linux = 1
+            pager_ifdef_string += pager_ifdefs % (c.id, c.id, \
+                                                  c.id, c.id, \
+                                                  c.id, c.id, \
+                                                  c.id, c.id, c.id)
     return pager_ifdef_string
 def generate_kernel_cinfo(containers, cinfo_path):
     pager_ifdefs = generate_pager_memory_ifdefs(containers)
     with open(cinfo_path, 'w+') as cinfo_file:
         fbody = cinfo_file_start % pager_ifdefs
+        total_other_caps = 9
         for c in containers:
             # Currently only these are considered as capabilities
-            total_caps = c.virt_regions + c.phys_regions
+            total_caps = c.virt_regions + c.phys_regions + total_other_caps
             fbody += cinfo_start % (c.id, c.name)
             fbody += pager_start % (c.id, c.id, c.id, total_caps)
             cap_index = 0
@@ -145,6 +211,7 @@ def generate_kernel_cinfo(containers, cinfo_path):
                           mem_index, c.id, \
                           mem_index, c.id, mem_index)
                 cap_index += 1
+            fbody += cap_all_others % (tuple(range(cap_index, total_caps)))
             fbody += pager_end
             fbody += cinfo_end
         fbody += cinfo_file_end
