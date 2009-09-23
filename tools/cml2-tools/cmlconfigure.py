@@ -1144,12 +1144,14 @@ class curses_style_menu:
             raise "TERMTOOSMALL"
         self.menus.viewport_height = self.lines-2 + (not configuration.expert_tie or cml.evaluate(configuration.expert_tie) != cml.n)
         if curses.has_colors():
-            curses.init_pair(curses.COLOR_CYAN, curses.COLOR_WHITE, curses.COLOR_BLACK)
-            curses.init_pair(curses.COLOR_GREEN, curses.COLOR_WHITE, curses.COLOR_BLACK)
+            #curses.init_pair(curses.COLOR_CYAN, curses.COLOR_WHITE, curses.COLOR_BLACK)
+            #curses.init_pair(curses.COLOR_GREEN, curses.COLOR_WHITE, curses.COLOR_BLACK)
+            curses.init_pair(curses.COLOR_CYAN, curses.COLOR_BLACK, curses.COLOR_WHITE)
+            curses.init_pair(curses.COLOR_GREEN, curses.COLOR_BLACK, curses.COLOR_WHITE)
         self.window.clear()
         self.window.scrollok(0)
         self.window.idlok(1)
-
+        stdscr.bkgd(' ', curses.color_pair(curses.COLOR_CYAN))
         # Most of the work gets done here
         self.interact(config)
 

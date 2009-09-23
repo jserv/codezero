@@ -333,6 +333,7 @@ default CONFIG_CONT0_OPT_DIRNAME from (CONFIG_CONT0_TYPE_LINUX==y) ? "linux" : (
 default CONFIG_CONT1_OPT_DIRNAME from (CONFIG_CONT1_TYPE_LINUX==y) ? "linux" : ((CONFIG_CONT1_TYPE_BARE==y) ? "bare" : "noname")
 
 unless CONFIG_CONTAINERS > 1 suppress cont1_menu
+require CONFIG_CONTAINERS < 2 implies cont1_menu==n
 
 when CONFIG_CONT0_TYPE_LINUX==y suppress cont0_bare_pager_params
 when CONFIG_CONT0_TYPE_BARE==y suppress cont0_linux_pager_params
