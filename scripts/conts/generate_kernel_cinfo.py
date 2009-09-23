@@ -29,6 +29,8 @@ cinfo_file_start = \
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
 
+%s
+
 /*
  * FIXME:
  * Add irqs, exceptions
@@ -94,9 +96,35 @@ cap_physmem = \
 \t\t\t},
 '''
 
+pager_ifdefs_todotext = \
+'''
+/*
+ * TODO:
+ * This had to be defined this way because in CML2 there
+ * is no straightforward way to derive symbols from expressions
+ * (a ternary expression of (? : ) form complains for type deduction.
+ */'''
+
+pager_ifdefs = \
+'''
+#if defined(CONFIG_CONT%d_TYPE_LINUX)
+    #define CONFIG_CONT%d_PAGER_LMA  CONFIG_CONT%d_LINUX_PHYS_OFFSET + CONFIG_CONT%d_TEXT_OFFSET
+    #define CONFIG_CONT%d_PAGER_VMA  CONFIG_CONT%d_LINUX_PAGE_OFFSET + CONFIG_CONT%d_TEXT_OFFSET
+    #define CONFIG_CONT%d_PAGER_SIZE CONFIG_CONT%d_LINUX_MAPSIZE
+#endif
+'''
+def generate_pager_memory_ifdefs(containers):
+    pager_ifdef_string = pager_ifdefs_todotext
+    for c in containers:
+        pager_ifdef_string += pager_ifdefs % (c.id, c.id, \
+                                              c.id, c.id, \
+                                              c.id, c.id, \
+                                              c.id, c.id, c.id)
+    return pager_ifdef_string
 def generate_kernel_cinfo(containers, cinfo_path):
+    pager_ifdefs = generate_pager_memory_ifdefs(containers)
     with open(cinfo_path, 'w+') as cinfo_file:
-        fbody = cinfo_file_start
+        fbody = cinfo_file_start % pager_ifdefs
         for c in containers:
             # Currently only these are considered as capabilities
             total_caps = c.virt_regions + c.phys_regions
