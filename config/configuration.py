@@ -173,8 +173,6 @@ class configuration:
 def configuration_save(config):
     if not os.path.exists(CONFIG_SHELVE_DIR):
         os.mkdir(CONFIG_SHELVE_DIR)
-    if os.path.exists(CONFIG_SHELVE):
-        shutil.rmtree(CONFIG_SHELVE)
 
     config_shelve = shelve.open(CONFIG_SHELVE)
     config_shelve["configuration"] = config
