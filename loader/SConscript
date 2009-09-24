@@ -27,14 +27,13 @@ def gen_loader_images_S(target, source, env):
         generate_image_S(target[0].path, source)
 
 loader_ksyms = Command(join(PROJROOT, 'loader/ksyms.S'), join(BUILDDIR, 'kernel.elf'), ksym_to_loader)
-loader_image_S = Command(join(PROJROOT, 'loader/images.S'), \
-                         [join(BUILDDIR, 'kernel.elf'), \
-                          join(BUILDDIR, 'conts/containers.elf')], \
-                          gen_loader_images_S)
+loader_image_S = Command(join(PROJROOT, 'loader/images.S'), [join(BUILDDIR, 'kernel.elf'), join(BUILDDIR, 'conts/containers.elf')], \
+                         gen_loader_images_S)
 
 src = Glob('*.[cS]')
 objs = env.Object(src)
 
 Depends(src, loader_ksyms)
 Depends(src, loader_image_S)
-Return('objs')
+Depends(objs, loader_image_S)
+Return('objs', 'loader_image_S')
