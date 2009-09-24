@@ -72,23 +72,23 @@ class configuration:
     # TODO: Carry this over to Container() as static method???
     def get_container_parameter(self, id, param, val):
         if param[:len("PAGER_LMA")] == "PAGER_LMA":
-            self.containers[id].pager_lma = val
+            self.containers[id].pager_lma = int(val, 0)
         elif param[:len("PAGER_VMA")] == "PAGER_VMA":
-            self.containers[id].pager_vma = val
+            self.containers[id].pager_vma = int(val, 0)
         elif param[:len("PAGER_SIZE")] == "PAGER_SIZE":
-            self.containers[id].pager_size = val
+            self.containers[id].pager_size = int(val, 0)
         elif param[:len("LINUX_MAPSIZE")] == "LINUX_MAPSIZE":
-            self.containers[id].linux_mapsize = val
+            self.containers[id].linux_mapsize = int(val, 0)
         elif param[:len("LINUX_PAGE_OFFSET")] == "LINUX_PAGE_OFFSET":
-            self.containers[id].linux_page_offset = val
-            self.containers[id].pager_vma += val
+            self.containers[id].linux_page_offset = int(val, 0)
+            self.containers[id].pager_vma += int(val, 0)
         elif param[:len("LINUX_PHYS_OFFSET")] == "LINUX_PHYS_OFFSET":
-            self.containers[id].linux_phys_offset = val
-            self.containers[id].pager_lma += val
+            self.containers[id].linux_phys_offset = int(val, 0)
+            self.containers[id].pager_lma += int(val, 0)
         elif param[:len("LINUX_TEXT_OFFSET")] == "LINUX_TEXT_OFFSET":
-            self.containers[id].linux_text_offset = val
-            self.containers[id].pager_lma += val
-            self.containers[id].pager_vma += val
+            self.containers[id].linux_text_offset = int(val, 0)
+            self.containers[id].pager_lma += int(val, 0)
+            self.containers[id].pager_vma += int(val, 0)
         elif re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param):
             matchobj = re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param)
             virtphys, regionidstr, discard1, startend = matchobj.groups()
