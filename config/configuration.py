@@ -9,9 +9,13 @@ class Container:
         self.name = None
         self.type = None
         self.id = id
-        self.pager_lma = None
-        self.pager_vma = None
-        self.pager_size = None
+        self.pager_lma = 0
+        self.pager_vma = 0
+        self.pager_size = 0
+        self.linux_page_offset = 0
+        self.linux_phys_offset = 0
+        self.linux_text_offset = 0
+        self.linux_mapsize = 0
         self.physmem = {}
         self.physmem["START"] = {}
         self.physmem["END"] = {}
@@ -73,11 +77,22 @@ class configuration:
             self.containers[id].pager_vma = val
         elif param[:len("PAGER_SIZE")] == "PAGER_SIZE":
             self.containers[id].pager_size = val
+        elif param[:len("LINUX_MAPSIZE")] == "LINUX_MAPSIZE":
+            self.containers[id].linux_mapsize = val
+        elif param[:len("LINUX_PAGE_OFFSET")] == "LINUX_PAGE_OFFSET":
+            self.containers[id].linux_page_offset = val
+            self.containers[id].pager_vma += val
+        elif param[:len("LINUX_PHYS_OFFSET")] == "LINUX_PHYS_OFFSET":
+            self.containers[id].linux_phys_offset = val
+            self.containers[id].pager_lma += val
+        elif param[:len("LINUX_TEXT_OFFSET")] == "LINUX_TEXT_OFFSET":
+            self.containers[id].linux_text_offset = val
+            self.containers[id].pager_lma += val
+            self.containers[id].pager_vma += val
         elif re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param):
             matchobj = re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param)
             virtphys, regionidstr, discard1, startend = matchobj.groups()
             regionid = int(regionidstr)
-            #print "Matched: ", virtphys, regionid, discard1, startend
             if virtphys == "VIRT":
                 self.containers[id].virtmem[startend][regionid] = val
                 if regionid + 1 > self.containers[id].virt_regions:
@@ -86,13 +101,6 @@ class configuration:
                 self.containers[id].physmem[startend][regionid] = val
                 if regionid + 1 > self.containers[id].phys_regions:
                     self.containers[id].phys_regions = regionid + 1
-
-#        elif param[:len("VIRT_END")] == "VIRT_END":
-#            self.containers[id].vma_end = val
-#        elif param[:len("PHYS_START")] == "PHYS_START":
-#            self.containers[id].lma_start = val
-#        elif param[:len("PHYS_END")] == "PHYS_END":
-#            self.containers[id].lma_end = val
         elif param[:len("OPT_DIRNAME")] == "OPT_DIRNAME":
             dirname = val[1:-1].lower()
             self.containers[id].dirname = dirname
