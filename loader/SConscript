@@ -35,5 +35,5 @@ objs = env.Object(src)
 
 Depends(src, loader_ksyms)
 Depends(src, loader_image_S)
-Depends(objs, loader_image_S)
+Depends(objs, join(BUILDDIR, 'conts/containers.elf'))
 Return('objs', 'loader_image_S')

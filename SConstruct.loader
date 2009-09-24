@@ -43,10 +43,9 @@ libc = SConscript('loader/libs/c/SConscript', \
 libelf = SConscript('loader/libs/elf/SConscript', exports = { 'env' : env }, \
                     duplicate = 0, variant_dir = 'build/loader/libs/elf')
 
-loader_objs, images_S = SConscript('loader/SConscript', exports = { 'env' : env }, \
-                                   duplicate = 0, variant_dir = 'build/loader')
+loader_objs = SConscript('loader/SConscript', exports = { 'env' : env }, \
+                         duplicate = 0, variant_dir = 'build/loader')
 
 final_elf = env.Program('build/final.elf', [libelf + libc + loader_objs])
 Depends(loader_objs, libelf)
 Depends(loader_objs, libc)
-Depends(final_elf, images_S)
