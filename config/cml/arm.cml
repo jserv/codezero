@@ -5,30 +5,30 @@ start main_menu
 #############
 symbols
 
-CONFIG_ARCH_ARM			'ARM'
+ARCH_ARM			'ARM'
 
 arm_cpu_type			'ARM Processor Type'
-CONFIG_CPU_ARM1136		'ARM1136 - To be added'
-CONFIG_CPU_ARM11MPCORE		'ARM11 MPCore - To be added'
-CONFIG_CPU_ARM926		'ARM926EJ-S'
-CONFIG_CPU_CORTEXA8		'ARM Cortex-A8 - Not supported'
+CPU_ARM1136		'ARM1136 - To be added'
+CPU_ARM11MPCORE		'ARM11 MPCore - To be added'
+CPU_ARM926		'ARM926EJ-S'
+CPU_CORTEXA8		'ARM Cortex-A8 - Not supported'
 
 arm_subarch_type		'ARM Architecture Family'
-CONFIG_SUBARCH_V5		'ARM v5 Architecture'
-CONFIG_SUBARCH_V6		'ARM v6 Architecture, To be added'
-CONFIG_SUBARCH_V7		'ARM v7 Architecture, To be added'
+SUBARCH_V5		'ARM v5 Architecture'
+SUBARCH_V6		'ARM v6 Architecture, To be added'
+SUBARCH_V7		'ARM v7 Architecture, To be added'
 
 arm_platform_type		'ARM Platform Type'
-CONFIG_PLATFORM_EB		'Realview EB Platform, Unsupported yet'
-CONFIG_PLATFORM_AB926		'Versatile AB926 Platform, Unsupported yet'
-CONFIG_PLATFORM_PB926		'Versatile PB926 Platform'
-CONFIG_PLATFORM_PB11MPCORE	'Realview PB11MPCore Platform'
-CONFIG_PLATFORM_PBA8		'Realview PB-A8 Platform'
+PLATFORM_EB		'Realview EB Platform, Unsupported yet'
+PLATFORM_AB926		'Versatile AB926 Platform, Unsupported yet'
+PLATFORM_PB926		'Versatile PB926 Platform'
+PLATFORM_PB11MPCORE	'Realview PB11MPCore Platform'
+PLATFORM_PBA8		'Realview PB-A8 Platform'
 
-CONFIG_DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
-CONFIG_DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
-CONFIG_DRIVER_IRQ_PL190		'ARM Vectored Interrupt Controller PL190'
-CONFIG_DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
+DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
+DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
+DRIVER_IRQ_PL190		'ARM Vectored Interrupt Controller PL190'
+DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
 
 main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
@@ -42,29 +42,29 @@ arch_type		'Main architecture'
 #############
 
 choices arch_type
-	CONFIG_ARCH_ARM
-	default CONFIG_ARCH_ARM
+	ARCH_ARM
+	default ARCH_ARM
 
 choices arm_subarch_type
-	CONFIG_SUBARCH_V5
-	CONFIG_SUBARCH_V6
-	CONFIG_SUBARCH_V7
-	default CONFIG_SUBARCH_V5
+	SUBARCH_V5
+	SUBARCH_V6
+	SUBARCH_V7
+	default SUBARCH_V5
 
 choices arm_cpu_type
-	CONFIG_CPU_ARM926
-	CONFIG_CPU_ARM1136
-	CONFIG_CPU_ARM11MPCORE
-	CONFIG_CPU_CORTEXA8
-        default CONFIG_CPU_ARM926
+	CPU_ARM926
+	CPU_ARM1136
+	CPU_ARM11MPCORE
+	CPU_CORTEXA8
+        default CPU_ARM926
 
 choices arm_platform_type
-        CONFIG_PLATFORM_EB
-	CONFIG_PLATFORM_AB926
-	CONFIG_PLATFORM_PB926
-	CONFIG_PLATFORM_PB11MPCORE
-	CONFIG_PLATFORM_PBA8
-        default CONFIG_PLATFORM_PB926
+        PLATFORM_EB
+	PLATFORM_AB926
+	PLATFORM_PB926
+	PLATFORM_PB11MPCORE
+	PLATFORM_PBA8
+        default PLATFORM_PB926
 
 #############
 #   MENUS   #
@@ -77,10 +77,10 @@ menu arm_platform_menu
 	arm_platform_type
 
 menu drivers_menu
-	CONFIG_DRIVER_UART_PL011
-	CONFIG_DRIVER_TIMER_SP804
-	CONFIG_DRIVER_IRQ_PL190
-	CONFIG_DRIVER_IRQ_GIC
+	DRIVER_UART_PL011
+	DRIVER_TIMER_SP804
+	DRIVER_IRQ_PL190
+	DRIVER_IRQ_GIC
 
 menu arm_menu
 	arm_subarch_type
@@ -91,7 +91,7 @@ menu arm_menu
 menu main_menu
 	arch_type
 	arm_menu
-	CONFIG_CONTAINERS%
+	CONTAINERS%
 	containers_menu
 
 #############
@@ -99,246 +99,246 @@ menu main_menu
 #############
 
 #Platform rules:
-unless CONFIG_SUBARCH_V5 suppress CONFIG_PLATFORM_PB926
-unless CONFIG_SUBARCH_V5 suppress CONFIG_PLATFORM_AB926
-unless CONFIG_SUBARCH_V6 suppress CONFIG_PLATFORM_PB11MPCORE
-unless CONFIG_SUBARCH_V7 suppress CONFIG_PLATFORM_PBA8
+unless SUBARCH_V5 suppress PLATFORM_PB926
+unless SUBARCH_V5 suppress PLATFORM_AB926
+unless SUBARCH_V6 suppress PLATFORM_PB11MPCORE
+unless SUBARCH_V7 suppress PLATFORM_PBA8
 
 #CPU rules:
-unless CONFIG_SUBARCH_V5 suppress CONFIG_CPU_ARM926
-unless CONFIG_SUBARCH_V6 suppress CONFIG_CPU_ARM1136
-unless CONFIG_SUBARCH_V6 suppress CONFIG_CPU_ARM11MPCORE
-unless CONFIG_SUBARCH_V7 suppress CONFIG_CPU_CORTEXA8
+unless SUBARCH_V5 suppress CPU_ARM926
+unless SUBARCH_V6 suppress CPU_ARM1136
+unless SUBARCH_V6 suppress CPU_ARM11MPCORE
+unless SUBARCH_V7 suppress CPU_CORTEXA8
 
 # NOTE: Unlike menus, choices dont take { sym } model of visibility
 # dependencies. Instead, a choice symbol is declared in a menu, and
 # suppress statement is used to make sym visible, instead of a
 # { sym } model under the choices. (See manual for { sym } usage).
 
-unless CONFIG_SUBARCH_V5 suppress CONFIG_PLATFORM_PB926
-unless CONFIG_ARCH_ARM suppress arm_menu
-unless CONFIG_PLATFORM_PB926 or CONFIG_PLATFORM_AB926 suppress CONFIG_DRIVER_IRQ_PL190
-unless CONFIG_PLATFORM_EB suppress CONFIG_CPU_ARM1136
-unless CONFIG_PLATFORM_EB or CONFIG_PLATFORM_PBA8 or CONFIG_PLATFORM_PB11MPCORE suppress CONFIG_DRIVER_IRQ_GIC
-default CONFIG_DRIVER_UART_PL011 from y
-default CONFIG_DRIVER_TIMER_SP804 from y
-default CONFIG_DRIVER_IRQ_PL190 from y
-default CONFIG_DRIVER_IRQ_GIC from y
+unless SUBARCH_V5 suppress PLATFORM_PB926
+unless ARCH_ARM suppress arm_menu
+unless PLATFORM_PB926 or PLATFORM_AB926 suppress DRIVER_IRQ_PL190
+unless PLATFORM_EB suppress CPU_ARM1136
+unless PLATFORM_EB or PLATFORM_PBA8 or PLATFORM_PB11MPCORE suppress DRIVER_IRQ_GIC
+default DRIVER_UART_PL011 from y
+default DRIVER_TIMER_SP804 from y
+default DRIVER_IRQ_PL190 from y
+default DRIVER_IRQ_GIC from y
 
 # Container Rules
 symbols
-CONFIG_CONTAINERS		'Number of containers'
-CONFIG_CONT0_TYPE_LINUX		'Linux Container'
-CONFIG_CONT0_TYPE_BARE		'Bare Container'
-CONFIG_CONT0_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
-CONFIG_CONT0_OPT_DIRNAME	'Containers directory name under conts'
+CONTAINERS		'Number of containers'
+CONT0_TYPE_LINUX		'Linux Container'
+CONT0_TYPE_BARE		'Bare Container'
+CONT0_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
+CONT0_OPT_DIRNAME	'Containers directory name under conts'
 
-CONFIG_CONT0_PHYSMEM_REGIONS	'Container 0 number of physical regions'
-CONFIG_CONT0_PHYS0_START	'Container 0 physical start address'
-CONFIG_CONT0_PHYS0_END		'Container 0 physical end address'
-CONFIG_CONT0_PHYS1_START	'Container 0 physical start address'
-CONFIG_CONT0_PHYS1_END		'Container 0 physical end address'
-CONFIG_CONT0_PHYS2_START	'Container 0 physical start address'
-CONFIG_CONT0_PHYS2_END		'Container 0 physical end address'
-CONFIG_CONT0_PHYS3_START	'Container 0 physical start address'
-CONFIG_CONT0_PHYS3_END		'Container 0 physical end address'
+CONT0_PHYSMEM_REGIONS	'Container 0 number of physical regions'
+CONT0_PHYS0_START	'Container 0 physical start address'
+CONT0_PHYS0_END		'Container 0 physical end address'
+CONT0_PHYS1_START	'Container 0 physical start address'
+CONT0_PHYS1_END		'Container 0 physical end address'
+CONT0_PHYS2_START	'Container 0 physical start address'
+CONT0_PHYS2_END		'Container 0 physical end address'
+CONT0_PHYS3_START	'Container 0 physical start address'
+CONT0_PHYS3_END		'Container 0 physical end address'
 
-CONFIG_CONT0_VIRTMEM_REGIONS	'Container 0 number of virtual regions'
-CONFIG_CONT0_VIRT0_START	'Container 0 virtual start address'
-CONFIG_CONT0_VIRT0_END		'Container 0 virtual end address'
-CONFIG_CONT0_VIRT1_START	'Container 0 virtual start address'
-CONFIG_CONT0_VIRT1_END		'Container 0 virtual end address'
-CONFIG_CONT0_VIRT2_START	'Container 0 virtual start address'
-CONFIG_CONT0_VIRT2_END		'Container 0 virtual end address'
-CONFIG_CONT0_VIRT3_START	'Container 0 virtual start address'
-CONFIG_CONT0_VIRT3_END		'Container 0 virtual end address'
-CONFIG_CONT0_VIRT4_START	'Container 0 virtual start address'
-CONFIG_CONT0_VIRT4_END		'Container 0 virtual end address'
-CONFIG_CONT0_VIRT5_START	'Container 0 virtual start address'
-CONFIG_CONT0_VIRT5_END		'Container 0 virtual end address'
-
-
-CONFIG_CONT1_TYPE_LINUX		'Linux Container'
-CONFIG_CONT1_TYPE_BARE		'Bare Container'
-CONFIG_CONT1_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
-CONFIG_CONT1_OPT_DIRNAME	'Containers directory name under conts'
-
-CONFIG_CONT1_PHYSMEM_REGIONS	'Container 1 number of physical regions'
-CONFIG_CONT1_PHYS0_START	'Container 1 physical start address'
-CONFIG_CONT1_PHYS0_END		'Container 1 physical end address'
-CONFIG_CONT1_PHYS1_START	'Container 1 physical start address'
-CONFIG_CONT1_PHYS1_END		'Container 1 physical end address'
-CONFIG_CONT1_PHYS2_START	'Container 1 physical start address'
-CONFIG_CONT1_PHYS2_END		'Container 1 physical end address'
-CONFIG_CONT1_PHYS3_START	'Container 1 physical start address'
-CONFIG_CONT1_PHYS3_END		'Container 1 physical end address'
-
-CONFIG_CONT1_VIRTMEM_REGIONS	'Container 1 number of virtual regions'
-CONFIG_CONT1_VIRT0_START	'Container 1 virtual start address'
-CONFIG_CONT1_VIRT0_END		'Container 1 virtual end address'
-CONFIG_CONT1_VIRT1_START	'Container 1 virtual start address'
-CONFIG_CONT1_VIRT1_END		'Container 1 virtual end address'
-CONFIG_CONT1_VIRT2_START	'Container 1 virtual start address'
-CONFIG_CONT1_VIRT2_END		'Container 1 virtual end address'
-CONFIG_CONT1_VIRT3_START	'Container 1 virtual start address'
-CONFIG_CONT1_VIRT3_END		'Container 1 virtual end address'
-CONFIG_CONT1_VIRT4_START	'Container 1 virtual start address'
-CONFIG_CONT1_VIRT4_END		'Container 1 virtual end address'
-CONFIG_CONT1_VIRT5_START	'Container 1 virtual start address'
-CONFIG_CONT1_VIRT5_END		'Container 1 virtual end address'
-
-CONFIG_CONT0_PAGER_LMA		'Container 0 Pager LMA'
-CONFIG_CONT0_PAGER_VMA		'Container 0 Pager VMA'
-CONFIG_CONT0_PAGER_SIZE		'Container 0 Pager Initial map size (Optional)'
-CONFIG_CONT0_LINUX_PAGE_OFFSET	'Container 0 Linux PAGE_OFFSET parameter'
-CONFIG_CONT0_LINUX_TEXT_OFFSET	'Container 0 Linux TEXT_OFFSET parameter'
-CONFIG_CONT0_LINUX_PHYS_OFFSET	'Container 0 Linux PHYS_OFFSET parameter'
-CONFIG_CONT0_LINUX_MAPSIZE	'Container 0 Linux Initial kernel map size parameter'
-
-CONFIG_CONT1_PAGER_LMA		'Container 1 Pager LMA'
-CONFIG_CONT1_PAGER_VMA		'Container 1 Pager VMA'
-CONFIG_CONT1_PAGER_SIZE		'Container 1 Pager Initial map size (Optional)'
-CONFIG_CONT1_LINUX_PAGE_OFFSET	'Container 1 Linux PAGE_OFFSET parameter'
-CONFIG_CONT1_LINUX_TEXT_OFFSET  'Container 1 Linux TEXT_OFFSET parameter'
-CONFIG_CONT1_LINUX_PHYS_OFFSET	'Container 1 Linux PHYS_OFFSET parameter'
-CONFIG_CONT1_LINUX_MAPSIZE	'Container 1 Linux Initial kernel map size parameter'
+CONT0_VIRTMEM_REGIONS	'Container 0 number of virtual regions'
+CONT0_VIRT0_START	'Container 0 virtual start address'
+CONT0_VIRT0_END		'Container 0 virtual end address'
+CONT0_VIRT1_START	'Container 0 virtual start address'
+CONT0_VIRT1_END		'Container 0 virtual end address'
+CONT0_VIRT2_START	'Container 0 virtual start address'
+CONT0_VIRT2_END		'Container 0 virtual end address'
+CONT0_VIRT3_START	'Container 0 virtual start address'
+CONT0_VIRT3_END		'Container 0 virtual end address'
+CONT0_VIRT4_START	'Container 0 virtual start address'
+CONT0_VIRT4_END		'Container 0 virtual end address'
+CONT0_VIRT5_START	'Container 0 virtual start address'
+CONT0_VIRT5_END		'Container 0 virtual end address'
 
 
-default CONFIG_CONT0_PAGER_LMA	 from 0x0
-default CONFIG_CONT0_PAGER_VMA	 from 0x0
-default CONFIG_CONT0_PAGER_SIZE  from 0x0
-default CONFIG_CONT0_LINUX_PAGE_OFFSET from 0x0
-default CONFIG_CONT0_LINUX_TEXT_OFFSET from 0x0
-default CONFIG_CONT0_LINUX_PHYS_OFFSET from 0x0
-default CONFIG_CONT0_LINUX_MAPSIZE from 0x0
+CONT1_TYPE_LINUX		'Linux Container'
+CONT1_TYPE_BARE		'Bare Container'
+CONT1_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
+CONT1_OPT_DIRNAME	'Containers directory name under conts'
 
-default CONFIG_CONT1_PAGER_LMA	 from 0x0
-default CONFIG_CONT1_PAGER_VMA	 from 0x0
-default CONFIG_CONT1_PAGER_SIZE from 0x0
-default CONFIG_CONT1_LINUX_PAGE_OFFSET from 0x0
-default CONFIG_CONT1_LINUX_TEXT_OFFSET from 0x0
-default CONFIG_CONT1_LINUX_PHYS_OFFSET from 0x0
-default CONFIG_CONT1_LINUX_MAPSIZE from 0x0
+CONT1_PHYSMEM_REGIONS	'Container 1 number of physical regions'
+CONT1_PHYS0_START	'Container 1 physical start address'
+CONT1_PHYS0_END		'Container 1 physical end address'
+CONT1_PHYS1_START	'Container 1 physical start address'
+CONT1_PHYS1_END		'Container 1 physical end address'
+CONT1_PHYS2_START	'Container 1 physical start address'
+CONT1_PHYS2_END		'Container 1 physical end address'
+CONT1_PHYS3_START	'Container 1 physical start address'
+CONT1_PHYS3_END		'Container 1 physical end address'
 
-default CONFIG_CONTAINERS from 2
+CONT1_VIRTMEM_REGIONS	'Container 1 number of virtual regions'
+CONT1_VIRT0_START	'Container 1 virtual start address'
+CONT1_VIRT0_END		'Container 1 virtual end address'
+CONT1_VIRT1_START	'Container 1 virtual start address'
+CONT1_VIRT1_END		'Container 1 virtual end address'
+CONT1_VIRT2_START	'Container 1 virtual start address'
+CONT1_VIRT2_END		'Container 1 virtual end address'
+CONT1_VIRT3_START	'Container 1 virtual start address'
+CONT1_VIRT3_END		'Container 1 virtual end address'
+CONT1_VIRT4_START	'Container 1 virtual start address'
+CONT1_VIRT4_END		'Container 1 virtual end address'
+CONT1_VIRT5_START	'Container 1 virtual start address'
+CONT1_VIRT5_END		'Container 1 virtual end address'
 
-default CONFIG_CONT0_VIRTMEM_REGIONS from 1
-default CONFIG_CONT0_PHYSMEM_REGIONS from 1
-default CONFIG_CONT1_VIRTMEM_REGIONS from 1
-default CONFIG_CONT1_PHYSMEM_REGIONS from 1
+CONT0_PAGER_LMA		'Container 0 Pager LMA'
+CONT0_PAGER_VMA		'Container 0 Pager VMA'
+CONT0_PAGER_SIZE		'Container 0 Pager Initial map size (Optional)'
+CONT0_LINUX_PAGE_OFFSET	'Container 0 Linux PAGE_OFFSET parameter'
+CONT0_LINUX_TEXT_OFFSET	'Container 0 Linux TEXT_OFFSET parameter'
+CONT0_LINUX_PHYS_OFFSET	'Container 0 Linux PHYS_OFFSET parameter'
+CONT0_LINUX_MAPSIZE	'Container 0 Linux Initial kernel map size parameter'
 
-# Define limits on virtual and physical memory regions of a _single_ container 0. Too much code!
-when CONFIG_CONT0_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT0_VIRT1_START CONFIG_CONT0_VIRT1_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT0_VIRT2_START CONFIG_CONT0_VIRT2_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT0_VIRT3_START CONFIG_CONT0_VIRT3_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT0_VIRT4_START CONFIG_CONT0_VIRT4_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT0_VIRT5_START CONFIG_CONT0_VIRT5_END
+CONT1_PAGER_LMA		'Container 1 Pager LMA'
+CONT1_PAGER_VMA		'Container 1 Pager VMA'
+CONT1_PAGER_SIZE		'Container 1 Pager Initial map size (Optional)'
+CONT1_LINUX_PAGE_OFFSET	'Container 1 Linux PAGE_OFFSET parameter'
+CONT1_LINUX_TEXT_OFFSET  'Container 1 Linux TEXT_OFFSET parameter'
+CONT1_LINUX_PHYS_OFFSET	'Container 1 Linux PHYS_OFFSET parameter'
+CONT1_LINUX_MAPSIZE	'Container 1 Linux Initial kernel map size parameter'
 
-when CONFIG_CONT0_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT0_VIRT2_START CONFIG_CONT0_VIRT2_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT0_VIRT3_START CONFIG_CONT0_VIRT3_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT0_VIRT4_START CONFIG_CONT0_VIRT4_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT0_VIRT5_START CONFIG_CONT0_VIRT5_END
 
-when CONFIG_CONT0_VIRTMEM_REGIONS < 4 suppress CONFIG_CONT0_VIRT3_START CONFIG_CONT0_VIRT3_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 4 suppress CONFIG_CONT0_VIRT4_START CONFIG_CONT0_VIRT4_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 4 suppress CONFIG_CONT0_VIRT5_START CONFIG_CONT0_VIRT5_END
+default CONT0_PAGER_LMA	 from 0x0
+default CONT0_PAGER_VMA	 from 0x0
+default CONT0_PAGER_SIZE  from 0x0
+default CONT0_LINUX_PAGE_OFFSET from 0x0
+default CONT0_LINUX_TEXT_OFFSET from 0x0
+default CONT0_LINUX_PHYS_OFFSET from 0x0
+default CONT0_LINUX_MAPSIZE from 0x0
 
-when CONFIG_CONT0_VIRTMEM_REGIONS < 5 suppress CONFIG_CONT0_VIRT4_START CONFIG_CONT0_VIRT4_END
-when CONFIG_CONT0_VIRTMEM_REGIONS < 5 suppress CONFIG_CONT0_VIRT5_START CONFIG_CONT0_VIRT5_END
+default CONT1_PAGER_LMA	 from 0x0
+default CONT1_PAGER_VMA	 from 0x0
+default CONT1_PAGER_SIZE from 0x0
+default CONT1_LINUX_PAGE_OFFSET from 0x0
+default CONT1_LINUX_TEXT_OFFSET from 0x0
+default CONT1_LINUX_PHYS_OFFSET from 0x0
+default CONT1_LINUX_MAPSIZE from 0x0
 
-when CONFIG_CONT0_VIRTMEM_REGIONS < 6 suppress CONFIG_CONT0_VIRT5_START CONFIG_CONT0_VIRT5_END
+default CONTAINERS from 2
 
-when CONFIG_CONT0_PHYSMEM_REGIONS < 2 suppress CONFIG_CONT0_PHYS1_START CONFIG_CONT0_PHYS1_END
-when CONFIG_CONT0_PHYSMEM_REGIONS < 2 suppress CONFIG_CONT0_PHYS2_START CONFIG_CONT0_PHYS2_END
-when CONFIG_CONT0_PHYSMEM_REGIONS < 2 suppress CONFIG_CONT0_PHYS3_START CONFIG_CONT0_PHYS3_END
-when CONFIG_CONT0_PHYSMEM_REGIONS < 3 suppress CONFIG_CONT0_PHYS2_START CONFIG_CONT0_PHYS2_END
-when CONFIG_CONT0_PHYSMEM_REGIONS < 3 suppress CONFIG_CONT0_PHYS3_START CONFIG_CONT0_PHYS3_END
-when CONFIG_CONT0_PHYSMEM_REGIONS < 4 suppress CONFIG_CONT0_PHYS3_START CONFIG_CONT0_PHYS3_END
-
+default CONT0_VIRTMEM_REGIONS from 1
+default CONT0_PHYSMEM_REGIONS from 1
+default CONT1_VIRTMEM_REGIONS from 1
+default CONT1_PHYSMEM_REGIONS from 1
 
 # Define limits on virtual and physical memory regions of a _single_ container 0. Too much code!
-when CONFIG_CONT1_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT1_VIRT1_START CONFIG_CONT1_VIRT1_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT1_VIRT2_START CONFIG_CONT1_VIRT2_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT1_VIRT3_START CONFIG_CONT1_VIRT3_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT1_VIRT4_START CONFIG_CONT1_VIRT4_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 2 suppress CONFIG_CONT1_VIRT5_START CONFIG_CONT1_VIRT5_END
+when CONT0_VIRTMEM_REGIONS < 2 suppress CONT0_VIRT1_START CONT0_VIRT1_END
+when CONT0_VIRTMEM_REGIONS < 2 suppress CONT0_VIRT2_START CONT0_VIRT2_END
+when CONT0_VIRTMEM_REGIONS < 2 suppress CONT0_VIRT3_START CONT0_VIRT3_END
+when CONT0_VIRTMEM_REGIONS < 2 suppress CONT0_VIRT4_START CONT0_VIRT4_END
+when CONT0_VIRTMEM_REGIONS < 2 suppress CONT0_VIRT5_START CONT0_VIRT5_END
 
-when CONFIG_CONT1_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT1_VIRT2_START CONFIG_CONT1_VIRT2_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT1_VIRT3_START CONFIG_CONT1_VIRT3_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT1_VIRT4_START CONFIG_CONT1_VIRT4_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 3 suppress CONFIG_CONT1_VIRT5_START CONFIG_CONT1_VIRT5_END
+when CONT0_VIRTMEM_REGIONS < 3 suppress CONT0_VIRT2_START CONT0_VIRT2_END
+when CONT0_VIRTMEM_REGIONS < 3 suppress CONT0_VIRT3_START CONT0_VIRT3_END
+when CONT0_VIRTMEM_REGIONS < 3 suppress CONT0_VIRT4_START CONT0_VIRT4_END
+when CONT0_VIRTMEM_REGIONS < 3 suppress CONT0_VIRT5_START CONT0_VIRT5_END
 
-when CONFIG_CONT1_VIRTMEM_REGIONS < 4 suppress CONFIG_CONT1_VIRT3_START CONFIG_CONT1_VIRT3_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 4 suppress CONFIG_CONT1_VIRT4_START CONFIG_CONT1_VIRT4_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 4 suppress CONFIG_CONT1_VIRT5_START CONFIG_CONT1_VIRT5_END
+when CONT0_VIRTMEM_REGIONS < 4 suppress CONT0_VIRT3_START CONT0_VIRT3_END
+when CONT0_VIRTMEM_REGIONS < 4 suppress CONT0_VIRT4_START CONT0_VIRT4_END
+when CONT0_VIRTMEM_REGIONS < 4 suppress CONT0_VIRT5_START CONT0_VIRT5_END
 
-when CONFIG_CONT1_VIRTMEM_REGIONS < 5 suppress CONFIG_CONT1_VIRT4_START CONFIG_CONT1_VIRT4_END
-when CONFIG_CONT1_VIRTMEM_REGIONS < 5 suppress CONFIG_CONT1_VIRT5_START CONFIG_CONT1_VIRT5_END
+when CONT0_VIRTMEM_REGIONS < 5 suppress CONT0_VIRT4_START CONT0_VIRT4_END
+when CONT0_VIRTMEM_REGIONS < 5 suppress CONT0_VIRT5_START CONT0_VIRT5_END
 
-when CONFIG_CONT1_VIRTMEM_REGIONS < 6 suppress CONFIG_CONT1_VIRT5_START CONFIG_CONT1_VIRT5_END
+when CONT0_VIRTMEM_REGIONS < 6 suppress CONT0_VIRT5_START CONT0_VIRT5_END
 
-when CONFIG_CONT1_PHYSMEM_REGIONS < 2 suppress CONFIG_CONT1_PHYS1_START CONFIG_CONT1_PHYS1_END
-when CONFIG_CONT1_PHYSMEM_REGIONS < 2 suppress CONFIG_CONT1_PHYS2_START CONFIG_CONT1_PHYS2_END
-when CONFIG_CONT1_PHYSMEM_REGIONS < 2 suppress CONFIG_CONT1_PHYS3_START CONFIG_CONT1_PHYS3_END
-when CONFIG_CONT1_PHYSMEM_REGIONS < 3 suppress CONFIG_CONT1_PHYS2_START CONFIG_CONT1_PHYS2_END
-when CONFIG_CONT1_PHYSMEM_REGIONS < 3 suppress CONFIG_CONT1_PHYS3_START CONFIG_CONT1_PHYS3_END
-when CONFIG_CONT1_PHYSMEM_REGIONS < 4 suppress CONFIG_CONT1_PHYS3_START CONFIG_CONT1_PHYS3_END
-
-default CONFIG_CONT0_PHYS0_START from 0x0
-default CONFIG_CONT0_PHYS0_END	 from 0x0
-default CONFIG_CONT0_PHYS1_START from 0x0
-default CONFIG_CONT0_PHYS1_END	 from 0x0
-default CONFIG_CONT0_PHYS2_START from 0x0
-default CONFIG_CONT0_PHYS2_END	 from 0x0
-default CONFIG_CONT0_PHYS3_START from 0x0
-default CONFIG_CONT0_PHYS3_END	 from 0x0
-
-default CONFIG_CONT0_VIRT0_START from 0x0
-default CONFIG_CONT0_VIRT0_END	 from 0x0
-default CONFIG_CONT0_VIRT1_START from 0x0
-default CONFIG_CONT0_VIRT1_END	 from 0x0
-default CONFIG_CONT0_VIRT2_START from 0x0
-default CONFIG_CONT0_VIRT2_END	 from 0x0
-default CONFIG_CONT0_VIRT3_START from 0x0
-default CONFIG_CONT0_VIRT3_END	 from 0x0
-default CONFIG_CONT0_VIRT4_START from 0x0
-default CONFIG_CONT0_VIRT4_END	 from 0x0
-default CONFIG_CONT0_VIRT5_START from 0x0
-default CONFIG_CONT0_VIRT5_END	 from 0x0
+when CONT0_PHYSMEM_REGIONS < 2 suppress CONT0_PHYS1_START CONT0_PHYS1_END
+when CONT0_PHYSMEM_REGIONS < 2 suppress CONT0_PHYS2_START CONT0_PHYS2_END
+when CONT0_PHYSMEM_REGIONS < 2 suppress CONT0_PHYS3_START CONT0_PHYS3_END
+when CONT0_PHYSMEM_REGIONS < 3 suppress CONT0_PHYS2_START CONT0_PHYS2_END
+when CONT0_PHYSMEM_REGIONS < 3 suppress CONT0_PHYS3_START CONT0_PHYS3_END
+when CONT0_PHYSMEM_REGIONS < 4 suppress CONT0_PHYS3_START CONT0_PHYS3_END
 
 
-default CONFIG_CONT1_PHYS0_START from 0x0
-default CONFIG_CONT1_PHYS0_END	 from 0x0
-default CONFIG_CONT1_PHYS1_START from 0x0
-default CONFIG_CONT1_PHYS1_END	 from 0x0
-default CONFIG_CONT1_PHYS2_START from 0x0
-default CONFIG_CONT1_PHYS2_END	 from 0x0
-default CONFIG_CONT1_PHYS3_START from 0x0
-default CONFIG_CONT1_PHYS3_END	 from 0x0
+# Define limits on virtual and physical memory regions of a _single_ container 0. Too much code!
+when CONT1_VIRTMEM_REGIONS < 2 suppress CONT1_VIRT1_START CONT1_VIRT1_END
+when CONT1_VIRTMEM_REGIONS < 2 suppress CONT1_VIRT2_START CONT1_VIRT2_END
+when CONT1_VIRTMEM_REGIONS < 2 suppress CONT1_VIRT3_START CONT1_VIRT3_END
+when CONT1_VIRTMEM_REGIONS < 2 suppress CONT1_VIRT4_START CONT1_VIRT4_END
+when CONT1_VIRTMEM_REGIONS < 2 suppress CONT1_VIRT5_START CONT1_VIRT5_END
 
-default CONFIG_CONT1_VIRT0_START from 0x0
-default CONFIG_CONT1_VIRT0_END	 from 0x0
-default CONFIG_CONT1_VIRT1_START from 0x0
-default CONFIG_CONT1_VIRT1_END	 from 0x0
-default CONFIG_CONT1_VIRT2_START from 0x0
-default CONFIG_CONT1_VIRT2_END	 from 0x0
-default CONFIG_CONT1_VIRT3_START from 0x0
-default CONFIG_CONT1_VIRT3_END	 from 0x0
-default CONFIG_CONT1_VIRT4_START from 0x0
-default CONFIG_CONT1_VIRT4_END	 from 0x0
-default CONFIG_CONT1_VIRT5_START from 0x0
-default CONFIG_CONT1_VIRT5_END	 from 0x0
+when CONT1_VIRTMEM_REGIONS < 3 suppress CONT1_VIRT2_START CONT1_VIRT2_END
+when CONT1_VIRTMEM_REGIONS < 3 suppress CONT1_VIRT3_START CONT1_VIRT3_END
+when CONT1_VIRTMEM_REGIONS < 3 suppress CONT1_VIRT4_START CONT1_VIRT4_END
+when CONT1_VIRTMEM_REGIONS < 3 suppress CONT1_VIRT5_START CONT1_VIRT5_END
 
-default CONFIG_CONT0_OPT_DIRNAME from (CONFIG_CONT0_TYPE_LINUX==y) ? "linux" : ((CONFIG_CONT0_TYPE_BARE==y) ? "bare" : "noname")
-default CONFIG_CONT1_OPT_DIRNAME from (CONFIG_CONT1_TYPE_LINUX==y) ? "linux" : ((CONFIG_CONT1_TYPE_BARE==y) ? "bare" : "noname")
+when CONT1_VIRTMEM_REGIONS < 4 suppress CONT1_VIRT3_START CONT1_VIRT3_END
+when CONT1_VIRTMEM_REGIONS < 4 suppress CONT1_VIRT4_START CONT1_VIRT4_END
+when CONT1_VIRTMEM_REGIONS < 4 suppress CONT1_VIRT5_START CONT1_VIRT5_END
 
-unless CONFIG_CONTAINERS > 1 suppress cont1_menu
-require CONFIG_CONTAINERS < 2 implies cont1_menu==n
+when CONT1_VIRTMEM_REGIONS < 5 suppress CONT1_VIRT4_START CONT1_VIRT4_END
+when CONT1_VIRTMEM_REGIONS < 5 suppress CONT1_VIRT5_START CONT1_VIRT5_END
 
-when CONFIG_CONT0_TYPE_LINUX==y suppress cont0_bare_pager_params
-when CONFIG_CONT0_TYPE_BARE==y suppress cont0_linux_pager_params
-when CONFIG_CONT1_TYPE_LINUX==y suppress cont1_bare_pager_params
-when CONFIG_CONT1_TYPE_BARE==y suppress cont1_linux_pager_params
+when CONT1_VIRTMEM_REGIONS < 6 suppress CONT1_VIRT5_START CONT1_VIRT5_END
+
+when CONT1_PHYSMEM_REGIONS < 2 suppress CONT1_PHYS1_START CONT1_PHYS1_END
+when CONT1_PHYSMEM_REGIONS < 2 suppress CONT1_PHYS2_START CONT1_PHYS2_END
+when CONT1_PHYSMEM_REGIONS < 2 suppress CONT1_PHYS3_START CONT1_PHYS3_END
+when CONT1_PHYSMEM_REGIONS < 3 suppress CONT1_PHYS2_START CONT1_PHYS2_END
+when CONT1_PHYSMEM_REGIONS < 3 suppress CONT1_PHYS3_START CONT1_PHYS3_END
+when CONT1_PHYSMEM_REGIONS < 4 suppress CONT1_PHYS3_START CONT1_PHYS3_END
+
+default CONT0_PHYS0_START from 0x0
+default CONT0_PHYS0_END	 from 0x0
+default CONT0_PHYS1_START from 0x0
+default CONT0_PHYS1_END	 from 0x0
+default CONT0_PHYS2_START from 0x0
+default CONT0_PHYS2_END	 from 0x0
+default CONT0_PHYS3_START from 0x0
+default CONT0_PHYS3_END	 from 0x0
+
+default CONT0_VIRT0_START from 0x0
+default CONT0_VIRT0_END	 from 0x0
+default CONT0_VIRT1_START from 0x0
+default CONT0_VIRT1_END	 from 0x0
+default CONT0_VIRT2_START from 0x0
+default CONT0_VIRT2_END	 from 0x0
+default CONT0_VIRT3_START from 0x0
+default CONT0_VIRT3_END	 from 0x0
+default CONT0_VIRT4_START from 0x0
+default CONT0_VIRT4_END	 from 0x0
+default CONT0_VIRT5_START from 0x0
+default CONT0_VIRT5_END	 from 0x0
+
+
+default CONT1_PHYS0_START from 0x0
+default CONT1_PHYS0_END	 from 0x0
+default CONT1_PHYS1_START from 0x0
+default CONT1_PHYS1_END	 from 0x0
+default CONT1_PHYS2_START from 0x0
+default CONT1_PHYS2_END	 from 0x0
+default CONT1_PHYS3_START from 0x0
+default CONT1_PHYS3_END	 from 0x0
+
+default CONT1_VIRT0_START from 0x0
+default CONT1_VIRT0_END	 from 0x0
+default CONT1_VIRT1_START from 0x0
+default CONT1_VIRT1_END	 from 0x0
+default CONT1_VIRT2_START from 0x0
+default CONT1_VIRT2_END	 from 0x0
+default CONT1_VIRT3_START from 0x0
+default CONT1_VIRT3_END	 from 0x0
+default CONT1_VIRT4_START from 0x0
+default CONT1_VIRT4_END	 from 0x0
+default CONT1_VIRT5_START from 0x0
+default CONT1_VIRT5_END	 from 0x0
+
+default CONT0_OPT_DIRNAME from (CONT0_TYPE_LINUX==y) ? "linux" : ((CONT0_TYPE_BARE==y) ? "bare" : "noname")
+default CONT1_OPT_DIRNAME from (CONT1_TYPE_LINUX==y) ? "linux" : ((CONT1_TYPE_BARE==y) ? "bare" : "noname")
+
+unless CONTAINERS > 1 suppress cont1_menu
+require CONTAINERS < 2 implies cont1_menu==n
+
+when CONT0_TYPE_LINUX==y suppress cont0_bare_pager_params
+when CONT0_TYPE_BARE==y suppress cont0_linux_pager_params
+when CONT1_TYPE_LINUX==y suppress cont1_bare_pager_params
+when CONT1_TYPE_BARE==y suppress cont1_linux_pager_params
 
 symbols
 containers_menu		'Configure Containers'
@@ -359,104 +359,104 @@ cont1_linux_pager_params 'Container 1 Pager parameters'
 cont1_bare_pager_params	 'Container 1 Pager parameters'
 
 menu cont0_bare_pager_params
-	CONFIG_CONT0_PAGER_LMA@
-	CONFIG_CONT0_PAGER_VMA@
-	CONFIG_CONT0_PAGER_SIZE@
+	CONT0_PAGER_LMA@
+	CONT0_PAGER_VMA@
+	CONT0_PAGER_SIZE@
 
 menu cont0_linux_pager_params
-	CONFIG_CONT0_LINUX_PAGE_OFFSET@
-	CONFIG_CONT0_LINUX_TEXT_OFFSET@
-	CONFIG_CONT0_LINUX_PHYS_OFFSET@
-	CONFIG_CONT0_LINUX_MAPSIZE@
+	CONT0_LINUX_PAGE_OFFSET@
+	CONT0_LINUX_TEXT_OFFSET@
+	CONT0_LINUX_PHYS_OFFSET@
+	CONT0_LINUX_MAPSIZE@
 
 menu cont1_bare_pager_params
-	CONFIG_CONT1_PAGER_LMA@
-	CONFIG_CONT1_PAGER_VMA@
-	CONFIG_CONT1_PAGER_SIZE@
+	CONT1_PAGER_LMA@
+	CONT1_PAGER_VMA@
+	CONT1_PAGER_SIZE@
 
 menu cont1_linux_pager_params
-	CONFIG_CONT1_LINUX_PAGE_OFFSET@
-	CONFIG_CONT1_LINUX_TEXT_OFFSET@
-	CONFIG_CONT1_LINUX_PHYS_OFFSET@
-	CONFIG_CONT1_LINUX_MAPSIZE@
+	CONT1_LINUX_PAGE_OFFSET@
+	CONT1_LINUX_TEXT_OFFSET@
+	CONT1_LINUX_PHYS_OFFSET@
+	CONT1_LINUX_MAPSIZE@
 
 menu cont0_physmem_list
-	CONFIG_CONT0_PHYSMEM_REGIONS%
-	CONFIG_CONT0_PHYS0_START@
-	CONFIG_CONT0_PHYS0_END@
-	CONFIG_CONT0_PHYS1_START@
-	CONFIG_CONT0_PHYS1_END@
-	CONFIG_CONT0_PHYS2_START@
-	CONFIG_CONT0_PHYS2_END@
-	CONFIG_CONT0_PHYS3_START@
-	CONFIG_CONT0_PHYS3_END@
+	CONT0_PHYSMEM_REGIONS%
+	CONT0_PHYS0_START@
+	CONT0_PHYS0_END@
+	CONT0_PHYS1_START@
+	CONT0_PHYS1_END@
+	CONT0_PHYS2_START@
+	CONT0_PHYS2_END@
+	CONT0_PHYS3_START@
+	CONT0_PHYS3_END@
 
 menu cont1_physmem_list
-	CONFIG_CONT1_PHYSMEM_REGIONS%
-	CONFIG_CONT1_PHYS0_START@
-	CONFIG_CONT1_PHYS0_END@
-	CONFIG_CONT1_PHYS1_START@
-	CONFIG_CONT1_PHYS1_END@
-	CONFIG_CONT1_PHYS2_START@
-	CONFIG_CONT1_PHYS2_END@
-	CONFIG_CONT1_PHYS3_START@
-	CONFIG_CONT1_PHYS3_END@
+	CONT1_PHYSMEM_REGIONS%
+	CONT1_PHYS0_START@
+	CONT1_PHYS0_END@
+	CONT1_PHYS1_START@
+	CONT1_PHYS1_END@
+	CONT1_PHYS2_START@
+	CONT1_PHYS2_END@
+	CONT1_PHYS3_START@
+	CONT1_PHYS3_END@
 
 menu cont0_virtmem_list
-	CONFIG_CONT0_VIRTMEM_REGIONS%
-	CONFIG_CONT0_VIRT0_START@
-	CONFIG_CONT0_VIRT0_END@
-	CONFIG_CONT0_VIRT1_START@
-	CONFIG_CONT0_VIRT1_END@
-	CONFIG_CONT0_VIRT2_START@
-	CONFIG_CONT0_VIRT2_END@
-	CONFIG_CONT0_VIRT3_START@
-	CONFIG_CONT0_VIRT3_END@
-	CONFIG_CONT0_VIRT4_START@
-	CONFIG_CONT0_VIRT4_END@
-	CONFIG_CONT0_VIRT5_START@
-	CONFIG_CONT0_VIRT5_END@
+	CONT0_VIRTMEM_REGIONS%
+	CONT0_VIRT0_START@
+	CONT0_VIRT0_END@
+	CONT0_VIRT1_START@
+	CONT0_VIRT1_END@
+	CONT0_VIRT2_START@
+	CONT0_VIRT2_END@
+	CONT0_VIRT3_START@
+	CONT0_VIRT3_END@
+	CONT0_VIRT4_START@
+	CONT0_VIRT4_END@
+	CONT0_VIRT5_START@
+	CONT0_VIRT5_END@
 
 menu cont1_virtmem_list
-	CONFIG_CONT1_VIRTMEM_REGIONS%
-	CONFIG_CONT1_VIRT0_START@
-	CONFIG_CONT1_VIRT0_END@
-	CONFIG_CONT1_VIRT1_START@
-	CONFIG_CONT1_VIRT1_END@
-	CONFIG_CONT1_VIRT2_START@
-	CONFIG_CONT1_VIRT2_END@
-	CONFIG_CONT1_VIRT3_START@
-	CONFIG_CONT1_VIRT3_END@
-	CONFIG_CONT1_VIRT4_START@
-	CONFIG_CONT1_VIRT4_END@
-	CONFIG_CONT1_VIRT5_START@
-	CONFIG_CONT1_VIRT5_END@
+	CONT1_VIRTMEM_REGIONS%
+	CONT1_VIRT0_START@
+	CONT1_VIRT0_END@
+	CONT1_VIRT1_START@
+	CONT1_VIRT1_END@
+	CONT1_VIRT2_START@
+	CONT1_VIRT2_END@
+	CONT1_VIRT3_START@
+	CONT1_VIRT3_END@
+	CONT1_VIRT4_START@
+	CONT1_VIRT4_END@
+	CONT1_VIRT5_START@
+	CONT1_VIRT5_END@
 
 menu container0_options
-	CONFIG_CONT0_OPT_DIRNAME$
+	CONT0_OPT_DIRNAME$
 	cont0_linux_pager_params
 	cont0_bare_pager_params
 	cont0_physmem_list
 	cont0_virtmem_list
 
 menu container1_options
-	CONFIG_CONT1_OPT_DIRNAME$
+	CONT1_OPT_DIRNAME$
 	cont1_linux_pager_params
 	cont1_bare_pager_params
 	cont1_physmem_list
 	cont1_virtmem_list
 
 choices container0_type
-        CONFIG_CONT0_TYPE_LINUX
-	CONFIG_CONT0_TYPE_BARE
-	CONFIG_CONT0_TYPE_C0_POSIX
-        default CONFIG_CONT0_TYPE_LINUX
+        CONT0_TYPE_LINUX
+	CONT0_TYPE_BARE
+	CONT0_TYPE_C0_POSIX
+        default CONT0_TYPE_LINUX
 
 choices container1_type
-        CONFIG_CONT1_TYPE_LINUX
-	CONFIG_CONT1_TYPE_BARE
-	CONFIG_CONT1_TYPE_C0_POSIX
-        default CONFIG_CONT1_TYPE_BARE
+        CONT1_TYPE_LINUX
+	CONT1_TYPE_BARE
+	CONT1_TYPE_C0_POSIX
+        default CONT1_TYPE_BARE
 
 menu cont0_menu
 	container0_type
@@ -470,6 +470,7 @@ menu containers_menu
 	cont0_menu
 	cont1_menu
 
+prefix CONFIG_
 
 # Checklist for correct CML2
 # 1) Have you defined a prompt for each menu, choice_type?
