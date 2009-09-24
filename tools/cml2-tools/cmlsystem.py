@@ -478,7 +478,8 @@ class CMLSystem(cml.CMLRulebase):
 
     def saveable(self, node, mode="normal"):
         "Should this symbol be visible in the configuration written out?"
-        if node.setcount > 0:
+        # Fix for loaded symbols from old configuration being written back without visibility check.
+        if node.setcount > 0 and self.is_visible(node):
             return 1
         if node.is_derived() and (not node.visibility or cml.evaluate(node.visibility)):
             return 1
