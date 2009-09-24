@@ -3,13 +3,11 @@ build
 .sconsign.dblite
 *.pyc
 config.log
-crt0.o
 *.[ao]
 cscope*out
 loader/images.S
 loader/ksyms.S
 tags
-.gdbinit
 conts/bare*
 conts/linux
 src/generic/cinfo.c
