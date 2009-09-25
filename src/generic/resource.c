@@ -806,7 +806,7 @@ int setup_boot_resources(struct boot_resources *bootres,
 	init_kernel_container(kcont);
 
 	/* Number of containers known at compile-time */
-	bootres->nconts = CONFIG_TOTAL_CONTAINERS;
+	bootres->nconts = CONFIG_CONTAINERS;
 
 	/* Traverse all containers */
 	for (int i = 0; i < bootres->nconts; i++) {

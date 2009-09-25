@@ -8,7 +8,7 @@
 #define __RESOURCES_H__
 
 /* Number of containers defined at compile-time */
-#define CONFIG_TOTAL_CONTAINERS		1
+#include <l4/config.h>
 
 #include <l4/generic/capability.h>
 #include <l4/lib/idpool.h>
