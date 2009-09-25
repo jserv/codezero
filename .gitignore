@@ -11,3 +11,5 @@ tags
 conts/bare*
 conts/linux
 src/generic/cinfo.c
+.gdbinit
+*.swp
