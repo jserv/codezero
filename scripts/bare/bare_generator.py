@@ -103,11 +103,22 @@ class BareContGenerator:
         self.copy_bare_build_desc(config, cont)
         self.generate_linker_script(config, cont)
 
+    def update_configuration(self, config, cont):
+        self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
+        self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
+        self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
+                                   self.linker_lds_name)
+        self.copy_bare_build_desc(config, cont)
+        self.generate_linker_script(config, cont)
+
     def check_create_bare_sources(self, config):
         for cont in config.containers:
             if cont.type == "bare":
                 if not os.path.exists(join(self.BARE_SRC_BASEDIR, cont.dirname)):
                     self.create_bare_sources(config, cont)
+                # Don't create new sources but update configuration
+                else:
+                    self.update_configuration(config, cont)
 
     def generate_linker_script(self, config, cont):
          with open(self.linker_lds_in) as fin:

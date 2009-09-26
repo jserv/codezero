@@ -64,5 +64,7 @@ def configure_kernel(cml_file):
     generate_kernel_cinfo(config.containers, KERNEL_CINFO_PATH)
 
 if __name__ == "__main__":
-    configure_kernel(join(CML2_CONFIG_SRCDIR, "arm.cml"))
+    if not os.path.exists(join(CML2_CONFIG_SRCDIR, 'out.cml')):
+        generate_container_cml(4)
+    configure_kernel(join(CML2_CONFIG_SRCDIR, "out.cml"))
 
