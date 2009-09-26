@@ -7,6 +7,7 @@ from config.projpaths import *
 from config.configuration import *
 from scripts.bare.bare_generator import *
 from scripts.conts.generate_kernel_cinfo import *
+from config.parse_options import *
 
 def cml2_header_to_symbols(cml2_header, config):
     with file(cml2_header) as header_file:
@@ -64,7 +65,6 @@ def configure_kernel(cml_file):
     generate_kernel_cinfo(config.containers, KERNEL_CINFO_PATH)
 
 if __name__ == "__main__":
-    if not os.path.exists(join(CML2_CONFIG_SRCDIR, 'out.cml')):
-        generate_container_cml(4)
+    build_parse_options()
     configure_kernel(join(CML2_CONFIG_SRCDIR, "out.cml"))
 
