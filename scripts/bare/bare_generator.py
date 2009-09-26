@@ -90,48 +90,44 @@ class BareContGenerator:
                                   self.main_configurator_name))
 
     def create_bare_sources(self, config, cont):
-        # Determine container directory name.
-        self.CONT_SRC_DIR = join(self.BARE_SRC_BASEDIR, cont.dirname.lower())
-
-        self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
-        self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
-        self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
-                                   self.linker_lds_name)
-
         self.create_bare_srctree(config, cont)
         self.copy_bare_build_readme(config, cont)
         self.copy_bare_build_desc(config, cont)
         self.generate_linker_script(config, cont)
 
     def update_configuration(self, config, cont):
-        self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
-        self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
-        self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
-                                   self.linker_lds_name)
         self.copy_bare_build_desc(config, cont)
         self.generate_linker_script(config, cont)
 
     def check_create_bare_sources(self, config):
         for cont in config.containers:
             if cont.type == "bare":
+                # Determine container directory name.
+                self.CONT_SRC_DIR = join(self.BARE_SRC_BASEDIR, cont.dirname.lower())
+                self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
+                self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
+                self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
+                                           self.linker_lds_name)
+
                 if not os.path.exists(join(self.BARE_SRC_BASEDIR, cont.dirname)):
                     self.create_bare_sources(config, cont)
-                # Don't create new sources but update configuration
                 else:
+                    # Don't create new sources but update configuration
                     self.update_configuration(config, cont)
 
     def generate_linker_script(self, config, cont):
-         with open(self.linker_lds_in) as fin:
+        with open(self.linker_lds_in) as fin:
             str = fin.read()
             with open(self.linker_lds_out, 'w+') as fout:
-                fout.write(str % (cont.pager_vma, \
-                                  cont.pager_lma))
+                fout.write(str % (hex(cont.pager_vma), \
+                                  hex(cont.pager_lma)))
 
     def bare_container_generate(self, config):
         self.check_create_bare_sources(config)
 
 if __name__ == "__main__":
     config = configuration_retrieve()
+    config.config_print()
     bare_cont = BareContGenerator()
     bare_cont.bare_container_generate(config)
 

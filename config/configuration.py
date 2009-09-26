@@ -163,9 +163,9 @@ class configuration:
             print '\nContainer %d' % c.id
             print 'Container type: %s' % c.type
             print 'Container Name: %s' % c.name
-            print 'Container Pager lma: %s' % c.pager_lma
-            print 'Container Pager vma: %s' % c.pager_vma
-            print 'Container Pager size: %s' % c.pager_size
+            print 'Container Pager lma: %s' % hex(c.pager_lma)
+            print 'Container Pager vma: %s' % hex(c.pager_vma)
+            print 'Container Pager size: %s' % hex(c.pager_size)
             print 'Container Virtual regions: %s' % c.virt_regions
             print 'Container Physical regions: %s' % c.phys_regions
 
