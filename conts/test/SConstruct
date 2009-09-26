@@ -52,3 +52,4 @@ src += Glob('src/*.[cS]')
 
 objs = env.Object(src)
 prog = env.Program('main.elf', objs)
+Depends(prog, 'include/linker.lds')

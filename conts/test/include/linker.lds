@@ -13,7 +13,15 @@ ENTRY(_start)
 SECTIONS
 {
 	. = vma_start;
-	.text : AT (ADDR(.text) - offset) { *(.text.head) *(.text) }
+	.text : AT (ADDR(.text) - offset) {
+	/*
+	 * NOTE:
+	 * crt0.S must be in .text.head. This is necessary because
+	 * the kernel does not know any _start address, it assumes
+	 * the start address of pager region as the start address.
+	 */
+		*(.text.head) *(.text)
+	}
 	.rodata : AT (ADDR(.rodata) - offset) { *(.rodata) }
 	.rodata1 : AT (ADDR(.rodata1) - offset) { *(.rodata1) }
 
