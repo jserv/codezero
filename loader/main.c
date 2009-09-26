@@ -98,11 +98,16 @@ int load_elf_image(unsigned long **entry, void *filebuf)
 	return 0;
 }
 
+void arch_start_kernel(void *entry)
+{
+	printf("elf-loader:\tStarting kernel\n\r");
+	void (*func)(unsigned long) = (void (*)(unsigned long)) (*(unsigned long*)entry);
+	func(0);
+}
+
 int main(void)
 {
 	unsigned long *kernel_entry;
-
-	arch_init();
 
 	printf("ELF Loader: Started.\n");
 
@@ -114,9 +119,11 @@ int main(void)
 			      (unsigned long)_end_containers);
 
 	printf("elf-loader:\tkernel entry point is %lx\n", *kernel_entry);
-//	arch_start_kernel(kernel_entry);
+	arch_start_kernel(kernel_entry);
 
-//	printf("elf-loader:\tKernel start failed!\n");
+	printf("elf-loader:\tKernel start failed!\n");
+	while (1)
+		printf("Endless loop.\n");
 
 	return -1;
 }
