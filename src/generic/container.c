@@ -24,9 +24,9 @@ int container_init(struct container *c)
 	init_mutex_queue_head(&c->mutex_queue_head);
 
 	/* Ini pager structs */
-	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++) {
+	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++)
 		cap_list_init(&c->pager[i].cap_list);
-	}
+
 	/* Init scheduler */
 	sched_init(&c->scheduler);
 
@@ -207,6 +207,8 @@ int init_pager(struct pager *pager, struct container *cont)
 	/*
 	 * Initialize dummy current capability list pointer
 	 * so that capability accounting can be done as normal
+	 * FYI: We're still on bootstack instead of current's
+	 * real stack. Hence this is a dummy.
 	 */
 	current->cap_list_ptr = &pager->cap_list;
 

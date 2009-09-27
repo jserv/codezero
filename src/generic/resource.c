@@ -471,6 +471,7 @@ int copy_container_info(struct container *c, struct container_info *cinfo)
 	/* Copy capabilities */
 	for (int i = 0; i < c->npagers; i++)
 		copy_pager_info(&c->pager[i], &cinfo->pager[i]);
+
 	return 0;
 }
 
@@ -663,8 +664,9 @@ void init_resource_allocators(struct boot_resources *bootres,
 	bootres->nkpgds++;
 
 	/* Initialise PGD cache */
-	kcont->pgd_cache = init_resource_cache(bootres->nspaces,
-				    	       PGD_SIZE, kcont, 1);
+	kcont->pgd_cache =
+		init_resource_cache(bootres->nspaces,
+				    PGD_SIZE, kcont, 1);
 
 	/* Initialise struct address_space cache */
 	kcont->space_cache =
@@ -673,22 +675,26 @@ void init_resource_allocators(struct boot_resources *bootres,
 				    kcont, 0);
 
 	/* Initialise ktcb cache */
-	kcont->ktcb_cache = init_resource_cache(bootres->nthreads,
-						PAGE_SIZE, kcont, 1);
+	kcont->ktcb_cache =
+		init_resource_cache(bootres->nthreads,
+				    PAGE_SIZE, kcont, 1);
 
 	/* Initialise umutex cache */
-	kcont->mutex_cache = init_resource_cache(bootres->nmutex,
-						 sizeof(struct mutex_queue),
-						 kcont, 0);
+	kcont->mutex_cache =
+		init_resource_cache(bootres->nmutex,
+				    sizeof(struct mutex_queue),
+				    kcont, 0);
 	/* Initialise container cache */
-	kcont->cont_cache = init_resource_cache(bootres->nconts,
-						sizeof(struct container),
-						kcont, 0);
+	kcont->cont_cache =
+		init_resource_cache(bootres->nconts,
+				    sizeof(struct container),
+				    kcont, 0);
 
 	/*
 	 * Add all caps used by the kernel
-	 * Two extra in case more memcaps get split after cap cache init below.
-	 * Three extra for quantitative kernel caps for pmds, pgds, caps.
+	 * Two extra in case more memcaps get split after
+	 * cap cache init below. Three extra for quantitative
+	 * kernel caps for pmds, pgds, caps.
 	 */
 	bootres->nkcaps += kcont->virtmem_used.ncaps +
 			   kcont->virtmem_free.ncaps +
@@ -699,9 +705,10 @@ void init_resource_allocators(struct boot_resources *bootres,
 	bootres->ncaps += bootres->nkcaps;
 
 	/* Initialise capability cache */
-	kcont->cap_cache = init_resource_cache(bootres->ncaps,
-					       sizeof(struct capability),
-					       kcont, 0);
+	kcont->cap_cache =
+		init_resource_cache(bootres->ncaps,
+				    sizeof(struct capability),
+				    kcont, 0);
 
 	/* Count boot pmds used so far and add them */
 	bootres->nkpmds += pgd_count_pmds(&init_pgd);
@@ -712,15 +719,17 @@ void init_resource_allocators(struct boot_resources *bootres,
 	 * cache init and add them.
 	 */
 	bootres->nkpmds += ((bootres->npmds * PMD_SIZE) / PMD_MAP_SIZE);
-	if (!is_aligned(bootres->npmds * PMD_SIZE, PMD_MAP_SIZE))
+	if (!is_aligned(bootres->npmds * PMD_SIZE,
+			PMD_MAP_SIZE))
 		bootres->nkpmds++;
 
 	/* Add kernel pmds to all pmd count */
 	bootres->npmds += bootres->nkpmds;
 
 	/* Initialise PMD cache */
-	kcont->pmd_cache = init_resource_cache(bootres->npmds,
-					       PMD_SIZE, kcont, 1);
+	kcont->pmd_cache =
+		init_resource_cache(bootres->npmds,
+				    PMD_SIZE, kcont, 1);
 
 }
 
@@ -740,16 +749,20 @@ int process_cap_info(struct cap_info *cap,
 	case CAP_RTYPE_THREADPOOL:
 		bootres->nthreads += cap->size;
 		break;
+
 	case CAP_RTYPE_SPACEPOOL:
 		bootres->nspaces += cap->size;
 		break;
+
 	case CAP_RTYPE_MUTEXPOOL:
 		bootres->nmutex += cap->size;
 		break;
+
 	case CAP_RTYPE_MAPPOOL:
 		/* Speficies how many pmds can be mapped */
 		bootres->npmds += cap->size;
 		break;
+
 	case CAP_RTYPE_CAPPOOL:
 		/* Specifies how many new caps can be created */
 		bootres->ncaps += cap->size;
@@ -772,6 +785,7 @@ int process_cap_info(struct cap_info *cap,
 			BUG();
 		}
 		break;
+
 	case CAP_RTYPE_PHYSMEM:
 		if ((ret = memcap_unmap(&kcont->physmem_free,
 					cap->start, cap->end))) {
@@ -790,6 +804,7 @@ int process_cap_info(struct cap_info *cap,
 		}
 		break;
 	}
+
 	return ret;
 }
 
