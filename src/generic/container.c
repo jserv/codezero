@@ -27,8 +27,6 @@ int container_init(struct container *c)
 	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++)
 		cap_list_init(&c->pager[i].cap_list);
 
-	/* Init scheduler */
-	sched_init(&c->scheduler);
 
 	return 0;
 }

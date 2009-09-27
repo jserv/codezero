@@ -24,6 +24,7 @@
 #include INC_PLAT(platform.h)
 #include INC_ARCH(exception.h)
 
+struct scheduler scheduler;
 
 /* This is incremented on each irq or voluntarily by preempt_disable() */
 extern unsigned int current_irq_nest_count;
@@ -33,14 +34,14 @@ static int voluntary_preempt = 0;
 
 void sched_lock_runqueues(void)
 {
-	spin_lock(&curcont->scheduler.sched_rq[0].lock);
-	spin_lock(&curcont->scheduler.sched_rq[1].lock);
+	spin_lock(&scheduler.sched_rq[0].lock);
+	spin_lock(&scheduler.sched_rq[1].lock);
 }
 
 void sched_unlock_runqueues(void)
 {
-	spin_unlock(&curcont->scheduler.sched_rq[0].lock);
-	spin_unlock(&curcont->scheduler.sched_rq[1].lock);
+	spin_unlock(&scheduler.sched_rq[0].lock);
+	spin_unlock(&scheduler.sched_rq[1].lock);
 }
 
 int preemptive()
@@ -125,14 +126,13 @@ static void sched_rq_swap_runqueues(void)
 {
 	struct runqueue *temp;
 
-	BUG_ON(list_empty(&curcont->scheduler.rq_expired->task_list));
-	BUG_ON(curcont->scheduler.rq_expired->total == 0);
+	BUG_ON(list_empty(&scheduler.rq_expired->task_list));
+	BUG_ON(scheduler.rq_expired->total == 0);
 
 	/* Queues are swapped and expired list becomes runnable */
-	temp = curcont->scheduler.rq_runnable;
-	curcont->scheduler.rq_runnable =
-		curcont->scheduler.rq_expired;
-	curcont->scheduler.rq_expired = temp;
+	temp = scheduler.rq_runnable;
+	scheduler.rq_runnable = scheduler.rq_expired;
+	scheduler.rq_expired = temp;
 }
 
 /* Set policy on where to add tasks in the runqueue */
@@ -206,7 +206,7 @@ void sched_resume_sync(struct ktcb *task)
 	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
 	sched_rq_add_task(task,
-			  task->container->scheduler.rq_runnable,
+			  scheduler.rq_runnable,
 			  RQ_ADD_FRONT);
 	schedule();
 }
@@ -221,7 +221,7 @@ void sched_resume_async(struct ktcb *task)
 {
 	task->state = TASK_RUNNABLE;
 	sched_rq_add_task(task,
-			  task->container->scheduler.rq_runnable,
+			  scheduler.rq_runnable,
 			  RQ_ADD_FRONT);
 }
 
@@ -235,8 +235,8 @@ void sched_suspend_sync(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	curcont->scheduler.prio_total -= current->priority;
-	BUG_ON(curcont->scheduler.prio_total <= 0);
+	scheduler.prio_total -= current->priority;
+	BUG_ON(scheduler.prio_total <= 0);
 	preempt_enable();
 
 	/* Async wake up any waiters */
@@ -250,8 +250,8 @@ void sched_suspend_async(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	curcont->scheduler.prio_total -= current->priority;
-	BUG_ON(curcont->scheduler.prio_total <= 0);
+	scheduler.prio_total -= current->priority;
+	BUG_ON(scheduler.prio_total <= 0);
 
 	/* This will make sure we yield soon */
 	preempt_enable();
@@ -346,11 +346,11 @@ void schedule()
 		sched_rq_remove_task(current);
 		if (current->ticks_left)
 			sched_rq_add_task(current,
-					  curcont->scheduler.rq_runnable,
+					  scheduler.rq_runnable,
 					  RQ_ADD_BEHIND);
 		else
 			sched_rq_add_task(current,
-					  curcont->scheduler.rq_expired,
+					  scheduler.rq_expired,
 					  RQ_ADD_BEHIND);
 	}
 
@@ -363,15 +363,14 @@ void schedule()
 		wake_up_task(current, WAKEUP_INTERRUPT);
 
 	/* Determine the next task to be run */
-	if (curcont->scheduler.rq_runnable->total > 0) {
-		next = link_to_struct(
-		       curcont->scheduler.rq_runnable->task_list.next,
+	if (scheduler.rq_runnable->total > 0) {
+		next = link_to_struct(scheduler.rq_runnable->task_list.next,
 		       struct ktcb, rq_list);
 	} else {
-		if (curcont->scheduler.rq_expired->total > 0) {
+		if (scheduler.rq_expired->total > 0) {
 			sched_rq_swap_runqueues();
 			next = link_to_struct(
-			       curcont->scheduler.rq_runnable->task_list.next,
+			       scheduler.rq_runnable->task_list.next,
 			       struct ktcb, rq_list);
 		} else {
 			idle_task();
@@ -380,7 +379,7 @@ void schedule()
 
 	/* New tasks affect runqueue total priority. */
 	if (next->flags & TASK_RESUMING) {
-		curcont->scheduler.prio_total += next->priority;
+		scheduler.prio_total += next->priority;
 		next->flags &= ~TASK_RESUMING;
 	}
 
@@ -391,7 +390,7 @@ void schedule()
 		 * becomes runnable rather than all at once. It is done
 		 * every runqueue swap
 		 */
-		sched_recalc_ticks(next, curcont->scheduler.prio_total);
+		sched_recalc_ticks(next, scheduler.prio_total);
 		next->ticks_left = next->ticks_assigned;
 	}
 

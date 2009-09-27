@@ -47,8 +47,6 @@ struct container {
 	struct id_pool *thread_id_pool;		/* Id pools for thread/spaces */
 	struct id_pool *space_id_pool;
 
-	struct scheduler scheduler;		/* Scheduling structs */
-
 	struct mutex_queue_head mutex_queue_head; /* Userspace mutex list */
 
 	/*

@@ -403,6 +403,7 @@ void init_finalize(struct kernel_container *kcont)
 	 * Set up KIP UTCB ref
 	 */
 	kip.utcb = (u32)current->utcb_address;
+
 	/*
 	 * Start the scheduler, jumping to task
 	 */
@@ -444,6 +445,9 @@ void start_kernel(void)
 
 	/* Initialise system call page */
 	syscall_init();
+
+	/* Init scheduler */
+	sched_init(&scheduler);
 
 	/* Evaluate system resources and set up resource pools */
 	init_system_resources(&kernel_container);

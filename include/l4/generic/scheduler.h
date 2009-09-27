@@ -55,6 +55,7 @@ struct scheduler {
 	/* Total priority of all tasks in container */
 	int prio_total;
 };
+extern struct scheduler scheduler;
 
 void sched_init_runqueue(struct runqueue *rq);
 void sched_init_task(struct ktcb *task, int priority);
