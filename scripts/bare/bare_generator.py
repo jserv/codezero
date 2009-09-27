@@ -32,12 +32,15 @@ class BareContGenerator:
         self.build_readme_in = join(SCRIPTROOT, 'files/build.readme.in')
         self.build_desc_in = join(SCRIPTROOT, 'files/container.desc.in')
         self.linker_lds_in = join(SCRIPTROOT, 'files/linker.lds.in')
+        self.container_h_in = join(SCRIPTROOT, 'files/container.h.in')
 
         self.build_script_name = 'SConstruct'
         self.build_readme_name = 'build.readme'
         self.build_desc_name = '.container'
         self.linker_lds_name = 'linker.lds'
+        self.container_h_name = 'container.h'
 
+        self.container_h_out = None
         self.build_script_out = None
         self.build_readme_out = None
         self.build_desc_out = None
@@ -89,15 +92,24 @@ class BareContGenerator:
                                   self.main_configurator_name, \
                                   self.main_configurator_name))
 
+    def copy_bare_container_h(self, config, cont):
+        with open(self.container_h_in) as fin:
+            str = fin.read()
+            with open(self.container_h_out, 'w+') as fout:
+                # Make any manipulations here
+                fout.write(str % (cont.name, cont.id, cont.id))
+
     def create_bare_sources(self, config, cont):
         self.create_bare_srctree(config, cont)
         self.copy_bare_build_readme(config, cont)
         self.copy_bare_build_desc(config, cont)
         self.generate_linker_script(config, cont)
+        self.copy_bare_container_h(config, cont)
 
     def update_configuration(self, config, cont):
         self.copy_bare_build_desc(config, cont)
         self.generate_linker_script(config, cont)
+        self.copy_bare_container_h(config, cont)
 
     def check_create_bare_sources(self, config):
         for cont in config.containers:
@@ -108,6 +120,8 @@ class BareContGenerator:
                 self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
                 self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
                                            self.linker_lds_name)
+                self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), \
+                                            self.container_h_name)
 
                 if not os.path.exists(join(self.BARE_SRC_BASEDIR, cont.dirname)):
                     self.create_bare_sources(config, cont)

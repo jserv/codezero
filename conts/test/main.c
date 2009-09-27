@@ -5,9 +5,12 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4/api/space.h>
 
+extern int print_hello_world(void);
+
 int main(void)
 {
-	printf("Hello World!\n");
+	print_hello_world();
+
 	return 0;
 }
 
