@@ -14,7 +14,6 @@ class Container:
         self.pager_size = 0
         self.linux_page_offset = 0
         self.linux_phys_offset = 0
-        self.linux_text_offset = 0
         self.linux_mapsize = 0
         self.physmem = {}
         self.physmem["START"] = {}
@@ -85,10 +84,6 @@ class configuration:
         elif param[:len("LINUX_PHYS_OFFSET")] == "LINUX_PHYS_OFFSET":
             self.containers[id].linux_phys_offset = int(val, 0)
             self.containers[id].pager_lma += int(val, 0)
-        elif param[:len("LINUX_TEXT_OFFSET")] == "LINUX_TEXT_OFFSET":
-            self.containers[id].linux_text_offset = int(val, 0)
-            self.containers[id].pager_lma += int(val, 0)
-            self.containers[id].pager_vma += int(val, 0)
         elif re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param):
             matchobj = re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param)
             virtphys, regionidstr, discard1, startend = matchobj.groups()

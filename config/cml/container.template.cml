@@ -32,7 +32,6 @@ CONT%d_PAGER_LMA		'Container %d Pager LMA'
 CONT%d_PAGER_VMA		'Container %d Pager VMA'
 CONT%d_PAGER_SIZE	'Container %d Pager Initial map size (Optional)'
 CONT%d_LINUX_PAGE_OFFSET	'Container %d Linux PAGE_OFFSET parameter'
-CONT%d_LINUX_TEXT_OFFSET	'Container %d Linux TEXT_OFFSET parameter'
 CONT%d_LINUX_PHYS_OFFSET	'Container %d Linux PHYS_OFFSET parameter'
 CONT%d_LINUX_MAPSIZE	'Container %d Linux Initial kernel map size parameter'
 
@@ -40,7 +39,6 @@ default CONT%d_PAGER_LMA	 from 0x0
 default CONT%d_PAGER_VMA	 from 0x0
 default CONT%d_PAGER_SIZE  from 0x0
 default CONT%d_LINUX_PAGE_OFFSET from 0x0
-default CONT%d_LINUX_TEXT_OFFSET from 0x0
 default CONT%d_LINUX_PHYS_OFFSET from 0x0
 default CONT%d_LINUX_MAPSIZE from 0x0
 
@@ -119,7 +117,6 @@ menu cont%d_bare_pager_params
 
 menu cont%d_linux_pager_params
 	CONT%d_LINUX_PAGE_OFFSET@
-	CONT%d_LINUX_TEXT_OFFSET@
 	CONT%d_LINUX_PHYS_OFFSET@
 	CONT%d_LINUX_MAPSIZE@
 
