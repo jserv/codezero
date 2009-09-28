@@ -17,6 +17,7 @@ SCRIPTROOT = os.path.abspath(os.path.dirname(__file__))
 
 from config.projpaths import *
 from config.configuration import *
+from config.lib import *
 
 class BareContGenerator:
     def __init__(self):
@@ -68,11 +69,11 @@ class BareContGenerator:
             fout.write(name_header)
             fout.write('\t' + cont.name + '\n')
             fout.write(pager_lma_header)
-            fout.write('\t' + hex(cont.pager_lma) + '\n')
+            fout.write('\t' + conv_hex(cont.pager_lma) + '\n')
             fout.write(pager_size_header)
-            fout.write('\t' + hex(cont.pager_size) + '\n')
+            fout.write('\t' + conv_hex(cont.pager_size) + '\n')
             fout.write(pager_vma_header)
-            fout.write('\t' + hex(cont.pager_vma) + '\n')
+            fout.write('\t' + conv_hex(cont.pager_vma) + '\n')
             for ireg in range(cont.virt_regions):
                 fout.write(pager_virtmem_header % ireg)
                 fout.write('\t' + cont.virtmem["START"][ireg] + ' - ' + cont.virtmem["END"][ireg] + '\n')
@@ -133,8 +134,8 @@ class BareContGenerator:
         with open(self.linker_lds_in) as fin:
             str = fin.read()
             with open(self.linker_lds_out, 'w+') as fout:
-                fout.write(str % (hex(cont.pager_vma), \
-                                  hex(cont.pager_lma)))
+                fout.write(str % (conv_hex(cont.pager_vma), \
+                                  conv_hex(cont.pager_lma)))
 
     def bare_container_generate(self, config):
         self.check_create_bare_sources(config)

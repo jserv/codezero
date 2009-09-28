@@ -14,6 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELR
 
 from config.projpaths import *
 from config.configuration import *
+from config.lib import *
 
 # Convert address from python literal to numeric value
 def address_remove_literal(address):
