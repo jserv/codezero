@@ -56,8 +56,10 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 
 contid = ARGUMENTS.get('cont', '0')
 
+libposix_env = env.Clone()
+libposix_env.Replace(CPPPATH = [LIBPOSIX_INCLUDE_USERSPACE, 'include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
 libposix = SConscript('libposix/SConscript', \
-                      exports = { 'config' : config,  'env' : env, 'contid' : contid}, duplicate = 0, \
+                      exports = { 'config' : config,  'env' : libposix_env, 'contid' : contid}, duplicate = 0, \
                       variant_dir = join(BUILDDIR, 'conts' + '/posix' + '/libposix'))
 
 mm0_env = env.Clone()
@@ -73,8 +75,9 @@ fs0 = SConscript('fs0/SConscript', \
                  variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/fs0'))
 
 test0_env = env.Clone()
-test0_env.Replace(CPPPATH = [LIBPOSIX_INCLUDE_USERSPACE, 'include', LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
-test0_env.Append(CCFLAGS = '-nostdinc')
+test0_env.Replace(CPPPATH = ['include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
+#test0_env.Replace(CPPPATH = [LIBPOSIX_INCLUDE_USERSPACE, 'include', LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
+#test0_env.Append(CCFLAGS = '-nostdinc')
 test0 = SConscript('test0/SConscript', \
                    exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid}, duplicate = 0, \
                    variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/test0'))

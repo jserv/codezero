@@ -10,12 +10,13 @@ src = [Glob('*.[cS]') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
 env = environment.Clone()
 test_env = environment.Clone()
 
-env.Append(LIBS = 'posix')
+env.Append(LIBS = ['posix', 'c-userspace'])
 env.Append(LINKFLAGS = ['-T' + "test0/include/linker.lds", '-u_start'])
 env.Append(CPPFLAGS = ' -D__USERSPACE__')
 objs = env.Object(src)
 test0 = env.Program('test0.elf', objs)
 
+test_env.Append(LIBS = ['posix', 'c-userspace'])
 test_env.Append(LINKFLAGS = ['-T' + "test0/include/test_exec_linker.lds", '-u_start'])
 test_env.Append(CPPFLAGS = ' -D__USERSPACE__')
 test_src = Glob('src/test_exec/*.[cS]')
