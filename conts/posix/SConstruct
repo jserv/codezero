@@ -1,0 +1,90 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+#
+import os, shelve, sys
+from os.path import *
+
+PROJRELROOT = '../../'
+
+sys.path.append(PROJRELROOT)
+
+from config.projpaths import *
+from config.configuration import *
+
+config = configuration_retrieve()
+arch = config.arch
+
+
+LIBL4_RELDIR = 'conts/libl4'
+KERNEL_INCLUDE = join(PROJROOT, 'include')
+LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
+LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
+LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
+
+# Locally important paths are here
+LIBC_RELDIR = 'conts/libc'
+LIBC_DIR = join(PROJROOT, LIBC_RELDIR)
+LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
+LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
+                join(LIBC_DIR, 'include/arch' + '/' + arch)]
+
+LIBMEM_RELDIR = 'conts/libmem'
+LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
+LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
+LIBMEM_INCLUDE = LIBMEM_DIR
+
+LIBPOSIX_RELDIR = 'conts/posix/libposix'
+LIBPOSIX_DIR = join(PROJROOT, LIBPOSIX_RELDIR)
+LIBPOSIX_INCLUDE_SERVER = join(LIBPOSIX_DIR, 'include')
+LIBPOSIX_INCLUDE_USERSPACE = join(LIBPOSIX_DIR, 'include/posix')
+LIBPOSIX_LIBPATH = join(BUILDDIR, LIBPOSIX_RELDIR)
+
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+           		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', \
+	    	      '-std=gnu99', '-Wall', '-Werror'],
+	              LINKFLAGS = ['-nostdlib'], \
+           		  ASFLAGS = ['-D__ASSEMBLY__'],
+           		  PROGSUFFIX = '.elf',
+           		  ENV = {'PATH' : os.environ['PATH']},
+           		  LIBS = ['gcc', 'libl4', 'c-userspace', 'libmm', 'libmc', 'gcc'],
+                  CPPPATH = ['include', LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE],
+                  LIBPATH = [LIBC_LIBPATH, LIBL4_LIBPATH, LIBMEM_LIBPATH, LIBPOSIX_LIBPATH],
+          		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+
+contid = ARGUMENTS.get('cont', '0')
+
+libposix = SConscript('libposix/SConscript', \
+                      exports = { 'config' : config,  'env' : env, 'contid' : contid}, duplicate = 0, \
+                      variant_dir = join(BUILDDIR, 'conts' + '/posix' + '/libposix'))
+
+mm0_env = env.Clone()
+mm0_env.Append(CPPPATH = LIBPOSIX_INCLUDE_SERVER)
+mm0 = SConscript('mm0/SConscript', \
+                 exports = { 'config' : config,  'env' : mm0_env, 'contid' : contid}, duplicate = 0, \
+                 variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/mm0'))
+
+fs0_env = env.Clone()
+fs0_env.Append(CPPPATH = LIBPOSIX_INCLUDE_SERVER)
+fs0 = SConscript('fs0/SConscript', \
+                 exports = { 'config' : config,  'env' : fs0_env, 'contid' : contid}, duplicate = 0, \
+                 variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/fs0'))
+
+test0_env = env.Clone()
+test0_env.Replace(CPPPATH = [LIBPOSIX_INCLUDE_USERSPACE, 'include', LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
+test0_env.Append(CCFLAGS = '-nostdinc')
+test0 = SConscript('test0/SConscript', \
+                   exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid}, duplicate = 0, \
+                   variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/test0'))
+
+Depends(fs0, libposix)
+Depends(test0, libposix)
+
+Alias('libposix', libposix)
+Alias('mm0', mm0)
+Alias('fs0', fs0)
+Alias('test0', test0)
+
+Default([mm0, fs0, libposix, test0])

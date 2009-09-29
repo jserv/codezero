@@ -1,0 +1,26 @@
+
+Import('config', 'environment', 'contid')
+
+import os, sys
+
+arch = config.arch
+
+src = [Glob('*.[cS]') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
+
+env = environment.Clone()
+test_env = environment.Clone()
+
+env.Append(LIBS = 'posix')
+env.Append(LINKFLAGS = ['-T' + "test0/include/linker.lds", '-u_start'])
+env.Append(CPPFLAGS = ' -D__USERSPACE__')
+objs = env.Object(src)
+test0 = env.Program('test0.elf', objs)
+
+test_env.Append(LINKFLAGS = ['-T' + "test0/include/test_exec_linker.lds", '-u_start'])
+test_env.Append(CPPFLAGS = ' -D__USERSPACE__')
+test_src = Glob('src/test_exec/*.[cS]')
+test_objs = test_env.Object(test_src)
+test_exec = test_env.Program('test_exec.elf', test_objs)
+env.Depends(test0, test_exec)
+
+Return('test0')

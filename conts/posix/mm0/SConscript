@@ -1,0 +1,26 @@
+
+Import('config', 'env', 'contid')
+
+import os, sys
+
+arch = config.arch
+
+def create_symlinks(arch):
+	arch_path = "include/arch"
+	arch_path2 ="src/arch"
+	if os.path.exists(arch_path):
+		os.system("rm %s" % (arch_path))
+	os.system("ln -s %s %s" % ("arch-" + arch, arch_path))
+	if os.path.exists(arch_path2):
+		os.system("rm %s" % (arch_path2))
+	os.system("ln -s %s %s" % ("arch-" + arch, arch_path2))
+
+src = [Glob('*.c') + Glob('src/*.c') + Glob('src/lib/*.c') + Glob('src/lib/elf/*.c') + Glob('src/arch/*.c')]
+
+e = env.Clone()
+
+e.Append(LINKFLAGS = ['-T' + "mm0/include/linker.lds", '-u_start'])
+objs = e.Object(src)
+mm0 = e.Program('mm0.elf', objs)
+
+Return('mm0')

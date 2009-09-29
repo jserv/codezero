@@ -1,0 +1,17 @@
+
+Import('config', 'env', 'contid')
+
+import os, sys
+
+arch = config.arch
+
+src = [Glob('*.c') + Glob('src/*.c') + Glob('src/arch/arm/*.c') + Glob('src/memfs/*.c') + Glob('src/lib/*.c')]
+
+e = env.Clone()
+e.Append(LIBS = 'posix')
+e.Append(LINKFLAGS = ['-T' + "fs0/include/linker.lds", '-u_start'])
+
+objs = e.Object(src)
+fs0 = e.Program('fs0.elf', objs)
+
+Return('fs0')
