@@ -37,6 +37,13 @@ libc = SConscript('conts/libc/SConscript', \
                   duplicate = 0, variant_dir = \
                   join(BUILDDIR, os.path.relpath('conts/libc', PROJROOT)))
 
+libmm, libmc = SConscript('conts/libmem/SConscript', \
+                         exports = { 'env' : env, 'arch' : arch, 'platform' : platform }, \
+                         duplicate = 0, variant_dir = \
+                         join(BUILDDIR, os.path.relpath('conts/libmem', PROJROOT)))
+
+
 Alias('libl4', libl4)
 Alias('libc', libc)
-
+Alias('libmm', libmm)
+Alias('libmc', libmc)
