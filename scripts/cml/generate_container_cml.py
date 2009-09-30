@@ -39,7 +39,7 @@ def add_container_constraint(cid):
     return cml_string
 
 def generate_container_cml(arch, ncont):
-    contid_occurence = 219  # Exact number of arguments
+    contid_occurence = 223  # Exact number of arguments
     fbody = ""
     with open(join(CML2_CONFIG_SRCDIR, arch + '.cml')) as in_cml:
         fbody += in_cml.read()

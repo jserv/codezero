@@ -1,7 +1,7 @@
 symbols
 CONT%d_TYPE_LINUX	'Linux Container'
 CONT%d_TYPE_BARE	'Bare Container'
-CONT%d_TYPE_C0_POSIX	'Codezero POSIX Services Container (mm0, fs0 microkernel services)'
+CONT%d_TYPE_POSIX	'Codezero POSIX Services'
 CONT%d_OPT_DIRNAME	'Containers directory name under conts'
 
 CONT%d_PHYSMEM_REGIONS	'Container %d number of physical regions'
@@ -95,16 +95,17 @@ default CONT%d_VIRT4_END	 from 0x0
 default CONT%d_VIRT5_START from 0x0
 default CONT%d_VIRT5_END	 from 0x0
 
-default CONT%d_OPT_DIRNAME from (CONT%d_TYPE_LINUX==y) ? "linux" : ((CONT%d_TYPE_BARE==y) ? "bare%d" : "noname")
+default CONT%d_OPT_DIRNAME from (CONT%d_TYPE_LINUX==y) ? "linux%d" : ((CONT%d_TYPE_BARE==y) ? "bare%d" : "posix%d")
 
 when CONT%d_TYPE_LINUX==y suppress cont%d_bare_pager_params
 when CONT%d_TYPE_BARE==y suppress cont%d_linux_pager_params
+when CONT%d_TYPE_POSIX==y suppress cont%d_linux_pager_params
 
 symbols
 cont%d_menu		'Container %d Parameters'
 cont%d_physmem_list	'Container %d physical memory regions'
 cont%d_virtmem_list	'Container %d Virtual memory regions'
-container%d_type		'Container %d Type'
+container%d_type	'Container %d Type'
 container%d_options	'Container %d Options'
 
 cont%d_linux_pager_params 'Container %d Pager parameters'
@@ -156,7 +157,7 @@ menu container%d_options
 choices container%d_type
         CONT%d_TYPE_LINUX
 	CONT%d_TYPE_BARE
-	CONT%d_TYPE_C0_POSIX
+	CONT%d_TYPE_POSIX
         default CONT%d_TYPE_BARE
 
 menu cont%d_menu
