@@ -30,6 +30,9 @@ def build_linux_container(projpaths, container):
                                                   rootfs_builder)
     return linux_container_packer.pack_container()
 
+def build_posix_container(projpaths, container):
+    posix_builder = PosixBuilder(projpaths, container)
+    posix_builder.build_posix()
 
 def glob_by_walk(arg, dirname, names):
     ext, imglist = arg
@@ -61,6 +64,8 @@ def build_all_containers():
             cont_images.append(build_linux_container(projpaths, container))
         elif container.type == 'bare':
             cont_images.append(build_default_container(projpaths, container))
+        elif container.type == 'posix':
+            cont_images.append(build_posix_container(projpaths, container))
         else:
             print "Error: Don't know how to build " + \
                   "container of type: %s" % (container.type)
