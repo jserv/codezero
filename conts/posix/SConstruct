@@ -13,6 +13,7 @@ sys.path.append(PROJRELROOT)
 
 from config.projpaths import *
 from config.configuration import *
+from config.lib import *
 
 config = configuration_retrieve()
 arch = config.arch
@@ -45,7 +46,7 @@ LIBPOSIX_LIBPATH = join(BUILDDIR, LIBPOSIX_RELDIR)
 env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
            		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', \
 	    	      '-std=gnu99', '-Wall', '-Werror'],
-	              LINKFLAGS = ['-nostdlib'], \
+	              LINKFLAGS = ['-nostdlib'],
            		  ASFLAGS = ['-D__ASSEMBLY__'],
            		  PROGSUFFIX = '.elf',
            		  ENV = {'PATH' : os.environ['PATH']},
@@ -65,19 +66,19 @@ libposix = SConscript('libposix/SConscript', \
 mm0_env = env.Clone()
 mm0_env.Append(CPPPATH = LIBPOSIX_INCLUDE_SERVER)
 mm0 = SConscript('mm0/SConscript', \
-                 exports = { 'config' : config,  'env' : mm0_env, 'contid' : contid}, duplicate = 0, \
+                 exports = { 'config' : config,  'env' : mm0_env, 'contid' : contid }, duplicate = 0, \
                  variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/mm0'))
 
 fs0_env = env.Clone()
 fs0_env.Append(CPPPATH = LIBPOSIX_INCLUDE_SERVER)
 fs0 = SConscript('fs0/SConscript', \
-                 exports = { 'config' : config,  'env' : fs0_env, 'contid' : contid}, duplicate = 0, \
+                 exports = { 'config' : config,  'env' : fs0_env, 'contid' : contid, 'previmage' : mm0 }, duplicate = 0, \
                  variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/fs0'))
 
 test0_env = env.Clone()
 test0_env.Replace(CPPPATH = ['include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
 test0 = SConscript('test0/SConscript', \
-                   exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid}, duplicate = 0, \
+                   exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid, 'previmage' : fs0 }, duplicate = 0, \
                    variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/test0'))
 
 images = [mm0, fs0, test0]

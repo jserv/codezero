@@ -1,17 +1,29 @@
 
-Import('config', 'env', 'contid')
+Import('config', 'env', 'previmage', 'contid')
 
 import os, sys
 
 arch = config.arch
 
+sys.path.append('../../../../')
+from config.lib import *
+from tools.pyelf.lmanext import *
+
 src = [Glob('*.c') + Glob('src/*.c') + Glob('src/arch/arm/*.c') + Glob('src/memfs/*.c') + Glob('src/lib/*.c')]
+
+def generate_lma_lds(target, source, env):
+    with open(source[1].path, 'r') as lds_in:
+        with open(target[0].path, 'w+') as lds_out:
+            linker_script = lds_in.read()
+            lds_out.write(linker_script % next_available_lma(source[0].path))
+
+lma_lds = Command('include/linker.lds', [previmage, 'include/linker.lds.in'], generate_lma_lds)
 
 e = env.Clone()
 e.Append(LIBS = 'posix')
-e.Append(LINKFLAGS = ['-T' + "fs0/include/linker.lds", '-u_start'])
+e.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
 
 objs = e.Object(src)
 fs0 = e.Program('fs0.elf', objs)
-
+Depends(fs0, lma_lds)
 Return('fs0')

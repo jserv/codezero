@@ -30,15 +30,32 @@ def build_linux_container(projpaths, container):
                                                   rootfs_builder)
     return linux_container_packer.pack_container()
 
-def build_posix_container(projpaths, container):
-    posix_builder = PosixBuilder(projpaths, container)
-    posix_builder.build_posix()
-
 def glob_by_walk(arg, dirname, names):
     ext, imglist = arg
     files = glob.glob(join(dirname, ext))
     imglist.extend(files)
 
+def source_to_builddir(srcdir, id):
+    cont_builddir = \
+        os.path.relpath(srcdir, \
+                        PROJROOT).replace("conts", \
+                                          "cont" + str(id))
+    return join(BUILDDIR, cont_builddir)
+
+# We simply use SCons to figure all this out from container.id
+# This is very similar to default container builder:
+# In fact this notion may become a standard convention for
+# calling specific bare containers
+def build_posix_container(projpaths, container):
+    images = []
+    print '\nBuilding the Posix Container...'
+    scons_cmd = 'scons -f ' + join(POSIXDIR, 'SConstruct') + ' cont=' str(container.id)
+    print "Issuing scons command: %s" % scons_cmd
+    os.system(scons_cmd)
+    builddir = source_to_builddir(POSIXDIR, container.id)
+    os.path.walk(builddir, glob_by_walk, ['*.elf', images])
+    container_packer = DefaultContainerPacker(container, images)
+    return container_packer.pack_container()
 
 # This simply calls SCons on a given container, and collects
 # all images with .elf extension, instead of using whole classes

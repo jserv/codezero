@@ -4,17 +4,9 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 
-/*
- * The only catch with this linker script is that everything
- * is linked starting at virtual_base, and loaded starting
- * at physical_base. virtual_base is the predefined region
- * of virtual memory for userland applications. physical_base
- * is determined at build-time, it is one of the subsequent pages
- * that come after the kernel image's load area.
- */
 /* USER_AREA_START, see memlayout.h */
 virtual_base = 0x10000000;
-physical_base = 0x8000;
+physical_base = %s;
 __stack = (0x20000000 - 0x1000 - 8); /* First page before env/args page */
 /* INCLUDE "include/physical_base.lds" */
 

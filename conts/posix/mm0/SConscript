@@ -5,6 +5,11 @@ import os, sys
 
 arch = config.arch
 
+sys.path.append('../../../../')
+from config.lib import *
+
+container = next((c for c in config.containers if int(c.id) == int(contid)), None)
+
 def create_symlinks(arch):
 	arch_path = "include/arch"
 	arch_path2 ="src/arch"
@@ -15,12 +20,22 @@ def create_symlinks(arch):
 		os.system("rm %s" % (arch_path2))
 	os.system("ln -s %s %s" % ("arch-" + arch, arch_path2))
 
+def generate_lma_lds(target, source, env):
+    with open(source[0].path, 'r') as lds_in:
+        with open(target[0].path, 'w+') as lds_out:
+            linker_script = lds_in.read()
+            lds_out.write(linker_script % conv_hex(container.pager_lma))
+
+lma_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_lma_lds)
+
 src = [Glob('*.c') + Glob('src/*.c') + Glob('src/lib/*.c') + Glob('src/lib/elf/*.c') + Glob('src/arch/*.c')]
 
 e = env.Clone()
 
-e.Append(LINKFLAGS = ['-T' + "mm0/include/linker.lds", '-u_start'])
+e.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
 objs = e.Object(src)
 mm0 = e.Program('mm0.elf', objs)
 
+Depends(mm0, lma_lds)
 Return('mm0')
+

@@ -14,7 +14,7 @@
  */
 /* INITTASK_AREA_START, see memlayout.h */
 virtual_base = 0xE0000000;
-physical_base = 0x8000;
+physical_base = %s;
 
 /* INCLUDE "include/physical_base.lds" */
 

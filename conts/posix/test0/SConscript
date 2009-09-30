@@ -1,20 +1,33 @@
 
-Import('config', 'environment', 'contid')
+Import('config', 'environment', 'previmage', 'contid')
 
 import os, sys
 
 arch = config.arch
 
+sys.path.append('../../../../')
+from config.lib import *
+from tools.pyelf.lmanext import *
+
 src = [Glob('*.[cS]') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
+
+def generate_lma_lds(target, source, env):
+    with open(source[1].path, 'r') as lds_in:
+        with open(target[0].path, 'w+') as lds_out:
+            linker_script = lds_in.read()
+            lds_out.write(linker_script % next_available_lma(source[0].path))
+
+lma_lds = Command('include/linker.lds', [previmage, 'include/linker.lds.in'], generate_lma_lds)
 
 env = environment.Clone()
 test_env = environment.Clone()
 
 env.Append(LIBS = ['posix', 'c-userspace'])
-env.Append(LINKFLAGS = ['-T' + "test0/include/linker.lds", '-u_start'])
+env.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
 env.Append(CPPFLAGS = ' -D__USERSPACE__')
 objs = env.Object(src)
 test0 = env.Program('test0.elf', objs)
+Depends(test0, lma_lds)
 
 test_env.Append(LIBS = ['posix', 'c-userspace'])
 test_env.Append(LINKFLAGS = ['-T' + "test0/include/test_exec_linker.lds", '-u_start'])
