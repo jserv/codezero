@@ -48,8 +48,11 @@ def source_to_builddir(srcdir, id):
 # calling specific bare containers
 def build_posix_container(projpaths, container):
     images = []
+    cwd = os.getcwd()
+    os.chdir(POSIXDIR)
+    print POSIXDIR
     print '\nBuilding the Posix Container...'
-    scons_cmd = 'scons -f ' + join(POSIXDIR, 'SConstruct') + ' cont=' str(container.id)
+    scons_cmd = 'scons ' + 'cont=' + str(container.id)
     print "Issuing scons command: %s" % scons_cmd
     os.system(scons_cmd)
     builddir = source_to_builddir(POSIXDIR, container.id)

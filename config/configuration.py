@@ -106,7 +106,7 @@ class configuration:
                 if param2 == "LINUX":
                     self.containers[id].type = "linux"
                 elif param2 == "C0_POSIX":
-                    self.containers[id].type = "cps"
+                    self.containers[id].type = "posix"
                 elif param2 == "BARE":
                     self.containers[id].type = "bare"
 

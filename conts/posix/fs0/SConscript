@@ -5,7 +5,8 @@ import os, sys
 
 arch = config.arch
 
-sys.path.append('../../../../')
+sys.path.append('../../../')
+
 from config.lib import *
 from tools.pyelf.lmanext import *
 
