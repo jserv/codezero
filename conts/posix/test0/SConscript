@@ -11,6 +11,17 @@ from tools.pyelf.lmanext import *
 
 src = [Glob('*.[cS]') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
 
+asm_string = \
+'''
+.align 4
+.section .testexec
+.incbin "%s"
+'''
+
+def generate_incbin_asm(target, source, env):
+    with open(target[0].path, 'w+') as asm_out:
+        asm_out.write(asm_string % source[0].path)
+
 def generate_lma_lds(target, source, env):
     with open(source[1].path, 'r') as lds_in:
         with open(target[0].path, 'w+') as lds_out:
@@ -20,21 +31,25 @@ def generate_lma_lds(target, source, env):
 lma_lds = Command('include/linker.lds', [previmage, 'include/linker.lds.in'], generate_lma_lds)
 
 env = environment.Clone()
-test_env = environment.Clone()
+test_exec_env = environment.Clone()
+
+
+test_exec_env.Append(LIBS = ['posix', 'c-userspace'])
+test_exec_env.Append(LINKFLAGS = ['-T' + "test0/include/test_exec_linker.lds", '-u_start'])
+test_exec_env.Append(CPPFLAGS = ' -D__USERSPACE__')
+test_exec_env.Replace(PROGSUFFIX = '')
+test_exec_src = Glob('src/test_exec/*.[cS]')
+test_exec_objs = test_exec_env.Object(test_exec_src)
+test_exec = test_exec_env.Program('src/test_exec/test_exec', test_exec_objs)
+test_exec_asm = Command('test_exec.S', test_exec, generate_incbin_asm)
 
 env.Append(LIBS = ['posix', 'c-userspace'])
 env.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
 env.Append(CPPFLAGS = ' -D__USERSPACE__')
-objs = env.Object(src)
+objs = env.Object(src + test_exec_asm)
 test0 = env.Program('test0.elf', objs)
-Depends(test0, lma_lds)
 
-test_env.Append(LIBS = ['posix', 'c-userspace'])
-test_env.Append(LINKFLAGS = ['-T' + "test0/include/test_exec_linker.lds", '-u_start'])
-test_env.Append(CPPFLAGS = ' -D__USERSPACE__')
-test_src = Glob('src/test_exec/*.[cS]')
-test_objs = test_env.Object(test_src)
-test_exec = test_env.Program('test_exec.elf', test_objs)
+Depends(test0, lma_lds)
 env.Depends(test0, test_exec)
 
 Return('test0')

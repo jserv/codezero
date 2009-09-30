@@ -99,7 +99,7 @@ def relocate_bootdesc(target, source, env):
     shutil.copyfile(bootdesc_raw.path, target[0].path)
 
 bootdesc_c = e.Command('bootdesc.c', images, generate_bootdesc)
-bootdesc_raw = e.Program('bootdesc_raw.elf', bootdesc_c)
+bootdesc_raw = e.Program('bootdesc_raw', bootdesc_c)
 bootdesc = e.Command('bootdesc.elf', [bootdesc_raw, images], relocate_bootdesc)
 
 Return('bootdesc')

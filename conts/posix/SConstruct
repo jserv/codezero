@@ -10,6 +10,7 @@ from os.path import *
 PROJRELROOT = '../../'
 
 sys.path.append(PROJRELROOT)
+sys.path.append('../../../../')
 
 from config.projpaths import *
 from config.configuration import *
