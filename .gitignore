@@ -1,6 +1,7 @@
 build
 *~
 .sconsign.dblite
+.scons*
 *.pyc
 config.log
 *.[ao]
