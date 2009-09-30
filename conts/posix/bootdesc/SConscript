@@ -11,6 +11,7 @@ from os.path import *
 Import('config', 'environment', 'images')
 
 e = environment.Clone()
+e.Replace(PROGSUFFIX = '')
 e.Append(LINKFLAGS = ['-T' + e['bootdesc_dir'] + '/linker.lds'])
 #e.Append(LINKFLAGS = ['-T' + '/linker.lds'])
 

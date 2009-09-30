@@ -57,6 +57,8 @@ int kstat_to_stat(struct kstat *ks, struct stat *s)
 	s->st_atime = ks->atime;
 	s->st_mtime = ks->mtime;
 	s->st_ctime = ks->ctime;
+
+	return 0;
 }
 
 static inline int l4_stat(const char *pathname, void *buffer)
