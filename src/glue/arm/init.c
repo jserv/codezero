@@ -405,6 +405,12 @@ void init_finalize(struct kernel_container *kcont)
 	kip.utcb = (u32)current->utcb_address;
 
 	/*
+	 * Added the first pager's space area to
+	 * the address space list of the related container
+	 */
+	address_space_add(current->space);
+
+	/*
 	 * Start the scheduler, jumping to task
 	 */
 	scheduler_start();
