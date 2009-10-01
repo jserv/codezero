@@ -350,6 +350,11 @@ elf_loadFile(void *elfFile, bool phys)
 	//printf("Number of program headers: %d\n", num_pheaders);
 	//printf("Program header offset of first header from file beginning: 0x%p\n",pheader_offset);
 
+	/*
+	 * FIXME:
+	 * This should have a linked list of mapped ranges so that it can check
+	 * at run-time whether any images are overlapping in their LMA and refuse to load.
+	 */
 	for(i=0; i < num_pheaders; i++) {
 		/* Load that section */
 		uint64_t dest, src;
@@ -357,11 +362,11 @@ elf_loadFile(void *elfFile, bool phys)
 		size_t len;
 		if (phys) {
 			dest = elf_getProgramHeaderPaddr(elfFile, i);
-	//		printf("Elf file pheader physical: %p\n", dest);
-	//		printf("Elf file pheader virtual: %p\n",
-	//			elf_getProgramHeaderVaddr(elfFile,i));
+		//	printf("Elf file pheader physical: 0x%x\n", (unsigned int)dest);
+		//	printf("Elf file pheader virtual: 0x%x\n",
+		//	       (unsigned int)elf_getProgramHeaderVaddr(elfFile,i));
 		} else {
-	//		printf("Elf file pheader virtual: %p\n", dest);
+		//	printf("Elf file pheader virtual: 0x%x\n", (unsigned int)dest);
 			dest = elf_getProgramHeaderVaddr(elfFile, i);
 		}
 		len = elf_getProgramHeaderFileSize(elfFile, i);
@@ -370,14 +375,19 @@ elf_loadFile(void *elfFile, bool phys)
 	//	printf("Elf program header offset: %p\n", src);
 		pheader_type = elf_getProgramHeaderType(elfFile, i);
 	//	printf("Elf program header type: %p\n", pheader_type);
-	//	printf("Copying from %x to %x of size: %p\n", (unsigned int)src, (unsigned int)dest, len);
+
+/* Enable this one
+		printf("Copying to range from 0x%x to 0x%x of size: 0x%x\n", (unsigned int)dest, (unsigned int)dest + (unsigned int)len, (unsigned int)len);
+ */
 		memcpy((void*) (uintptr_t) dest, (void*) (uintptr_t) src, len);
 		dest += len;
 		clrsize = elf_getProgramHeaderMemorySize(elfFile, i) - len;
-	//	printf("Clearing memory... starting from %x, size: %x\n", (unsigned int)dest, clrsize);
+//		printf("Clearing memory... starting from %x, size: %x\n", (unsigned int)dest, (unsigned int)clrsize);
 		memset((void*) (uintptr_t) dest, 0, clrsize);
-	//	printf("Memory cleared.\n");
+//		printf("Memory cleared.\n");
 	}
+// And this one
+//	printf("\n");
 
 	return true;
 }

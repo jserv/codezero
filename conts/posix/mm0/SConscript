@@ -24,6 +24,7 @@ def generate_lma_lds(target, source, env):
     with open(source[0].path, 'r') as lds_in:
         with open(target[0].path, 'w+') as lds_out:
             linker_script = lds_in.read()
+            assert container.pager_lma != 0
             lds_out.write(linker_script % conv_hex(container.pager_lma))
 
 lma_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_lma_lds)

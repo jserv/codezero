@@ -48,8 +48,9 @@ env.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
 env.Append(CPPFLAGS = ' -D__USERSPACE__')
 objs = env.Object(src + test_exec_asm)
 test0 = env.Program('test0.elf', objs)
-
+Depends(test0, objs)
 Depends(test0, lma_lds)
+Depends(lma_lds, previmage)
 env.Depends(test0, test_exec)
 
 Return('test0')

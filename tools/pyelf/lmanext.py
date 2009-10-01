@@ -28,8 +28,9 @@ def next_available_lma(srcfile):
             p_align = x.p_align
             if paddr > paddr_max:
                 paddr_max = paddr
-
     paddr_aligned = paddr_max & ~(p_align.value - 1)
+    #print "paddr_max %s " % hex(paddr_max)
+    #print "paddr_aligned %s " % hex(paddr_aligned)
     if paddr_max & (p_align.value - 1):
         paddr_aligned += p_align.value
     return conv_hex(paddr_aligned)

@@ -2,6 +2,7 @@
 # -*- mode: python; coding: utf-8; -*-
 import os, sys, shelve, shutil, re
 from projpaths import *
+from lib import *
 
 class Container:
     def __init__(self, id):
@@ -152,17 +153,19 @@ class configuration:
         # Make sure elements in order for indexed accessing
         self.containers.sort(self.compare_containers)
 
+    def container_print(self, c):
+        print '\nContainer %d' % c.id
+        print 'Container type: %s' % c.type
+        print 'Container Name: %s' % c.name
+        print 'Container Pager lma: %s' % conv_hex(c.pager_lma)
+        print 'Container Pager vma: %s' % conv_hex(c.pager_vma)
+        print 'Container Pager size: %s' % conv_hex(c.pager_size)
+        print 'Container Virtual regions: %s' % c.virt_regions
+        print 'Container Physical regions: %s' % c.phys_regions
 
     def containers_print(self, containers):
         for c in containers:
-            print '\nContainer %d' % c.id
-            print 'Container type: %s' % c.type
-            print 'Container Name: %s' % c.name
-            print 'Container Pager lma: %s' % hex(c.pager_lma)
-            print 'Container Pager vma: %s' % hex(c.pager_vma)
-            print 'Container Pager size: %s' % hex(c.pager_size)
-            print 'Container Virtual regions: %s' % c.virt_regions
-            print 'Container Physical regions: %s' % c.phys_regions
+            self.container_print(self, c)
 
     def config_print(self):
         print 'Configuration\n'

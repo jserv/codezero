@@ -121,9 +121,9 @@ int main(void)
 	printf("elf-loader:\tkernel entry point is %lx\n", *kernel_entry);
 	arch_start_kernel(kernel_entry);
 
-	printf("elf-loader:\tKernel start failed!\n");
+	printf("elf-loader:\tKernel start failed! Looping endless.\n");
 	while (1)
-		printf("Endless loop.\n");
+		;
 
 	return -1;
 }
