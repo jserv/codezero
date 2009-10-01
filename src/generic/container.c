@@ -159,9 +159,9 @@ int init_first_pager(struct pager *pager,
 	link_init(&space->list);
 	mutex_init(&space->lock);
 	space->pgd = current_pgd;
+	address_space_attach(task, space);
 
 	/* Initialize container relationships */
-	task->space = space;
 	pager->tcb = task;
 	task->pager = pager;
 	task->container = cont;
