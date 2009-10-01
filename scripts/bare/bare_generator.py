@@ -23,7 +23,7 @@ class BareContGenerator:
     def __init__(self):
         self.CONT_SRC_DIR = ''   # Set when container is selected
         self.BARE_SRC_BASEDIR = join(PROJROOT, 'conts')
-        self.EXAMPLE_PROJ_SRC_DIR = join(PROJROOT, 'conts/test')
+        self.EXAMPLE_PROJ_SRC_DIR = join(PROJROOT, 'conts/bare_src')
 
         self.main_builder_name = 'build.py'
         self.main_configurator_name = 'configure.py'

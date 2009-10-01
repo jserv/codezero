@@ -9,7 +9,7 @@ cscope*out
 loader/images.S
 loader/ksyms.S
 tags
-conts/bare*
+conts/bare[0-9]
 conts/linux
 src/generic/cinfo.c
 .gdbinit
