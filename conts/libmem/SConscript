@@ -1,0 +1,34 @@
+# -*- mode: python; coding: utf-8; -*-
+
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+import os, sys
+
+PROJRELROOT = '../..'
+
+sys.path.append(PROJRELROOT)
+
+from config.projpaths import *
+
+KERNEL_INCLUDE = join(PROJROOT, 'include')
+LIBL4_RELDIR = 'conts/libl4'
+LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
+LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
+LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
+
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding'],
+		  LINKFLAGS = ['-nostdlib'],
+		  ASFLAGS = ['-D__ASSEMBLY__'],
+		  ENV = {'PATH' : os.environ['PATH']},
+		  LIBS = 'gcc',
+		  CPPPATH = ['.', KERNEL_INCLUDE, LIBL4_INCLUDE],
+          CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+
+objmm = env.StaticObject(Glob('mm/*.c'))
+objmc = env.StaticObject(Glob('memcache/*.[cS]'))
+libmm = env.StaticLibrary('mm', objmm)
+libmc = env.StaticLibrary('mc', objmc)
+
+Return('libmm', 'libmc')
