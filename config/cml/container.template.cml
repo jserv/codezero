@@ -5,14 +5,14 @@ CONT%d_TYPE_POSIX	'Codezero POSIX Services'
 CONT%d_OPT_NAME		'Container name'
 
 CONT%d_PHYSMEM_REGIONS	'Container %d number of physical regions'
-CONT%d_PHYS0_START	'Container %d physical start address'
-CONT%d_PHYS0_END	'Container %d physical end address'
-CONT%d_PHYS1_START	'Container %d physical start address'
-CONT%d_PHYS1_END	'Container %d physical end address'
-CONT%d_PHYS2_START	'Container %d physical start address'
-CONT%d_PHYS2_END	'Container %d physical end address'
-CONT%d_PHYS3_START	'Container %d physical start address'
-CONT%d_PHYS3_END	'Container %d physical end address'
+CONT%d_PHYS0_START	'Container %d physical area 0 start address'
+CONT%d_PHYS0_END	'Container %d physical area 0 end address'
+CONT%d_PHYS1_START	'Container %d physical area 1 start address'
+CONT%d_PHYS1_END	'Container %d physical area 1 end address'
+CONT%d_PHYS2_START	'Container %d physical area 2 start address'
+CONT%d_PHYS2_END	'Container %d physical area 2 end address'
+CONT%d_PHYS3_START	'Container %d physical area 3 start address'
+CONT%d_PHYS3_END	'Container %d physical area 3 end address'
 
 cont%d_phys0_caps 	'Container %d Physical memory capabilities'
 cont%d_phys1_caps 	'Container %d Physical memory capabilities'
@@ -139,30 +139,40 @@ default CONT%d_VIRT5_CAP_MAP_EXEC 	from y
 default CONT%d_VIRT5_CAP_MAP_UNMAP 	from y
 
 menu cont%d_phys0_caps
+	CONT%d_PHYS0_START@
+	CONT%d_PHYS0_END@
 	CONT%d_PHYS0_CAP_MAP_READ
 	CONT%d_PHYS0_CAP_MAP_WRITE
 	CONT%d_PHYS0_CAP_MAP_EXEC
 	CONT%d_PHYS0_CAP_MAP_UNMAP
 
 menu cont%d_phys1_caps
+	CONT%d_PHYS1_START@
+	CONT%d_PHYS1_END@
 	CONT%d_PHYS1_CAP_MAP_READ
 	CONT%d_PHYS1_CAP_MAP_WRITE
 	CONT%d_PHYS1_CAP_MAP_EXEC
 	CONT%d_PHYS1_CAP_MAP_UNMAP
 
 menu cont%d_phys2_caps
+	CONT%d_PHYS2_START@
+	CONT%d_PHYS2_END@
 	CONT%d_PHYS2_CAP_MAP_READ
 	CONT%d_PHYS2_CAP_MAP_WRITE
 	CONT%d_PHYS2_CAP_MAP_EXEC
 	CONT%d_PHYS2_CAP_MAP_UNMAP
 
 menu cont%d_phys3_caps
+	CONT%d_PHYS3_START@
+	CONT%d_PHYS3_END@
 	CONT%d_PHYS3_CAP_MAP_READ
 	CONT%d_PHYS3_CAP_MAP_WRITE
 	CONT%d_PHYS3_CAP_MAP_EXEC
 	CONT%d_PHYS3_CAP_MAP_UNMAP
 
 menu cont%d_virt0_caps
+	CONT%d_VIRT0_START@
+	CONT%d_VIRT0_END@
 	CONT%d_VIRT0_CAP_MAP_UTCB
 	CONT%d_VIRT0_CAP_MAP_READ
 	CONT%d_VIRT0_CAP_MAP_WRITE
@@ -170,6 +180,8 @@ menu cont%d_virt0_caps
 	CONT%d_VIRT0_CAP_MAP_UNMAP
 
 menu cont%d_virt1_caps
+	CONT%d_VIRT1_START@
+	CONT%d_VIRT1_END@
 	CONT%d_VIRT1_CAP_MAP_UTCB
 	CONT%d_VIRT1_CAP_MAP_READ
 	CONT%d_VIRT1_CAP_MAP_WRITE
@@ -177,6 +189,8 @@ menu cont%d_virt1_caps
 	CONT%d_VIRT1_CAP_MAP_UNMAP
 
 menu cont%d_virt2_caps
+	CONT%d_VIRT2_START@
+	CONT%d_VIRT2_END@
 	CONT%d_VIRT2_CAP_MAP_UTCB
 	CONT%d_VIRT2_CAP_MAP_READ
 	CONT%d_VIRT2_CAP_MAP_WRITE
@@ -184,6 +198,8 @@ menu cont%d_virt2_caps
 	CONT%d_VIRT2_CAP_MAP_UNMAP
 
 menu cont%d_virt3_caps
+	CONT%d_VIRT3_START@
+	CONT%d_VIRT3_END@
 	CONT%d_VIRT3_CAP_MAP_UTCB
 	CONT%d_VIRT3_CAP_MAP_READ
 	CONT%d_VIRT3_CAP_MAP_WRITE
@@ -191,6 +207,8 @@ menu cont%d_virt3_caps
 	CONT%d_VIRT3_CAP_MAP_UNMAP
 
 menu cont%d_virt4_caps
+	CONT%d_VIRT4_START@
+	CONT%d_VIRT4_END@
 	CONT%d_VIRT4_CAP_MAP_UTCB
 	CONT%d_VIRT4_CAP_MAP_READ
 	CONT%d_VIRT4_CAP_MAP_WRITE
@@ -198,6 +216,8 @@ menu cont%d_virt4_caps
 	CONT%d_VIRT4_CAP_MAP_UNMAP
 
 menu cont%d_virt5_caps
+	CONT%d_VIRT5_START@
+	CONT%d_VIRT5_END@
 	CONT%d_VIRT5_CAP_MAP_UTCB
 	CONT%d_VIRT5_CAP_MAP_READ
 	CONT%d_VIRT5_CAP_MAP_WRITE
@@ -207,18 +227,18 @@ menu cont%d_virt5_caps
 symbols
 
 CONT%d_VIRTMEM_REGIONS	'Container %d number of virtual regions'
-CONT%d_VIRT0_START	'Container %d virtual start address'
-CONT%d_VIRT0_END	'Container %d virtual end address'
-CONT%d_VIRT1_START	'Container %d virtual start address'
-CONT%d_VIRT1_END	'Container %d virtual end address'
-CONT%d_VIRT2_START	'Container %d virtual start address'
-CONT%d_VIRT2_END	'Container %d virtual end address'
-CONT%d_VIRT3_START	'Container %d virtual start address'
-CONT%d_VIRT3_END	'Container %d virtual end address'
-CONT%d_VIRT4_START	'Container %d virtual start address'
-CONT%d_VIRT4_END	'Container %d virtual end address'
-CONT%d_VIRT5_START	'Container %d virtual start address'
-CONT%d_VIRT5_END	'Container %d virtual end address'
+CONT%d_VIRT0_START	'Container %d virtual area 0 start address'
+CONT%d_VIRT0_END	'Container %d virtual area 0 end address'
+CONT%d_VIRT1_START	'Container %d virtual area 1 start address'
+CONT%d_VIRT1_END	'Container %d virtual area 1 end address'
+CONT%d_VIRT2_START	'Container %d virtual area 2 start address'
+CONT%d_VIRT2_END	'Container %d virtual area 2 end address'
+CONT%d_VIRT3_START	'Container %d virtual area 3 start address'
+CONT%d_VIRT3_END	'Container %d virtual area 3 end address'
+CONT%d_VIRT4_START	'Container %d virtual area 4 start address'
+CONT%d_VIRT4_END	'Container %d virtual area 4 end address'
+CONT%d_VIRT5_START	'Container %d virtual area 5 start address'
+CONT%d_VIRT5_END	'Container %d virtual area 5 end address'
 
 CONT%d_PAGER_LMA	'Container %d Pager LMA'
 CONT%d_PAGER_VMA	'Container %d Pager VMA'
@@ -238,32 +258,32 @@ default CONT%d_VIRTMEM_REGIONS from 1
 default CONT%d_PHYSMEM_REGIONS from 1
 
 # Define limits on virtual and physical memory regions of a _single_ container 0. Too much code!
-when CONT%d_VIRTMEM_REGIONS < 2 suppress CONT%d_VIRT1_START CONT%d_VIRT1_END
-when CONT%d_VIRTMEM_REGIONS < 2 suppress CONT%d_VIRT2_START CONT%d_VIRT2_END
-when CONT%d_VIRTMEM_REGIONS < 2 suppress CONT%d_VIRT3_START CONT%d_VIRT3_END
-when CONT%d_VIRTMEM_REGIONS < 2 suppress CONT%d_VIRT4_START CONT%d_VIRT4_END
-when CONT%d_VIRTMEM_REGIONS < 2 suppress CONT%d_VIRT5_START CONT%d_VIRT5_END
+when CONT%d_VIRTMEM_REGIONS < 2 suppress cont%d_virt1_caps
+when CONT%d_VIRTMEM_REGIONS < 2 suppress cont%d_virt2_caps
+when CONT%d_VIRTMEM_REGIONS < 2 suppress cont%d_virt3_caps
+when CONT%d_VIRTMEM_REGIONS < 2 suppress cont%d_virt4_caps
+when CONT%d_VIRTMEM_REGIONS < 2 suppress cont%d_virt5_caps
 
-when CONT%d_VIRTMEM_REGIONS < 3 suppress CONT%d_VIRT2_START CONT%d_VIRT2_END
-when CONT%d_VIRTMEM_REGIONS < 3 suppress CONT%d_VIRT3_START CONT%d_VIRT3_END
-when CONT%d_VIRTMEM_REGIONS < 3 suppress CONT%d_VIRT4_START CONT%d_VIRT4_END
-when CONT%d_VIRTMEM_REGIONS < 3 suppress CONT%d_VIRT5_START CONT%d_VIRT5_END
+when CONT%d_VIRTMEM_REGIONS < 3 suppress cont%d_virt2_caps
+when CONT%d_VIRTMEM_REGIONS < 3 suppress cont%d_virt3_caps
+when CONT%d_VIRTMEM_REGIONS < 3 suppress cont%d_virt4_caps
+when CONT%d_VIRTMEM_REGIONS < 3 suppress cont%d_virt5_caps
 
-when CONT%d_VIRTMEM_REGIONS < 4 suppress CONT%d_VIRT3_START CONT%d_VIRT3_END
-when CONT%d_VIRTMEM_REGIONS < 4 suppress CONT%d_VIRT4_START CONT%d_VIRT4_END
-when CONT%d_VIRTMEM_REGIONS < 4 suppress CONT%d_VIRT5_START CONT%d_VIRT5_END
+when CONT%d_VIRTMEM_REGIONS < 4 suppress cont%d_virt3_caps
+when CONT%d_VIRTMEM_REGIONS < 4 suppress cont%d_virt4_caps
+when CONT%d_VIRTMEM_REGIONS < 4 suppress cont%d_virt5_caps
 
-when CONT%d_VIRTMEM_REGIONS < 5 suppress CONT%d_VIRT4_START CONT%d_VIRT4_END
-when CONT%d_VIRTMEM_REGIONS < 5 suppress CONT%d_VIRT5_START CONT%d_VIRT5_END
+when CONT%d_VIRTMEM_REGIONS < 5 suppress cont%d_virt4_caps
+when CONT%d_VIRTMEM_REGIONS < 5 suppress cont%d_virt5_caps
 
-when CONT%d_VIRTMEM_REGIONS < 6 suppress CONT%d_VIRT5_START CONT%d_VIRT5_END
+when CONT%d_VIRTMEM_REGIONS < 6 suppress cont%d_virt5_caps
 
-when CONT%d_PHYSMEM_REGIONS < 2 suppress CONT%d_PHYS1_START CONT%d_PHYS1_END
-when CONT%d_PHYSMEM_REGIONS < 2 suppress CONT%d_PHYS2_START CONT%d_PHYS2_END
-when CONT%d_PHYSMEM_REGIONS < 2 suppress CONT%d_PHYS3_START CONT%d_PHYS3_END
-when CONT%d_PHYSMEM_REGIONS < 3 suppress CONT%d_PHYS2_START CONT%d_PHYS2_END
-when CONT%d_PHYSMEM_REGIONS < 3 suppress CONT%d_PHYS3_START CONT%d_PHYS3_END
-when CONT%d_PHYSMEM_REGIONS < 4 suppress CONT%d_PHYS3_START CONT%d_PHYS3_END
+when CONT%d_PHYSMEM_REGIONS < 2 suppress cont%d_phys1_caps
+when CONT%d_PHYSMEM_REGIONS < 2 suppress cont%d_phys2_caps
+when CONT%d_PHYSMEM_REGIONS < 2 suppress cont%d_phys3_caps
+when CONT%d_PHYSMEM_REGIONS < 3 suppress cont%d_phys2_caps
+when CONT%d_PHYSMEM_REGIONS < 3 suppress cont%d_phys3_caps
+when CONT%d_PHYSMEM_REGIONS < 4 suppress cont%d_phys3_caps
 
 default CONT%d_PHYS0_START	from 0x0
 default CONT%d_PHYS0_END	from 0x0
@@ -315,38 +335,18 @@ menu cont%d_linux_pager_params
 
 menu cont%d_virtmem_list
 	CONT%d_VIRTMEM_REGIONS%
-	CONT%d_VIRT0_START@
-	CONT%d_VIRT0_END@
 	cont%d_virt0_caps
-	CONT%d_VIRT1_START@
-	CONT%d_VIRT1_END@
 	cont%d_virt1_caps
-	CONT%d_VIRT2_START@
-	CONT%d_VIRT2_END@
 	cont%d_virt2_caps
-	CONT%d_VIRT3_START@
-	CONT%d_VIRT3_END@
 	cont%d_virt3_caps
-	CONT%d_VIRT4_START@
-	CONT%d_VIRT4_END@
 	cont%d_virt4_caps
-	CONT%d_VIRT5_START@
-	CONT%d_VIRT5_END@
 	cont%d_virt5_caps
 
 menu cont%d_physmem_list
 	CONT%d_PHYSMEM_REGIONS%
-	CONT%d_PHYS0_START@
-	CONT%d_PHYS0_END@
 	cont%d_phys0_caps
-	CONT%d_PHYS1_START@
-	CONT%d_PHYS1_END@
 	cont%d_phys1_caps
-	CONT%d_PHYS2_START@
-	CONT%d_PHYS2_END@
 	cont%d_phys2_caps
-	CONT%d_PHYS3_START@
-	CONT%d_PHYS3_END@
 	cont%d_phys3_caps
 
 menu container%d_options
