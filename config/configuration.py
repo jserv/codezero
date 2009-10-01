@@ -97,7 +97,7 @@ class configuration:
                 self.containers[id].physmem[startend][regionid] = val
                 if regionid + 1 > self.containers[id].phys_regions:
                     self.containers[id].phys_regions = regionid + 1
-        elif param[:len("OPT_DIRNAME")] == "OPT_DIRNAME":
+        elif param[:len("OPT_NAME")] == "OPT_NAME":
             dirname = val[1:-1].lower()
             self.containers[id].dirname = dirname
             self.containers[id].name = dirname
