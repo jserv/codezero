@@ -162,15 +162,25 @@ int start_boot_tasks(struct initdata *initdata)
 		if (file) {
 			BUG_ON(file->type != VM_FILE_BOOTFILE);
 			img = file->priv_data;
-			if (!strcmp(img->name, __PAGERNAME__))
+			if (img->name[0] == 'm' &&
+			    img->name[1] == 'm' &&
+			    img->name[2] == '0')
 				mm0_file = file;
-			else if (!strcmp(img->name, __VFSNAME__))
+			else if (img->name[0] == 'f' &&
+				 img->name[1] == 's' &&
+				 img->name[2] == '0')
 				fs0_file = file;
 			else
 				list_insert(&file->list, &other_files);
 		} else
 			break;
 	} while (1);
+
+	if (!mm0_file || !fs0_file) {
+		printf("%s: FATAL: Could not find images for %s, and/or %s\n",
+		       __PAGERNAME__, __PAGERNAME__, __VFSNAME__);
+		BUG();
+	}
 
 	/* MM0 needs partial initialisation since it's already running. */
 	// printf("%s: Initialising mm0 tcb.\n", __TASKNAME__);
