@@ -2,85 +2,85 @@ symbols
 CONT%d_TYPE_LINUX	'Linux Container'
 CONT%d_TYPE_BARE	'Bare Container'
 CONT%d_TYPE_POSIX	'Codezero POSIX Services'
-CONT%d_OPT_NAME		'Container name'
+CONT%d_OPT_NAME		'Container Name'
 
-CONT%d_PHYSMEM_REGIONS	'Container %d number of physical regions'
-CONT%d_PHYS0_START	'Container %d physical area 0 start address'
-CONT%d_PHYS0_END	'Container %d physical area 0 end address'
-CONT%d_PHYS1_START	'Container %d physical area 1 start address'
-CONT%d_PHYS1_END	'Container %d physical area 1 end address'
-CONT%d_PHYS2_START	'Container %d physical area 2 start address'
-CONT%d_PHYS2_END	'Container %d physical area 2 end address'
-CONT%d_PHYS3_START	'Container %d physical area 3 start address'
-CONT%d_PHYS3_END	'Container %d physical area 3 end address'
+CONT%d_PHYSMEM_REGIONS	'Container %d Number of Physical Regions'
+CONT%d_PHYS0_START	'Container %d Physical Region 0 Start Address'
+CONT%d_PHYS0_END	'Container %d Physical Region 0 End Address'
+CONT%d_PHYS1_START	'Container %d Physical Region 1 Start Address'
+CONT%d_PHYS1_END	'Container %d Physical Region 1 End Address'
+CONT%d_PHYS2_START	'Container %d Physical Region 2 Start Address'
+CONT%d_PHYS2_END	'Container %d Physical Region 2 End Address'
+CONT%d_PHYS3_START	'Container %d Physical Region 3 Start Address'
+CONT%d_PHYS3_END	'Container %d Physical Region 3 End Address'
 
-cont%d_phys0_caps 	'Container %d Physical memory capabilities'
-cont%d_phys1_caps 	'Container %d Physical memory capabilities'
-cont%d_phys2_caps 	'Container %d Physical memory capabilities'
-cont%d_phys3_caps 	'Container %d Physical memory capabilities'
+cont%d_phys0_caps 	'Container %d Physical Region 0 Memory Capabilities'
+cont%d_phys1_caps 	'Container %d Physical Region 1 Memory Capabilities'
+cont%d_phys2_caps 	'Container %d Physical Region 2 Memory Capabilities'
+cont%d_phys3_caps 	'Container %d Physical Region 3 Memory Capabilities'
 
-cont%d_virt0_caps 	'Container %d Virtual memory capabilities'
-cont%d_virt1_caps 	'Container %d Virtual memory capabilities'
-cont%d_virt2_caps 	'Container %d Virtual memory capabilities'
-cont%d_virt3_caps 	'Container %d Virtual memory capabilities'
-cont%d_virt4_caps 	'Container %d Virtual memory capabilities'
-cont%d_virt5_caps 	'Container %d Virtual memory capabilities'
+cont%d_virt0_caps 	'Container %d Virtual Region 0 Memory Capabilities'
+cont%d_virt1_caps 	'Container %d Virtual Region 1 Memory Capabilities'
+cont%d_virt2_caps 	'Container %d Virtual Region 2 Memory Capabilities'
+cont%d_virt3_caps 	'Container %d Virtual Region 3 Memory Capabilities'
+cont%d_virt4_caps 	'Container %d Virtual Region 4 Memory Capabilities'
+cont%d_virt5_caps 	'Container %d Virtual Region 5 Memory Capabilities'
 
-CONT%d_PHYS0_CAP_MAP_READ 	'Read permission'
-CONT%d_PHYS0_CAP_MAP_WRITE 	'Write permission'
-CONT%d_PHYS0_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_PHYS0_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_PHYS0_CAP_MAP_READ 	'Read Permission'
+CONT%d_PHYS0_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_PHYS0_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_PHYS0_CAP_MAP_UNMAP 	'Unmap Permission'
 
-CONT%d_PHYS1_CAP_MAP_READ 	'Read permission'
-CONT%d_PHYS1_CAP_MAP_WRITE 	'Write permission'
-CONT%d_PHYS1_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_PHYS1_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_PHYS1_CAP_MAP_READ 	'Read Permission'
+CONT%d_PHYS1_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_PHYS1_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_PHYS1_CAP_MAP_UNMAP 	'Unmap Permission'
 
-CONT%d_PHYS2_CAP_MAP_READ 	'Read permission'
-CONT%d_PHYS2_CAP_MAP_WRITE 	'Write permission'
-CONT%d_PHYS2_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_PHYS2_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_PHYS2_CAP_MAP_READ 	'Read Permission'
+CONT%d_PHYS2_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_PHYS2_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_PHYS2_CAP_MAP_UNMAP 	'Unmap Permission'
 
-CONT%d_PHYS3_CAP_MAP_READ 	'Read permission'
-CONT%d_PHYS3_CAP_MAP_WRITE 	'Write permission'
-CONT%d_PHYS3_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_PHYS3_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_PHYS3_CAP_MAP_READ 	'Read Permission'
+CONT%d_PHYS3_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_PHYS3_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_PHYS3_CAP_MAP_UNMAP 	'Unmap Permission'
 
 CONT%d_VIRT0_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%d_VIRT0_CAP_MAP_READ 	'Read permission'
-CONT%d_VIRT0_CAP_MAP_WRITE 	'Write permission'
-CONT%d_VIRT0_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_VIRT0_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_VIRT0_CAP_MAP_READ 	'Read Permission'
+CONT%d_VIRT0_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_VIRT0_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_VIRT0_CAP_MAP_UNMAP 	'Unmap Permission'
 
 CONT%d_VIRT1_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%d_VIRT1_CAP_MAP_READ 	'Read permission'
-CONT%d_VIRT1_CAP_MAP_WRITE 	'Write permission'
+CONT%d_VIRT1_CAP_MAP_READ 	'Read Permission'
+CONT%d_VIRT1_CAP_MAP_WRITE 	'Write Permission'
 CONT%d_VIRT1_CAP_MAP_EXEC 	'Exec permission'
 CONT%d_VIRT1_CAP_MAP_UNMAP 	'Unmap permission'
 
 CONT%d_VIRT2_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%d_VIRT2_CAP_MAP_READ 	'Read permission'
-CONT%d_VIRT2_CAP_MAP_WRITE 	'Write permission'
-CONT%d_VIRT2_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_VIRT2_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_VIRT2_CAP_MAP_READ 	'Read Permission'
+CONT%d_VIRT2_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_VIRT2_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_VIRT2_CAP_MAP_UNMAP 	'Unmap Permission'
 
 CONT%d_VIRT3_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%d_VIRT3_CAP_MAP_READ 	'Read permission'
-CONT%d_VIRT3_CAP_MAP_WRITE 	'Write permission'
-CONT%d_VIRT3_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_VIRT3_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_VIRT3_CAP_MAP_READ 	'Read Permission'
+CONT%d_VIRT3_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_VIRT3_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_VIRT3_CAP_MAP_UNMAP 	'Unmap Permission'
 
 CONT%d_VIRT4_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%d_VIRT4_CAP_MAP_READ 	'Read permission'
-CONT%d_VIRT4_CAP_MAP_WRITE 	'Write permission'
-CONT%d_VIRT4_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_VIRT4_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_VIRT4_CAP_MAP_READ 	'Read Permission'
+CONT%d_VIRT4_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_VIRT4_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_VIRT4_CAP_MAP_UNMAP 	'Unmap Permission'
 
 CONT%d_VIRT5_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%d_VIRT5_CAP_MAP_READ 	'Read permission'
-CONT%d_VIRT5_CAP_MAP_WRITE 	'Write permission'
-CONT%d_VIRT5_CAP_MAP_EXEC 	'Exec permission'
-CONT%d_VIRT5_CAP_MAP_UNMAP 	'Unmap permission'
+CONT%d_VIRT5_CAP_MAP_READ 	'Read Permission'
+CONT%d_VIRT5_CAP_MAP_WRITE 	'Write Permission'
+CONT%d_VIRT5_CAP_MAP_EXEC 	'Exec Permission'
+CONT%d_VIRT5_CAP_MAP_UNMAP 	'Unmap Permission'
 
 default CONT%d_PHYS0_CAP_MAP_READ	from y
 default CONT%d_PHYS0_CAP_MAP_WRITE	from y
@@ -102,37 +102,37 @@ default CONT%d_PHYS3_CAP_MAP_WRITE	from y
 default CONT%d_PHYS3_CAP_MAP_EXEC	from y
 default CONT%d_PHYS3_CAP_MAP_UNMAP	from y
 
-default CONT%d_VIRT0_CAP_MAP_UTCB	from y
+default CONT%d_VIRT0_CAP_MAP_UTCB	from n
 default CONT%d_VIRT0_CAP_MAP_READ	from y
 default CONT%d_VIRT0_CAP_MAP_WRITE	from y
 default CONT%d_VIRT0_CAP_MAP_EXEC	from y
 default CONT%d_VIRT0_CAP_MAP_UNMAP	from y
 
-default CONT%d_VIRT1_CAP_MAP_UTCB	from y
+default CONT%d_VIRT1_CAP_MAP_UTCB	from n
 default CONT%d_VIRT1_CAP_MAP_READ 	from y
 default CONT%d_VIRT1_CAP_MAP_WRITE 	from y
 default CONT%d_VIRT1_CAP_MAP_EXEC 	from y
 default CONT%d_VIRT1_CAP_MAP_UNMAP 	from y
 
-default CONT%d_VIRT2_CAP_MAP_UTCB	from y
+default CONT%d_VIRT2_CAP_MAP_UTCB	from n
 default CONT%d_VIRT2_CAP_MAP_READ 	from y
 default CONT%d_VIRT2_CAP_MAP_WRITE 	from y
 default CONT%d_VIRT2_CAP_MAP_EXEC 	from y
 default CONT%d_VIRT2_CAP_MAP_UNMAP 	from y
 
-default CONT%d_VIRT3_CAP_MAP_UTCB	from y
+default CONT%d_VIRT3_CAP_MAP_UTCB	from n
 default CONT%d_VIRT3_CAP_MAP_READ 	from y
 default CONT%d_VIRT3_CAP_MAP_WRITE 	from y
 default CONT%d_VIRT3_CAP_MAP_EXEC 	from y
 default CONT%d_VIRT3_CAP_MAP_UNMAP 	from y
 
-default CONT%d_VIRT4_CAP_MAP_UTCB	from y
+default CONT%d_VIRT4_CAP_MAP_UTCB	from n
 default CONT%d_VIRT4_CAP_MAP_READ 	from y
 default CONT%d_VIRT4_CAP_MAP_WRITE 	from y
 default CONT%d_VIRT4_CAP_MAP_EXEC 	from y
 default CONT%d_VIRT4_CAP_MAP_UNMAP 	from y
 
-default CONT%d_VIRT5_CAP_MAP_UTCB	from y
+default CONT%d_VIRT5_CAP_MAP_UTCB	from n
 default CONT%d_VIRT5_CAP_MAP_READ 	from y
 default CONT%d_VIRT5_CAP_MAP_WRITE 	from y
 default CONT%d_VIRT5_CAP_MAP_EXEC 	from y
@@ -226,26 +226,26 @@ menu cont%d_virt5_caps
 
 symbols
 
-CONT%d_VIRTMEM_REGIONS	'Container %d number of virtual regions'
-CONT%d_VIRT0_START	'Container %d virtual area 0 start address'
-CONT%d_VIRT0_END	'Container %d virtual area 0 end address'
-CONT%d_VIRT1_START	'Container %d virtual area 1 start address'
-CONT%d_VIRT1_END	'Container %d virtual area 1 end address'
-CONT%d_VIRT2_START	'Container %d virtual area 2 start address'
-CONT%d_VIRT2_END	'Container %d virtual area 2 end address'
-CONT%d_VIRT3_START	'Container %d virtual area 3 start address'
-CONT%d_VIRT3_END	'Container %d virtual area 3 end address'
-CONT%d_VIRT4_START	'Container %d virtual area 4 start address'
-CONT%d_VIRT4_END	'Container %d virtual area 4 end address'
-CONT%d_VIRT5_START	'Container %d virtual area 5 start address'
-CONT%d_VIRT5_END	'Container %d virtual area 5 end address'
+CONT%d_VIRTMEM_REGIONS	'Container %d Number of Virtual Regions'
+CONT%d_VIRT0_START	'Container %d Virtual Region 0 Start Address'
+CONT%d_VIRT0_END	'Container %d Virtual Region 0 End Address'
+CONT%d_VIRT1_START	'Container %d Virtual Region 1 Start Address'
+CONT%d_VIRT1_END	'Container %d Virtual Region 1 End Address'
+CONT%d_VIRT2_START	'Container %d Virtual Region 2 Start Address'
+CONT%d_VIRT2_END	'Container %d Virtual Region 2 End Address'
+CONT%d_VIRT3_START	'Container %d Virtual Region 3 Start Address'
+CONT%d_VIRT3_END	'Container %d Virtual Region 3 End Address'
+CONT%d_VIRT4_START	'Container %d Virtual Region 4 Start Address'
+CONT%d_VIRT4_END	'Container %d Virtual Region 4 End Address'
+CONT%d_VIRT5_START	'Container %d Virtual Region 5 Start Address'
+CONT%d_VIRT5_END	'Container %d Virtual Region 5 End Address'
 
 CONT%d_PAGER_LMA	'Container %d Pager LMA'
 CONT%d_PAGER_VMA	'Container %d Pager VMA'
-CONT%d_PAGER_SIZE	'Container %d Pager Initial map size (Optional)'
-CONT%d_LINUX_PAGE_OFFSET	'Container %d Linux PAGE_OFFSET parameter'
-CONT%d_LINUX_PHYS_OFFSET	'Container %d Linux PHYS_OFFSET parameter'
-CONT%d_LINUX_MAPSIZE	'Container %d Linux Initial kernel map size parameter'
+CONT%d_PAGER_SIZE	'Container %d Pager Initial Map Size (Optional)'
+CONT%d_LINUX_PAGE_OFFSET	'Container %d Linux PAGE_OFFSET Parameter'
+CONT%d_LINUX_PHYS_OFFSET	'Container %d Linux PHYS_OFFSET Parameter'
+CONT%d_LINUX_MAPSIZE	'Container %d Linux Initial Kernel Map Size Parameter'
 
 default CONT%d_PAGER_LMA	 from 0x0
 default CONT%d_PAGER_VMA	 from 0x0
@@ -315,13 +315,13 @@ when CONT%d_TYPE_POSIX==y suppress cont%d_linux_pager_params
 
 symbols
 cont%d_menu		'Container %d Parameters'
-cont%d_physmem_list	'Container %d physical memory regions'
-cont%d_virtmem_list	'Container %d Virtual memory regions'
+cont%d_physmem_list	'Container %d Physical Memory Regions'
+cont%d_virtmem_list	'Container %d Virtual Memory Regions'
 container%d_type	'Container %d Type'
 container%d_options	'Container %d Options'
 
-cont%d_linux_pager_params	'Container %d Pager parameters'
-cont%d_bare_pager_params	'Container %d Pager parameters'
+cont%d_linux_pager_params	'Container %d Pager Parameters'
+cont%d_bare_pager_params	'Container %d Pager Parameters'
 
 menu cont%d_bare_pager_params
 	CONT%d_PAGER_LMA@
