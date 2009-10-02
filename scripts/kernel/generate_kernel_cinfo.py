@@ -161,8 +161,10 @@ pager_ifdefs_todotext = \
 /*
  * TODO:
  * This had to be defined this way because in CML2 there
- * is no straightforward way to derive symbols from expressions
- * (a ternary expression of (? : ) form complains for type deduction.
+ * is no straightforward way to derive symbols from expressions, even
+ * it is stated in the manual that it can be done.
+ * As a workaround, a ternary expression of (? : ) was tried but this
+ * complains that type deduction could not be done.
  */'''
 
 pager_ifdefs = \
@@ -186,6 +188,7 @@ def generate_pager_memory_ifdefs(containers):
                                                   c.id, c.id, \
                                                   c.id, c.id, c.id)
     return pager_ifdef_string
+
 def generate_kernel_cinfo(containers, cinfo_path):
     pager_ifdefs = generate_pager_memory_ifdefs(containers)
     with open(cinfo_path, 'w+') as cinfo_file:

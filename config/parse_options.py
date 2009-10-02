@@ -2,7 +2,7 @@
 # -*- mode: python; coding: utf-8; -*-
 #
 from optparse import OptionParser
-import os, sys
+import os, sys, shutil
 
 PROJRELROOT = '../'
 
@@ -45,6 +45,6 @@ def build_parse_options():
     if autogen_true:
         generate_container_cml(options.arch, options.ncont)
         if options.reset_old_config == 1 and os.path.exists(CML2_OLDCONFIG_FILE):
-            print "Deleting %s" % CML2_OLDCONFIG_FILE
-            os.remove(CML2_OLDCONFIG_FILE)
+            print "Moving %s to unused file %s" % (CML2_OLDCONFIG_FILE, CML2_OLDCONFIG_FILE + '.saved')
+            shutil.move(CML2_OLDCONFIG_FILE, CML2_OLDCONFIG_FILE + '.saved')
 
