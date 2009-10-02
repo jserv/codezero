@@ -39,7 +39,6 @@ def add_container_constraint(cid):
     return cml_string
 
 def generate_container_cml(arch, ncont):
-    contid_occurence = 380  # Exact number of arguments
     fbody = ""
     with open(join(CML2_CONFIG_SRCDIR, arch + '.cml')) as in_cml:
         fbody += in_cml.read()
@@ -61,7 +60,7 @@ def generate_container_cml(arch, ncont):
         with open(CML2_CONT_DEFFILE, "rU") as contdefs:
             defbody = contdefs.read()
             defbody = defbody.replace("%\n", "%%\n")
-            fbody += defbody % tuple(contid_occurence * [cont])
+            fbody += defbody % { 'cn' : cont }
 
     # Write the result to output rules file.
     with open(join(CML2_CONFIG_SRCDIR, "out.cml"), "w+") as out_cml:
