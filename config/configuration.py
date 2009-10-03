@@ -25,6 +25,16 @@ class Container:
         self.virt_regions = 0
         self.phys_regions = 0
 
+    def print_self(self):
+        print '\nContainer %d' % self.id
+        print 'Container type: %s' % self.type
+        print 'Container Name: %s' % self.name
+        print 'Container Pager lma: %s' % conv_hex(self.pager_lma)
+        print 'Container Pager vma: %s' % conv_hex(self.pager_vma)
+        print 'Container Pager size: %s' % conv_hex(self.pager_size)
+        print 'Container Virtual regions: %s' % self.virt_regions
+        print 'Container Physical regions: %s' % self.phys_regions
+
 class configuration:
 
     def __init__(self):
@@ -153,20 +163,6 @@ class configuration:
         # Make sure elements in order for indexed accessing
         self.containers.sort(self.compare_containers)
 
-    def container_print(self, c):
-        print '\nContainer %d' % c.id
-        print 'Container type: %s' % c.type
-        print 'Container Name: %s' % c.name
-        print 'Container Pager lma: %s' % conv_hex(c.pager_lma)
-        print 'Container Pager vma: %s' % conv_hex(c.pager_vma)
-        print 'Container Pager size: %s' % conv_hex(c.pager_size)
-        print 'Container Virtual regions: %s' % c.virt_regions
-        print 'Container Physical regions: %s' % c.phys_regions
-
-    def containers_print(self, containers):
-        for c in containers:
-            self.container_print(self, c)
-
     def config_print(self):
         print 'Configuration\n'
         print '-------------\n'
@@ -174,7 +170,11 @@ class configuration:
         print 'Platform: %s' % self.platform
         print 'Symbols:\n %s' % self.all
         print 'Containers: %s' % self.ncontainers
-        self.containers_print(self.containers)
+        self.containers_print()
+
+    def containers_print(self):
+        for c in self.containers:
+            c.print_self()
 
 def configuration_save(config):
     if not os.path.exists(CONFIG_SHELVE_DIR):

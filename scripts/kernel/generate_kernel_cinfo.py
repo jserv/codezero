@@ -74,25 +74,30 @@ pager_end = \
 
 cap_virtmem = \
 '''
-\t\t\t[%d] = {
+\t\t\t[%(capidx)d] = {
 \t\t\t\t.type = CAP_TYPE_MAP | CAP_RTYPE_VIRTMEM,
-\t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE
-\t\t\t\t          | CAP_MAP_EXEC | CAP_MAP_UNMAP,
-\t\t\t\t.start = __pfn(CONFIG_CONT%d_VIRT%d_START),
-\t\t\t\t.end = __pfn(CONFIG_CONT%d_VIRT%d_END),
-\t\t\t\t.size = __pfn(CONFIG_CONT%d_VIRT%d_END - CONFIG_CONT%d_VIRT%d_START),
+\t\t\t\t.access = (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_READ_ << CAP_MAP_READ_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_WRITE_ << CAP_MAP_WRITE_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_EXEC_ << CAP_MAP_EXEC_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_UNMAP_ << CAP_MAP_UNMAP_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_UTCB_ << CAP_MAP_UTCB_BIT),
+\t\t\t\t.start = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_START),
+\t\t\t\t.end = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_END),
+\t\t\t\t.size = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_END - CONFIG_CONT%(cn)d_VIRT%(vn)d_START),
 \t\t\t},
 '''
 
 cap_physmem = \
 '''
-\t\t\t[%d] = {
+\t\t\t[%(capidx)d] = {
 \t\t\t\t.type = CAP_TYPE_MAP | CAP_RTYPE_PHYSMEM,
-\t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE
-\t\t\t\t          | CAP_MAP_EXEC | CAP_MAP_UNMAP,
-\t\t\t\t.start = __pfn(CONFIG_CONT%d_PHYS%d_START),
-\t\t\t\t.end = __pfn(CONFIG_CONT%d_PHYS%d_END),
-\t\t\t\t.size = __pfn(CONFIG_CONT%d_PHYS%d_END - CONFIG_CONT%d_PHYS%d_START),
+\t\t\t\t.access = (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_READ_ << CAP_MAP_READ_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_WRITE_ << CAP_MAP_WRITE_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_EXEC_ << CAP_MAP_EXEC_BIT) |
+\t\t\t\t          (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_UNMAP_ << CAP_MAP_UNMAP_BIT),
+\t\t\t\t.start = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_START),
+\t\t\t\t.end = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_END),
+\t\t\t\t.size = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_END - CONFIG_CONT%(cn)d_PHYS%(pn)d_START),
 \t\t\t},
 '''
 
@@ -169,10 +174,10 @@ pager_ifdefs_todotext = \
 
 pager_ifdefs = \
 '''
-#if defined(CONFIG_CONT%d_TYPE_LINUX)
-    #define CONFIG_CONT%d_PAGER_LMA  (CONFIG_CONT%d_LINUX_PHYS_OFFSET + CONFIG_CONT%d_LINUX_TEXT_OFFSET)
-    #define CONFIG_CONT%d_PAGER_VMA  (CONFIG_CONT%d_LINUX_PAGE_OFFSET + CONFIG_CONT%d_LINUX_TEXT_OFFSET)
-    #define CONFIG_CONT%d_PAGER_SIZE CONFIG_CONT%d_LINUX_MAPSIZE
+#if defined(CONFIG_CONT%(cn)d_TYPE_LINUX)
+    #define CONFIG_CONT%(cn)d_PAGER_LMA  (CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET + CONFIG_CONT%(cn)d_LINUX_TEXT_OFFSET)
+    #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET + CONFIG_CONT%(cn)d_LINUX_TEXT_OFFSET)
+    #define CONFIG_CONT%(cn)d_PAGER_SIZE CONFIG_CONT%(cn)d_LINUX_MAPSIZE
 #endif
 '''
 def generate_pager_memory_ifdefs(containers):
@@ -183,14 +188,16 @@ def generate_pager_memory_ifdefs(containers):
             if linux == 0:
                 pager_ifdef_string += pager_ifdefs_todotext
                 linux = 1
-            pager_ifdef_string += pager_ifdefs % (c.id, c.id, \
-                                                  c.id, c.id, \
-                                                  c.id, c.id, \
-                                                  c.id, c.id, c.id)
+            pager_ifdef_string += pager_ifdefs % { 'cn' : c.id }
     return pager_ifdef_string
 
-def generate_kernel_cinfo(containers, cinfo_path):
+def generate_kernel_cinfo(config, cinfo_path):
+    containers = config.containers
+    containers.sort()
+
+    print "Generating kernel cinfo..."
     pager_ifdefs = generate_pager_memory_ifdefs(containers)
+
     with open(cinfo_path, 'w+') as cinfo_file:
         fbody = cinfo_file_start % pager_ifdefs
         total_other_caps = 9
@@ -201,18 +208,10 @@ def generate_kernel_cinfo(containers, cinfo_path):
             fbody += pager_start % (c.id, c.id, c.id, total_caps)
             cap_index = 0
             for mem_index in range(c.virt_regions):
-                fbody += cap_virtmem % \
-                         (cap_index, c.id, \
-                          mem_index, c.id, \
-                          mem_index, c.id, \
-                          mem_index, c.id, mem_index)
+                fbody += cap_virtmem % { 'capidx' : cap_index, 'cn' : c.id, 'vn' : mem_index }
                 cap_index += 1
             for mem_index in range(c.phys_regions):
-                fbody += cap_physmem % \
-                         (cap_index, c.id, \
-                          mem_index, c.id, \
-                          mem_index, c.id, \
-                          mem_index, c.id, mem_index)
+                fbody += cap_physmem % { 'capidx' : cap_index, 'cn' : c.id, 'pn' : mem_index }
                 cap_index += 1
             fbody += cap_all_others % (tuple(range(cap_index, total_caps)))
             fbody += pager_end
@@ -222,11 +221,8 @@ def generate_kernel_cinfo(containers, cinfo_path):
 
 if __name__ == "__main__":
     config = configuration_retrieve()
-    #config.config_print()
-    containers = config.containers
-    containers.sort()
     if len(sys.argv) > 1:
-        generate_kernel_cinfo(containers, join(PROJROOT, sys.argv[1]))
+        generate_kernel_cinfo(config, join(PROJROOT, sys.argv[1]))
     else:
-        generate_kernel_cinfo(containers, join(PROJROOT, 'src/generic/cinfo.c'))
+        generate_kernel_cinfo(config, join(PROJROOT, 'src/generic/cinfo.c'))
 

@@ -57,13 +57,23 @@
 #define CAP_EXREGS_RW_CPUTIME	(1 << 6)
 
 /* Map capability */
-#define CAP_MAP_READ		(1 << 0)
-#define CAP_MAP_WRITE		(1 << 1)
-#define CAP_MAP_EXEC		(1 << 2)
-#define CAP_MAP_CACHED		(1 << 3)
-#define CAP_MAP_UNCACHED	(1 << 4)
-#define CAP_MAP_UNMAP		(1 << 5)
-#define CAP_MAP_UTCB		(1 << 6)
+
+/* Shift values */
+#define CAP_MAP_READ_BIT	0
+#define CAP_MAP_WRITE_BIT	1
+#define CAP_MAP_EXEC_BIT	2
+#define CAP_MAP_CACHED_BIT	3
+#define CAP_MAP_UNCACHED_BIT	4
+#define CAP_MAP_UNMAP_BIT	5
+#define CAP_MAP_UTCB_BIT	6
+
+#define CAP_MAP_READ		(1 << CAP_MAP_READ_BIT)
+#define CAP_MAP_WRITE		(1 << CAP_MAP_WRITE_BIT)
+#define CAP_MAP_EXEC		(1 << CAP_MAP_EXEC_BIT)
+#define CAP_MAP_CACHED		(1 << CAP_MAP_CACHED_BIT)
+#define CAP_MAP_UNCACHED	(1 << CAP_MAP_UNCACHED_BIT)
+#define CAP_MAP_UNMAP		(1 << CAP_MAP_UNMAP_BIT)
+#define CAP_MAP_UTCB		(1 << CAP_MAP_UTCB_BIT)
 
 /* Ipc capability */
 #define CAP_IPC_SEND		(1 << 0)

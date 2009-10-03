@@ -29,6 +29,11 @@ def build_parse_options():
                       help = "Reset configuration file settings "
                              "(If you had configured before and changing the "
                              "rule file, this will reset existing values to default)")
+    parser.add_option("-s", "--save-old-config", action = "store_true",
+                      default = False, dest = "backup_config",
+                      help = "Backs up old configuration file settings to a .saved file"
+                             "(Subsequent calls would overwrite. Only meaningful with -r)")
+
 
     (options, args) = parser.parse_args()
 
@@ -45,6 +50,10 @@ def build_parse_options():
     if autogen_true:
         generate_container_cml(options.arch, options.ncont)
         if options.reset_old_config == 1 and os.path.exists(CML2_OLDCONFIG_FILE):
-            print "Moving %s to unused file %s" % (CML2_OLDCONFIG_FILE, CML2_OLDCONFIG_FILE + '.saved')
-            shutil.move(CML2_OLDCONFIG_FILE, CML2_OLDCONFIG_FILE + '.saved')
+            if options.backup_config == 1:
+                print "Backing up %s into %s" % (CML2_OLDCONFIG_FILE, CML2_OLDCONFIG_FILE + '.saved')
+                shutil.move(CML2_OLDCONFIG_FILE, CML2_OLDCONFIG_FILE + '.saved')
+            else:
+                print "Deleting %s" % CML2_OLDCONFIG_FILE
+                os.remove(CML2_OLDCONFIG_FILE)
 
