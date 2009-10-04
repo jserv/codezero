@@ -18,39 +18,6 @@
 #include <lib/malloc.h>
 #include <l4/api/space.h>
 
-/*
- * Sends vfs task information about forked child, and its utcb
- */
-int vfs_notify_exit(struct tcb *task, int status)
-{
-	int err = 0;
-
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-
-	l4_save_ipcregs();
-
-	/* Write parent and child information */
-	write_mr(L4SYS_ARG0, task->tid);
-	write_mr(L4SYS_ARG1, status);
-
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
-			       L4_IPC_TAG_NOTIFY_EXIT)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		goto out;
-	}
-
-	/* Check if syscall was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: VFS returned ipc error: %d.\n",
-		       __FUNCTION__, err);
-		goto out;
-	}
-
-out:
-	l4_restore_ipcregs();
-	return err;
-}
-
 
 /* Closes all file descriptors of a task */
 int task_close_files(struct tcb *task)
@@ -91,7 +58,10 @@ int execve_recycle_task(struct tcb *new, struct tcb *orig)
 	new->pagerid = orig->pagerid;
 
 	/* Copy shared page */
-	new->shared_page = orig->shared_page;
+	/*
+	 * FIXME: Make sure to take care of this.
+	 */
+	//new->shared_page = orig->shared_page;
 
 	/* Copy parent relationship */
 	BUG_ON(new->parent);
@@ -135,12 +105,10 @@ void do_exit(struct tcb *task, int status)
 	/* Destroy task's utcb slot */
 	task_destroy_utcb(task);
 
-	/* Tell vfs that task is exiting */
-	vfs_notify_exit(task, status);
-
 	/* Remove default shared page shm areas from vfs */
+	BUG();
 	// printf("Unmapping 0x%p from vfs as shared-page of %d\n", task->shared_page, task->tid);
-	shpage_unmap_from_task(task, find_task(VFS_TID));
+	//shpage_unmap_from_task(task, find_task(VFS_TID));
 
 	/* Free task's local tcb */
 	tcb_destroy(task);

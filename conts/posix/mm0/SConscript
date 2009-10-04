@@ -29,11 +29,12 @@ def generate_lma_lds(target, source, env):
 
 lma_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_lma_lds)
 
-src = [Glob('*.c') + Glob('src/*.c') + Glob('src/lib/*.c') + Glob('src/lib/elf/*.c') + Glob('src/arch/*.c')]
+src = [Glob('*.c') + Glob('mm/*.c') + Glob('lib/*.c') + Glob('fs/*.c') + Glob('fs/memfs/*.c') + Glob('lib/elf/*.c') + Glob('mm/arch/*.c')]
 
 e = env.Clone()
 
 e.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
+e.Append(LIBS = 'posix')
 objs = e.Object(src)
 mm0 = e.Program('mm0.elf', objs)
 

@@ -47,11 +47,24 @@ struct file_descriptor {
 
 struct task_fd_head {
 	struct file_descriptor fd[TASK_FILES_MAX];
+	struct id_pool *fdpool;
 	int tcb_refs;
 };
 
 struct task_vma_head {
 	struct link list;
+	int tcb_refs;
+};
+
+#define TCB_NO_SHARING				0
+#define	TCB_SHARED_VM				(1 << 0)
+#define	TCB_SHARED_FILES			(1 << 1)
+#define TCB_SHARED_FS				(1 << 2)
+#define TASK_FILES_MAX			32
+
+struct task_fs_data {
+	struct vnode *curdir;
+	struct vnode *rootdir;
 	int tcb_refs;
 };
 
@@ -114,9 +127,6 @@ struct tcb {
 	unsigned long map_start;
 	unsigned long map_end;
 
-	/* Default ipc-shared-page information */
-	void *shared_page;
-
 	/* Chain of utcb descriptors */
 	struct utcb_head *utcb_head;
 
@@ -128,6 +138,8 @@ struct tcb {
 
 	/* File descriptors for this task */
 	struct task_fd_head *files;
+	struct task_fs_data *fs_data;
+
 };
 
 struct tcb_head {

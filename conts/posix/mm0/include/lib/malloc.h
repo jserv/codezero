@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 #include <string.h>
-#include <stdio.h>
 
 void *kmalloc(size_t size);
 void kfree(void *blk);

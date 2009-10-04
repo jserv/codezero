@@ -61,7 +61,6 @@ int default_release_pages(struct vm_object *vm_obj)
 	return 0;
 }
 
-
 int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
@@ -88,11 +87,14 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	paddr = (void *)page_to_phys(page);
 	vaddr = l4_new_virtual(1);
 
-	/* Map the page to vfs task */
-	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
+	/* FIXME: Are we sure that pages need to be mapped to self one-by-one? */
+	BUG();
 
-	// printf("%s/%s: Writing to vnode %d, at pgoff 0x%x, %d pages, buf at 0x%x\n",
-	//	__TASKNAME__, __FUNCTION__, vm_file_to_vnum(f), page_offset, 1, vaddr);
+	/* Map the page to self */
+	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
+
+	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
+		__TASKNAME__, __FUNCTION__, vm_file_to_vnum(f), page_offset, 1, vaddr);
 
 	/* Syscall to vfs to write page back to file. */
 	if ((err = vfs_write(vm_file_to_vnum(f), page_offset, 1, vaddr)) < 0)

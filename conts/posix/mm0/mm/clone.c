@@ -16,42 +16,6 @@
 #include <test.h>
 #include <clone.h>
 
-/*
- * Sends vfs task information about forked child, and its utcb
- */
-int vfs_notify_fork(struct tcb *child, struct tcb *parent, unsigned int flags)
-{
-	int err = 0;
-
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-
-	l4_save_ipcregs();
-
-	/* Write parent and child information */
-	write_mr(L4SYS_ARG0, parent->tid);
-	write_mr(L4SYS_ARG1, child->tid);
-	write_mr(L4SYS_ARG2, (unsigned int)child->shared_page);
-	write_mr(L4SYS_ARG3, flags);
-
-	if ((err = l4_sendrecv(VFS_TID, VFS_TID,
-			       L4_IPC_TAG_NOTIFY_FORK)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		goto out;
-	}
-
-	/* Check if syscall was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Pager from VFS read error: %d.\n",
-		       __FUNCTION__, err);
-		goto out;
-	}
-
-out:
-	l4_restore_ipcregs();
-	return err;
-}
-
-
 int sys_fork(struct tcb *parent)
 {
 	int err;
@@ -88,14 +52,12 @@ int sys_fork(struct tcb *parent)
 		BUG();
 
 	/* Create and prefault a shared page for child and map it to vfs task */
-	shpage_map_to_task(child, find_task(VFS_TID),
-			   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
-			   SHPAGE_PREFAULT);
+	BUG();
+	//shpage_map_to_task(child, find_task(VFS_TID),
+	//		   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
+	//		   SHPAGE_PREFAULT);
 
 	// printf("Mapped 0x%p to vfs as utcb of %d\n", child->utcb, child->tid);
-
-	/* We can now notify vfs about forked process */
-	vfs_notify_fork(child, parent, TCB_NO_SHARING);
 
 	/* Add child to global task list */
 	global_add_task(child);
@@ -146,12 +108,13 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 		BUG();
 
 	/* Create and prefault a shared page for child and map it to vfs task */
-	shpage_map_to_task(child, find_task(VFS_TID),
-			   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
-			   SHPAGE_PREFAULT);
+	BUG();
+	//shpage_map_to_task(child, find_task(VFS_TID),
+	//		   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
+	//			   SHPAGE_PREFAULT);
 
 	/* We can now notify vfs about forked process */
-	vfs_notify_fork(child, parent, flags);
+	BUG();
 
 	/* Add child to global task list */
 	global_add_task(child);

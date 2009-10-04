@@ -11,14 +11,6 @@
 LINK_DECLARE(vnode_cache);
 LINK_DECLARE(dentry_cache);
 
-/*
- * /
- * /boot
- * /boot/images/mm0.axf
- * /boot/images/fs0.axf
- * /boot/images/test0.axf
- * /file.txt
- */
 struct vfs_mountpoint vfs_root;
 
 /*

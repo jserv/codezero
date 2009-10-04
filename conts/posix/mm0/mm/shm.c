@@ -227,28 +227,6 @@ struct vm_file *shm_new(key_t key, unsigned long npages)
 }
 
 /*
- * Fast internal path to do shmget/shmat() together for mm0's
- * convenience. Works for existing areas.
- */
-void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
-{
-	struct vm_file *shm_file;
-	struct shm_descriptor *shm_desc;
-
-	list_foreach_struct(shm_file, &global_vm_files.list, list) {
-		if(shm_file->type == VM_FILE_SHM) {
-			shm_desc = shm_file_to_desc(shm_file);
-			/* Found the key, shmat that area */
-			if (shm_desc->key == key)
-				return do_shmat(shm_file, shmaddr,
-						0, task);
-		}
-	}
-
-	return PTR_ERR(-EEXIST);
-}
-
-/*
  * FIXME: Make sure hostile tasks don't subvert other tasks' shared pages
  * by early-registring their shared page address here.
  */
@@ -307,6 +285,30 @@ int sys_shmget(key_t key, int size, int shmflg)
 }
 
 
+
+#if 0
+
+/*
+ * Fast internal path to do shmget/shmat() together for mm0's
+ * convenience. Works for existing areas.
+ */
+void *shmat_shmget_internal(struct tcb *task, key_t key, void *shmaddr)
+{
+	struct vm_file *shm_file;
+	struct shm_descriptor *shm_desc;
+
+	list_foreach_struct(shm_file, &global_vm_files.list, list) {
+		if(shm_file->type == VM_FILE_SHM) {
+			shm_desc = shm_file_to_desc(shm_file);
+			/* Found the key, shmat that area */
+			if (shm_desc->key == key)
+				return do_shmat(shm_file, shmaddr,
+						0, task);
+		}
+	}
+
+	return PTR_ERR(-EEXIST);
+}
 
 /*
  * Currently, a default shm page is allocated to every thread in the system
@@ -379,3 +381,4 @@ int shpage_unmap_from_task(struct tcb *owner, struct tcb *mapper)
 {
 	return sys_shmdt(mapper, owner->shared_page);
 }
+#endif

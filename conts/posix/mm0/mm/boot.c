@@ -49,7 +49,6 @@ int boottask_setup_regions(struct vm_file *file, struct tcb *task,
 int boottask_mmap_regions(struct tcb *task, struct vm_file *file)
 {
 	void *mapped;
-	struct vm_file *shm;
 
 	/*
 	 * mmap each task's physical image to task's address space.
@@ -73,14 +72,6 @@ int boottask_mmap_regions(struct tcb *task, struct vm_file *file)
 		       (int)mapped);
 		return (int)mapped;
 	}
-
-	/* Task's default shared page */
-	task->shared_page = shm_new_address(DEFAULT_SHPAGE_SIZE/PAGE_SIZE);
-
-	/* Create a shared memory segment available for shmat() */
-	if (IS_ERR(shm = shm_new((key_t)task->shared_page,
-				 __pfn(DEFAULT_SHPAGE_SIZE))))
-		return (int)shm;
 
 	task_setup_utcb(task);
 

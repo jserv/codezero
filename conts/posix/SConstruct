@@ -70,19 +70,13 @@ mm0 = SConscript('mm0/SConscript', \
                  exports = { 'config' : config,  'env' : mm0_env, 'contid' : contid }, duplicate = 0, \
                  variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/mm0'))
 
-fs0_env = env.Clone()
-fs0_env.Append(CPPPATH = LIBPOSIX_INCLUDE_SERVER)
-fs0 = SConscript('fs0/SConscript', \
-                 exports = { 'config' : config,  'env' : fs0_env, 'contid' : contid, 'previmage' : mm0 }, duplicate = 0, \
-                 variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/fs0'))
-
 test0_env = env.Clone()
 test0_env.Replace(CPPPATH = ['include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
 test0 = SConscript('test0/SConscript', \
-                   exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid, 'previmage' : fs0 }, duplicate = 0, \
+                   exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid, 'previmage' : mm0 }, duplicate = 0, \
                    variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/test0'))
 
-images = [mm0, fs0, test0]
+images = [mm0, test0]
 bootdesc_env = env.Clone()
 bootdesc_env['bootdesc_dir'] = 'bootdesc'
 
@@ -91,14 +85,13 @@ bootdesc = SConscript('bootdesc/SConscript', \
                       'contid' : contid, 'images' : images }, duplicate = 0, \
                       variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/bootdesc'))
 
-Depends(fs0, libposix)
+Depends(mm0, libposix)
 Depends(test0, libposix)
-Depends(bootdesc, [fs0, test0, mm0])
+Depends(bootdesc, [test0, mm0])
 
 Alias('libposix', libposix)
 Alias('mm0', mm0)
-Alias('fs0', fs0)
 Alias('test0', test0)
 Alias('bootdesc', bootdesc)
 
-Default([mm0, fs0, libposix, test0, bootdesc])
+Default([mm0, libposix, test0, bootdesc])

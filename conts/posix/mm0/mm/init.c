@@ -20,6 +20,7 @@
 #include <boot.h>
 #include <utcb.h>
 #include <bootm.h>
+#include <vfs.h>
 
 /* A separate list than the generic file list that keeps just the boot files */
 LINK_DECLARE(boot_file_list);
@@ -96,6 +97,10 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 	task->tid = ids->tid;
 	task->spid = ids->spid;
 	task->tgid = ids->tgid;
+
+	/* Initialise vfs specific fields. */
+	task->fs_data->rootdir = vfs_root.pivot;
+	task->fs_data->curdir = vfs_root.pivot;
 
 	if ((err = boottask_setup_regions(f, task,
 					  task_start, task_end)) < 0)

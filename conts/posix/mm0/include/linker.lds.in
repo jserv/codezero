@@ -34,6 +34,9 @@ SECTIONS
 	.data : AT (ADDR(.data) - pager_offset)
 	{
 		*(.data)
+		_start_bdev = .;
+		*(.data.memfs)
+		_end_bdev = .;
 	}
 	.bss : AT (ADDR(.bss) - pager_offset) { *(.bss) }
 	. = ALIGN(4K);

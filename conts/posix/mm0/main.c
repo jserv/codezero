@@ -84,11 +84,6 @@ void handle_requests(void)
 		ret = page_fault_handler(sender, (fault_kdata_t *)&mr[0]);
 		break;
 
-	case L4_IPC_TAG_TASKDATA:
-		/* Send runnable task information to fs0 */
-		ret = vfs_send_task_data(sender);
-		break;
-
 	case L4_IPC_TAG_SHMGET: {
 		ret = sys_shmget((key_t)mr[0], (int)mr[1], (int)mr[2]);
 		break;
@@ -101,10 +96,6 @@ void handle_requests(void)
 
 	case L4_IPC_TAG_SHMDT:
 		ret = sys_shmdt(sender, (void *)mr[0]);
-		break;
-
-	case L4_IPC_TAG_SHPAGE:
-		ret = (int)task_send_shpage_address(sender, (l4id_t)mr[0]);
 		break;
 
 	case L4_IPC_TAG_READ:
@@ -166,6 +157,22 @@ void handle_requests(void)
 //		ret = sys_brk(sender, (void *)mr[0]);
 //		break;
 	}
+
+	/* FIXME: Fix all these syscalls to read any buffer data from the caller task's utcb. */
+	/* FS0 System calls */
+	case L4_IPC_TAG_OPEN:
+		ret = sys_open(sender, (void *)mr[0], (int)mr[1], (unsigned int)mr[2]);
+		break;
+	case L4_IPC_TAG_MKDIR:
+		ret = sys_mkdir(sender, (const char *)mr[0], (unsigned int)mr[1]);
+		break;
+	case L4_IPC_TAG_CHDIR:
+		ret = sys_chdir(sender, (const char *)mr[0]);
+		break;
+	case L4_IPC_TAG_READDIR:
+		ret = sys_readdir(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
+		break;
+
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "
 		       "received from (%d). Full mr reading: "

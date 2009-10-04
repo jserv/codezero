@@ -79,9 +79,6 @@ int initialise(void)
 
 	printf("%s: Mounted memfs root filesystem.\n", __TASKNAME__);
 
-	/* Learn about what tasks are running */
-	init_task_data();
-
 	/*
 	 * Initialisation is done. From here on, we can start
 	 * serving filesystem requests.

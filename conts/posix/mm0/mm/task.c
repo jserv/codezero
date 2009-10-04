@@ -35,6 +35,7 @@
 #include <boot.h>
 #include <test.h>
 #include <utcb.h>
+#include <vfs.h>
 
 struct global_list global_tasks = {
 	.list = { &global_tasks.list, &global_tasks.list },
@@ -74,6 +75,7 @@ struct tcb *find_task(int tid)
 	return 0;
 }
 
+
 struct tcb *tcb_alloc_init(unsigned int flags)
 {
 	struct tcb *task;
@@ -102,14 +104,39 @@ struct tcb *tcb_alloc_init(unsigned int flags)
 		link_init(&task->utcb_head->list);
 	}
 
+	/* Allocate new fs data struct if its not shared */
+	if (!(flags & TCB_SHARED_FS)) {
+		if (!(task->fs_data =
+		      kzalloc(sizeof(*task->fs_data)))) {
+			kfree(task->vm_area_head);
+			kfree(task->utcb_head);
+			kfree(task);
+			return PTR_ERR(-ENOMEM);
+		}
+		task->fs_data->tcb_refs = 1;
+	}
+
 	/* Allocate file structures if not shared */
 	if (!(flags & TCB_SHARED_FILES)) {
 		if (!(task->files =
 		      kzalloc(sizeof(*task->files)))) {
 			kfree(task->vm_area_head);
 			kfree(task->utcb_head);
+			kfree(task->fs_data);
 			kfree(task);
+
 			return PTR_ERR(-ENOMEM);
+		}
+		if (IS_ERR(task->files->fdpool =
+			   id_pool_new_init(TASK_FILES_MAX))) {
+			void *err = task->files->fdpool;
+			kfree(task->vm_area_head);
+			kfree(task->utcb_head);
+			kfree(task->fs_data);
+			kfree(task->files);
+			kfree(task);
+
+			return err;
 		}
 		task->files->tcb_refs = 1;
 	}
@@ -137,8 +164,14 @@ int task_free_resources(struct tcb *task)
 	 * Threads may share file descriptor structure
 	 * if no users left, free it.
 	 */
-	if (!(--task->files->tcb_refs))
+	if (--task->files->tcb_refs == 0) {
+		kfree(task->files->fdpool);
 		kfree(task->files);
+	}
+
+	/* Similarly free filesystem view structure */
+	if (--task->fs_data->tcb_refs == 0)
+		kfree(task->fs_data);
 
 	/*
 	 * Threads may share the virtual space.
@@ -246,7 +279,7 @@ int task_release_vmas(struct task_vma_head *vma_head)
 	return 0;
 }
 
-int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
+int copy_tcb(struct tcb *to, struct tcb *from, unsigned int share_flags)
 {
 	/* Copy program segment boundary information */
 	to->start = from->start;
@@ -267,7 +300,7 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 	to->map_end = from->map_end;
 
 	/* Sharing the list of vmas and utcbs */
-	if (flags & TCB_SHARED_VM) {
+	if (share_flags & TCB_SHARED_VM) {
 		to->vm_area_head = from->vm_area_head;
 		to->vm_area_head->tcb_refs++;
 		to->utcb_head = from->utcb_head;
@@ -283,19 +316,28 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags)
 		 */
 	}
 
-	/* Copy all file descriptors */
-	if (flags & TCB_SHARED_FILES) {
+	if (share_flags & TCB_SHARED_FILES) {
 		to->files = from->files;
 		to->files->tcb_refs++;
 	} else {
-	       	/* Bulk copy all file descriptors */
-		memcpy(to->files, from->files, sizeof(*to->files));
+		/* Copy all file descriptors */
+		memcpy(to->files->fd, from->files->fd,
+		       TASK_FILES_MAX * sizeof(to->files->fd[0]));
+
+		/* Copy the idpool */
+		id_pool_copy(to->files->fdpool, from->files->fdpool, TASK_FILES_MAX);
 
 		/* Increase refcount for all open files */
 		for (int i = 0; i < TASK_FILES_MAX; i++)
 			if (to->files->fd[i].vmfile)
 				to->files->fd[i].vmfile->openers++;
 	}
+
+	if (share_flags & TCB_SHARED_FS) {
+		to->fs_data = from->fs_data;
+		to->fs_data->tcb_refs++;
+	} else
+		memcpy(to->fs_data, from->fs_data, sizeof(*to->fs_data));
 
 	return 0;
 }
@@ -305,6 +347,9 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 {
 	struct tcb *task;
 	int err;
+
+	/* Can't have some share flags with no parent task */
+	BUG_ON(!parent && share_flags);
 
 	/* Set task ids if a parent is supplied */
 	if (parent) {
@@ -368,6 +413,10 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 		}
 	} else {
 		struct tcb *pager = find_task(PAGER_TID);
+
+		/* Initialise vfs specific fields. */
+		task->fs_data->rootdir = vfs_root.pivot;
+		task->fs_data->curdir = vfs_root.pivot;
 
 		/* All parentless tasks are children of the pager */
 		list_insert_tail(&task->child_ref, &pager->children);
@@ -638,46 +687,6 @@ int task_start(struct tcb *task)
 	if ((err = l4_thread_control(THREAD_RUN, &ids)) < 0) {
 		printf("l4_thread_control failed with %d\n", err);
 		return err;
-	}
-
-	return 0;
-}
-
-/*
- * During its initialisation FS0 wants to learn how many boot tasks
- * are running, and their tids, which includes itself. This function
- * provides that information.
- */
-int vfs_send_task_data(struct tcb *vfs)
-{
-	int li = 0;
-	struct tcb *t, *self;
-	struct task_data_head *tdata_head;
-
-	if (vfs->tid != VFS_TID) {
-		printf("%s: Task data requested by %d, which is not "
-		       "FS0 id %d, ignoring.\n", __TASKNAME__, vfs->tid,
-		       VFS_TID);
-		return 0;
-	}
-
-	BUG_ON(!(self = find_task(self_tid())));
-	BUG_ON(!vfs->shared_page);
-
-	/* Attach mm0 to vfs's utcb segment just like a normal task */
-	shpage_map_to_task(vfs, self, SHPAGE_PREFAULT);
-
-	/* Write all requested task information to shared pages's user buffer area */
-	tdata_head = (struct task_data_head *)vfs->shared_page;
-
-	/* First word is total number of tcbs */
-	tdata_head->total = global_tasks.total;
-
-	/* Write per-task data for all tasks */
-	list_foreach_struct(t, &global_tasks.list, list) {
-		tdata_head->tdata[li].tid = t->tid;
-		tdata_head->tdata[li].shpage_address = (unsigned long)t->shared_page;
-		li++;
 	}
 
 	return 0;
