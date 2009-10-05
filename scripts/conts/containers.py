@@ -63,6 +63,21 @@ def build_posix_container(projpaths, container):
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container()
 
+# We simply use SCons to figure all this out from container.id
+# Builds the test container.
+def build_test_container(projpaths, container):
+    images = []
+    cwd = os.getcwd()
+    os.chdir(TESTDIR)
+    print '\nBuilding the Test Container...'
+    scons_cmd = 'scons ' + 'cont=' + str(container.id)
+    print "Issuing scons command: %s" % scons_cmd
+    os.system(scons_cmd)
+    builddir = source_to_builddir(TESTDIR, container.id)
+    os.path.walk(builddir, glob_by_walk, ['*.elf', images])
+    container_packer = DefaultContainerPacker(container, images)
+    return container_packer.pack_container()
+
 # This simply calls SCons on a given container, and collects
 # all images with .elf extension, instead of using whole classes
 # for building and packing.
@@ -89,6 +104,8 @@ def build_all_containers():
             cont_images.append(build_default_container(projpaths, container))
         elif container.type == 'posix':
             cont_images.append(build_posix_container(projpaths, container))
+        elif container.type == 'test':
+            cont_images.append(build_test_container(projpaths, container))
         else:
             print "Error: Don't know how to build " + \
                   "container of type: %s" % (container.type)

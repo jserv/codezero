@@ -1,0 +1,44 @@
+
+Import('config', 'env', 'contid')
+
+import os, sys
+from config.projpaths import *
+
+arch = config.arch
+
+sys.path.append('../../')
+from config.lib import *
+
+container = next((c for c in config.containers if int(c.id) == int(contid)), None)
+
+CONTAINER_INCLUDE = join(BUILDDIR, 'cont' + str(contid) + '/test' + '/include')
+
+def generate_linker_script(target, source, env):
+    with open(source[0].path, 'r') as lds_in:
+        linker_script = lds_in.read()
+        with open(target[0].path, 'w+') as lds_out:
+            assert container.pager_vma != 0
+            assert container.pager_lma != 0
+            lds_out.write(linker_script % (conv_hex(container.pager_vma), conv_hex(container.pager_lma)))
+
+def generate_container_h(target, source, env):
+    with open(source[0].path, 'r') as fin:
+        str = fin.read()
+        with open(target[0].path, 'w+') as fout:
+            # Make any manipulations here
+            fout.write(str % (container.name, container.id, container.id))
+
+linker_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_linker_script)
+
+container_h = Command('include/container.h', 'include/container.h.in', generate_container_h)
+
+src = [Glob('*.[cS]') + Glob('src/*.[cS]')]
+
+env.Append(LINKFLAGS = ['-T' + linker_lds[0].path, '-u_start'])
+env.Append(CPPPATH = [CONTAINER_INCLUDE])
+
+objs = env.Object(src)
+prog = env.Program('main.elf', objs)
+Depends(linker_lds, CML2_CONFIG_H)
+Depends(prog, linker_lds)
+

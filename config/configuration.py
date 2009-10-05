@@ -151,6 +151,8 @@ class configuration:
                     self.containers[id].type = "posix"
                 elif param2 == "BARE":
                     self.containers[id].type = "bare"
+                elif param2 == "TEST":
+                    self.containers[id].type = "test"
 
     # Extract parameters for containers
     def get_container_parameters(self, name, val):
