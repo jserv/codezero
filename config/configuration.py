@@ -43,6 +43,7 @@ class configuration:
         self.platform = None
         self.all = []
         self.containers = []
+        self.ncontainers = 0
 
     # Get all name value symbols
     def get_all(self, name, val):
@@ -155,6 +156,14 @@ class configuration:
     def check_add_container(self, id):
         for cont in self.containers:
             if id == cont.id:
+                return
+
+        # If symbol to describe number of containers
+        # Has already been visited, use that number
+        # as an extra checking.
+        if self.ncontainers > 0:
+            # Sometimes unwanted symbols slip through
+            if id >= int(self.ncontainers):
                 return
 
         container = Container(id)

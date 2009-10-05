@@ -196,6 +196,8 @@ def generate_kernel_cinfo(config, cinfo_path):
     containers.sort()
 
     print "Generating kernel cinfo..."
+    #config.config_print()
+
     pager_ifdefs = generate_pager_memory_ifdefs(containers)
 
     with open(cinfo_path, 'w+') as cinfo_file:
