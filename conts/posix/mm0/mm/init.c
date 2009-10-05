@@ -101,46 +101,30 @@ int pager_setup_task(void)
 	task->data_start = (unsigned long)__start_data;
 	task->data_end = (unsigned long)__end_data;
 
+	/* BSS markers */
+	task->bss_start = (unsigned long)__start_bss;
+	task->bss_end = (unsigned long)__end_bss;
+
 	/* Task's region available for mmap */
-	task->map_start = (unsigned long)__stack;
+	task->map_start = page_align_up((unsigned long)__stack);
 	task->map_end = 0xF0000000; /* FIXME: Fix this */
 
+	/* Task's total map boundaries */
+	task->start = task->text_start;
+	task->end = 0xF0000000;
+
 	/*
-	 * Map all regions as anonymous
-	 * (since no real file could back)
+	 * Map all regions as anonymous (since no real
+	 * file could back) All already-mapped areas
+	 * are mapped at once.
 	 */
-
-	/* Map text */
 	if (IS_ERR(mapped =
-		   do_mmap(0, 0, task, task->text_start,
-			   VMA_ANONYMOUS | VM_READ |
+		   do_mmap(0, 0, task, task->start,
+			   VMA_ANONYMOUS | VM_READ | VMA_FIXED |
 			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
-			   __pfn(page_align_up(task->text_end) -
-				 task->text_start)))) {
+			   __pfn(page_align_up(task->map_start) -
+				 task->start)))) {
 		printf("do_mmap: failed with %d.\n", (int)mapped);
-		return (int)mapped;
-	}
-
-	/* Map data */
-	if (IS_ERR(mapped =
-		   do_mmap(0, 0, task, task->data_start,
-			   VMA_ANONYMOUS | VM_READ |
-			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
-			   __pfn(page_align_up(task->data_end) -
-				 task->data_start)))) {
-		printf("do_mmap: failed with %d.\n", (int)mapped);
-		return (int)mapped;
-	}
-
-	/* Map stack */
-	if (IS_ERR(mapped =
-		   do_mmap(0, 0, task, task->stack_start,
-			   VMA_ANONYMOUS | VM_READ |
-			   VM_WRITE | VMA_PRIVATE,
-			   __pfn(task->stack_end -
-				 task->stack_start)))) {
-		printf("do_mmap: Mapping stack failed with %d.\n",
-		       (int)mapped);
 		return (int)mapped;
 	}
 
@@ -471,7 +455,7 @@ void copy_init_process(void)
 	void *init_img_start, *init_img_end;
 
 	if ((fd = sys_open(find_task(self_tid()),
-			   "/test0", O_TRUNC | O_RDWR,
+			   "/test0", O_TRUNC | O_RDWR | O_CREAT,
 			   0)) < 0) {
 		printf("FATAL: Could not open file "
 		       "to write initial task.\n");

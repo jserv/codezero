@@ -129,36 +129,6 @@ out:
 	return retval;
 }
 
-/*
- * When a task does a read/write/mmap request on a file, if
- * the file descriptor is unknown to the pager, this call
- * asks vfs if that file has been opened, and any other
- * relevant information.
- */
-int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
-{
-	struct tcb *task;
-	struct vnode *v;
-
-	/* Check if such task exists */
-	if (!(task = find_task(opener)))
-		return -ESRCH;
-
-	/* Check if that fd has been opened */
-	if (!task->files->fd[fd].vnum)
-		return -EBADF;
-
-	/* Search the vnode by that vnum */
-	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
-					 task->files->fd[fd].vnum)))
-		return (int)v;
-
-	/* Read file information */
-	*vnum = v->vnum;
-	*length = v->size;
-
-	return 0;
-}
 
 /* Creates a node under a directory, e.g. a file, directory. */
 struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
@@ -226,8 +196,13 @@ int sys_open(struct tcb *task, const char *pathname, int flags, unsigned int mod
 	BUG_ON((fd = id_new(task->files->fdpool)) < 0);
 	retval = fd;
 
-	/* Why assign just vnum? Why not vmfile, vnode etc? */
-	BUG();
+	/* TODO:
+	 * Why assign just vnum? Why not vmfile, vnode etc?
+	 *
+	 * This is because vmfile is going to be created when
+	 * the file pages are accessed. Need to trace this
+	 * behaviour.
+	 */
 
 	/* Assign the new fd with the vnode's number */
 	task->files->fd[fd].vnum = v->vnum;
@@ -416,6 +391,37 @@ struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned 
 	global_add_vm_file(vmfile);
 
 	return vmfile;
+}
+
+/*
+ * When a task does a read/write/mmap request on a file, if
+ * the file descriptor is unknown to the pager, this call
+ * asks vfs if that file has been opened, and any other
+ * relevant information.
+ */
+int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
+{
+	struct tcb *task;
+	struct vnode *v;
+
+	/* Check if such task exists */
+	if (!(task = find_task(opener)))
+		return -ESRCH;
+
+	/* Check if that fd has been opened */
+	if (!task->files->fd[fd].vnum)
+		return -EBADF;
+
+	/* Search the vnode by that vnum */
+	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
+					 task->files->fd[fd].vnum)))
+		return (int)v;
+
+	/* Read file information */
+	*vnum = v->vnum;
+	*length = v->size;
+
+	return 0;
 }
 
 /* Initialise a new file and the descriptor for it from given file data */
