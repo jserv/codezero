@@ -263,11 +263,14 @@ void release_initdata()
 		 self_tid());
 }
 
-static void init_page_map(struct page_bitmap *pmap, unsigned long pfn_start, unsigned long pfn_end)
+static void init_page_map(struct page_bitmap *pmap,
+			  unsigned long pfn_start,
+			  unsigned long pfn_end)
 {
 	pmap->pfn_start = pfn_start;
 	pmap->pfn_end = pfn_end;
-	set_page_map(pmap, pfn_start, pfn_end - pfn_start, 0);
+	set_page_map(pmap, pfn_start,
+		     pfn_end - pfn_start, 0);
 }
 
 /*
@@ -276,17 +279,20 @@ static void init_page_map(struct page_bitmap *pmap, unsigned long pfn_start, uns
  * @start = start page address to set, inclusive.
  * @numpages = number of pages to set.
  */
-int set_page_map(struct page_bitmap *page_map, unsigned long pfn_start,
+int set_page_map(struct page_bitmap *page_map,
+		 unsigned long pfn_start,
 		 int numpages, int val)
 {
 	unsigned long pfn_end = pfn_start + numpages;
 	unsigned long pfn_err = 0;
 
-	if (page_map->pfn_start > pfn_start || page_map->pfn_end < pfn_start) {
+	if (page_map->pfn_start > pfn_start ||
+	    page_map->pfn_end < pfn_start) {
 		pfn_err = pfn_start;
 		goto error;
 	}
-	if (page_map->pfn_end < pfn_end || page_map->pfn_start > pfn_end) {
+	if (page_map->pfn_end < pfn_end ||
+	    page_map->pfn_start > pfn_end) {
 		pfn_err = pfn_end;
 		goto error;
 	}
@@ -297,28 +303,30 @@ int set_page_map(struct page_bitmap *page_map, unsigned long pfn_start,
 	else
 		for (int i = pfn_start; i < pfn_end; i++)
 			page_map->map[BITWISE_GETWORD(i)] &= ~BITWISE_GETBIT(i);
+
 	return 0;
+
 error:
 	BUG_MSG("Given page area is out of system page_map range: 0x%lx\n",
 		pfn_err << PAGE_BITS);
 	return -1;
 }
 
-/* Allocates page descriptors and initialises them using page_map information */
+/*
+ * Allocates page descriptors and
+ * initialises them using page_map information
+ */
 void init_physmem_secondary(struct membank *membank)
 {
 	struct page_bitmap *pmap = initdata.page_map;
 	int npages = pmap->pfn_end - pmap->pfn_start;
 
-	/* Allocation marks for the struct page array; npages, start, end */
+	/*
+	 * Allocation marks for the struct
+	 * page array; npages, start, end
+	 */
 	int pg_npages, pg_spfn, pg_epfn;
 	unsigned long ffree_addr;
-
-	/*
-	 * Means the page array won't map one to one to pfns. That's ok,
-	 * but we dont allow it for now.
-	 */
-	// BUG_ON(pmap->pfn_start);
 
 	membank[0].start = __pfn_to_addr(pmap->pfn_start);
 	membank[0].end = __pfn_to_addr(pmap->pfn_end);
@@ -330,23 +338,34 @@ void init_physmem_secondary(struct membank *membank)
 	BUG_ON(membank[0].free >= membank[0].end);
 
 	/*
-	 * One struct page for every physical page. Calculate how many pages
-	 * needed for page structs, start and end pfn marks.
+	 * One struct page for every physical page.
+	 * Calculate how many pages needed for page
+	 * structs, start and end pfn marks.
 	 */
 	pg_npages = __pfn(page_align_up((sizeof(struct page) * npages)));
 
-	/* These are relative pfn offsets to the start of the memory bank */
 
-	/* FIXME:
-	 * 1.) These values were only right when membank started from pfn 0.
-	 * 2.) Use set_page_map to set page map below instead of manually.
+	/* These are relative pfn offsets
+	 * to the start of the memory bank
+	 *
+	 * FIXME:
+	 * 1.) These values were only right
+	 *     when membank started from pfn 0.
+	 *
+	 * 2.) Use set_page_map to set page map
+	 *     below instead of manually.
 	 */
 	pg_spfn = __pfn(membank[0].free);
 	pg_epfn = pg_spfn + pg_npages;
 
-	/* Use free pages from the bank as the space for struct page array */
-	membank[0].page_array = l4_map_helper((void *)membank[0].free,
-					      pg_npages);
+	/*
+	 * Use free pages from the bank as
+	 * the space for struct page array
+	 */
+	membank[0].page_array =
+		l4_map_helper((void *)membank[0].free,
+			      pg_npages);
+
 	/* Update free memory left */
 	membank[0].free += pg_npages * PAGE_SIZE;
 
@@ -358,21 +377,29 @@ void init_physmem_secondary(struct membank *membank)
 	for (int i = 0; i < npages; i++) {
 		link_init(&membank[0].page_array[i].list);
 
-		/* Set use counts for pages the kernel has already used up */
-		if (!(pmap->map[BITWISE_GETWORD(i)] & BITWISE_GETBIT(i)))
+		/*
+		 * Set use counts for pages the
+		 * kernel has already used up
+		 */
+		if (!(pmap->map[BITWISE_GETWORD(i)]
+		      & BITWISE_GETBIT(i)))
 			membank[0].page_array[i].refcnt = -1;
 		else	/* Last page used +1 is free */
 			ffree_addr = (i + 1) * PAGE_SIZE;
 	}
 
-	/* First free address must come up the same for both */
+	/*
+	 * First free address must
+	 * come up the same for both
+	 */
 	BUG_ON(ffree_addr != membank[0].free);
 
 	/* Set global page array to this bank's array */
 	page_array = membank[0].page_array;
 
 	/* Test that page/phys macros work */
-	BUG_ON(phys_to_page(page_to_phys(&page_array[5])) != &page_array[5])
+	BUG_ON(phys_to_page(page_to_phys(&page_array[5]))
+			    != &page_array[5])
 }
 
 
@@ -383,10 +410,11 @@ void init_physmem_primary()
 	struct bootdesc *bootdesc = initdata.bootdesc;
 
 	/* Allocate page map structure */
-	initdata.page_map = alloc_bootmem(sizeof(struct page_bitmap) +
-					  ((initdata.physmem->end -
-					    initdata.physmem->start)
-					    >> 5) + 1, 0);
+	initdata.page_map =
+		alloc_bootmem(sizeof(struct page_bitmap) +
+			      ((initdata.physmem->end -
+			        initdata.physmem->start)
+			       >> 5) + 1, 0);
 
 	/* Initialise page map from physmem capability */
 	init_page_map(initdata.page_map,
@@ -397,7 +425,9 @@ void init_physmem_primary()
 	for (int i = 0; i < bootdesc->total_images; i++) {
 		pfn_start =
 			__pfn(page_align_up(bootdesc->images[i].phys_start));
-		pfn_end = __pfn(page_align_up(bootdesc->images[i].phys_end));
+		pfn_end =
+			__pfn(page_align_up(bootdesc->images[i].phys_end));
+
 		if (pfn_end > pfn_images_end)
 			pfn_images_end = pfn_end;
 		set_page_map(initdata.page_map, pfn_start,
