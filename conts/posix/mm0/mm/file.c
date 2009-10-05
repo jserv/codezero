@@ -399,14 +399,13 @@ struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned 
  * asks vfs if that file has been opened, and any other
  * relevant information.
  */
-int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
+int file_open(struct tcb *task, int fd)
 {
-	struct tcb *task;
 	struct vnode *v;
+	struct vm_file *vmfile;
 
-	/* Check if such task exists */
-	if (!(task = find_task(opener)))
-		return -ESRCH;
+	if (fd < 0 || fd > TASK_FILES_MAX)
+		return -EINVAL;
 
 	/* Check if that fd has been opened */
 	if (!task->files->fd[fd].vnum)
@@ -417,32 +416,15 @@ int vfs_open(l4id_t opener, int fd, unsigned long *vnum, unsigned long *length)
 					 task->files->fd[fd].vnum)))
 		return (int)v;
 
-	/* Read file information */
-	*vnum = v->vnum;
-	*length = v->size;
-
-	return 0;
-}
-
-/* Initialise a new file and the descriptor for it from given file data */
-int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
-{
-	struct vm_file *vmfile;
-
-	/* fd slot must be empty */
-	BUG_ON(task->files->fd[fd].vnum != 0);
+	/* Cursor must be zero */
 	BUG_ON(task->files->fd[fd].cursor != 0);
 
-	/* Assign vnum to given fd on the task */
-	task->files->fd[fd].vnum = vnum;
-	task->files->fd[fd].cursor = 0;
-
-	/* Check if that vm_file is already in the list */
+	/* Check that vm_file is already in the list */
 	list_foreach_struct(vmfile, &global_vm_files.list, list) {
 
 		/* Check whether it is a vfs file and if so vnums match. */
 		if ((vmfile->type & VM_FILE_VFS) &&
-		    vm_file_to_vnum(vmfile) == vnum) {
+		    vm_file_to_vnum(vmfile) == v->vnum) {
 
 			/* Add a reference to it from the task */
 			task->files->fd[fd].vmfile = vmfile;
@@ -455,35 +437,17 @@ int do_open(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
 	if (IS_ERR(vmfile = vfs_file_create()))
 		return (int)vmfile;
 
-	/* Initialise and add a reference to it from the task */
-	vm_file_to_vnum(vmfile) = vnum;
-	vmfile->length = length;
+	/* Assign file information */
+	vm_file_to_vnum(vmfile) = v->vnum;
+	vmfile->length = v->size;
+
+	/* Add a reference to it from the task */
 	vmfile->vm_obj.pager = &file_pager;
 	task->files->fd[fd].vmfile = vmfile;
 	vmfile->openers++;
 
 	/* Add to file list */
 	global_add_vm_file(vmfile);
-
-	return 0;
-}
-
-int file_open(struct tcb *opener, int fd)
-{
-	int err;
-	unsigned long vnum;
-	unsigned long length;
-
-	if (fd < 0 || fd > TASK_FILES_MAX)
-		return -EINVAL;
-
-	/* Ask vfs if such a file has been recently opened */
-	if ((err = vfs_open(opener->tid, fd, &vnum, &length)) < 0)
-		return err;
-
-	/* Initialise local structures with received file data */
-	if ((err = do_open(opener, fd, vnum, length)) < 0)
-		return err;
 
 	return 0;
 }
