@@ -78,7 +78,7 @@ class configuration:
     # Extract number of containers
     def get_ncontainers(self, name, val):
         if name[:len("CONFIG_CONTAINERS")] == "CONFIG_CONTAINERS":
-            self.ncontainers = val
+            self.ncontainers = int(val)
 
     # TODO: Carry this over to Container() as static method???
     def get_container_parameter(self, id, param, val):
@@ -163,7 +163,7 @@ class configuration:
         # as an extra checking.
         if self.ncontainers > 0:
             # Sometimes unwanted symbols slip through
-            if id >= int(self.ncontainers):
+            if id >= self.ncontainers:
                 return
 
         container = Container(id)
@@ -178,7 +178,7 @@ class configuration:
         print 'Arch: %s, %s' % (self.arch, self.subarch)
         print 'Platform: %s' % self.platform
         print 'Symbols:\n %s' % self.all
-        print 'Containers: %s' % self.ncontainers
+        print 'Containers: %d' % self.ncontainers
         self.containers_print()
 
     def containers_print(self):
