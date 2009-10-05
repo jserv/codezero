@@ -22,17 +22,17 @@
 #include <file.h>
 #include <init.h>
 #include <test.h>
-#include <boot.h>
 #include <utcb.h>
 #include <bootm.h>
 #include <vfs.h>
 #include <init.h>
 #include <memory.h>
 #include <capability.h>
-
-
-extern unsigned long _start_init[];
-extern unsigned long _end_init[];
+#include <linker.h>
+#include <mmap.h>
+#include <file.h>
+#include <syscalls.h>
+#include <linker.h>
 
 /* Kernel data acquired during initialisation */
 __initdata struct initdata initdata;
@@ -59,38 +59,92 @@ void print_pfn_range(int pfn, int size)
 }
 
 /*
- * A specialised function for setting up the task environment of mm0.
- * Essentially all the memory regions are set up but a new task isn't
- * created, registers aren't assigned, and thread not started, since
- * these are all already done by the kernel. But we do need a memory
- * environment for mm0, hence this function.
+ * This sets up the mm0 task struct and memory environment but omits
+ * bits that are already done such as creating a new thread, setting
+ * registers.
  */
-int mm0_task_init(struct vm_file *f, unsigned long task_start,
-		  unsigned long task_end, struct task_ids *ids)
+int pager_setup_task(void)
 {
-	int err;
 	struct tcb *task;
+	struct task_ids ids;
+	void *mapped;
 
 	/*
-	 * The thread itself is already known by the kernel, so we just
-	 * allocate a local task structure.
+	 * The thread itself is already known by the kernel,
+	 * so we just allocate a local task structure.
 	 */
-	BUG_ON(IS_ERR(task = tcb_alloc_init(TCB_NO_SHARING)));
+	if (IS_ERR(task = tcb_alloc_init(TCB_NO_SHARING))) {
+		printf("FATAL: "
+		       "Could not allocate tcb for pager.\n");
+		BUG();
+	}
 
-	task->tid = ids->tid;
-	task->spid = ids->spid;
-	task->tgid = ids->tgid;
+	/* Set up own ids */
+	l4_getid(&ids);
+	task->tid = ids.tid;
+	task->spid = ids.spid;
+	task->tgid = ids.tgid;
 
 	/* Initialise vfs specific fields. */
 	task->fs_data->rootdir = vfs_root.pivot;
 	task->fs_data->curdir = vfs_root.pivot;
 
-	if ((err = boottask_setup_regions(f, task,
-					  task_start, task_end)) < 0)
-		return err;
+	/* Text markers */
+	task->text_start = (unsigned long)__start_text;
+	task->text_end = (unsigned long)__end_rodata;
 
-	if ((err =  boottask_mmap_regions(task, f)) < 0)
-		return err;
+	/* Data markers */
+	task->stack_end = (unsigned long)__stack;
+	task->stack_start = (unsigned long)__start_stack;
+
+	/* Stack markers */
+	task->data_start = (unsigned long)__start_data;
+	task->data_end = (unsigned long)__end_data;
+
+	/* Task's region available for mmap */
+	task->map_start = (unsigned long)__stack;
+	task->map_end = 0xF0000000; /* FIXME: Fix this */
+
+	/*
+	 * Map all regions as anonymous
+	 * (since no real file could back)
+	 */
+
+	/* Map text */
+	if (IS_ERR(mapped =
+		   do_mmap(0, 0, task, task->text_start,
+			   VMA_ANONYMOUS | VM_READ |
+			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
+			   __pfn(page_align_up(task->text_end) -
+				 task->text_start)))) {
+		printf("do_mmap: failed with %d.\n", (int)mapped);
+		return (int)mapped;
+	}
+
+	/* Map data */
+	if (IS_ERR(mapped =
+		   do_mmap(0, 0, task, task->data_start,
+			   VMA_ANONYMOUS | VM_READ |
+			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
+			   __pfn(page_align_up(task->data_end) -
+				 task->data_start)))) {
+		printf("do_mmap: failed with %d.\n", (int)mapped);
+		return (int)mapped;
+	}
+
+	/* Map stack */
+	if (IS_ERR(mapped =
+		   do_mmap(0, 0, task, task->stack_start,
+			   VMA_ANONYMOUS | VM_READ |
+			   VM_WRITE | VMA_PRIVATE,
+			   __pfn(task->stack_end -
+				 task->stack_start)))) {
+		printf("do_mmap: Mapping stack failed with %d.\n",
+		       (int)mapped);
+		return (int)mapped;
+	}
+
+	task_setup_utcb(task);
 
 	/* Set pager as child and parent of itself */
 	list_insert(&task->child_ref, &task->children);
@@ -109,9 +163,6 @@ int mm0_task_init(struct vm_file *f, unsigned long task_start,
 
 	/* Add the task to the global task list */
 	global_add_task(task);
-
-	/* Add the file to global vm lists */
-	global_add_vm_file(f);
 
 	return 0;
 }
@@ -141,9 +192,11 @@ int read_pager_capabilities()
 	int err;
 
 	/* Read number of capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_NCAPS, 0, &ncaps)) < 0) {
-		printf("l4_capability_control() reading # of capabilities failed.\n"
-		       "Could not complete CAP_CONTROL_NCAPS request.\n");
+	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
+					 0, &ncaps)) < 0) {
+		printf("l4_capability_control() reading # of"
+		       " capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_NCAPS request.\n");
 		goto error;
 	}
 	total_caps = ncaps;
@@ -152,9 +205,11 @@ int read_pager_capabilities()
 	caparray = alloc_bootmem(sizeof(struct capability) * ncaps, 0);
 
 	/* Read all capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_READ_CAPS, 0, caparray)) < 0) {
-		printf("l4_capability_control() reading of capabilities failed.\n"
-		       "Could not complete CAP_CONTROL_READ_CAPS request.\n");
+	if ((err = l4_capability_control(CAP_CONTROL_READ_CAPS,
+					 0, caparray)) < 0) {
+		printf("l4_capability_control() reading of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_READ_CAPS request.\n");
 		goto error;
 	}
 
@@ -172,8 +227,10 @@ int read_pager_capabilities()
 			return 0;
 		}
 	}
-	printf("%s: Error, pager has no physmem capability defined.\n",
-		__TASKNAME__);
+
+	printf("%s: Error, pager has no physmem "
+	       "capability defined.\n", __TASKNAME__);
+
 	goto error;
 
 	return 0;
@@ -201,8 +258,8 @@ void release_initdata()
 	 * it remains as if it is a used block
 	 */
 
-	l4_unmap(_start_init,
-		 __pfn(page_align_up(_end_init - _start_init)),
+	l4_unmap(__start_init,
+		 __pfn(page_align_up(__end_init - __start_init)),
 		 self_tid());
 }
 
@@ -378,11 +435,28 @@ void init_execve(char *path)
  */
 void copy_init_process(void)
 {
-	//int fd = sys_open(find_task(self_tid()), "/test0", O_WRITE, 0)
+	int fd;
+	struct svc_image *init_img;
+	unsigned long img_size;
+	void *init_img_start, *init_img_end;
 
-	//sys_write(find_task(self_tid()), fd, __test0_start, __test0_end - __test0_start);
+	if ((fd = sys_open(find_task(self_tid()),
+			   "/test0", O_TRUNC | O_RDWR,
+			   0)) < 0) {
+		printf("FATAL: Could not open file "
+		       "to write initial task.\n");
+		BUG();
+	}
 
-	//sys_close(find_task(self_tid()), fd);
+	init_img = bootdesc_get_image_byname("test0");
+	img_size = init_img->phys_end - init_img->phys_start;
+
+	init_img_start = l4_map_helper((void *)init_img->phys_start, __pfn(img_size));
+	init_img_end = init_img_start + img_size;
+
+	sys_write(find_task(self_tid()), fd, init_img_start, img_size);
+
+	sys_close(find_task(self_tid()), fd);
 
 }
 
@@ -411,6 +485,8 @@ void init(void)
 	utcb_pool_init();
 
 	vfs_init();
+
+	pager_setup_task();
 
 	start_init_process();
 

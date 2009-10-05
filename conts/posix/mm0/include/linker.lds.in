@@ -26,29 +26,49 @@ ENTRY(_start)
 SECTIONS
 {
 	. = virtual_base;
-	_start_text = .;
-	.text : AT (ADDR(.text) - pager_offset) { *(.text.head) *(.text) }
-	/* rodata is needed else your strings will link at physical! */
-	.rodata : AT (ADDR(.rodata) - pager_offset) { *(.rodata) }
-	.rodata1 : AT (ADDR(.rodata1) - pager_offset) { *(.rodata1) }
-	.data : AT (ADDR(.data) - pager_offset) { *(.data) }
-	.bss : AT (ADDR(.bss) - pager_offset) { *(.bss) }
+
+	__start_text = .;
+	.text : AT (ADDR(.text) - pager_offset) {
+		*(.text.head) *(.text)
+	}
+	__end_text = .;
+
+	__start_rodata = .;
+	.rodata : AT (ADDR(.rodata) - pager_offset) {
+		*(.rodata)
+	}
+	.rodata1 : AT (ADDR(.rodata1) - pager_offset) {
+		*(.rodata1)
+	}
+	__end_rodata = .;
+
+	__start_data = .;
+	.data : AT (ADDR(.data) - pager_offset) {
+		*(.data)
+	}
+	__end_data = .;
+
+	__start_bss = .;
+	.bss : AT (ADDR(.bss) - pager_offset) {
+		*(.bss)
+	}
 	. = ALIGN(4K);
+	__end_bss = .;
 	. += 0x2000;	/* BSS doesnt increment link counter??? */
-	.stack : AT (ADDR(.stack) - pager_offset)
-	{
+
+	__start_stack = .;
+	.stack : AT (ADDR(.stack) - pager_offset) {
 		*(.stack)
 	}
 	. = ALIGN(4K);
 	__stack = .; /* This is the preallocated boot stack */
 
 	/* Below part is to be discarded after boot */
-	_start_init = .;
-	.init : AT (ADDR(.init) - pager_offset)
-	{
+	__start_init = .;
+	.init : AT (ADDR(.init) - pager_offset)	{
 		*(.init.data)
 		*(.init.bootmem)
 	}
-	_end_init = .;
-	_end = .;
+	__end_init = .;
+	__end = .;
 }

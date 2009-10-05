@@ -3,7 +3,7 @@
 
 #include <l4/lib/list.h>
 #include <l4lib/types.h>
-#include <posix/sys/types.h>
+#include <posix/sys/types.h>	/* FIXME: Remove this and refer to internal headers */
 #include <task.h>
 
 int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,

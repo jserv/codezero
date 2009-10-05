@@ -16,7 +16,7 @@
 #include <memory.h>
 #include <file.h>
 #include <user.h>
-
+#include <linker.h>
 
 struct address_pool pager_vaddr_pool;
 
@@ -40,9 +40,6 @@ static struct pager_virtual_address_id_pool {
 	.bitlimit = ADDRESS_POOL_256MB * 32,
 };
 
-/* End of pager image */
-extern unsigned char _end[];
-
 /* For supplying contiguous virtual addresses to pager */
 int pager_address_pool_init(void)
 {
@@ -55,7 +52,8 @@ int pager_address_pool_init(void)
 	address_pool_init_with_idpool(&pager_vaddr_pool,
 			  	      (struct id_pool *)
 				      &pager_virtual_address_id_pool,
-				      page_align_up((unsigned long)_end + PAGE_SIZE),
+				      page_align_up((unsigned long)__end + PAGE_SIZE),
+	/* FIXME: Fix this! Same as mm0's map_start and map_end */
 				      (unsigned long)0xF0000000);
 	return 0;
 }

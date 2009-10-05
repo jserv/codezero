@@ -7,9 +7,10 @@
 #include <bootdesc.h>
 #include <bootm.h>
 #include <init.h>
+#include <linker.h>
+
 #include <l4lib/arch/syslib.h>
 
-extern unsigned long _end[];
 extern unsigned long pager_offset;
 
 struct svc_image *bootdesc_get_image_byname(char *name)
@@ -28,7 +29,7 @@ void read_boot_params()
 	/*
 	 * End of the executable image is where bootdesc resides
 	 */
-	bootdesc = (struct bootdesc *)_end;
+	bootdesc = (struct bootdesc *)__end;
 
 	/* Check if bootdesc is on an unmapped page */
 	if (is_page_aligned(bootdesc))
@@ -42,5 +43,5 @@ void read_boot_params()
 	       bootdesc->desc_size);
 
 	if (npages > 0)
-		l4_unmap_helper((void *)page_align_up(_end), npages);
+		l4_unmap_helper((void *)page_align_up(__end), npages);
 }

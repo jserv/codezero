@@ -32,7 +32,6 @@
 #include <exec.h>
 #include <shm.h>
 #include <mmap.h>
-#include <boot.h>
 #include <test.h>
 #include <utcb.h>
 #include <vfs.h>

@@ -22,7 +22,6 @@
 #include <shm.h>
 #include <mmap.h>
 #include <test.h>
-#include <boot.h>
 
 
 /* Receives all registers and origies back */
