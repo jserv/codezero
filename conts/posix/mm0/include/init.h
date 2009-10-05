@@ -29,7 +29,7 @@ struct initdata {
 
 extern struct initdata initdata;
 
-void init_pager(void);
+void init(void);
 
 /* TODO: Remove this stuff from here. */
 int init_devzero(void);

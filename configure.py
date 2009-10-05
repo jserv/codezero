@@ -56,6 +56,7 @@ def configure_kernel(cml_file):
     cml2_update_config_h(CONFIG_H, config)
 
     configuration_save(config)
+    #config.config_print()
 
     # Generate bare container files if new ones defined
     bare_cont_gen = BareContGenerator()

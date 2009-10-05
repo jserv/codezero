@@ -31,15 +31,13 @@ struct membank {
 extern struct membank membank[];
 
 /* Describes bitmap of used/unused state for all physical pages */
-extern struct page_bitmap page_map;
 extern struct memdesc physmem;
 
 /* Sets the global page map as used/unused. Aligns input when needed. */
 int set_page_map(struct page_bitmap *pmap, unsigned long start,
 		 int numpages, int val);
 
-struct initdata;
-void init_physmem_primary(struct initdata *initdata);
-void init_physmem_secondary(struct initdata *initdata, struct membank *membank);
+void init_physmem_primary();
+void init_physmem_secondary(struct membank *membank);
 
 #endif /* __PAGER_PHYSMEM_H__ */

@@ -12,7 +12,7 @@
 
 void init_mm_descriptors(struct page_bitmap *page_map,
 			 struct bootdesc *bootdesc, struct membank *membank);
-void init_physmem(struct initdata *initdata, struct membank *membank);
+void init_physmem(void);
 
 int pager_address_pool_init(void);
 void *pager_new_address(int npages);

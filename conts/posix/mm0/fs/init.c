@@ -1,5 +1,5 @@
 /*
- * FS0 Initialisation.
+ * Filesystem initialisation.
  *
  * Copyright (C) 2007 Bahadir Balban
  */
@@ -51,7 +51,7 @@ void vfs_register_filesystems(void)
 /*
  * Filesystem initialisation.
  */
-int initialise(void)
+int vfs_init(void)
 {
 	void *rootdev_blocks;
 	struct superblock *root_sb;
@@ -79,10 +79,6 @@ int initialise(void)
 
 	printf("%s: Mounted memfs root filesystem.\n", __TASKNAME__);
 
-	/*
-	 * Initialisation is done. From here on, we can start
-	 * serving filesystem requests.
-	 */
 	return 0;
 }
 

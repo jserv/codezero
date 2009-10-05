@@ -15,7 +15,8 @@ struct bootdesc {
 	struct svc_image images[];
 } __attribute__((__packed__));
 
-struct initdata;
-void read_bootdesc(struct initdata *initdata);
+
+void read_boot_params();
+struct svc_image *bootdesc_get_image_byname(char *);
 
 #endif /* __BOOTDESC_H__ */

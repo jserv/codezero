@@ -589,8 +589,6 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 	return ret;
 }
 
-
-
 /* Writes updated file stats back to vfs. (e.g. new file size) */
 int vfs_update_file_stats(struct vm_file *f)
 {

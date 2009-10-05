@@ -118,7 +118,7 @@ int main(void)
 	load_container_images((unsigned long)_start_containers,
 			      (unsigned long)_end_containers);
 
-	printf("elf-loader:\tkernel entry point is %lx\n", *kernel_entry);
+	printf("elf-loader:\tkernel entry point is 0x%lx\n", *kernel_entry);
 	arch_start_kernel(kernel_entry);
 
 	printf("elf-loader:\tKernel start failed! Looping endless.\n");

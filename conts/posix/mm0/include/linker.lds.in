@@ -31,13 +31,7 @@ SECTIONS
 	/* rodata is needed else your strings will link at physical! */
 	.rodata : AT (ADDR(.rodata) - pager_offset) { *(.rodata) }
 	.rodata1 : AT (ADDR(.rodata1) - pager_offset) { *(.rodata1) }
-	.data : AT (ADDR(.data) - pager_offset)
-	{
-		*(.data)
-		_start_bdev = .;
-		*(.data.memfs)
-		_end_bdev = .;
-	}
+	.data : AT (ADDR(.data) - pager_offset) { *(.data) }
 	.bss : AT (ADDR(.bss) - pager_offset) { *(.bss) }
 	. = ALIGN(4K);
 	. += 0x2000;	/* BSS doesnt increment link counter??? */
