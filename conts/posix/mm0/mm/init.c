@@ -467,10 +467,12 @@ void copy_init_process(void)
 
 	/*
 	 * Map an anonymous region and prefault it.
+	 * Its got to be from __end, because we haven't
+	 * unmapped .init section yet (where map_start normally lies).
 	 */
 	if (IS_ERR(mapped =
-		   do_mmap(0, 0, self, 0,
-			   VMA_ANONYMOUS | VM_READ |
+		   do_mmap(0, 0, self, page_align_up(__end),
+			   VMA_ANONYMOUS | VM_READ | VMA_FIXED |
 			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
 			   __pfn(img_size)))) {
 		printf("FATAL: do_mmap: failed with %d.\n",
@@ -496,7 +498,7 @@ void copy_init_process(void)
 	sys_close(find_task(self_tid()), fd);
 
 	/* Unmap anon region */
-	do_munmap(self, (unsigned long)mapped, img_size);
+	do_munmap(self, (unsigned long)mapped, __pfn(img_size));
 
 	/* Unmap raw virtual range for image memory */
 	l4_unmap_helper(init_img_start,__pfn(img_size));

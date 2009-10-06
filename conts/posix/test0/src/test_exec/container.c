@@ -16,9 +16,6 @@ void __container_init(void)
 	/* Generic L4 thread initialisation */
 	__l4_init();
 
-	/* Initialise posix library for application */
-	libposix_init();
-
 	/* Entry to main */
 	main();
 }

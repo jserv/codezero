@@ -491,20 +491,23 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd, struct tcb *ta
 		return (int)mapped;
 	}
 
-	/* Map the stack's part that will contain args and environment */
-	if (IS_ERR(args_on_stack =
-		   pager_validate_map_user_range2(task,
-						  (void *)task->args_start,
-						  stack_used,
-						  VM_READ | VM_WRITE))) {
-		return (int)args_on_stack;
+	/* If args or env use any bytes */
+	if (stack_used) {
+		/* Map the stack's part that will contain args and environment */
+		if (IS_ERR(args_on_stack =
+			   pager_validate_map_user_range2(task,
+							  (void *)task->args_start,
+							  stack_used,
+							  VM_READ | VM_WRITE))) {
+			return (int)args_on_stack;
+		}
+
+		/* Copy arguments and env */
+		task_args_to_user(args_on_stack, args, env);
+
+		/* Unmap task's those stack pages from pager */
+		pager_unmap_pages(args_on_stack, arg_pages);
 	}
-
-	/* Copy arguments and env */
-	task_args_to_user(args_on_stack, args, env);
-
-	/* Unmap task's those stack pages from pager */
-	pager_unmap_pages(args_on_stack, arg_pages);
 
 	return 0;
 }
@@ -536,7 +539,7 @@ int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task
 		/* Get the page */
 		last_data_page = task_virt_to_page(task, task->data_end);
 
-		/* Map the page */
+		/* Map the page. FIXME: PAGE COLOR!!! */
 		pagebuf = l4_map_helper((void *)page_to_phys(last_data_page), 1);
 
 		/* Find the bss offset */

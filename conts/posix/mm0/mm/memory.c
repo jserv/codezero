@@ -157,6 +157,7 @@ void *pager_map_file_range(struct vm_file *f, unsigned long byte_offset,
 	return (void *)((unsigned long)page | (PAGE_MASK & byte_offset));
 }
 
+/* FIXME: PAGE_COLOR!!! */
 void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 				    unsigned long size, unsigned int vm_flags)
 {

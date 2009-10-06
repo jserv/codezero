@@ -9,7 +9,7 @@ sys.path.append('../../../../')
 from config.lib import *
 from tools.pyelf.lmanext import *
 
-src = [Glob('*.[c]') + Glob('test_exec.S') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
+src = [Glob('*.c') + Glob('test_exec.S') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
 
 asm_string = \
 '''
@@ -41,6 +41,7 @@ test_exec_src = Glob('src/test_exec/*.[cS]')
 test_exec_objs = test_exec_env.Object(test_exec_src)
 test_exec = test_exec_env.Program('src/test_exec/test_exec', test_exec_objs)
 test_exec_asm = Command('test_exec.S', test_exec, generate_incbin_asm)
+Depends(test_exec, test_exec_objs)
 
 env.Append(LIBS = ['posix', 'c-userspace'])
 env.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
@@ -48,7 +49,6 @@ env.Append(CPPFLAGS = ' -D__USERSPACE__')
 env.Replace(PROGSUFFIX = '')
 objs = env.Object(src + test_exec_asm)
 test0 = env.Program('test0', objs)
-
 
 elf_wrap_string = \
 '''
@@ -75,11 +75,8 @@ elf_wrap_env.Append(LINKFLAGS = '-T' + elf_wrapped_lds[0].path)
 elf_wrap_objs = elf_wrap_env.Object(elf_wrapped_asm)
 test0_elf_elf = elf_wrap_env.Program('test0_elf.elf', elf_wrap_objs)
 
-Depends(test0, objs)
 Depends(test0, lma_lds)
-Depends(lma_lds, previmage)
 Depends(test0, test_exec)
-Depends(test0_elf_elf, elf_wrap_objs)
-Depends(test0_elf_elf, test0)
+Depends(lma_lds, previmage)
 Depends(test0_elf_elf, elf_wrapped_lds)
 Return('test0_elf_elf')
