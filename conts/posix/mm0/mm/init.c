@@ -436,14 +436,6 @@ void init_physmem(void)
 	init_page_allocator(membank[0].free, membank[0].end);
 }
 
-void init_execve(char *path)
-{
-	/*
-	 * Find executable, and execute it by creating a new process
-	 * rather than replacing the current image (which is the pager!)
-	 */
-}
-
 /*
  * To be removed later: This file copies in-memory elf image to the
  * initialized and formatted in-memory memfs filesystem.

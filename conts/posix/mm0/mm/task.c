@@ -411,7 +411,7 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 			task->parent = parent;
 		}
 	} else {
-		struct tcb *pager = find_task(PAGER_TID);
+		struct tcb *pager = find_task(self_tid());
 
 		/* Initialise vfs specific fields. */
 		task->fs_data->rootdir = vfs_root.pivot;

@@ -9,7 +9,7 @@
 /*
  * This presents extra executable file information that is
  * not present in the tcb, in a generic format.
- */ 
+ */
 struct exec_file_desc {
 	unsigned long text_offset;	/* File offset of text section */
 	unsigned long data_offset;	/* File offset of data section */

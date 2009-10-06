@@ -103,7 +103,7 @@ void print_vnode(struct vnode *v)
 int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *length)
 {
 	struct pathdata *pdata;
-	struct tcb *task;
+	struct tcb *task = 0;
 	struct vnode *v;
 	int retval;
 

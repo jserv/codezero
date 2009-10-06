@@ -34,6 +34,6 @@ void init(void);
 /* TODO: Remove this stuff from here. */
 int init_devzero(void);
 struct vm_file *get_devzero(void);
-int init_boot_files(struct initdata *initdata);
+int init_execve(char *path);
 
 #endif /* __MM_INIT_H__ */

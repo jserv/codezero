@@ -1,4 +1,4 @@
-/*
+/* It is safe when argc = 0 *//*
  * Program execution
  *
  * Copyright (C) 2008 Bahadir Balban
@@ -19,7 +19,8 @@
 #include <task.h>
 #include <exit.h>
 #include <lib/elf/elf.h>
-
+#include <init.h>
+#include <stat.h>
 
 /*
  * Probes and parses the low-level executable file format and creates a
@@ -32,6 +33,77 @@ int task_setup_from_executable(struct vm_file *vmfile, struct tcb *task,
 
 	return elf_parse_executable(task, vmfile, efd);
 }
+
+int init_execve(char *filepath)
+{
+	unsigned long vnum, length;
+	struct vm_file *vmfile;
+	struct exec_file_desc efd;
+	struct tcb *new_task;
+	struct task_ids ids = {
+		.tid = TASK_ID_INVALID,
+		.spid = TASK_ID_INVALID,
+		.tgid = TASK_ID_INVALID
+	};
+	struct args_struct args = { .argc = 0 }; /* It is safe when argc = 0 */
+	struct args_struct env = { .argc = 0 }; /* It is safe when argc = 0 */
+	//struct tcb *self = find_task(self_tid());
+	// int fd;
+	int err;
+
+	/* Get file info from vfs */
+	if ((err = vfs_open_bypath(filepath, &vnum, &length)) < 0)
+		return err;
+
+	/* Create and get the file structure */
+	if (IS_ERR(vmfile = do_open2(0, 0, vnum, length)))
+		return (int)vmfile;
+
+#if 0
+	if ((fd = sys_open(self, filepath,
+			   O_RDONLY, 0)) < 0) {
+		printf("FATAL: Could not open file "
+		       "to execute initial task.\n");
+		BUG();
+	}
+#endif
+
+	if (IS_ERR(new_task = task_create(0, &ids,
+					  THREAD_NEW_SPACE,
+					  TCB_NO_SHARING))) {
+		vm_file_put(vmfile); /* FIXME: sys_close() ??? */
+		return (int)new_task;
+	}
+
+	/* Fill and validate tcb memory segment markers from executable file */
+	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
+		vm_file_put(vmfile);
+		kfree(new_task);
+		return err;
+	}
+
+	/* Map task's new segment markers as virtual memory regions */
+	if ((err = task_mmap_segments(new_task, vmfile,
+				      &efd, &args, &env)) < 0) {
+		vm_file_put(vmfile);
+		kfree(new_task);
+		return err;
+	}
+
+	/* Set up task registers via exchange_registers() */
+	task_setup_registers(new_task, 0,
+			     new_task->args_start,
+			     new_task->pagerid);
+
+	/* Add new task to global list */
+	global_add_task(new_task);
+
+	/* Start the task */
+	task_start(new_task);
+
+	return 0;
+}
+
 
 int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	      struct args_struct *env)
