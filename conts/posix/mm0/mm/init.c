@@ -1,7 +1,7 @@
 /*
  * Initialise the system.
  *
- * Copyright (C) 2007, 2008 Bahadir Balban
+ * Copyright (C) 2007 - 2009 Bahadir Balban
  */
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
@@ -58,6 +58,7 @@ void print_pfn_range(int pfn, int size)
 	printf("Used: 0x%x - 0x%x\n", addr, end);
 }
 
+
 /*
  * This sets up the mm0 task struct and memory environment but omits
  * bits that are already done such as creating a new thread, setting
@@ -105,9 +106,9 @@ int pager_setup_task(void)
 	task->bss_start = (unsigned long)__start_bss;
 	task->bss_end = (unsigned long)__end_bss;
 
-	/* Task's region available for mmap */
-	task->map_start = page_align_up((unsigned long)__stack);
-	task->map_end = 0xF0000000; /* FIXME: Fix this */
+	/* Task's region available for mmap as  */
+	task->map_start = PAGER_MMAP_START;
+	task->map_end = PAGER_MMAP_END;
 
 	/* Task's total map boundaries */
 	task->start = task->text_start;
@@ -124,8 +125,8 @@ int pager_setup_task(void)
 			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
 			   __pfn(page_align_up(task->map_start) -
 				 task->start)))) {
-		printf("do_mmap: failed with %d.\n", (int)mapped);
-		return (int)mapped;
+		printf("FATAL: do_mmap: failed with %d.\n", (int)mapped);
+		BUG();
 	}
 
 	task_setup_utcb(task);
@@ -453,24 +454,60 @@ void copy_init_process(void)
 	struct svc_image *init_img;
 	unsigned long img_size;
 	void *init_img_start, *init_img_end;
+	struct tcb *self = find_task(self_tid());
+	void *mapped;
+	int err;
 
-	if ((fd = sys_open(find_task(self_tid()),
-			   "/test0", O_TRUNC | O_RDWR | O_CREAT,
-			   0)) < 0) {
+	if ((fd = sys_open(self, "/test0", O_TRUNC |
+			   O_RDWR | O_CREAT, 0)) < 0) {
 		printf("FATAL: Could not open file "
 		       "to write initial task.\n");
 		BUG();
 	}
 
 	init_img = bootdesc_get_image_byname("test0");
-	img_size = init_img->phys_end - init_img->phys_start;
+	img_size = page_align_up(init_img->phys_end) -
+				 page_align(init_img->phys_start);
 
-	init_img_start = l4_map_helper((void *)init_img->phys_start, __pfn(img_size));
+	init_img_start = l4_map_helper((void *)init_img->phys_start,
+				       __pfn(img_size));
 	init_img_end = init_img_start + img_size;
 
-	sys_write(find_task(self_tid()), fd, init_img_start, img_size);
+	/*
+	 * Map an anonymous region and prefault it.
+	 */
+	if (IS_ERR(mapped =
+		   do_mmap(0, 0, self, 0,
+			   VMA_ANONYMOUS | VM_READ |
+			   VM_WRITE | VM_EXEC | VMA_PRIVATE,
+			   __pfn(img_size)))) {
+		printf("FATAL: do_mmap: failed with %d.\n",
+		       (int)mapped);
+		BUG();
+	}
 
+	 /* Prefault it */
+	if ((err = prefault_range(self, (unsigned long)mapped,
+				  img_size,
+				  VM_READ | VM_WRITE)) < 0) {
+		printf("FATAL: Prefaulting init image failed.\n");
+		BUG();
+	}
+
+	/* Copy the raw image to anon region */
+	memcpy(mapped, init_img_start, img_size);
+
+	/* Write it to real file from anon region */
+	sys_write(find_task(self_tid()), fd, mapped, img_size);
+
+	/* Close file */
 	sys_close(find_task(self_tid()), fd);
+
+	/* Unmap anon region */
+	do_munmap(self, (unsigned long)mapped, img_size);
+
+	/* Unmap raw virtual range for image memory */
+	l4_unmap_helper(init_img_start,__pfn(img_size));
 
 }
 

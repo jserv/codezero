@@ -970,7 +970,7 @@ int prefault_page(struct tcb *task, unsigned long address,
 		.address = address,
 	};
 
-	dprintf("Pre-faulting address 0x%x, on task %d, with flags: 0x%x\n",
+	dprintf("Pre-faulting address 0x%lx, on task %d, with flags: 0x%x\n",
 		address, task->tid, vmflags);
 
 	/* Find the vma */

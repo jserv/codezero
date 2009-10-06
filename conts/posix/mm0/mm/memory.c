@@ -40,21 +40,27 @@ static struct pager_virtual_address_id_pool {
 	.bitlimit = ADDRESS_POOL_256MB * 32,
 };
 
-/* For supplying contiguous virtual addresses to pager */
+/* For supplying contiguous virtual addresses to pager
+ *
+ * MM0:
+ * task->start
+ * Text
+ * Data
+ * Bss
+ * Stack
+ * mmap area start
+ * mmap area end
+ *
+ * pager address pool
+ *
+ * task->end
+ */
 int pager_address_pool_init(void)
 {
-	/*
-	 * Initialise id pool for pager virtual address
-	 * allocation. This spans from end of pager image
-	 * until the end of the virtual address range
-	 * allocated for the pager
-	 */
-	address_pool_init_with_idpool(&pager_vaddr_pool,
+		address_pool_init_with_idpool(&pager_vaddr_pool,
 			  	      (struct id_pool *)
 				      &pager_virtual_address_id_pool,
-				      page_align_up((unsigned long)__end + PAGE_SIZE),
-	/* FIXME: Fix this! Same as mm0's map_start and map_end */
-				      (unsigned long)0xF0000000);
+				      PAGER_MMAP_END, 0xF0000000);
 	return 0;
 }
 

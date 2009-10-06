@@ -110,22 +110,22 @@ int task_insert_vma(struct vm_area *this, struct link *vma_list)
  */
 unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 {
-	unsigned long pfn_start = __pfn(task->start);
+	unsigned long pfn_start = __pfn(task->map_start);
 	unsigned long pfn_end = pfn_start + npages;
 	struct vm_area *vma;
 
-	if (npages > __pfn(task->end - task->start))
+	if (npages > __pfn(task->map_end - task->map_start))
 		return 0;
 
 	/* If no vmas, first map slot is available. */
 	if (list_empty(&task->vm_area_head->list))
-		return task->start;
+		return task->map_start;
 
 	/* First vma to check our range against */
 	vma = link_to_struct(task->vm_area_head->list.next, struct vm_area, list);
 
 	/* Start searching from task's end of data to start of stack */
-	while (pfn_end <= __pfn(task->end)) {
+	while (pfn_end <= __pfn(task->map_end)) {
 
 		/* If intersection, skip the vma and fast-forward to next */
 		if (set_intersection(pfn_start, pfn_end,
@@ -140,7 +140,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 			 * Are we out of task map area?
 			 */
 			if (vma->list.next == &task->vm_area_head->list) {
-				if (pfn_end > __pfn(task->end))
+				if (pfn_end > __pfn(task->map_end))
 					break; /* Yes, fail */
 				else	/* No, success */
 					return __pfn_to_addr(pfn_start);
@@ -151,7 +151,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 					 struct vm_area, list);
 			continue;
 		}
-		BUG_ON(pfn_start + npages > __pfn(task->end));
+		BUG_ON(pfn_start + npages > __pfn(task->map_end));
 		return __pfn_to_addr(pfn_start);
 	}
 
@@ -308,7 +308,7 @@ void *do_mmap(struct vm_file *mapfile, unsigned long file_offset,
 	}
 
 	/* Finished initialising the vma, add it to task */
-	dprintf("%s: Mapping 0x%x - 0x%x\n", __FUNCTION__,
+	dprintf("%s: Mapping 0x%lx - 0x%lx\n", __FUNCTION__,
 		map_address, map_address + __pfn_to_addr(npages));
 	task_insert_vma(new, &task->vm_area_head->list);
 

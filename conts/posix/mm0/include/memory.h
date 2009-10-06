@@ -9,6 +9,11 @@
 #include <vm_area.h>
 #include <init.h>
 #include <physmem.h>
+#include <linker.h>
+
+#define PAGER_MMAP_SEGMENT		SZ_4MB
+#define PAGER_MMAP_START		(page_align_up(__stack))
+#define PAGER_MMAP_END			(PAGER_MMAP_START + PAGER_MMAP_SEGMENT)
 
 void init_mm_descriptors(struct page_bitmap *page_map,
 			 struct bootdesc *bootdesc, struct membank *membank);

@@ -63,7 +63,7 @@ void print_cache_pages(struct vm_object *vmo)
 		printf("Pages:\n======\n");
 
 	list_foreach_struct(p, &vmo->page_cache, list) {
-		dprintf("Page offset: 0x%x, virtual: 0x%x, refcnt: %d\n", p->offset,
+		dprintf("Page offset: 0x%lx, virtual: 0x%lx, refcnt: %d\n", p->offset,
 		       p->virtual, p->refcnt);
 	}
 }

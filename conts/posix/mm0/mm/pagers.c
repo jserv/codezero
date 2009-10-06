@@ -87,8 +87,12 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	paddr = (void *)page_to_phys(page);
 	vaddr = l4_new_virtual(1);
 
-	/* FIXME: Are we sure that pages need to be mapped to self one-by-one? */
-	BUG();
+	/* FIXME:
+	 * Are we sure that pages need
+	 * to be mapped to self one-by-one?
+	 *
+	 * This needs fixing.
+	 */
 
 	/* Map the page to self */
 	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());

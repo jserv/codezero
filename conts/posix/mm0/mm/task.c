@@ -713,3 +713,13 @@ int task_prefault_regions(struct tcb *task, struct vm_file *f)
 	return 0;
 }
 
+int prefault_range(struct tcb *task, unsigned long start,
+		   unsigned long end, unsigned int vm_flags)
+{
+	for (unsigned long i = start;  i < start + end; i += PAGE_SIZE)
+		prefault_page(task, i, vm_flags);
+
+	return 0;
+}
+
+

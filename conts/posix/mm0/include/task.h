@@ -166,4 +166,7 @@ struct tcb *task_create(struct tcb *orig,
 			unsigned int ctrl_flags,
 			unsigned int alloc_flags);
 
+int prefault_range(struct tcb *task, unsigned long start,
+		   unsigned long end, unsigned int vm_flags);
+
 #endif /* __TASK_H__ */
