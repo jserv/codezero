@@ -22,12 +22,12 @@ static inline int l4_chdir(const char *pathname)
 {
 	int fd;
 
-	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
-	copy_to_shpage((void *)pathname, 0, strlen(pathname) + 1);
-	write_mr(L4SYS_ARG0, (unsigned long)shared_page);
+	utcb_full_strcpy_from(pathname);
+
+	write_mr(L4SYS_ARG0, (unsigned long)utcb_full_buffer());
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((fd = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_CHDIR)) < 0) {
+	if ((fd = l4_sendrecv_full(VFS_TID, VFS_TID, L4_IPC_TAG_CHDIR)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}

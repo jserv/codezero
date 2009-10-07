@@ -8,7 +8,7 @@ Import('env')
 
 e = env.Clone()
 e.Append(CPPPATH = ['include', 'include/posix'])
-e.Replace(CCFLAGS = ['-g', '-nostdlib', '-Wall', '-ffreestanding', '-std=gnu99'])
+e.Replace(CCFLAGS = ['-g', '-nostdlib', '-Wall', '-Werror', '-ffreestanding', '-std=gnu99'])
 
 objects = e.StaticObject(Glob('*.c'))
 libposix = e.StaticLibrary('posix', objects)

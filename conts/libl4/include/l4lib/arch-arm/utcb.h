@@ -11,6 +11,7 @@
 #ifndef __ASSEMBLY__
 #include <l4lib/types.h>
 #include <l4/macros.h>
+#include <l4/lib/math.h>
 #include INC_GLUE(message.h)
 #include INC_GLUE(memory.h)
 #include <string.h>
@@ -41,10 +42,11 @@ extern struct utcb **kip_utcb_ref;
 static inline struct utcb *l4_get_utcb()
 {
  	/*
-	 * By double dereferencing, we get the private TLS (aka UTCB). First
-	 * reference is to the KIP's utcb offset, second is to the utcb itself,
-	 * to which the KIP's utcb reference had been updated during context
-	 * switch.
+	 * By double dereferencing, we get the private TLS
+	 * (aka UTCB). First reference is to the KIP's utcb
+	 * offset, second is to the utcb itself, to which
+	 * the KIP's utcb reference had been updated during
+	 * context switch.
 	 */
 	return *kip_utcb_ref;
 }
@@ -64,6 +66,36 @@ static inline void write_mr(unsigned int offset, unsigned int val)
 		l4_get_utcb()->mr[offset] = val;
 	else
 		l4_get_utcb()->mr_rest[offset - MR_TOTAL] = val;
+}
+
+
+static inline void *utcb_full_buffer()
+{
+	return &l4_get_utcb()->mr_rest[0];
+}
+
+static inline char *utcb_full_strcpy_from(const char *src)
+{
+	return strncpy((char *)&l4_get_utcb()->mr_rest[0], src,
+		       L4_UTCB_FULL_BUFFER_SIZE);
+}
+
+static inline void *utcb_full_memcpy_from(const char *src, int size)
+{
+	return memcpy(&l4_get_utcb()->mr_rest[0], src,
+		      min(size, L4_UTCB_FULL_BUFFER_SIZE));
+}
+
+static inline char *utcb_full_strcpy_to(char *dst)
+{
+	return strncpy(dst, (char *)&l4_get_utcb()->mr_rest[0],
+		       L4_UTCB_FULL_BUFFER_SIZE);
+}
+
+static inline void *utcb_full_memcpy_to(char *dst, int size)
+{
+	return memcpy(dst, &l4_get_utcb()->mr_rest[0],
+		      min(size, L4_UTCB_FULL_BUFFER_SIZE));
 }
 
 #endif /* !__ASSEMBLY__ */

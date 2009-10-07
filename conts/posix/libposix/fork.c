@@ -42,13 +42,6 @@ int fork(void)
 		return -1;
 	}
 
-	/*
-	 * If we're a child, we need to initialise the default
-	 * shared page via libposix_init()
-	 */
-	if (ret == 0)
-		shared_page_init();
-
 	return ret;
 }
 

@@ -18,16 +18,26 @@
 #include <shpage.h>
 #include <libposix.h>
 
+/*
+ * TODO:
+ *
+ * Do this as follows:
+ *
+ * A short ipc l4_send() to indicate request
+ * An extended l4_receive_extended() to get back extended buffer.
+ *
+ * Or do it just like read()
+ */
 static inline int l4_readdir(int fd, void *buf, size_t count)
 {
 	int cnt;
 
 	write_mr(L4SYS_ARG0, fd);
-	write_mr(L4SYS_ARG1, (unsigned long)shared_page);
+	write_mr(L4SYS_ARG1, (unsigned long)buf);
 	write_mr(L4SYS_ARG2, count);
 
 	/* Call pager with readdir() request. Check ipc error. */
-	if ((cnt = l4_sendrecv(VFS_TID, VFS_TID, L4_IPC_TAG_READDIR)) < 0) {
+	if ((cnt = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_READDIR)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
 	}
@@ -38,7 +48,6 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 
 	}
 
-	copy_from_shpage(buf, 0, cnt);
 	return cnt;
 }
 
