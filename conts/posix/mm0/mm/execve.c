@@ -1,4 +1,4 @@
-/* It is safe when argc = 0 *//*
+/*
  * Program execution
  *
  * Copyright (C) 2008 Bahadir Balban
@@ -21,6 +21,7 @@
 #include <lib/elf/elf.h>
 #include <init.h>
 #include <stat.h>
+#include <alloca.h>
 
 /*
  * Probes and parses the low-level executable file format and creates a
@@ -40,16 +41,29 @@ int init_execve(char *filepath)
 	struct vm_file *vmfile;
 	struct exec_file_desc efd;
 	struct tcb *new_task;
+	struct args_struct args, env;
+	char *env_string = "pagerid=0";
+	int err;
+
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
 		.spid = TASK_ID_INVALID,
-		.tgid = TASK_ID_INVALID
+		.tgid = TASK_ID_INVALID,
 	};
-	struct args_struct args = { .argc = 0 }; /* It is safe when argc = 0 */
-	struct args_struct env = { .argc = 0 }; /* It is safe when argc = 0 */
-	//struct tcb *self = find_task(self_tid());
-	// int fd;
-	int err;
+
+	/* Set up args_struct */
+	args.argc = 1;
+	args.argv = alloca(sizeof(args.argv));
+	args.argv[0] = alloca(strlen(filepath) + 1);
+	strncpy(args.argv[0], filepath, strlen(filepath) + 1);
+	args.size = sizeof(args.argv) * args.argc + strlen(filepath) + 1;
+
+	/* Set up environment */
+	env.argc = 1;
+	env.argv = alloca(sizeof(env.argv));
+	env.argv[0] = alloca(strlen(env_string) + 1);
+	strncpy(env.argv[0], env_string, strlen(env_string) + 1);
+	env.size = sizeof(env.argv) + strlen(env_string) + 1;
 
 	/* Get file info from vfs */
 	if ((err = vfs_open_bypath(filepath, &vnum, &length)) < 0)
@@ -94,6 +108,7 @@ int init_execve(char *filepath)
 	task_setup_registers(new_task, 0,
 			     new_task->args_start,
 			     new_task->pagerid);
+
 
 	/* Add new task to global list */
 	global_add_task(new_task);

@@ -425,47 +425,96 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 	return task;
 }
 
+
 /*
  * Copy argument and environment strings into task's stack in a
  * format that is expected by the C runtime.
  *
  * e.g. uclibc expects stack state:
  *
- * (low) |->argc|argv[0]|argv[1]|...|argv[argc] = 0|envp[0]|...|NULL| (high)
+ * (low) |->argc|argv[0]|argv[1]|...|argv[argc] = 0|envp[0]|envp[1]|...|NULL| (high)
+ *
+ * IOW:
+ *
+ * argc
+ * argv pointers
+ * null
+ * env pointers
+ * null
+ *
+ * After the final null, we place the strings, but this is unspecified.
+ * On setting new environment strings, instead of using this fixed
+ * space, heap seems to get used in uClibc.
  *
  */
-int task_args_to_user(char *user_stack, struct args_struct *args,
-		      struct args_struct *env)
+int task_copy_args_to_user(char *user_stack, unsigned long user_ptr,
+			   struct args_struct *args, struct args_struct *env)
 {
+	char **argv_start, **envp_start;
+
 	BUG_ON((unsigned long)user_stack & 7);
 
 	/* Copy argc */
 	*((int *)user_stack) = args->argc;
 	user_stack += sizeof(int);
 
-	/* Copy argument strings one by one */
-	for (int i = 0; i < args->argc; i++) {
-		strcpy(user_stack, args->argv[i]);
-		user_stack += strlen(args->argv[i]) + 1;
-	}
+	/* Set beginning of argv */
+	argv_start = (char **)user_stack;
+
+	/* Forward by number of argv ptrs */
+	user_stack += sizeof(int) * args->argc;
+
 	/* Put the null terminator integer */
 	*((int *)user_stack) = 0;
 	user_stack = user_stack + sizeof(int);
 
+	/* Set beginning of envp */
+	envp_start = (char **)user_stack;
+	/* Forward by number of envp ptrs */
+	user_stack += sizeof(int) * env->argc;
+
+	/* Put the null terminator integer */
+	*((int *)user_stack) = 0;
+	user_stack = user_stack + sizeof(int);
+
+	/* Copy argument strings one by one */
+	for (int i = 0; i < args->argc; i++) {
+		/* Copy string */
+		strcpy(user_stack, args->argv[i]);
+
+		/* Set its pointer on stack */
+		argv_start[i] = (char *)
+			((user_ptr & ~PAGE_MASK)
+			 | ((unsigned long)user_stack &
+			    PAGE_MASK));
+
+		/* Update location */
+		user_stack += strlen(args->argv[i]) + 1;
+	}
+
 	/* Copy environment strings one by one */
 	for (int i = 0; i < env->argc; i++) {
+		/* Copy string */
 		strcpy(user_stack, env->argv[i]);
+
+		/* Set its pointer on stack */
+		envp_start[i] = (char *)
+			((user_ptr & ~PAGE_MASK)
+			 | ((unsigned long)user_stack &
+			    PAGE_MASK));
+
 		user_stack += strlen(env->argv[i]) + 1;
 	}
 
 	return 0;
 }
 
-int task_map_stack(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task,
-		   struct args_struct *args, struct args_struct *env)
+int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
+		   struct tcb *task, struct args_struct *args,
+		   struct args_struct *env)
 {
 	/* First set up task's stack markers */
-	unsigned long stack_used = align_up(args->size + env->size, 8);
+	unsigned long stack_used = align_up(args->size + env->size + 8, 8);
 	unsigned long arg_pages = __pfn(page_align_up(stack_used));
 	char *args_on_stack;
 	void *mapped;
@@ -491,23 +540,21 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd, struct tcb *ta
 		return (int)mapped;
 	}
 
-	/* If args or env use any bytes */
-	if (stack_used) {
-		/* Map the stack's part that will contain args and environment */
-		if (IS_ERR(args_on_stack =
-			   pager_validate_map_user_range2(task,
-							  (void *)task->args_start,
-							  stack_used,
-							  VM_READ | VM_WRITE))) {
-			return (int)args_on_stack;
-		}
+	/* Map the stack's part that will contain args and environment */
+	if (IS_ERR(args_on_stack =
+		   pager_validate_map_user_range2(task,
+						  (void *)task->args_start,
+						  stack_used,
+						  VM_READ | VM_WRITE)))
+		return (int)args_on_stack;
 
-		/* Copy arguments and env */
-		task_args_to_user(args_on_stack, args, env);
+	/* Copy arguments and env */
+	task_copy_args_to_user(args_on_stack,
+			       task->args_start,
+			       args, env);
 
-		/* Unmap task's those stack pages from pager */
-		pager_unmap_pages(args_on_stack, arg_pages);
-	}
+	/* Unmap task's those stack pages from pager */
+	pager_unmap_pages(args_on_stack, arg_pages);
 
 	return 0;
 }

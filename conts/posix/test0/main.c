@@ -25,7 +25,7 @@ void wait_pager(l4id_t partner)
 
 pid_t parent_of_all;
 
-void main(void)
+int main(int argc, char *argv[])
 {
 
 	printf("\n%s: Started with thread id %d\n", __TASKNAME__, getpid());

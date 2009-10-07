@@ -9,7 +9,7 @@ sys.path.append('../../../../')
 from config.lib import *
 from tools.pyelf.lmanext import *
 
-src = [Glob('*.c') + Glob('test_exec.S') + Glob('src/*.c') + Glob('src/arch/arm/*.c')]
+src = [Glob('*.c') + Glob('test_exec.S') + Glob('src/*.[Sc]') + Glob('src/arch/arm/*.c')]
 
 asm_string = \
 '''
@@ -34,7 +34,7 @@ env = environment.Clone()
 test_exec_env = environment.Clone()
 
 test_exec_env.Append(LIBS = ['posix', 'c-userspace'])
-test_exec_env.Append(LINKFLAGS = ['-T' + "test0/include/test_exec_linker.lds", '-u_start'])
+test_exec_env.Append(LINKFLAGS = '-T' + "test0/include/test_exec_linker.lds")
 test_exec_env.Append(CPPFLAGS = ' -D__USERSPACE__')
 test_exec_env.Replace(PROGSUFFIX = '')
 test_exec_src = Glob('src/test_exec/*.[cS]')
@@ -44,7 +44,7 @@ test_exec_asm = Command('test_exec.S', test_exec, generate_incbin_asm)
 Depends(test_exec, test_exec_objs)
 
 env.Append(LIBS = ['posix', 'c-userspace'])
-env.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
+env.Append(LINKFLAGS = '-T' + lma_lds[0].path)
 env.Append(CPPFLAGS = ' -D__USERSPACE__')
 env.Replace(PROGSUFFIX = '')
 objs = env.Object(src + test_exec_asm)
@@ -75,6 +75,9 @@ elf_wrap_env.Append(LINKFLAGS = '-T' + elf_wrapped_lds[0].path)
 elf_wrap_objs = elf_wrap_env.Object(elf_wrapped_asm)
 test0_elf_elf = elf_wrap_env.Program('test0_elf.elf', elf_wrap_objs)
 
+# So that everytime test0 is built, elf_wrap_objs
+# gets built (even though elf_wrapped_asm remains the same
+Depends(elf_wrap_objs, test0)
 Depends(test0, lma_lds)
 Depends(test0, test_exec)
 Depends(lma_lds, previmage)

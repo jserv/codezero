@@ -8,15 +8,27 @@
 #include <l4lib/init.h>
 #include <l4lib/utcb.h>
 #include <posix_init.h>		/* Initialisers for posix library */
+#include <stdlib.h>
 
-void main(void);
+int main(int argc, char *argv[]);
 
-void __container_init(void)
+int __container_init(int argc, char **argv)
 {
+	void *envp = &argv[argc + 1];
+	char *pagerval;
+
+	if ((char *)envp == *argv)
+		envp = &argv[argc];
+
+	__libposix_init(envp);
+
+	pagerval = getenv("pagerid");
+	printf("Pager id: %s\n", pagerval);
+
 	/* Generic L4 thread initialisation */
 	__l4_init();
 
 	/* Entry to main */
-	main();
+	return main(argc, argv);
 }
 

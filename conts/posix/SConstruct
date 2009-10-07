@@ -74,6 +74,7 @@ rootfs = SConscript('rootfs/SConscript', \
                    exports = { 'config' : config,  'environment' : env, 'contid' : contid, 'previmage' : mm0 }, duplicate = 0, \
                    variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/rootfs'))
 
+# No libposix reference because it conflicts with the compiler C library + the cluncky libc we have.
 test0_env = env.Clone()
 test0_env.Replace(CPPPATH = ['include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
 test0 = SConscript('test0/SConscript', \
