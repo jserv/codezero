@@ -74,7 +74,6 @@ def generate_image_S(target_path, images):
     fbody = ''
     with open(target_path, 'w+') as images_S:
         for img in images:
-            print os.path.basename(img.path)
             if os.path.basename(img.path) == kern_fname:
                 fbody += decl_sect_asm % ('.kernel', img)
             if os.path.basename(img.path) == conts_fname:

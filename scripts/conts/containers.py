@@ -50,7 +50,6 @@ def build_posix_container(projpaths, container):
     images = []
     cwd = os.getcwd()
     os.chdir(POSIXDIR)
-    print POSIXDIR
     print '\nBuilding the Posix Container...'
     scons_cmd = 'scons ' + 'cont=' + str(container.id)
     #print "Issuing scons command: %s" % scons_cmd
