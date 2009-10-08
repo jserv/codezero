@@ -104,8 +104,8 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	if ((err = vfs_write(vm_file_to_vnum(f), page_offset, 1, vaddr)) < 0)
 		goto out_err;
 
-	/* Unmap it from vfs */
-	l4_unmap(vaddr, 1, VFS_TID);
+	/* Unmap it from self */
+	l4_unmap(vaddr, 1, self_tid());
 	l4_del_virtual(vaddr, 1);
 
 	/* Clear dirty flag */
@@ -114,7 +114,7 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	return 0;
 
 out_err:
-	l4_unmap(vaddr, 1, VFS_TID);
+	l4_unmap(vaddr, 1, self_tid());
 	l4_del_virtual(vaddr, 1);
 
 	return err;
@@ -143,7 +143,7 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 		page = phys_to_page(paddr);
 
 		/* Map the page to vfs task */
-		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, VFS_TID);
+		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
 
 		/* Syscall to vfs to read into the page. */
 		if ((err = vfs_read(vm_file_to_vnum(f), page_offset,
@@ -151,7 +151,7 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 			goto out_err;
 
 		/* Unmap it from vfs */
-		l4_unmap(vaddr, 1, VFS_TID);
+		l4_unmap(vaddr, 1, self_tid());
 		l4_del_virtual(vaddr, 1);
 
 		/* Update vm object details */
@@ -172,7 +172,7 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 	return page;
 
 out_err:
-	l4_unmap(vaddr, 1, VFS_TID);
+	l4_unmap(vaddr, 1, self_tid());
 	l4_del_virtual(vaddr, 1);
 	free_page(paddr);
 	return PTR_ERR(err);
