@@ -53,7 +53,7 @@ def build_posix_container(projpaths, container):
     print POSIXDIR
     print '\nBuilding the Posix Container...'
     scons_cmd = 'scons ' + 'cont=' + str(container.id)
-    print "Issuing scons command: %s" % scons_cmd
+    #print "Issuing scons command: %s" % scons_cmd
     os.system(scons_cmd)
     builddir = source_to_builddir(POSIXDIR, container.id)
     os.path.walk(builddir, glob_by_walk, ['*.elf', images])

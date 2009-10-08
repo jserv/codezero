@@ -16,12 +16,13 @@ from configure import *
 from config.parse_options import *
 
 def main():
-    build_parse_options()
+    options, args = build_parse_options()
 
     #
     # Configure
     #
-    configure_kernel(CML2_CML_FILE)
+    if options.config or not os.path.exists(CML2_OLDCONFIG_FILE):
+        configure_kernel(CML2_CML_FILE)
 
     #
     # Build the kernel

@@ -23,7 +23,8 @@ int fileio(void)
 	memset(filename, 0, 128);
 	sprintf(filename, "/home/bahadir/newfile%d.txt", tid);
 	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
-		test_printf("OPEN: %d", errno);
+		test_printf("OPEN: %d", -errno);
+		test_printf("While trying to open %s\n", filename);
 		goto out_err;
 	}
 	test_printf("%d: Created %s\n", tid, filename);

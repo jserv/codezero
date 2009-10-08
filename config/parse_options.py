@@ -18,9 +18,11 @@ def build_parse_options():
 
     parser.add_option("-a", "--arch", type = "string", dest = "arch",
                       help = "Use configuration file for architecture")
-    parser.add_option("-c", "--num-containers", type = "int", dest = "ncont",
+    parser.add_option("-n", "--num-containers", type = "int", dest = "ncont",
                       help = "Maximum number of containers that will be "
                              "made available in configuration")
+    parser.add_option("-c", "--configure-first", action = "store_true", dest = "config",
+                      help = "Tells the build script to run configurator first")
     parser.add_option("-f", "--use-file", dest = "cml_file",
                       help = "Supply user-defined cml file "
                              "(Use only if you want to override default)")
@@ -56,4 +58,4 @@ def build_parse_options():
             else:
                 print "Deleting %s" % CML2_OLDCONFIG_FILE
                 os.remove(CML2_OLDCONFIG_FILE)
-
+    return options, args
