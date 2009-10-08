@@ -62,6 +62,7 @@ struct memfs_inode {
 struct memfs_superblock {
 	u32 magic;		/* Filesystem magic number */
 	char name[8];
+	int fsidx;		/* Index that gets orred to get global vnum */
 	u32 blocksize;		/* Filesystem block size */
 	u64 fmaxblocks;		/* Maximum number of blocks per file */
 	u64 fssize;		/* Total size of filesystem */

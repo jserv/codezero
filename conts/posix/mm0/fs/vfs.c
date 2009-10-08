@@ -12,6 +12,7 @@ LINK_DECLARE(vnode_cache);
 LINK_DECLARE(dentry_cache);
 
 struct vfs_mountpoint vfs_root;
+struct id_pool *vfs_fsidx_pool;
 
 /*
  * Vnodes in the vnode cache have 2 keys. One is their dentry names, the other
@@ -68,7 +69,7 @@ int vfs_mount_root(struct superblock *sb)
 	 * Lookup the root vnode of this superblock.
 	 * The root superblock has vnode number 0.
 	 */
-	vfs_root.pivot = vfs_lookup_byvnum(sb, 0);
+	vfs_root.pivot = vfs_lookup_byvnum(sb, sb->fsidx | 0);
 	vfs_root.sb = sb;
 
 	return 0;

@@ -156,6 +156,7 @@ struct superblock *get_superblock(void *buf);
 
 struct superblock {
 	u64 fssize;
+	int fsidx;
 	unsigned int blocksize;
 	struct link list;
 	struct file_system_type *fs;

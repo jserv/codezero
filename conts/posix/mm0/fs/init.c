@@ -56,6 +56,15 @@ int vfs_init(void)
 	void *rootdev_blocks;
 	struct superblock *root_sb;
 
+	/* Initialize superblock ids */
+	vfs_fsidx_pool = id_pool_new_init(VFS_FSIDX_SIZE);
+
+	/*
+	 * Waste first one so that vnums
+	 * always orr with a non-zero value
+	 */
+	id_new(vfs_fsidx_pool);
+
 	/* Get standard init data from microkernel */
 	// request_initdata(&initdata);
 

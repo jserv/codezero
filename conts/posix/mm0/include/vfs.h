@@ -10,8 +10,14 @@
 #include <task.h>
 #include <path.h>
 
+/* Top nibble of vnum indicates filesystem index */
+#define VFS_FSIDX_MASK		0xF0000000
+#define VFS_FSIDX_SHIFT		28
+#define VFS_FSIDX_SIZE		16
+
 extern struct link vnode_cache;
 extern struct link dentry_cache;
+extern struct id_pool *vfs_fsidx_pool;
 
 /*
  * This is a temporary origacement for page cache support provided by mm0.
@@ -69,6 +75,9 @@ static inline void vfs_free_vnode(struct vnode *v)
 static inline struct superblock *vfs_alloc_superblock(void)
 {
 	struct superblock *sb = kmalloc(sizeof(struct superblock));
+	int fsidx = id_new(vfs_fsidx_pool);
+
+	sb->fsidx = fsidx << VFS_FSIDX_SHIFT;
 	link_init(&sb->list);
 
 	return sb;

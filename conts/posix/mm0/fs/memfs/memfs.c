@@ -126,7 +126,7 @@ int memfs_init_rootdir(struct superblock *sb)
 	 */
 	v = sb->root = sb->ops->alloc_vnode(sb);
 	msb->root_vnum = sb->root->vnum;
-	BUG_ON(msb->root_vnum != 0);
+	BUG_ON(msb->root_vnum == 0);
 
 	/* Initialise fields */
 	vfs_set_type(v, S_IFDIR);

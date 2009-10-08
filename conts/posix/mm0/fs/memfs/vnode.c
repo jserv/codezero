@@ -122,7 +122,7 @@ struct vnode *memfs_alloc_vnode(struct superblock *sb)
 
 	/* Associate the two together */
 	v->inode = i;
-	v->vnum = i->inum;
+	v->vnum = i->inum | sb->fsidx;	/* Globalize by fsidx */
 
 	/* Associate memfs-specific fields with vnode */
 	v->ops = memfs_vnode_operations;
@@ -174,7 +174,7 @@ int memfs_read_vnode(struct superblock *sb, struct vnode *v)
 		return -EEXIST;
 
 	/* Simply copy common fields */
-	v->vnum = i->inum;
+	v->vnum = i->inum | sb->fsidx;
 	v->size = i->size;
 	v->mode = i->mode;
 	v->owner = i->owner;
@@ -194,7 +194,7 @@ int memfs_write_vnode(struct superblock *sb, struct vnode *v)
 	BUG_ON(!i);
 
 	/* Simply copy common fields */
-	i->inum = v->vnum;
+	i->inum = v->vnum & ~VFS_FSIDX_MASK;
 	i->size = v->size;
 	i->mode = v->mode;
 	i->owner = v->owner;
