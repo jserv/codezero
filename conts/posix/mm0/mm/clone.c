@@ -52,7 +52,6 @@ int sys_fork(struct tcb *parent)
 		BUG();
 
 	/* Create and prefault a shared page for child and map it to vfs task */
-	BUG();
 	//shpage_map_to_task(child, find_task(VFS_TID),
 	//		   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
 	//		   SHPAGE_PREFAULT);
@@ -108,13 +107,10 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 		BUG();
 
 	/* Create and prefault a shared page for child and map it to vfs task */
-	BUG();
 	//shpage_map_to_task(child, find_task(VFS_TID),
 	//		   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
 	//			   SHPAGE_PREFAULT);
-
 	/* We can now notify vfs about forked process */
-	BUG();
 
 	/* Add child to global task list */
 	global_add_task(child);

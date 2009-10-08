@@ -105,13 +105,14 @@ struct dirbuf {
 };
 
 /* Posix-style dirent format used by userspace. Returned by sys_readdir() */
-#define DIRENT_NAME_MAX			32
+#define DIRENT_NAME_MAX			256
 struct dirent {
 	u32 inum;			/* Inode number */
 	u32 offset;			/* Dentry offset in its buffer */
 	u16 rlength;			/* Record length */
+	u8 type;			/* Dir type */
 	u8  name[DIRENT_NAME_MAX];	/* Name string */
-};
+} __attribute__((__packed__));
 
 struct vnode {
 	unsigned long vnum;		/* Filesystem-wide unique vnode id */

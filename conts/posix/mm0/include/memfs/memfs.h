@@ -80,8 +80,9 @@ struct memfs_dentry {
 	u32 inum;			/* Inode number */
 	u32 offset;			/* Dentry offset in its buffer */
 	u16 rlength;			/* Record length */
+	u8  type;			/* Record type */
 	u8  name[MEMFS_DNAME_MAX];	/* Name string */
-};
+} __attribute__((__packed__));
 
 extern struct vnode_ops memfs_vnode_operations;
 extern struct superblock_ops memfs_superblock_operations;
