@@ -85,7 +85,7 @@
 #define L4_IPC_EXTENDED_MAX_SIZE	(SZ_1K*2)
 
 /* Primaries aren't used for memcopy. Those ops use this as a parameter */
-#define L4_UTCB_FULL_BUFFER_SIZE	(MR_REST * sizeof(int)) 
+#define L4_UTCB_FULL_BUFFER_SIZE	(MR_REST * sizeof(int))
 
 #include INC_GLUE(memlayout.h)
 

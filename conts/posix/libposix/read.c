@@ -15,7 +15,7 @@
 #include <l4lib/os/posix/readdir.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
-#include <shpage.h>
+#include INC_GLUE(message.h)
 #include <libposix.h>
 
 /*
@@ -28,6 +28,37 @@
  *
  * Or do it just like read()
  */
+static inline int l4_readdir(int fd, void *buf, size_t count)
+{
+	int cnt, err;
+
+	write_mr(L4SYS_ARG0, fd);
+	write_mr(L4SYS_ARG1, count);
+
+	/* Call pager with readdir() request. Check ipc error. */
+	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_READDIR)) < 0) {
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Call pager with readdir() request. Check ipc error. */
+	if ((err = l4_receive_extended(PAGER_TID,
+				       L4_IPC_EXTENDED_MAX_SIZE,
+				       buf)) < 0) {
+		print_err("%s: L4 Extended IPC error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall itself was successful */
+	if ((cnt = l4_get_retval()) < 0) {
+		print_err("%s: READDIR Error: %d.\n", __FUNCTION__, (int)cnt);
+		return cnt;
+	}
+
+	return cnt;
+}
+
+#if 0
 static inline int l4_readdir(int fd, void *buf, size_t count)
 {
 	int cnt;
@@ -50,7 +81,7 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 
 	return cnt;
 }
-
+#endif
 static inline int l4_read(int fd, void *buf, size_t count)
 {
 	int cnt;

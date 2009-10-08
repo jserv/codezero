@@ -110,6 +110,23 @@ static inline void l4_set_tag(unsigned int tag)
 	write_mr(MR_TAG, tag_flags);
 }
 
+/* Servers:
+ * Sets the message register for returning errors back to client task.
+ * These are usually posix error codes.
+ */
+static inline void l4_set_retval(int retval)
+{
+	write_mr(MR_RETURN, retval);
+}
+
+/* Clients:
+ * Learn result of request.
+ */
+static inline int l4_get_retval(void)
+{
+	return read_mr(MR_RETURN);
+}
+
 /*
  * If we're about to do another ipc, this saves the last ipc's
  * parameters such as the sender and tag information.
@@ -195,6 +212,39 @@ static inline int l4_receive_extended(l4id_t from, unsigned int size, void *buf)
 	return l4_ipc(L4_NILTHREAD, from, flags);
 }
 
+/*
+ * Return result value as extended IPC.
+ *
+ * Extended IPC copies up to 2KB user address space buffers.
+ * Along with such an ipc, a return value is sent using a primary
+ * mr that is used as the return register.
+ *
+ * It may not be desirable to return a payload on certain conditions,
+ * (such as an error return value) So a nopayload field is provided.
+ */
+static inline int l4_return_extended(int retval, unsigned int size,
+				     void *buf, int nopayload)
+{
+	unsigned int flags = 0;
+	l4id_t sender = l4_get_sender();
+
+	l4_set_retval(retval);
+
+	/* Set up flags word for extended ipc */
+	flags = l4_set_ipc_flags(flags, L4_IPC_FLAGS_EXTENDED);
+	flags = l4_set_ipc_msg_index(flags, L4SYS_ARG0);
+
+	/* Write buffer pointer to MR index that we specified */
+	write_mr(L4SYS_ARG0, (unsigned long)buf);
+
+	if (nopayload)
+		flags = l4_set_ipc_size(flags, 0);
+	else
+		flags = l4_set_ipc_size(flags, size);
+
+	return l4_ipc(sender, L4_NILTHREAD, flags);
+}
+
 static inline int l4_sendrecv_extended(l4id_t to, l4id_t from,
 				       unsigned int tag, void *buf)
 {
@@ -226,23 +276,6 @@ static inline int l4_receive(l4id_t from)
 	return l4_ipc(L4_NILTHREAD, from, 0);
 }
 
-/* Servers:
- * Sets the message register for returning errors back to client task.
- * These are usually posix error codes.
- */
-static inline void l4_set_retval(int retval)
-{
-	write_mr(MR_RETURN, retval);
-}
-
-/* Clients:
- * Learn result of request.
- */
-static inline int l4_get_retval(void)
-{
-	return read_mr(MR_RETURN);
-}
-
 static inline void l4_print_mrs()
 {
 	printf("Message registers: 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n",
@@ -259,7 +292,7 @@ static inline int l4_ipc_return(int retval)
 
 	l4_set_retval(retval);
 
-	/* Setting the tag may overwrite retval so we l4_send without tagging */
+	/* Setting the tag would overwrite retval so we l4_send without tagging */
 	return l4_ipc(sender, L4_NILTHREAD, 0);
 }
 

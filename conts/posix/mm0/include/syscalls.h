@@ -38,7 +38,7 @@ void sys_exit(struct tcb *task, int status);
 
 /* Posix calls */
 int sys_open(struct tcb *sender, const char *pathname, int flags, u32 mode);
-int sys_readdir(struct tcb *sender, int fd, void *buf, int count);
+int sys_readdir(struct tcb *sender, int fd, int count, char *dirbuf);
 int sys_mkdir(struct tcb *sender, const char *pathname, unsigned int mode);
 int sys_chdir(struct tcb *sender, const char *pathname);
 

@@ -148,26 +148,32 @@ void handle_requests(void)
 		ret = sys_execve(sender, (char *)mr[0],
 				 (char **)mr[1], (char **)mr[2]);
 		if (ret < 0)
-			break;	/* We origy for errors */
+			break;	/* We reply for errors */
 		else
 			return; /* else we're done */
 	}
 
-	/* FIXME: Fix all these syscalls to read any buffer data from the caller task's utcb. */
+	/*
+	 * FIXME: Fix all these syscalls to read any
+	 * buffer data from the caller task's utcb.
+	 */
+
 	/* FS0 System calls */
 	case L4_IPC_TAG_OPEN:
 		ret = sys_open(sender, utcb_full_buffer(), (int)mr[0], (unsigned int)mr[1]);
 		break;
 	case L4_IPC_TAG_MKDIR:
-		ret = sys_mkdir(sender, (const char *)mr[0], (unsigned int)mr[1]);
+		ret = sys_mkdir(sender, utcb_full_buffer(), (unsigned int)mr[0]);
 		break;
 	case L4_IPC_TAG_CHDIR:
-		ret = sys_chdir(sender, (const char *)mr[0]);
+		ret = sys_chdir(sender, utcb_full_buffer());
 		break;
-	case L4_IPC_TAG_READDIR:
-		ret = sys_readdir(sender, (int)mr[0], (void *)mr[1], (int)mr[2]);
-		break;
-
+	case L4_IPC_TAG_READDIR: {
+		char dirbuf[L4_IPC_EXTENDED_MAX_SIZE];
+		ret = sys_readdir(sender, (int)mr[0], (int)mr[1], dirbuf);
+		l4_return_extended(ret, L4_IPC_EXTENDED_MAX_SIZE, dirbuf, ret < 0);
+		return;
+	}
 	default:
 		printf("%s: Unrecognised ipc tag (%d) "
 		       "received from (%d). Full mr reading: "

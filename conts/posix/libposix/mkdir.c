@@ -26,8 +26,7 @@ static inline int l4_mkdir(const char *pathname, mode_t mode)
 
 	// write_mr(L4SYS_ARG0, (unsigned long)pathname);
 	utcb_full_strcpy_from(pathname);
-	write_mr(L4SYS_ARG0, (unsigned long)utcb_full_buffer());
-	write_mr(L4SYS_ARG1, (u32)mode);
+	write_mr(L4SYS_ARG0, (u32)mode);
 
 	/* Call pager with shmget() request. Check ipc error. */
 	if ((fd = l4_sendrecv_full(PAGER_TID, PAGER_TID, L4_IPC_TAG_MKDIR)) < 0) {

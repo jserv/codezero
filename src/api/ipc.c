@@ -131,6 +131,8 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 		break;
 	case IPC_FLAGS_EXTENDED:
 		if (send_ipc_type == IPC_FLAGS_EXTENDED)
+			/* We do a short copy as well. */
+			ret = ipc_short_copy(to, from);
 			ret = ipc_extended_copy(to, from);
 		if (send_ipc_type == IPC_FLAGS_SHORT)
 			ret = -ENOIPC;

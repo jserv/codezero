@@ -31,6 +31,8 @@
 #include <path.h>
 #include <syscalls.h>
 
+#include INC_GLUE(message.h)
+
 /* Copy from one page's buffer into another page */
 int page_copy(struct page *dst, struct page *src,
 	      unsigned long dst_offset, unsigned long src_offset,
@@ -1173,17 +1175,22 @@ int fill_dirent(void *buf, unsigned long vnum, int offset, char *name)
  *
  * FIXME: Ensure buf is in shared utcb, and count does not exceed it.
  */
-int sys_readdir(struct tcb *t, int fd, void *buf, int count)
+int sys_readdir(struct tcb *t, int fd, int count, char *dirbuf)
 {
 	int dirent_size = sizeof(struct dirent);
 	int total = 0, nbytes = 0;
 	unsigned long vnum;
 	struct vnode *v;
 	struct dentry *d;
+	char *buf = dirbuf;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
 
-	BUG(); /* Do this by extended ipc !!! */
+	/*
+	 * FIXME:
+	 * Add dirbuf overflow checking
+	 */
+
 	/* Check address is in task's utcb */
 
 	if (fd < 0 || fd > TASK_FILES_MAX || !t->files->fd[fd].vnum)
