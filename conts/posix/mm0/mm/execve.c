@@ -181,14 +181,17 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	}
 
 	/* Map task's new segment markers as virtual memory regions */
-	if ((err = task_mmap_segments(new_task, vmfile, &efd, args, env)) < 0) {
+	if ((err = task_mmap_segments(new_task, vmfile,
+				      &efd, args, env)) < 0) {
 		vm_file_put(vmfile);
 		kfree(new_task);
 		return err;
 	}
 
 	/* Set up task registers via exchange_registers() */
-	task_setup_registers(new_task, 0, new_task->args_start, new_task->pagerid);
+	task_setup_registers(new_task, 0,
+			     new_task->args_start,
+			     new_task->pagerid);
 
 	/* Add new task to global list */
 	global_add_task(new_task);

@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
 
 	wait_pager(0);
 
-
 	printf("\n%s: Running POSIX API tests.\n", __TASKNAME__);
 
 	dirtest();
@@ -56,7 +55,8 @@ int main(int argc, char *argv[])
 	if (parent_of_all == getpid()) {
 		user_mutex_test();
 	}
-	exectest();
+
+	exectest(parent_of_all);
 
 	while (1)
 		wait_pager(0);

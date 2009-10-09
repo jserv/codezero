@@ -42,6 +42,7 @@ test_exec_objs = test_exec_env.Object(test_exec_src)
 test_exec = test_exec_env.Program('src/test_exec/test_exec', test_exec_objs)
 test_exec_asm = Command('test_exec.S', test_exec, generate_incbin_asm)
 Depends(test_exec, test_exec_objs)
+Depends(test_exec, 'include/test_exec_linker.lds')
 
 env.Append(LIBS = ['posix', 'c-userspace'])
 env.Append(LINKFLAGS = '-T' + lma_lds[0].path)

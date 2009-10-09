@@ -663,8 +663,8 @@ int do_close(struct tcb *task, int fd)
 {
 	int err;
 
-	 printf("%s: Closing fd: %d on task %d\n", __FUNCTION__,
-	       fd, task->tid);
+	 //printf("%s: Closing fd: %d on task %d\n", __FUNCTION__,
+	 //      fd, task->tid);
 
 	if ((err = id_del(task->files->fdpool, fd)) < 0) {
 		printf("%s: Error releasing fd identifier.\n",

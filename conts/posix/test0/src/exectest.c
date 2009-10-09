@@ -14,7 +14,7 @@
 extern char _start_test_exec[];
 extern char _end_test_exec[];
 
-int exectest(void)
+int exectest(pid_t parent_of_all)
 {
 	int fd, err;
 	void *exec_start = (void *)_start_test_exec;
@@ -22,6 +22,8 @@ int exectest(void)
 	int left, cnt;
 	char *argv[5];
 	char filename[128];
+	char *envp[2];
+	char env_string[30];
 
 	memset(filename, 0, 128);
 	sprintf(filename, "/home/bahadir/execfile%d", getpid());
@@ -65,8 +67,13 @@ int exectest(void)
 	argv[3] = "FOURTH ARG";
 	argv[4] = 0;
 
+	memset(env_string, 0, 30);
+	sprintf(env_string, "parent_of_all=%d", parent_of_all);
+	envp[0] = env_string;
+	envp[1] = 0; /* This is important as the array needs to end with a null */
+
 	/* Execute the file */
-	err = execve(filename, argv, 0);
+	err = execve(filename, argv, envp);
 
 out_err:
 	printf("EXECVE failed with %d\n", err);

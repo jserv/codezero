@@ -5,7 +5,8 @@
  */
 
 virtual_base = 0x10000000;
-__stack = (0x20000000 - 0x1000 - 8); /* First page before the env/args */
+/* __stack = (0x20000000 - 0x1000 - 8); */
+/* First page before the env/args */
 
 
 ENTRY(_start)
@@ -16,6 +17,7 @@ SECTIONS
 	.text : { *(.text.head) *(.text) }
 	.rodata : { *(.rodata) }
 	.rodata1 : { *(.rodata1) }
+	. = ALIGN(4K);
 	.data :	{ *(.data) }
 	.bss : { *(.bss) }
 }

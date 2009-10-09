@@ -9,7 +9,9 @@ from os.path import join
 
 Import('env')
 
-
+###
+### FIXME: We are missing the dependency on containers.elf
+###
 PROJRELROOT = '../../'
 
 from config.projpaths import *

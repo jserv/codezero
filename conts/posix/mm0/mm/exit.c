@@ -106,7 +106,6 @@ void do_exit(struct tcb *task, int status)
 	task_destroy_utcb(task);
 
 	/* Remove default shared page shm areas from vfs */
-	BUG();
 	// printf("Unmapping 0x%p from vfs as shared-page of %d\n", task->shared_page, task->tid);
 	//shpage_unmap_from_task(task, find_task(VFS_TID));
 
