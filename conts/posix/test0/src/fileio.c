@@ -44,6 +44,9 @@ int fileio(void)
 	if ((int)(cnt = read(fd, buf, strlen(str))) < 0) {
 		test_printf("READ: %d", errno);
 		goto out_err;
+	} else if (cnt != strlen(str)) {
+		test_printf("%d: Read: %d bytes from file.\n", tid, cnt);
+		goto out_err;
 	}
 
 	test_printf("%d: Read: %d bytes from file.\n", tid, cnt);

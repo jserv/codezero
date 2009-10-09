@@ -56,6 +56,10 @@ typedef struct msg_regs {
  * These references are valid only when they have been explicitly set
  * by a kernel entry point, e.g. a system call, a data abort handler
  * that imitates a page fault ipc etc.
+ *
+ * Second note:
+ * _If_ these refer to real utcb's in the future, make sure to have
+ * utcb_map_lazily() check so that they're safe accesses.
  */
 #define KTCB_REF_ARG0(ktcb)	(&(ktcb)->syscall_regs->r0)
 #define KTCB_REF_MR0(ktcb)	(&(ktcb)->syscall_regs->MR0_REGISTER)

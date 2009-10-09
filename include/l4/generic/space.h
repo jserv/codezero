@@ -57,6 +57,8 @@ void address_space_reference_unlock();
 void init_address_space_list(struct address_space_list *space_list);
 int check_access(unsigned long vaddr, unsigned long size,
 		 unsigned int flags, int page_in);
+int check_access_task(unsigned long vaddr, unsigned long size,
+		      unsigned int flags, int page_in, struct ktcb *task);
 #endif
 
 #endif /* __SPACE_H__ */

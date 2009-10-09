@@ -141,13 +141,8 @@ struct address_space *address_space_create(struct address_space *orig)
  * check if a pte is locked before going forward with a request.
  */
 
-/*
- * Checks whether the given user address is a valid userspace address.
- * If so, whether it is currently mapped into its own address space.
- * If its not mapped-in, it generates a page-in request to the thread's
- * pager. If fault hasn't cleared, aborts.
- */
-int check_access(unsigned long vaddr, unsigned long size, unsigned int flags, int page_in)
+int check_access_task(unsigned long vaddr, unsigned long size,
+		      unsigned int flags, int page_in, struct ktcb *task)
 {
 	int err;
 	unsigned long start, end, mapsize;
@@ -162,9 +157,15 @@ int check_access(unsigned long vaddr, unsigned long size, unsigned int flags, in
 	mapsize = end - start;
 
 	/* Check if the address is mapped with given flags */
-	if (!check_mapping(start, mapsize, flags)) {
-		/* Is a page in requested? */
-		if (page_in) {
+	if (!check_mapping_pgd(start, mapsize, flags, TASK_PGD(task))) {
+		/*
+		 * Is a page in requested?
+		 *
+		 * Only allow page-in from current task,
+		 * since on-behalf-of type of ipc is
+		 * complicated and we don't do it.
+		 */
+		if (page_in && task == current) {
 			/* Ask pager if paging in is possible */
 			if((err = pager_pagein_request(start, mapsize,
 						       flags)) < 0)
@@ -174,5 +175,17 @@ int check_access(unsigned long vaddr, unsigned long size, unsigned int flags, in
 	}
 
 	return 0;
+}
+
+/*
+ * Checks whether the given user address is a valid userspace address.
+ * If so, whether it is currently mapped into its own address space.
+ * If its not mapped-in, it generates a page-in request to the thread's
+ * pager. If fault hasn't cleared, aborts.
+ */
+int check_access(unsigned long vaddr, unsigned long size,
+		 unsigned int flags, int page_in)
+{
+	return check_access_task(vaddr, size, flags, page_in, current);
 }
 

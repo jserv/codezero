@@ -112,7 +112,8 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
  * on mapping the buffer. Remember that if a task maps its own user buffer to itself
  * this way, the kernel can access it, since it shares that task's page table.
  */
-int pager_pagein_request(unsigned long addr, unsigned long size, unsigned int flags)
+int pager_pagein_request(unsigned long addr, unsigned long size,
+			 unsigned int flags)
 {
 	u32 abort = 0;
 	unsigned long npages = __pfn(align_up(size, PAGE_SIZE));

@@ -1,7 +1,7 @@
 /*
  * Some ktcb related data
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007 - 2009 Bahadir Balban
  */
 #include <l4/generic/tcb.h>
 #include <l4/generic/space.h>
@@ -180,6 +180,53 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 	BUG_ON(!task->utcb_address);
 
 	/*
+	 * There you go:
+	 *
+	 * if task == current && not mapped, page-in, if not return -EFAULT
+	 * if task != current && not mapped, page-in to task, return -EFAULT
+	 * if task != current && task mapped, but mapped != current mapped, map it, return 0
+	 * if task != current && task mapped, but mapped == current mapped, return 0
+	 */
+
+	if (current == task) {
+		/* Check own utcb, if not there, page it in */
+		if ((ret = check_access(task->utcb_address, UTCB_SIZE,
+					MAP_SVC_RW_FLAGS, 1)) < 0)
+			return -EFAULT;
+		else
+			return 0;
+	} else {
+		/* Check another's utcb, but don't try to map in */
+		if ((ret = check_access_task(task->utcb_address,
+					     UTCB_SIZE,
+					     MAP_SVC_RW_FLAGS, 0,
+					     task)) < 0) {
+			return -EFAULT;
+		} else {
+			/*
+			 * Task has it mapped, map it to self
+			 * unless they're identical
+			 */
+			if ((phys =
+			     virt_to_phys_by_pgd(task->utcb_address,
+						 TASK_PGD(task))) !=
+			     virt_to_phys_by_pgd(task->utcb_address,
+						 TASK_PGD(current)))
+				/*
+				 * We have none or an old reference.
+				 * Update it with privileged flags,
+				 * so that only kernel can access.
+				 */
+				printk("%s: Caught old utcb mapping.\n", __FUNCTION__);
+				add_mapping_pgd(phys, task->utcb_address,
+						page_align_up(UTCB_SIZE),
+						MAP_SVC_RW_FLAGS,
+						TASK_PGD(current));
+				BUG_ON(!phys);
+		}
+	}
+#if 0
+	/*
 	 * FIXME:
 	 *
 	 * A task may have the utcb mapping of a destroyed thread
@@ -209,6 +256,7 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 			}
 		}
 	}
+#endif
 	return 0;
 }
 
