@@ -136,14 +136,14 @@ typedef long fpos_t; /* same */
 #define FILENAME_MAX 37
 #define L_tmpnam 37
 
+#ifndef SEEK_SET
+#define SEEK_SET 0
+#endif
 #ifndef SEEK_CUR
-#define SEEK_CUR 0
+#define SEEK_CUR 1
 #endif
 #ifndef SEEK_END
-#define SEEK_END 1
-#endif
-#ifndef SEEK_SET
-#define SEEK_SET 2
+#define SEEK_END 2
 #endif
 
 #define TMP_MAX 37

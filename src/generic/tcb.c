@@ -183,7 +183,7 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 	 * There you go:
 	 *
 	 * if task == current && not mapped, page-in, if not return -EFAULT
-	 * if task != current && not mapped, page-in to task, return -EFAULT
+	 * if task != current && not mapped, return -EFAULT since can't page-in on behalf of it.
 	 * if task != current && task mapped, but mapped != current mapped, map it, return 0
 	 * if task != current && task mapped, but mapped == current mapped, return 0
 	 */
@@ -211,18 +211,18 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 			     virt_to_phys_by_pgd(task->utcb_address,
 						 TASK_PGD(task))) !=
 			     virt_to_phys_by_pgd(task->utcb_address,
-						 TASK_PGD(current)))
+						 TASK_PGD(current))) {
 				/*
 				 * We have none or an old reference.
 				 * Update it with privileged flags,
 				 * so that only kernel can access.
 				 */
-				printk("%s: Caught old utcb mapping.\n", __FUNCTION__);
 				add_mapping_pgd(phys, task->utcb_address,
 						page_align_up(UTCB_SIZE),
 						MAP_SVC_RW_FLAGS,
 						TASK_PGD(current));
-				BUG_ON(!phys);
+			}
+			BUG_ON(!phys);
 		}
 	}
 #if 0
