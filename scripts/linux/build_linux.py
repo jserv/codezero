@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELR
 
 from config.projpaths import *
 from config.configuration import *
+from config.lib import *
 
 LINUX_KERNEL_BUILDDIR = join(BUILDDIR, os.path.relpath(LINUX_KERNELDIR, PROJROOT))
 
@@ -26,6 +27,95 @@ def source_to_builddir(srcdir, id):
                         PROJROOT).replace("conts", \
                                           "cont" + str(id))
     return join(BUILDDIR, cont_builddir)
+
+class LinuxUpdateKernel:
+
+    def __init__(self, container):
+        self.list = (['MAGIC_SYSRQ', 'SET'],['DEBUG_KERNEL', 'SET'])
+        self.modify_kernel_config()
+        self.update_kernel_params(container)
+
+    # Replace line(having input_pattern) in filename with new_data
+    def replace_line(self, filename, input_pattern, new_data, prev_line):
+        with open(filename, 'r+') as f:
+            flag = 0
+            temp = 0
+            x = re.compile(input_pattern)
+            for line in f:
+                if '' != prev_line:
+                    if temp == prev_line and re.match(x, line):
+                        flag = 1
+                        break
+                    temp = line
+                else:
+                    if re.match(x, line):
+                        flag = 1
+                        break
+
+            if flag == 0:
+                print 'Warning: No match found for the parameter'
+                return
+            else:
+                # Prevent recompilation in case kernel parameter is same
+                if new_data != line:
+                    f.seek(0)
+                    l = f.read()
+
+                    # Need to truncate file because, size of contents to be
+                    # written may be less than the size of original file.
+                    f.seek(0)
+                    f.truncate(0)
+
+                    # Write back to file
+                    f.write(l.replace(line, new_data))
+
+    def update_kernel_params(self, container):
+        # Update TEXT_START
+        file = join(LINUX_KERNELDIR, 'arch/arm/boot/compressed/Makefile')
+        param = str(conv_hex(container.linux_phys_offset))
+        new_data = ('ZTEXTADDR' + '\t' + ':= ' + param + '\n')
+        data_to_replace = "(ZTEXTADDR)(\t)(:= 0)"
+        prev_line = ''
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+
+        # Update PHYS_OFFSET
+        file = join(LINUX_KERNELDIR, 'arch/arm/mach-versatile/include/mach/memory.h')
+        param = str(conv_hex(container.linux_phys_offset))
+        new_data = ('#define PHYS_OFFSET     UL(' + param + ')\n')
+        data_to_replace = "(#define PHYS_OFFSET)"
+        prev_line = ''
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+
+        # Update PAGE_OFFSET
+        file = join(LINUX_KERNELDIR, 'arch/arm/Kconfig')
+        param = str(conv_hex(container.linux_page_offset))
+        new_data = ('\t' + 'default ' + param + '\n')
+        data_to_replace = "(\t)(default )"
+        prev_line = ('\t'+'default 0x80000000 if VMSPLIT_2G' + '\n')
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+
+        # Update ZRELADDR
+        file = join(LINUX_KERNELDIR, 'arch/arm/mach-versatile/Makefile.boot')
+        param = str(conv_hex(container.linux_zreladdr))
+        new_data = ('   zreladdr-y' + '\t' + ':= ' + param + '\n')
+        data_to_replace = "(\s){3}(zreladdr-y)(\t)(:= )"
+        prev_line = ''
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+
+    def modify_kernel_config(self):
+        file = join(LINUX_KERNELDIR, 'arch/arm/configs/versatile_defconfig')
+        for i in self.list:
+            param = 'CONFIG_' + i[0]
+            prev_line = ''
+            if i[1] == 'SET':
+                data_to_replace = ('# ' + param)
+                new_data = (param + '=y' + '\n')
+            else:
+                data_to_replace = param
+                new_data = ('# ' + param + ' is not set' + '\n')
+
+            self.replace_line(file, data_to_replace, new_data, prev_line)
+
 
 class LinuxBuilder:
 
@@ -42,10 +132,12 @@ class LinuxBuilder:
         self.linux_S_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.S")
         self.linux_elf_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.elf")
 
+        self.container = container
         self.kernel_binary_image = \
             join(os.path.relpath(self.LINUX_KERNEL_BUILDDIR, LINUX_KERNELDIR), \
                  "arch/arm/boot/Image")
         self.kernel_image = None
+        self.kernel_updater = LinuxUpdateKernel(self.container)
 
     def build_linux(self):
         print '\nBuilding the linux kernel...'
