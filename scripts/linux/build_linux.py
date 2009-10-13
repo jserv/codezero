@@ -102,6 +102,24 @@ class LinuxUpdateKernel:
         prev_line = ''
         self.replace_line(file, data_to_replace, new_data, prev_line)
 
+        # Update ARCHID, CPUID and ATAGS ADDRESS
+        # Atags will be present at PHYS_OFFSET + 0x100
+        file = join(LINUX_KERNELDIR, 'arch/arm/kernel/head.S')
+        prev_line = ''
+        # CPUID for versatile: 0x41069265
+        new_data = ('cpuid:  .word   ' + '0x41069265' + '\n')
+        data_to_replace = "(cpuid:)"
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+        # ARCHID for versatile: 0x183
+        new_data = ('archid: .word   ' + '0x183' + '\n')
+        data_to_replace = "(archid:)"
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+        # Atags will be present at PHYS_OFFSET + 0x100(=256)
+        new_data = ('atags:  .word   ' + \
+                    str(conv_hex(container.linux_phys_offset + 0x100)) + '\n')
+        data_to_replace = "(atags:)"
+        self.replace_line(file, data_to_replace, new_data, prev_line)
+
     def modify_kernel_config(self):
         file = join(LINUX_KERNELDIR, 'arch/arm/configs/versatile_defconfig')
         for i in self.list:
