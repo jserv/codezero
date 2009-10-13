@@ -7,25 +7,27 @@
 #include <string.h>
 #include <tests.h>
 #include <errno.h>
-
-#define PAGE_SIZE	0x1000
+#include INC_GLUE(memory.h)
 
 int small_io_test(void)
 {
 	int fd1, fd2;
 	char *string = "abcdefg";
 	char strbuf[30];
+	char strbuf2[30];
 	char *path = "/text.txt";
+	//char stackbuf[PAGE_SIZE*2];
+
 	fd1 = open(path, O_TRUNC | O_RDWR | O_CREAT, S_IRWXU);
 	fd2 = open(path, O_RDWR, 0);
 
-	printf("fd1: %d, fd2: %d\n", fd1, fd2);
+	test_printf("%s: fd1: %d, fd2: %d\n", __FUNCTION__, fd1, fd2);
 	perror("OPEN");
 
 	for (int i = 0; i < 4; i++) {
 		sprintf(strbuf, "%s%d", string, i);
-		printf("Writing to %s offset %x, string: %s\n",
-		       path, i*PAGE_SIZE, strbuf);
+		test_printf("Writing to %s offset %x, string: %s\n",
+			    path, i*PAGE_SIZE, strbuf);
 		lseek(fd1, i*PAGE_SIZE, SEEK_SET);
 		write(fd1, strbuf, strlen(strbuf) + 1);
 	}
@@ -33,13 +35,29 @@ int small_io_test(void)
 
 	memset(strbuf, 0, 30);
 	for (int i = 0; i < 4; i++) {
+		sprintf(strbuf2, "%s%d", string, i);
 		lseek(fd2, i*PAGE_SIZE, SEEK_SET);
 		read(fd2, strbuf, 30);
-		printf("Read %s, offset %x as %s\n", path, i*PAGE_SIZE, strbuf);
+		test_printf("Read %s, offset %x as %s\n",
+			    path, i*PAGE_SIZE, strbuf);
+		if (strcmp(strbuf, strbuf2))
+			goto out_err;
 	}
+#if 0
+	/* Now read into an unaligned buffer larger than page size */
+	lseek(fd2, 0, SEEK_SET);
 
+	read(fd2, stackbuf, PAGE_SIZE * 2);
+	printf("stackbuf beginning: %s\n second page beginning: %s\n",
+	       stackbuf, &stackbuf[PAGE_SIZE]);
+#endif
 	close(fd2);
 
+	printf("MINI IO TEST        -- PASSED --\n");
+	return 0;
+
+out_err:
+	printf("MINI IO TEST        -- FAILED --\n");
 	return 0;
 }
 
