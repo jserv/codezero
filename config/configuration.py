@@ -22,6 +22,7 @@ class Container:
         self.linux_zreladdr = 0
         self.linux_page_offset = 0
         self.linux_phys_offset = 0
+        self.linux_rootfs_address = 0
         self.linux_mapsize = 0
         self.physmem = {}
         self.physmem["START"] = {}
@@ -123,6 +124,8 @@ class configuration:
             self.containers[id].pager_lma += int(val, 0)
         elif param[:len("LINUX_ZRELADDR")] == "LINUX_ZRELADDR":
             self.containers[id].linux_zreladdr += int(val, 0)
+        elif param[:len("LINUX_ROOTFS_ADDRESS")] == "LINUX_ROOTFS_ADDRESS":
+            self.containers[id].linux_rootfs_address += int(val, 0)
         elif re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param):
             matchobj = re.match(r"(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param)
             virtphys, regionidstr, discard1, startend = matchobj.groups()

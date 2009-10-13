@@ -34,7 +34,12 @@ class RootfsBuilder:
 
         self.rootfs_lds_in = join(self.LINUX_ROOTFSDIR, "rootfs.lds.in")
         self.rootfs_lds_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.lds")
+
+        self.rootfs_h_in = join(self.LINUX_ROOTFSDIR, "rootfs.h.in")
+        self.rootfs_h_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.h")
+
         self.rootfs_elf_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.elf")
+        self.cont_id = container.id
 
     def build_rootfs(self):
         print 'Building the root filesystem...'
@@ -43,8 +48,14 @@ class RootfsBuilder:
         os.chdir(LINUX_ROOTFSDIR)
         if not os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
             os.makedirs(self.LINUX_ROOTFS_BUILDDIR)
-        os.system("arm-none-linux-gnueabi-cpp -P " + \
-                  "%s > %s" % (self.rootfs_lds_in, self.rootfs_lds_out))
+
+        with open(self.rootfs_h_out, 'w+') as output:
+            with open(self.rootfs_h_in, 'r') as input:
+                output.write(input.read() % {'cn' : self.cont_id})
+
+        os.system("arm-none-linux-gnueabi-cpp -I%s -P %s > %s" % \
+                  (self.LINUX_ROOTFS_BUILDDIR, self.rootfs_lds_in, \
+                   self.rootfs_lds_out))
         os.system("arm-none-linux-gnueabi-gcc " + \
                   "-nostdlib -o %s -T%s rootfs.S" % (self.rootfs_elf_out, \
                                                      self.rootfs_lds_out))
