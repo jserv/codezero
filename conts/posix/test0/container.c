@@ -23,7 +23,6 @@ int __container_init(int argc, char **argv)
 	__libposix_init(envp);
 
 	pagerval = getenv("pagerid");
-	printf("Pager id: %s\n", pagerval);
 
 	/* Generic L4 thread initialisation */
 	__l4_init();

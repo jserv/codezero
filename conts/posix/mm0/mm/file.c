@@ -515,6 +515,67 @@ int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
  * found, it's a bug. The writeable page range must have been readied
  * by read_file_pages()/new_file_pages().
  */
+int read_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
+		     unsigned long pfn_start, unsigned long pfn_end,
+		     unsigned long cursor_offset, int count)
+{
+	struct page *file_page;
+	unsigned long task_offset; /* Current copy offset on the task buffer */
+	unsigned long file_offset; /* Current copy offset on the file */
+	int copysize, left;
+	int empty;
+
+	task_offset = (unsigned long)buf;
+	file_offset = cursor_offset;
+	left = count;
+
+	/* Find the head of consecutive pages */
+	list_foreach_struct(file_page, &vmfile->vm_obj.page_cache, list) {
+		if (file_page->offset < pfn_start)
+			continue;
+		else if (file_page->offset == pfn_end || left == 0)
+			break;
+
+		empty = PAGE_SIZE - page_offset(file_offset);
+
+		/* Copy until a single page cache page is filled */
+		while (empty && left) {
+			copysize = min(PAGE_SIZE - page_offset(file_offset), left);
+		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
+/*
+			printf("empty: %d, left: %d, copysize: "
+			       "%d, copy to page with pfn %lx, "
+			       "offset 0x%lx, from page with pfn "
+			       "%lx, offset 0x%lx\n", empty, left,
+			       copysize,
+			       task_virt_to_page(task,task_offset)->offset,
+			       page_offset(task_offset),
+			       file_page->offset,
+			       page_offset(file_offset));
+*/
+			page_copy(task_virt_to_page(task, task_offset),
+				  file_page,
+				  page_offset(task_offset),
+				  page_offset(file_offset),
+				  copysize);
+
+			empty -= copysize;
+			left -= copysize;
+			task_offset += copysize;
+			file_offset += copysize;
+		}
+	}
+	BUG_ON(left != 0);
+
+	return count - left;
+}
+
+
+/*
+ * Writes user data in buffer into pages in cache. If a page is not
+ * found, it's a bug. The writeable page range must have been readied
+ * by read_file_pages()/new_file_pages().
+ */
 int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 		      unsigned long pfn_start, unsigned long pfn_end,
 		      unsigned long cursor_offset, int count)
@@ -529,9 +590,6 @@ int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 	file_offset = cursor_offset;
 	left = count;
 
-	printf("%s: cursor_offset: 0x%lx, count: 0x%x, buf: %p\n",
-	       __FUNCTION__, cursor_offset, count, buf);
-
 	/* Find the head of consecutive pages */
 	list_foreach_struct(file_page, &vmfile->vm_obj.page_cache, list) {
 		if (file_page->offset < pfn_start)
@@ -541,15 +599,26 @@ int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 
 		empty = PAGE_SIZE - page_offset(file_offset);
 
-		/* Copy until the page is filled */
+		/* Copy until a single page cache page is filled */
 		while (empty && left) {
 			copysize = min(PAGE_SIZE - page_offset(file_offset), left);
 		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
-			//printf("empty: %d, left: %d, copysize: %d, copy to page with pfn %lx, offset 0x%lx, from page with pfn %lx, offset 0x%lx\n",
-			//       empty, left, copysize, file_page->offset, page_offset(file_offset),task_virt_to_page(task,task_offset)->offset, page_offset(task_offset));
-			page_copy(file_page, task_virt_to_page(task, task_offset),
-				  page_offset(file_offset), page_offset(task_offset),
+/*
+			printf("empty: %d, left: %d, copysize: "
+			       "%d, copy to page with pfn %lx, "
+			       "offset 0x%lx, from page with pfn "
+			       "%lx, offset 0x%lx\n", empty, left,
+			       copysize, file_page->offset,
+			       page_offset(file_offset),
+			       task_virt_to_page(task,task_offset)->offset,
+			       page_offset(task_offset));
+*/
+			page_copy(file_page,
+				  task_virt_to_page(task, task_offset),
+				  page_offset(file_offset),
+				  page_offset(task_offset),
 				  copysize);
+
 			empty -= copysize;
 			left -= copysize;
 			task_offset += copysize;
@@ -572,7 +641,7 @@ int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
  * be called first and count must be checked. Since it has read-checking
  * assumptions, count must be satisfied.
  */
-int read_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
+int read_cache_pages_orig(struct vm_file *vmfile, struct tcb *task, void *buf,
 		     unsigned long pfn_start, unsigned long pfn_end,
 		     unsigned long cursor_offset, int count)
 {
@@ -630,7 +699,7 @@ copy:
 int sys_read(struct tcb *task, int fd, void *buf, int count)
 {
 	unsigned long pfn_start, pfn_end;
-	unsigned long cursor, byte_offset;
+	unsigned long cursor;
 	struct vm_file *vmfile;
 	int ret = 0;
 
@@ -675,12 +744,9 @@ int sys_read(struct tcb *task, int fd, void *buf, int count)
 	if ((ret = read_file_pages(vmfile, pfn_start, pfn_end)) < 0)
 		return ret;
 
-	/* The offset of cursor on first page */
-	byte_offset = PAGE_MASK & cursor;
-
 	/* Read it into the user buffer from the cache */
 	if ((count = read_cache_pages(vmfile, task, buf, pfn_start, pfn_end,
-				      byte_offset, count)) < 0)
+				      cursor, count)) < 0)
 		return count;
 
 	/* Update cursor on success */

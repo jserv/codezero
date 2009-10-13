@@ -23,7 +23,6 @@ void wait_pager(l4id_t partner)
 	// printf("Pager synced with us.\n");
 }
 
-
 pid_t parent_of_all;
 
 int main(int argc, char *argv[])
