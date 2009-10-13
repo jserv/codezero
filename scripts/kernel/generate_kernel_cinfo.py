@@ -170,8 +170,8 @@ pager_ifdefs_todotext = \
 pager_ifdefs = \
 '''
 #if defined(CONFIG_CONT%(cn)d_TYPE_LINUX)
-    #define CONFIG_CONT%(cn)d_PAGER_LMA  (CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET + CONFIG_CONT%(cn)d_LINUX_TEXT_OFFSET)
-    #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET + CONFIG_CONT%(cn)d_LINUX_TEXT_OFFSET)
+    #define CONFIG_CONT%(cn)d_PAGER_LMA  (CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
+    #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_SIZE CONFIG_CONT%(cn)d_LINUX_MAPSIZE
 #endif
 '''

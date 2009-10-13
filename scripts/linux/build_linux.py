@@ -36,6 +36,15 @@ class LinuxBuilder:
         self.LINUX_KERNEL_BUILDDIR = \
             source_to_builddir(LINUX_KERNELDIR, container.id)
 
+        self.linux_lds_in = join(self.LINUX_KERNELDIR, "linux.lds.in")
+        self.linux_lds_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.lds")
+        self.linux_S_in = join(self.LINUX_KERNELDIR, "linux.S.in")
+        self.linux_S_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.S")
+        self.linux_elf_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.elf")
+
+        self.kernel_binary_image = \
+            join(os.path.relpath(self.LINUX_KERNEL_BUILDDIR, LINUX_KERNELDIR), \
+                 "arch/arm/boot/Image")
         self.kernel_image = None
 
     def build_linux(self):
@@ -48,10 +57,18 @@ class LinuxBuilder:
                   "CROSS_COMPILE=arm-none-linux-gnueabi- O=" + \
                   self.LINUX_KERNEL_BUILDDIR)
 
+        with open(self.linux_S_in, 'r') as input:
+            with open(self.linux_S_out, 'w+') as output:
+                content = input.read() % self.kernel_binary_image
+                output.write(content)
+
+        os.system("arm-none-linux-gnueabi-cpp -P " + \
+                  "%s > %s" % (self.linux_lds_in, self.linux_lds_out))
+        os.system("arm-none-linux-gnueabi-gcc -nostdlib -o %s -T%s %s" % \
+                  (self.linux_elf_out, self.linux_lds_out, self.linux_S_out))
+
         # Get the kernel image path
-        self.kernel_image = \
-            join(self.LINUX_KERNEL_BUILDDIR, \
-                 'arch/arm/boot/compressed/vmlinux')
+        self.kernel_image = self.linux_elf_out
 
         print 'Done...'
 
