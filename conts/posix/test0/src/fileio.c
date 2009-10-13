@@ -16,7 +16,7 @@ int small_io_test(void)
 	char strbuf[30];
 	char strbuf2[30];
 	char *path = "/text.txt";
-	//char stackbuf[PAGE_SIZE*2];
+//	char stackbuf[PAGE_SIZE*2];
 
 	fd1 = open(path, O_TRUNC | O_RDWR | O_CREAT, S_IRWXU);
 	fd2 = open(path, O_RDWR, 0);
@@ -26,7 +26,7 @@ int small_io_test(void)
 
 	for (int i = 0; i < 4; i++) {
 		sprintf(strbuf, "%s%d", string, i);
-		test_printf("Writing to %s offset %x, string: %s\n",
+		printf("Writing to %s offset %x, string: %s\n",
 			    path, i*PAGE_SIZE, strbuf);
 		lseek(fd1, i*PAGE_SIZE, SEEK_SET);
 		write(fd1, strbuf, strlen(strbuf) + 1);
@@ -38,7 +38,7 @@ int small_io_test(void)
 		sprintf(strbuf2, "%s%d", string, i);
 		lseek(fd2, i*PAGE_SIZE, SEEK_SET);
 		read(fd2, strbuf, 30);
-		test_printf("Read %s, offset %x as %s\n",
+		printf("Read %s, offset %x as %s\n",
 			    path, i*PAGE_SIZE, strbuf);
 		if (strcmp(strbuf, strbuf2))
 			goto out_err;
@@ -51,6 +51,7 @@ int small_io_test(void)
 	printf("stackbuf beginning: %s\n second page beginning: %s\n",
 	       stackbuf, &stackbuf[PAGE_SIZE]);
 #endif
+
 	close(fd2);
 
 	printf("MINI IO TEST        -- PASSED --\n");
