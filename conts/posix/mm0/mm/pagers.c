@@ -98,8 +98,8 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	/* Map the page to self */
 	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
 
-	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
-		__TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
+	//printf("%s/%s: Writing to vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
+	//	__TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
 
 	/* Syscall to vfs to write page back to file. */
 	if ((err = vfs_write(f->vnode, page_offset, 1, vaddr)) < 0)
@@ -151,8 +151,8 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 				    1, vaddr)) < 0)
 			goto out_err;
 
-		printf("%s/%s: Reading into vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
-		       __TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
+	//	printf("%s/%s: Reading into vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
+	//	       __TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
 
 		/* Unmap it from vfs */
 		l4_unmap(vaddr, 1, self_tid());

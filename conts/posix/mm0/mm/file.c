@@ -1057,7 +1057,6 @@ int sys_open(struct tcb *task, const char *pathname,
 			task->files->fd[fd].vmfile = vmfile;
 
 			vmfile->openers++;
-			retval = 0;
 			goto out;
 		}
 	}
