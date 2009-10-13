@@ -37,13 +37,13 @@ int task_setup_from_executable(struct vm_file *vmfile, struct tcb *task,
 
 int init_execve(char *filepath)
 {
-	unsigned long vnum, length;
 	struct vm_file *vmfile;
 	struct exec_file_desc efd;
-	struct tcb *new_task;
+	struct tcb *new_task, *self;
 	struct args_struct args, env;
 	char *env_string = "pagerid=0";
 	int err;
+	int fd;
 
 	struct task_ids ids = {
 		.tid = TASK_ID_INVALID,
@@ -65,33 +65,26 @@ int init_execve(char *filepath)
 	strncpy(env.argv[0], env_string, strlen(env_string) + 1);
 	env.size = sizeof(env.argv) + strlen(env_string) + 1;
 
-	/* Get file info from vfs */
-	if ((err = vfs_open_bypath(filepath, &vnum, &length)) < 0)
-		return err;
-
-	/* Create and get the file structure */
-	if (IS_ERR(vmfile = do_open2(0, 0, vnum, length)))
-		return (int)vmfile;
-
-#if 0
+	self = find_task(self_tid());
 	if ((fd = sys_open(self, filepath,
 			   O_RDONLY, 0)) < 0) {
 		printf("FATAL: Could not open file "
-		       "to execute initial task.\n");
+		       "to write initial task.\n");
 		BUG();
 	}
-#endif
+	/* Get the low-level vmfile */
+	vmfile = self->files->fd[fd].vmfile;
 
 	if (IS_ERR(new_task = task_create(0, &ids,
 					  THREAD_NEW_SPACE,
 					  TCB_NO_SHARING))) {
-		vm_file_put(vmfile); /* FIXME: sys_close() ??? */
+		sys_close(self, fd);
 		return (int)new_task;
 	}
 
 	/* Fill and validate tcb memory segment markers from executable file */
 	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
-		vm_file_put(vmfile);
+		sys_close(self, fd);
 		kfree(new_task);
 		return err;
 	}
@@ -99,7 +92,7 @@ int init_execve(char *filepath)
 	/* Map task's new segment markers as virtual memory regions */
 	if ((err = task_mmap_segments(new_task, vmfile,
 				      &efd, &args, &env)) < 0) {
-		vm_file_put(vmfile);
+		sys_close(self, fd);
 		kfree(new_task);
 		return err;
 	}
@@ -123,29 +116,28 @@ int init_execve(char *filepath)
 int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	      struct args_struct *env)
 {
-	unsigned long vnum, length;
 	struct vm_file *vmfile;
 	struct exec_file_desc efd;
-	struct tcb *new_task, *tgleader;
+	struct tcb *new_task, *tgleader, *self;
 	int err;
+	int fd;
 
-	/* Get file info from vfs */
-	if ((err = vfs_open_bypath(filename, &vnum, &length)) < 0)
-		return err;
+	self = find_task(self_tid());
+	if ((fd = sys_open(self, filename, O_RDONLY, 0)) < 0)
+		return fd;
 
-	/* Create and get the file structure */
-	if (IS_ERR(vmfile = do_open2(0, 0, vnum, length)))
-		return (int)vmfile;
+	/* Get the low-level vmfile */
+	vmfile = self->files->fd[fd].vmfile;
 
 	/* Create a new tcb */
 	if (IS_ERR(new_task = tcb_alloc_init(TCB_NO_SHARING))) {
-		vm_file_put(vmfile);
+		sys_close(self, fd);
 		return (int)new_task;
 	}
 
 	/* Fill and validate tcb memory segment markers from executable file */
 	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
-		vm_file_put(vmfile);
+		sys_close(self, fd);
 		kfree(new_task);
 		return err;
 	}
@@ -175,7 +167,7 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	 * exit() except destroying the actual thread.
 	 */
 	if ((err = execve_recycle_task(new_task, tgleader)) < 0) {
-		vm_file_put(vmfile);
+		sys_close(self, fd);
 		kfree(new_task);
 		return err;
 	}
@@ -183,7 +175,7 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	/* Map task's new segment markers as virtual memory regions */
 	if ((err = task_mmap_segments(new_task, vmfile,
 				      &efd, args, env)) < 0) {
-		vm_file_put(vmfile);
+		sys_close(self, fd);
 		kfree(new_task);
 		return err;
 	}

@@ -328,13 +328,12 @@ void *__sys_mmap(struct tcb *task, void *start, size_t length, int prot,
 {
 	unsigned int vmflags = 0;
 	struct vm_file *file = 0;
-	int err;
 
 	/* Check file validity */
 	if (!(flags & MAP_ANONYMOUS))
-		if (!task->files->fd[fd].vmfile)
-			if ((err = file_open(task, fd)) < 0)
-				return PTR_ERR(err);
+		if (fd < 0 || fd > TASK_FILES_MAX ||
+		    !task->files->fd[fd].vmfile)
+			return PTR_ERR(-EBADF);
 
 	/* Check file offset is page aligned */
 	if (!is_page_aligned(file_offset))

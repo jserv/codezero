@@ -47,7 +47,6 @@
 enum VM_FILE_TYPE {
 	VM_FILE_DEVZERO = 1,
 	VM_FILE_VFS,
-	VM_FILE_BOOTFILE,
 	VM_FILE_SHM,
 };
 
@@ -66,17 +65,10 @@ struct page {
 };
 extern struct page *page_array;
 
-/*
- * A suggestion to how a non-page_array (i.e. a device)
- * page could tell its physical address.
- */
-struct devpage {
-	struct page page;
-	unsigned long phys;
-};
-
 #define page_refcnt(x)		((x)->count + 1)
 #define virtual(x)		((x)->virtual)
+
+/* TODO: Calculate these by indexing each bank according to pfn */
 #define phys_to_page(x)		(page_array + __pfn((x) - membank[0].start))
 #define page_to_phys(x)		(__pfn_to_addr((((void *)(x)) - \
 						(void *)page_array) / \
@@ -131,11 +123,12 @@ struct vm_object {
 struct vm_file {
 	int openers;
 	struct link list;
-	unsigned long length;
 	unsigned int type;
+	unsigned long length;
 	struct vm_object vm_obj;
 	void (*destroy_priv_data)(struct vm_file *f);
-	void *priv_data;	/* Device pagers use to access device info */
+	struct vnode *vnode;
+	void *private_file_data;	/* FIXME: To be removed and placed into vnode!!! */
 };
 
 /* To create per-vma vm_object lists */
@@ -210,7 +203,6 @@ struct page *find_page(struct vm_object *obj, unsigned long pfn);
 
 /* Pagers */
 extern struct vm_pager file_pager;
-extern struct vm_pager bootfile_pager;
 extern struct vm_pager devzero_pager;
 extern struct vm_pager swap_pager;
 

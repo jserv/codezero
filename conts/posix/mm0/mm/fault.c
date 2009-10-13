@@ -330,8 +330,7 @@ int vm_object_is_deletable(struct vm_object *obj)
 		return 0;
 	else if (f->type == VM_FILE_SHM)
 		return 1;
-	else if (f->type == VM_FILE_BOOTFILE ||
-		 f->type == VM_FILE_VFS) {
+	else if (f->type == VM_FILE_VFS) {
 		if (f->openers == 0)
 			return 1;
 		else

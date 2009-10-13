@@ -20,7 +20,7 @@ struct id_pool *vfs_fsidx_pool;
  * If nothing is found, it reads the vnode from disk into cache. This is called
  * by system calls since tasks keep an fd-to-vnum table.
  */
-struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
+struct vnode *vfs_vnode_lookup_byvnum(struct superblock *sb, unsigned long vnum)
 {
 	struct vnode *v;
 	int err;
@@ -51,7 +51,7 @@ struct vnode *vfs_lookup_byvnum(struct superblock *sb, unsigned long vnum)
  * have, the other is their vnum. This one checks the vnode cache by the path
  * first. If nothing is found, it reads the vnode from disk into the cache.
  */
-struct vnode *vfs_lookup_bypath(struct pathdata *pdata)
+struct vnode *vfs_vnode_lookup_bypath(struct pathdata *pdata)
 {
 	const char *firstcomp;
 
@@ -69,7 +69,7 @@ int vfs_mount_root(struct superblock *sb)
 	 * Lookup the root vnode of this superblock.
 	 * The root superblock has vnode number 0.
 	 */
-	vfs_root.pivot = vfs_lookup_byvnum(sb, sb->fsidx | 0);
+	vfs_root.pivot = vfs_vnode_lookup_byvnum(sb, sb->fsidx | 0);
 	vfs_root.sb = sb;
 
 	return 0;

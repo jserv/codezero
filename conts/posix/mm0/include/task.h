@@ -40,7 +40,6 @@
 struct vm_file;
 
 struct file_descriptor {
-	unsigned long vnum;
 	unsigned long cursor;
 	struct vm_file *vmfile;
 };

@@ -153,11 +153,6 @@ void handle_requests(void)
 			return; /* else we're done */
 	}
 
-	/*
-	 * FIXME: Fix all these syscalls to read any
-	 * buffer data from the caller task's utcb.
-	 */
-
 	/* FS0 System calls */
 	case L4_IPC_TAG_OPEN:
 		ret = sys_open(sender, utcb_full_buffer(), (int)mr[0], (unsigned int)mr[1]);

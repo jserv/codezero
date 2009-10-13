@@ -25,8 +25,15 @@
 #include <posix/sys/shm.h>
 #include <posix/sys/types.h>
 
+/*
+ * FIXME:
+ *
+ * All this stuff is stored as file_private_data in the vm_file.
+ * However they need to have a pseudo-fs infrastructure that
+ * stores all internals under the vnode->inode field.
+ */
 #define shm_file_to_desc(shm_file)	\
-	((struct shm_descriptor *)shm_file->priv_data)
+	((struct shm_descriptor *)(shm_file)->private_file_data)
 
 /* Unique shared memory ids */
 static struct id_pool *shm_ids;
@@ -181,7 +188,7 @@ void shm_destroy_priv_data(struct vm_file *shm_file)
 	BUG_ON(id_del(shm_ids, shm_desc->shmid) < 0);
 
 	/* Now delete the private data itself */
-	kfree(shm_file->priv_data);
+	kfree(shm_file_to_desc(shm_file));
 }
 
 /* Creates an shm area and glues its details with shm pager and devzero */
@@ -213,7 +220,7 @@ struct vm_file *shm_new(key_t key, unsigned long npages)
 	/* Initialise the file */
 	shm_file->length = __pfn_to_addr(npages);
 	shm_file->type = VM_FILE_SHM;
-	shm_file->priv_data = shm_desc;
+	shm_file->private_file_data = shm_desc;
 	shm_file->destroy_priv_data = shm_destroy_priv_data;
 
 	/* Initialise the vm object */

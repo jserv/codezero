@@ -6,10 +6,10 @@
 #include <posix/sys/types.h>	/* FIXME: Remove this and refer to internal headers */
 #include <task.h>
 
-int vfs_read(unsigned long vnum, unsigned long f_offset, unsigned long npages,
-	     void *pagebuf);
-int vfs_write(unsigned long vnum, unsigned long f_offset, unsigned long npages,
-	     void *pagebuf);
+int vfs_read(struct vnode *v, unsigned long f_offset,
+	     unsigned long npages, void *pagebuf);
+int vfs_write(struct vnode *v, unsigned long f_offset,
+	      unsigned long npages, void *pagebuf);
 int sys_read(struct tcb *sender, int fd, void *buf, int count);
 int sys_write(struct tcb *sender, int fd, void *buf, int count);
 int sys_lseek(struct tcb *sender, int fd, off_t offset, int whence);
@@ -24,12 +24,6 @@ int flush_file_pages(struct vm_file *f);
 int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 		    unsigned long pfn_end);
 
-struct vfs_file_data {
-	unsigned long vnum;
-};
-
-#define vm_file_to_vnum(f)	\
-	(((struct vfs_file_data *)((f)->priv_data))->vnum)
 struct vm_file *vfs_file_create(void);
 
 

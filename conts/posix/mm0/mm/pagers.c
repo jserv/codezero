@@ -13,6 +13,7 @@
 #include <file.h>
 #include <init.h>
 #include <l4/api/errno.h>
+#include <fs.h>
 
 struct page *page_init(struct page *page)
 {
@@ -97,11 +98,11 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 	/* Map the page to self */
 	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
 
-	//printf("%s/%s: Writing to vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
-	//	__TASKNAME__, __FUNCTION__, vm_file_to_vnum(f), page_offset, 1, vaddr);
+	printf("%s/%s: Writing to vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
+		__TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
 
 	/* Syscall to vfs to write page back to file. */
-	if ((err = vfs_write(vm_file_to_vnum(f), page_offset, 1, vaddr)) < 0)
+	if ((err = vfs_write(f->vnode, page_offset, 1, vaddr)) < 0)
 		goto out_err;
 
 	/* Unmap it from self */
@@ -146,9 +147,12 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
 
 		/* Syscall to vfs to read into the page. */
-		if ((err = vfs_read(vm_file_to_vnum(f), page_offset,
+		if ((err = vfs_read(f->vnode, page_offset,
 				    1, vaddr)) < 0)
 			goto out_err;
+
+		printf("%s/%s: Reading into vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
+		       __TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
 
 		/* Unmap it from vfs */
 		l4_unmap(vaddr, 1, self_tid());
@@ -249,6 +253,7 @@ int bootfile_release_pages(struct vm_object *vm_obj)
 	return 0;
 }
 
+#if 0
 /* Returns the page with given offset in this vm_object */
 struct page *bootfile_page_in(struct vm_object *vm_obj,
 			      unsigned long offset)
@@ -330,13 +335,26 @@ int init_boot_files(struct initdata *initdata)
 
 	return 0;
 }
+#endif
+
+/*
+ * FIXME:
+ * Problem is that devzero is a character device and we don't have a
+ * character device subsystem yet.
+ *
+ * Therefore even though the vm_file for devzero requires a vnode,
+ * currently it has no vnode field, and the information (the zero page)
+ * that needs to be stored in the dynamic vnode is now stored in the
+ * field file_private_data in the vm_file, which really needs to be
+ * removed.
+ */
 
 /* Returns the page with given offset in this vm_object */
 struct page *devzero_page_in(struct vm_object *vm_obj,
 			     unsigned long page_offset)
 {
 	struct vm_file *devzero = vm_object_to_file(vm_obj);
-	struct page *zpage = devzero->priv_data;
+	struct page *zpage = devzero->private_file_data;
 
 	BUG_ON(!(devzero->type & VM_FILE_DEVZERO));
 
@@ -381,7 +399,7 @@ int init_devzero(void)
 	/* Allocate and initialise devzero file */
 	devzero = vm_file_create();
 	devzero->type = VM_FILE_DEVZERO;
-	devzero->priv_data = zpage;
+	devzero->private_file_data = zpage;
 	devzero->length = page_align(~0UL); /* So we dont wraparound to 0! */
 	devzero->vm_obj.npages = __pfn(devzero->length);
 	devzero->vm_obj.pager = &devzero_pager;

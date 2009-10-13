@@ -4,6 +4,7 @@
 #include <l4/lib/list.h>
 #include <vm_area.h>
 #include <lib/malloc.h>
+#include <fs.h>
 
 /*
  * This is yet unused, it is more of an anticipation
@@ -19,7 +20,7 @@ struct page *memdev_page_in(struct vm_object *vm_obj,
 			    unsigned long pfn_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
-	struct mmap_device *memdev = f->priv_data;
+	struct mmap_device *memdev = f->vnode->inode;
 	struct page *page;
 
 	/* Check if its within device boundary */

@@ -358,7 +358,7 @@ int memfs_vnode_readdir(struct vnode *v)
 		 * in the vnode cache. If it's not there, the lookup function
 		 * allocates and reads it for us as well.
 		 */
-		newv = newd->vnode = vfs_lookup_byvnum(v->sb, memfsd[i].inum);
+		newv = newd->vnode = vfs_vnode_lookup_byvnum(v->sb, memfsd[i].inum);
 		if (!newv) {
 			printf("Filesystem seems to be broken. Directory has"
 			       "inode number: %d, but no such inode found.\n",

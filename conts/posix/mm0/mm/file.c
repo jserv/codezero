@@ -64,15 +64,9 @@ int page_copy(struct page *dst, struct page *src,
 	return 0;
 }
 
-int vfs_read(unsigned long vnum, unsigned long file_offset,
+int vfs_read(struct vnode *v, unsigned long file_offset,
 	     unsigned long npages, void *pagebuf)
 {
-	struct vnode *v;
-
-	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL;
-
 	/* Ensure vnode is not a directory */
 	if (vfs_isdir(v))
 		return -EISDIR;
@@ -95,46 +89,9 @@ void print_vnode(struct vnode *v)
 }
 
 
-
-/*
- * Different from vfs_open(), which validates an already opened
- * file descriptor, this call opens a new vfs file by the pager
- * using the given path. The vnum handle and file length is returned
- * since the pager uses this information to access file pages.
- */
-int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *length)
-{
-	struct pathdata *pdata;
-	struct tcb *task = 0;
-	struct vnode *v;
-	int retval;
-
-	/* Parse path data */
-	if (IS_ERR(pdata = pathdata_parse(pathname,
-					  alloca(strlen(pathname) + 1),
-					  task)))
-		return (int)pdata;
-
-	/* Search the vnode by that path */
-	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
-		retval = (int)v;
-		goto out;
-	}
-
-	*vnum = v->vnum;
-	*length = v->size;
-
-	return 0;
-
-out:
-	pathdata_destroy(pdata);
-	return retval;
-}
-
-
 /* Creates a node under a directory, e.g. a file, directory. */
-struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
-			 unsigned int mode)
+struct vnode *vfs_vnode_create(struct tcb *task, struct pathdata *pdata,
+			       unsigned int mode)
 {
 	struct vnode *vparent, *newnode;
 	const char *nodename;
@@ -143,7 +100,7 @@ struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
 	nodename = pathdata_last_component(pdata);
 
 	/* Check that the parent directory exists. */
-	if (IS_ERR(vparent = vfs_lookup_bypath(pdata)))
+	if (IS_ERR(vparent = vfs_vnode_lookup_bypath(pdata)))
 		return vparent;
 
 	/* The parent vnode must be a directory. */
@@ -156,62 +113,6 @@ struct vnode *vfs_create(struct tcb *task, struct pathdata *pdata,
 
 	// print_vnode(vparent);
 	return newnode;
-}
-
-/* FIXME:
- * - Is it already open?
- * - Allocate a copy of path string since lookup destroys it
- * - Check flags and mode.
- */
-int sys_open(struct tcb *task, const char *pathname, int flags, unsigned int mode)
-{
-	struct pathdata *pdata;
-	struct vnode *v;
-	int fd;
-	int retval;
-
-	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-
-	/* Parse path data */
-	if (IS_ERR(pdata = pathdata_parse(pathname,
-					  alloca(strlen(pathname) + 1),
-					  task)))
-		return (int)pdata;
-
-	/* Creating new file */
-	if (flags & O_CREAT) {
-		/* Make sure mode identifies a file */
-		mode |= S_IFREG;
-		if (IS_ERR(v = vfs_create(task, pdata, mode))) {
-			retval = (int)v;
-			goto out;
-		}
-	} else {
-		/* Not creating, just opening, get the vnode */
-		if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
-			retval = (int)v;
-			goto out;
-		}
-	}
-
-	/* Get a new fd */
-	BUG_ON((fd = id_new(task->files->fdpool)) < 0);
-	retval = fd;
-
-	/* TODO:
-	 * Why assign just vnum? Why not vmfile, vnode etc?
-	 *
-	 * This is because vmfile is going to be created when
-	 * the file pages are accessed. Need to trace this
-	 * behaviour.
-	 */
-
-	/* Assign the new fd with the vnode's number */
-	task->files->fd[fd].vnum = v->vnum;
-
-out:
-	pathdata_destroy(pdata);
-	return retval;
 }
 
 int sys_mkdir(struct tcb *task, const char *pathname, unsigned int mode)
@@ -230,7 +131,7 @@ int sys_mkdir(struct tcb *task, const char *pathname, unsigned int mode)
 	mode |= S_IFDIR;
 
 	/* Create the directory or fail */
-	if (IS_ERR(v = vfs_create(task, pdata, mode)))
+	if (IS_ERR(v = vfs_vnode_create(task, pdata, mode)))
 		ret = (int)v;
 
 	/* Destroy extracted path data */
@@ -251,7 +152,7 @@ int sys_chdir(struct tcb *task, const char *pathname)
 		return (int)pdata;
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+	if (IS_ERR(v = vfs_vnode_lookup_bypath(pdata))) {
 		ret = (int)v;
 		goto out;
 	}
@@ -287,22 +188,13 @@ void fill_kstat(struct vnode *v, struct kstat *ks)
 
 int sys_fstat(struct tcb *task, int fd, void *statbuf)
 {
-	struct vnode *v;
-	unsigned long vnum;
-
-	/* Get the vnum */
-	if (fd < 0 || fd > TASK_FILES_MAX || !task->files->fd[fd].vnum)
+	/* Check that fd is valid */
+	if (fd < 0 || fd > TASK_FILES_MAX ||
+	    !task->files->fd[fd].vmfile)
 		return -EBADF;
 
-	BUG(); /* Could just return vmfile->vnode here. */
-	vnum = task->files->fd[fd].vnum;
-
-	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL;
-
 	/* Fill in the c0-style stat structure */
-	fill_kstat(v, statbuf);
+	fill_kstat(task->files->fd[fd].vmfile->vnode, statbuf);
 
 	return 0;
 }
@@ -325,7 +217,7 @@ int sys_stat(struct tcb *task, const char *pathname, void *statbuf)
 		return (int)pdata;
 
 	/* Get the vnode */
-	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+	if (IS_ERR(v = vfs_vnode_lookup_bypath(pdata))) {
 		ret = (int)v;
 		goto out;
 	}
@@ -337,121 +229,6 @@ out:
 	/* Destroy extracted path data */
 	pathdata_destroy(pdata);
 	return ret;
-}
-
-/*
- * Initialise a new file and the descriptor for it from given file data.
- * Could be called by an actual task or a pager
- */
-struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
-{
-	struct vm_file *vmfile;
-
-	/* Is this an open by a task (as opposed to by the pager)? */
-	if (task) {
-		/* fd slot must be empty */
-		BUG_ON(task->files->fd[fd].vnum != 0);
-		BUG_ON(task->files->fd[fd].cursor != 0);
-
-		/* Assign vnum to given fd on the task */
-		task->files->fd[fd].vnum = vnum;
-		task->files->fd[fd].cursor = 0;
-	}
-
-	/* Check if that vm_file is already in the list */
-	list_foreach_struct(vmfile, &global_vm_files.list, list) {
-
-		/* Check whether it is a vfs file and if so vnums match. */
-		if ((vmfile->type & VM_FILE_VFS) &&
-		    vm_file_to_vnum(vmfile) == vnum) {
-
-			/* Task opener? */
-			if (task)
-				/* Add a reference to it from the task */
-				task->files->fd[fd].vmfile = vmfile;
-
-			vmfile->openers++;
-			return vmfile;
-		}
-	}
-
-	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vfs_file_create()))
-		return vmfile;
-
-	/* Initialise and add a reference to it from the task */
-	vm_file_to_vnum(vmfile) = vnum;
-	vmfile->length = length;
-	vmfile->vm_obj.pager = &file_pager;
-
-	/* Task opener? */
-	if (task)
-		task->files->fd[fd].vmfile = vmfile;
-	vmfile->openers++;
-
-	/* Add to file list */
-	global_add_vm_file(vmfile);
-
-	return vmfile;
-}
-
-/*
- * When a task does a read/write/mmap request on a file, if
- * the file descriptor is unknown to the pager, this call
- * asks vfs if that file has been opened, and any other
- * relevant information.
- */
-int file_open(struct tcb *task, int fd)
-{
-	struct vnode *v;
-	struct vm_file *vmfile;
-
-	if (fd < 0 || fd > TASK_FILES_MAX)
-		return -EINVAL;
-
-	/* Check if that fd has been opened */
-	if (!task->files->fd[fd].vnum)
-		return -EBADF;
-
-	/* Search the vnode by that vnum */
-	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
-					 task->files->fd[fd].vnum)))
-		return (int)v;
-
-	/* Cursor must be zero */
-	BUG_ON(task->files->fd[fd].cursor != 0);
-
-	/* Check that vm_file is already in the list */
-	list_foreach_struct(vmfile, &global_vm_files.list, list) {
-
-		/* Check whether it is a vfs file and if so vnums match. */
-		if ((vmfile->type & VM_FILE_VFS) &&
-		    vm_file_to_vnum(vmfile) == v->vnum) {
-
-			/* Add a reference to it from the task */
-			task->files->fd[fd].vmfile = vmfile;
-			vmfile->openers++;
-			return 0;
-		}
-	}
-
-	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vfs_file_create()))
-		return (int)vmfile;
-
-	/* Assign file information */
-	vm_file_to_vnum(vmfile) = v->vnum;
-	vmfile->length = v->size;
-
-	/* Add a reference to it from the task */
-	vmfile->vm_obj.pager = &file_pager;
-	task->files->fd[fd].vmfile = vmfile;
-	vmfile->openers++;
-
-	/* Add to file list */
-	global_add_vm_file(vmfile);
-
-	return 0;
 }
 
 
@@ -513,7 +290,7 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 		if (IS_ERR(page)) {
 			printf("%s: %s:Could not read page %d "
 			       "from file with vnum: 0x%lu\n", __TASKNAME__,
-			       __FUNCTION__, f_offset, vm_file_to_vnum(vmfile));
+			       __FUNCTION__, f_offset, vmfile->vnode->vnum);
 			return (int)page;
 		}
 	}
@@ -524,18 +301,13 @@ int read_file_pages(struct vm_file *vmfile, unsigned long pfn_start,
 /*
  * The buffer must be contiguous by page, if npages > 1.
  */
-int vfs_write(unsigned long vnum, unsigned long file_offset,
+int vfs_write(struct vnode *v, unsigned long file_offset,
 	      unsigned long npages, void *pagebuf)
 {
-	struct vnode *v;
 	int fwrite_end;
 	int ret;
 
 	// printf("%s/%s\n", __TASKNAME__, __FUNCTION__);
-
-	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL;
 
 	/* Ensure vnode is not a directory */
 	if (vfs_isdir(v))
@@ -564,12 +336,7 @@ int vfs_write(unsigned long vnum, unsigned long file_offset,
 /* Writes updated file stats back to vfs. (e.g. new file size) */
 int vfs_update_file_stats(struct vm_file *f)
 {
-	unsigned long vnum = vm_file_to_vnum(f);
-	struct vnode *v;
-
-	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL;
+	struct vnode *v = f->vnode;
 
 	v->size = f->length;
 	v->sb->ops->write_vnode(v->sb, v);
@@ -596,7 +363,7 @@ int write_file_pages(struct vm_file *f, unsigned long pfn_start,
 		if (err < 0) {
 			printf("%s: %s:Could not write page %d "
 			       "to file with vnum: 0x%lu\n", __TASKNAME__,
-			       __FUNCTION__, f_offset, vm_file_to_vnum(f));
+			       __FUNCTION__, f_offset, f->vnode->vnum);
 			return err;
 		}
 	}
@@ -635,6 +402,10 @@ int fsync_common(struct tcb *task, int fd)
 	if (!task->files->fd[fd].vmfile)
 		return 0;
 
+	printf("Thread %d flushing fd: %d, vnum: 0x%lx, vnode: %p\n",
+	       task->tid, fd, task->files->fd[fd].vmfile->vnode->vnum,
+	       task->files->fd[fd].vmfile->vnode);
+
 	/* Finish I/O on file */
 	if ((err = flush_file_pages(task->files->fd[fd].vmfile)) < 0)
 		return err;
@@ -651,6 +422,9 @@ void vm_file_put(struct vm_file *file)
 			/* No links or openers, delete the file */
 			vm_file_delete(file);
 
+	/* FIXME:
+	 * Shall we delete the cached vnode here as well???
+	 */
 }
 
 /*
@@ -672,18 +446,12 @@ int do_close(struct tcb *task, int fd)
 		return err;
 	}
 
-	/*
-	 * If there was no IO on it, we may not know the file,
-	 * we simply return here. Since we notify VFS about the
-	 * close, it can tell us if the fd was open or not.
-	 */
 	if (!task->files->fd[fd].vmfile)
 		return 0;
 
 	/* Reduce file refcount etc. */
 	vm_file_put(task->files->fd[fd].vmfile);
 
-	task->files->fd[fd].vnum = 0;
 	task->files->fd[fd].cursor = 0;
 	task->files->fd[fd].vmfile = 0;
 
@@ -824,10 +592,19 @@ int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 			left = count;
 
 			/* Copy the first page and unmap. */
-			copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+			if (is_page_aligned(buf)) {
+				copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
+			} else {
+				if (left < (PAGE_MASK & (unsigned long)buf))
+					copysize = left;
+				else
+					copysize = (PAGE_MASK &
+						    (unsigned long)buf);
+			}
 			copy_offset = (unsigned long)buf;
 			page_copy(head, task_virt_to_page(task, copy_offset),
-				  cursor_offset, copy_offset & PAGE_MASK, copysize);
+				  cursor_offset, copy_offset & PAGE_MASK,
+				  copysize);
 			head->flags |= VM_DIRTY;
 			head->owner->flags |= VM_DIRTY;
 			left -= copysize;
@@ -928,10 +705,10 @@ int sys_read(struct tcb *task, int fd, void *buf, int count)
 	struct vm_file *vmfile;
 	int ret = 0;
 
-	/* Check fd validity */
-	if (!task->files->fd[fd].vmfile)
-		if ((ret = file_open(task, fd)) < 0)
-			return ret;
+	/* Check that fd is valid */
+	if (fd < 0 || fd > TASK_FILES_MAX ||
+	    !task->files->fd[fd].vmfile)
+		return -EBADF;
 
 
 	/* Check count validity */
@@ -998,17 +775,16 @@ int sys_write(struct tcb *task, int fd, void *buf, int count)
 	struct vm_file *vmfile;
 	int ret = 0;
 
-	/* Check fd validity */
-	if (!task->files->fd[fd].vmfile)
-		if ((ret = file_open(task, fd)) < 0)
-			return ret;
+	/* Check that fd is valid */
+	if (fd < 0 || fd > TASK_FILES_MAX ||
+	    !task->files->fd[fd].vmfile)
+		return -EBADF;
 
 	/* Check count validity */
 	if (count < 0)
 		return -EINVAL;
 	else if (!count)
 		return 0;
-
 
 	/* Check user buffer validity. */
 	if ((ret = pager_validate_user_range(task, buf,
@@ -1018,6 +794,8 @@ int sys_write(struct tcb *task, int fd, void *buf, int count)
 
 	vmfile = task->files->fd[fd].vmfile;
 	cursor = task->files->fd[fd].cursor;
+
+	printf("Thread %d writing to fd: %d, vnum: 0x%lx, vnode: %p\n", task->tid, fd, vmfile->vnode->vnum, vmfile->vnode);
 
 	/* See what pages user wants to write */
 	pfn_wstart = __pfn(cursor);
@@ -1098,10 +876,10 @@ int sys_lseek(struct tcb *task, int fd, off_t offset, int whence)
 	int retval = 0;
 	unsigned long long total, cursor;
 
-	/* Check fd validity */
-	if (!task->files->fd[fd].vmfile)
-		if ((retval = file_open(task, fd)) < 0)
-			return retval;
+	/* Check that fd is valid */
+	if (fd < 0 || fd > TASK_FILES_MAX ||
+	    !task->files->fd[fd].vmfile)
+		return -EBADF;
 
 	/* Offset validity */
 	if (offset < 0)
@@ -1179,7 +957,6 @@ int sys_readdir(struct tcb *t, int fd, int count, char *dirbuf)
 {
 	int dirent_size = sizeof(struct dirent);
 	int total = 0, nbytes = 0;
-	unsigned long vnum;
 	struct vnode *v;
 	struct dentry *d;
 	char *buf = dirbuf;
@@ -1193,14 +970,11 @@ int sys_readdir(struct tcb *t, int fd, int count, char *dirbuf)
 
 	/* Check address is in task's utcb */
 
-	if (fd < 0 || fd > TASK_FILES_MAX || !t->files->fd[fd].vnum)
+	if (fd < 0 || fd > TASK_FILES_MAX ||
+	    !t->files->fd[fd].vmfile->vnode)
 		return -EBADF;
 
-	vnum = t->files->fd[fd].vnum;
-
-	/* Lookup vnode */
-	if (!(v = vfs_lookup_byvnum(vfs_root.pivot->sb, vnum)))
-		return -EINVAL;
+	v = t->files->fd[fd].vmfile->vnode;
 
 	d = link_to_struct(v->dentries.next, struct dentry, vref);
 
@@ -1231,4 +1005,240 @@ int sys_readdir(struct tcb *t, int fd, int count, char *dirbuf)
 
 	return nbytes + total;
 }
+
+/* FIXME:
+ * - Is it already open?
+ * - Check flags and mode.
+ */
+int sys_open(struct tcb *task, const char *pathname,
+	     int flags, unsigned int mode)
+{
+	struct pathdata *pdata;
+	struct vnode *v;
+	struct vm_file *vmfile;
+	int retval;
+	int fd;
+
+
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task)))
+		return (int)pdata;
+
+	/* Creating new file */
+	if (flags & O_CREAT) {
+		/* Make sure mode identifies a file */
+		mode |= S_IFREG;
+
+		/* Create new vnode */
+		if (IS_ERR(v = vfs_vnode_create(task, pdata, mode))) {
+			retval = (int)v;
+			goto out;
+		}
+	} else {
+		/* Not creating. Get the existing vnode */
+		if (IS_ERR(v = vfs_vnode_lookup_bypath(pdata))) {
+			retval = (int)v;
+			goto out;
+		}
+	}
+
+	/* Get a new fd */
+	BUG_ON((fd = id_new(task->files->fdpool)) < 0);
+	retval = fd;
+
+	/* Check if that vm_file is already in the list */
+	list_foreach_struct(vmfile, &global_vm_files.list, list) {
+
+		/* Compare vnode pointer */
+		if (vmfile->vnode == v) {
+			/* Add a reference to it from the task */
+			task->files->fd[fd].vmfile = vmfile;
+
+			vmfile->openers++;
+			retval = 0;
+			goto out;
+		}
+	}
+
+	/* Create a new vm_file for this vnode */
+	if (IS_ERR(vmfile = vfs_file_create())) {
+		retval = (int)vmfile;
+		goto out;
+	}
+
+	/* Assign file information */
+	vmfile->vnode = v;
+	vmfile->length = vmfile->vnode->size;
+
+	/* Add a reference to it from the task */
+	vmfile->vm_obj.pager = &file_pager;
+	task->files->fd[fd].vmfile = vmfile;
+	vmfile->openers++;
+
+	/* Add to file list */
+	global_add_vm_file(vmfile);
+
+out:
+	if (retval < 0)
+		printf("Thread %d Opening %s, fd: %d, error: %d\n", task->tid, pathname, fd, retval);
+	else
+		printf("Thread %d Opening %s, fd: %d, vnum: %lx, vnode: %p\n", task->tid, pathname, fd, v->vnum, v);
+	pathdata_destroy(pdata);
+	return retval;
+}
+
+#if 0
+/*
+ * Different from vfs_open(), which validates an already opened
+ * file descriptor, this call opens a new vfs file by the pager
+ * using the given path. The vnum handle and file length is returned
+ * since the pager uses this information to access file pages.
+ */
+int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *length)
+{
+	struct pathdata *pdata;
+	struct tcb *task = 0;
+	struct vnode *v;
+	int retval;
+
+	/* Parse path data */
+	if (IS_ERR(pdata = pathdata_parse(pathname,
+					  alloca(strlen(pathname) + 1),
+					  task)))
+		return (int)pdata;
+
+	/* Search the vnode by that path */
+	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
+		retval = (int)v;
+		goto out;
+	}
+
+	*vnum = v->vnum;
+	*length = v->size;
+
+	return 0;
+
+out:
+	pathdata_destroy(pdata);
+	return retval;
+}
+
+/*
+ * Initialise a new file and the descriptor for it from given file data.
+ * Could be called by an actual task or a pager
+ */
+struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
+{
+	struct vm_file *vmfile;
+
+	/* Is this an open by a task (as opposed to by the pager)? */
+	if (task) {
+		/* fd slot must be empty */
+		BUG_ON(task->files->fd[fd].vnum != 0);
+		BUG_ON(task->files->fd[fd].cursor != 0);
+
+		/* Assign vnum to given fd on the task */
+		task->files->fd[fd].vnum = vnum;
+		task->files->fd[fd].cursor = 0;
+	}
+
+	/* Check if that vm_file is already in the list */
+	list_foreach_struct(vmfile, &global_vm_files.list, list) {
+
+		/* Check whether it is a vfs file and if so vnums match. */
+		if ((vmfile->type & VM_FILE_VFS) &&
+		    vm_file_to_vnum(vmfile) == vnum) {
+
+			/* Task opener? */
+			if (task)
+				/* Add a reference to it from the task */
+				task->files->fd[fd].vmfile = vmfile;
+
+			vmfile->openers++;
+			return vmfile;
+		}
+	}
+
+	/* Otherwise allocate a new one for this vnode */
+	if (IS_ERR(vmfile = vfs_file_create()))
+		return vmfile;
+
+	/* Initialise and add a reference to it from the task */
+	vm_file_to_vnum(vmfile) = vnum;
+	vmfile->length = length;
+	vmfile->vm_obj.pager = &file_pager;
+
+	/* Task opener? */
+	if (task)
+		task->files->fd[fd].vmfile = vmfile;
+	vmfile->openers++;
+
+	/* Add to file list */
+	global_add_vm_file(vmfile);
+
+	return vmfile;
+}
+
+/*
+ * When a task does a read/write/mmap request on a file, if
+ * the file descriptor is unknown to the pager, this call
+ * asks vfs if that file has been opened, and any other
+ * relevant information.
+ */
+int file_open(struct tcb *task, int fd)
+{
+	struct vnode *v;
+	struct vm_file *vmfile;
+
+	if (fd < 0 || fd > TASK_FILES_MAX)
+		return -EINVAL;
+
+	/* Check if that fd has been opened */
+	if (!task->files->fd[fd].vnum)
+		return -EBADF;
+
+	/* Search the vnode by that vnum */
+	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
+					 task->files->fd[fd].vnum)))
+		return (int)v;
+
+	/* Cursor must be zero */
+	BUG_ON(task->files->fd[fd].cursor != 0);
+
+	/* Check that vm_file is already in the list */
+	list_foreach_struct(vmfile, &global_vm_files.list, list) {
+
+		/* Check whether it is a vfs file and if so vnums match. */
+		if ((vmfile->type & VM_FILE_VFS) &&
+		    vm_file_to_vnum(vmfile) == v->vnum) {
+
+			/* Add a reference to it from the task */
+			task->files->fd[fd].vmfile = vmfile;
+			vmfile->openers++;
+			return 0;
+		}
+	}
+
+	/* Otherwise allocate a new one for this vnode */
+	if (IS_ERR(vmfile = vfs_file_create()))
+		return (int)vmfile;
+
+	/* Assign file information */
+	vm_file_to_vnum(vmfile) = v->vnum;
+	vmfile->length = v->size;
+
+	/* Add a reference to it from the task */
+	vmfile->vm_obj.pager = &file_pager;
+	task->files->fd[fd].vmfile = vmfile;
+	vmfile->openers++;
+
+	/* Add to file list */
+	global_add_vm_file(vmfile);
+
+	return 0;
+}
+
+#endif
 

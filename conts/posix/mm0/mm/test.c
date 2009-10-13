@@ -80,8 +80,6 @@ int mm0_test_global_vm_integrity(void)
 		vmstat.vm_files++;
 		if (f->type == VM_FILE_SHM)
 			vmstat.shm_files++;
-		else if (f->type == VM_FILE_BOOTFILE)
-			vmstat.boot_files++;
 		else if (f->type == VM_FILE_VFS)
 			vmstat.vfs_files++;
 		else if (f->type == VM_FILE_DEVZERO)

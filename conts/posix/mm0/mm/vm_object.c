@@ -82,8 +82,6 @@ void vm_object_print(struct vm_object *vmo)
 
 		if (f->type == VM_FILE_DEVZERO)
 			ftype = "devzero";
-		else if (f->type == VM_FILE_BOOTFILE)
-			ftype = "bootfile";
 		else if (f->type == VM_FILE_SHM)
 			ftype = "shm file";
 		else if (f->type == VM_FILE_VFS)
@@ -160,7 +158,6 @@ struct vm_file *vfs_file_create(void)
 	if (IS_ERR(f))
 		return f;
 
-	f->priv_data = kzalloc(sizeof(struct vfs_file_data));
 	f->type = VM_FILE_VFS;
 
 	return f;
@@ -195,11 +192,11 @@ int vm_object_delete(struct vm_object *vmo)
 	if (vmo->flags & VM_OBJ_FILE) {
 		f = vm_object_to_file(vmo);
 		BUG_ON(!list_empty(&f->list));
-		if (f->priv_data) {
+		if (f->private_file_data) {
 			if (f->destroy_priv_data)
 				f->destroy_priv_data(f);
 			else
-				kfree(f->priv_data);
+				kfree(f->private_file_data);
 		}
 		kfree(f);
 	} else if (vmo->flags & VM_OBJ_SHADOW)
