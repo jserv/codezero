@@ -26,10 +26,9 @@ int exectest(pid_t parent_of_all)
 	int left, cnt;
 	char *argv[5];
 	char *envp[2];
-	void *buf;
 
 	memset(filename, 0, 128);
-	sprintf(filename, "/execfile%d", getpid());
+	sprintf(filename, "/home/bahadir/execfile%d", getpid());
 
 	/* First create a new file and write the executable data to that file */
 	if ((fd = open(filename, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) < 0) {
@@ -67,6 +66,7 @@ int exectest(pid_t parent_of_all)
 		goto out_err;
 	}
 
+#if 0
 	/* Reopen */
 	if ((fd = open(filename, O_RDONLY, S_IRWXU)) < 0) {
 		err = errno;
@@ -82,7 +82,7 @@ int exectest(pid_t parent_of_all)
 		printf("First page of read and written file doesn't match\n");
 	else
 		printf("First page matches.\n");
-
+#endif
 	/* Set up some arguments */
 	argv[0] = "FIRST ARG";
 	argv[1] = "SECOND ARG";

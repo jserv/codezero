@@ -23,6 +23,7 @@ void wait_pager(l4id_t partner)
 	// printf("Pager synced with us.\n");
 }
 
+
 pid_t parent_of_all;
 
 int main(int argc, char *argv[])
@@ -36,7 +37,8 @@ int main(int argc, char *argv[])
 
 	printf("\n%s: Running POSIX API tests.\n", __TASKNAME__);
 
-/*
+	small_io_test();
+
 	dirtest();
 
 	mmaptest();
@@ -56,7 +58,7 @@ int main(int argc, char *argv[])
 	if (parent_of_all == getpid()) {
 		user_mutex_test();
 	}
-*/
+
 	exectest(parent_of_all);
 
 	while (1)

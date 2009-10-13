@@ -8,6 +8,41 @@
 #include <tests.h>
 #include <errno.h>
 
+#define PAGE_SIZE	0x1000
+
+int small_io_test(void)
+{
+	int fd1, fd2;
+	char *string = "abcdefg";
+	char strbuf[30];
+	char *path = "/text.txt";
+	fd1 = open(path, O_TRUNC | O_RDWR | O_CREAT, S_IRWXU);
+	fd2 = open(path, O_RDWR, 0);
+
+	printf("fd1: %d, fd2: %d\n", fd1, fd2);
+	perror("OPEN");
+
+	for (int i = 0; i < 4; i++) {
+		sprintf(strbuf, "%s%d", string, i);
+		printf("Writing to %s offset %x, string: %s\n",
+		       path, i*PAGE_SIZE, strbuf);
+		lseek(fd1, i*PAGE_SIZE, SEEK_SET);
+		write(fd1, strbuf, strlen(strbuf) + 1);
+	}
+	close(fd1);
+
+	memset(strbuf, 0, 30);
+	for (int i = 0; i < 4; i++) {
+		lseek(fd2, i*PAGE_SIZE, SEEK_SET);
+		read(fd2, strbuf, 30);
+		printf("Read %s, offset %x as %s\n", path, i*PAGE_SIZE, strbuf);
+	}
+
+	close(fd2);
+
+	return 0;
+}
+
 int fileio(void)
 {
 	int fd;

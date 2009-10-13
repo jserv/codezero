@@ -3,7 +3,7 @@
 
 #define __TASKNAME__			"test0"
 
- #define TEST_VERBOSE_PRINT
+//#define TEST_VERBOSE_PRINT
 #if defined (TEST_VERBOSE_PRINT)
 #define test_printf(...)	printf(__VA_ARGS__)
 #else
@@ -24,5 +24,6 @@ int fileio(void);
 int clonetest(void);
 int exectest(pid_t);
 int user_mutex_test(void);
+int small_io_test(void);
 
 #endif /* __TEST0_TESTS_H__ */

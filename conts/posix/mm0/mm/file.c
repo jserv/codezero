@@ -402,9 +402,11 @@ int fsync_common(struct tcb *task, int fd)
 	if (!task->files->fd[fd].vmfile)
 		return 0;
 
+	/*
 	printf("Thread %d flushing fd: %d, vnum: 0x%lx, vnode: %p\n",
 	       task->tid, fd, task->files->fd[fd].vmfile->vnode->vnum,
 	       task->files->fd[fd].vmfile->vnode);
+	*/
 
 	/* Finish I/O on file */
 	if ((err = flush_file_pages(task->files->fd[fd].vmfile)) < 0)
@@ -795,7 +797,8 @@ int sys_write(struct tcb *task, int fd, void *buf, int count)
 	vmfile = task->files->fd[fd].vmfile;
 	cursor = task->files->fd[fd].cursor;
 
-	printf("Thread %d writing to fd: %d, vnum: 0x%lx, vnode: %p\n", task->tid, fd, vmfile->vnode->vnum, vmfile->vnode);
+	//printf("Thread %d writing to fd: %d, vnum: 0x%lx, vnode: %p\n",
+	//task->tid, fd, vmfile->vnode->vnum, vmfile->vnode);
 
 	/* See what pages user wants to write */
 	pfn_wstart = __pfn(cursor);
@@ -1080,10 +1083,6 @@ int sys_open(struct tcb *task, const char *pathname,
 	global_add_vm_file(vmfile);
 
 out:
-	if (retval < 0)
-		printf("Thread %d Opening %s, fd: %d, error: %d\n", task->tid, pathname, fd, retval);
-	else
-		printf("Thread %d Opening %s, fd: %d, vnum: %lx, vnode: %p\n", task->tid, pathname, fd, v->vnum, v);
 	pathdata_destroy(pdata);
 	return retval;
 }

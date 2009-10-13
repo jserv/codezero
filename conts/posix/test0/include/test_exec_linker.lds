@@ -5,7 +5,7 @@
  */
 
 virtual_base = 0x10000000;
-/* __stack = (0x20000000 - 0x1000 - 8); */
+
 /* First page before the env/args */
 
 
