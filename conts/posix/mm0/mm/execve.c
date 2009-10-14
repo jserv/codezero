@@ -27,7 +27,8 @@
  * Probes and parses the low-level executable file format and creates a
  * generic execution description that can be used to run the task.
  */
-int task_setup_from_executable(struct vm_file *vmfile, struct tcb *task,
+int task_setup_from_executable(struct vm_file *vmfile,
+			       struct tcb *task,
 			       struct exec_file_desc *efd)
 {
 	memset(efd, 0, sizeof(*efd));
@@ -82,8 +83,13 @@ int init_execve(char *filepath)
 		return (int)new_task;
 	}
 
-	/* Fill and validate tcb memory segment markers from executable file */
-	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
+	/*
+	 * Fill and validate tcb memory
+	 * segment markers from executable file
+	 */
+	if ((err = task_setup_from_executable(vmfile,
+					      new_task,
+					      &efd)) < 0) {
 		sys_close(self, fd);
 		kfree(new_task);
 		return err;
@@ -113,7 +119,28 @@ int init_execve(char *filepath)
 }
 
 
-int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
+/*
+ * TODO:
+ *
+ * Dynamic Linking.
+ * See if an interpreter (dynamic linker) is needed
+ * Find the interpreter executable file, if needed
+ * Map all dynamic linker file segments
+ * (should not clash with original executable
+ * Set up registers to run dynamic linker (exchange_registers())
+ * Run the interpreter
+ *
+ * The interpreter will:
+ * - Need some initial info (dyn sym tables) at a certain location
+ * - Find necessary shared library files in userspace
+ *   (will use open/read).
+ * - Map them into process address space via mmap()
+ * - Reinitialise references to symbols in the shared libraries
+ * - Jump to the entry point of main executable.
+ */
+
+int do_execve(struct tcb *sender, char *filename,
+	      struct args_struct *args,
 	      struct args_struct *env)
 {
 	struct vm_file *vmfile;
@@ -135,8 +162,13 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 		return (int)new_task;
 	}
 
-	/* Fill and validate tcb memory segment markers from executable file */
-	if ((err = task_setup_from_executable(vmfile, new_task, &efd)) < 0) {
+	/*
+	 * Fill and validate tcb memory
+	 * segment markers from executable file
+	 */
+	if ((err = task_setup_from_executable(vmfile,
+					      new_task,
+					      &efd)) < 0) {
 		sys_close(self, fd);
 		kfree(new_task);
 		return err;
@@ -154,7 +186,9 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 		BUG_ON(!(tgleader = find_task(sender->tgid)));
 
 		/* Destroy all children threads. */
-		list_foreach_struct(thread, &tgleader->children, child_ref)
+		list_foreach_struct(thread,
+				    &tgleader->children,
+				    child_ref)
 			do_exit(thread, 0);
 	} else {
 		/* Otherwise group leader is same as sender */
@@ -191,33 +225,6 @@ int do_execve(struct tcb *sender, char *filename, struct args_struct *args,
 	/* Start the task */
 	task_start(new_task);
 
-#if 0
-TODO:
-Dynamic Linking.
-
-	/* See if an interpreter (dynamic linker) is needed */
-
-	/* Find the interpreter executable file, if needed */
-
-	/*
-	 * Map all dynamic linker file segments
-	 * (should not clash with original executable
-	 */
-
-	/* Set up registers to run dynamic linker (exchange_registers()) */
-
-	/* Run the interpreter */
-
-	/*
-	 * The interpreter will:
-	 * - Need some initial info (dyn sym tables) at a certain location
-	 * - Find necessary shared library files in userspace
-	 *   (will use open/read).
-	 * - Map them into process address space via mmap()
-	 * - Reinitialise references to symbols in the shared libraries
-	 * - Jump to the entry point of main executable.
-	 */
-#endif
 	return 0;
 }
 

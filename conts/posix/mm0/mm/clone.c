@@ -35,7 +35,8 @@ int sys_fork(struct tcb *parent)
 	 * Create a new L4 thread with parent's page tables
 	 * kernel stack and kernel-side tcb copied
 	 */
-	if (IS_ERR(child = task_create(parent, &ids, THREAD_COPY_SPACE,
+	if (IS_ERR(child = task_create(parent, &ids,
+				       THREAD_COPY_SPACE,
 			    	       TCB_NO_SHARING)))
 		return (int)child;
 
@@ -45,18 +46,13 @@ int sys_fork(struct tcb *parent)
 
 	/* Set child's new utcb address set by task_create() */
 	BUG_ON(!child->utcb_address);
-	exregs_set_utcb(&exregs, child->utcb_address);
+	exregs_set_utcb(&exregs,
+			child->utcb_address);
 
 	/* Do the actual exregs call to c0 */
-	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
+	if ((err = l4_exchange_registers(&exregs,
+					 child->tid)) < 0)
 		BUG();
-
-	/* Create and prefault a shared page for child and map it to vfs task */
-	//shpage_map_to_task(child, find_task(VFS_TID),
-	//		   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
-	//		   SHPAGE_PREFAULT);
-
-	// printf("Mapped 0x%p to vfs as utcb of %d\n", child->utcb, child->tid);
 
 	/* Add child to global task list */
 	global_add_task(child);
@@ -68,24 +64,27 @@ int sys_fork(struct tcb *parent)
 	return child->tid;
 }
 
-int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
+int do_clone(struct tcb *parent,
+	     unsigned long child_stack,
+	     unsigned int flags)
 {
 	struct exregs_data exregs;
 	struct task_ids ids;
 	struct tcb *child;
 	int err;
 
-	//ids.tid = TASK_ID_INVALID;
-	//ids.spid = parent->spid;
-
-
-	/* Determine whether the cloned thread is in parent's thread group */
+	/*
+	 * Determine whether the cloned
+	 * thread is in parent's thread group
+	 */
 	if (flags & TCB_SHARED_TGROUP)
 		ids.tgid = parent->tgid;
 	else
 		ids.tgid = TASK_ID_INVALID;
 
-	if (IS_ERR(child = task_create(parent, &ids, THREAD_SAME_SPACE, flags)))
+	if (IS_ERR(child = task_create(parent, &ids,
+				       THREAD_SAME_SPACE,
+				       flags)))
 		return (int)child;
 
 	/* Set up child stack marks with given stack argument */
@@ -103,20 +102,14 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 	exregs_set_utcb(&exregs, child->utcb_address);
 
 	/* Do the actual exregs call to c0 */
-	if ((err = l4_exchange_registers(&exregs, child->tid)) < 0)
+	if ((err = l4_exchange_registers(&exregs,
+					 child->tid)) < 0)
 		BUG();
-
-	/* Create and prefault a shared page for child and map it to vfs task */
-	//shpage_map_to_task(child, find_task(VFS_TID),
-	//		   SHPAGE_NEW_ADDRESS | SHPAGE_NEW_SHM |
-	//			   SHPAGE_PREFAULT);
-	/* We can now notify vfs about forked process */
 
 	/* Add child to global task list */
 	global_add_task(child);
 
 	/* Start cloned child. */
-	// printf("%s/%s: Starting cloned child.\n", __TASKNAME__, __FUNCTION__);
 	l4_thread_control(THREAD_RUN, &ids);
 
 	/* Return child tid to parent */
@@ -124,7 +117,9 @@ int do_clone(struct tcb *parent, unsigned long child_stack, unsigned int flags)
 }
 
 
-int sys_clone(struct tcb *parent, void *child_stack, unsigned int clone_flags)
+int sys_clone(struct tcb *parent,
+	      void *child_stack,
+	      unsigned int clone_flags)
 {
 	unsigned int flags = 0;
 
@@ -142,6 +137,8 @@ int sys_clone(struct tcb *parent, void *child_stack, unsigned int clone_flags)
 	if (clone_flags & CLONE_PARENT)
 		flags |= TCB_SHARED_PARENT;
 
-	return do_clone(parent, (unsigned long)child_stack, flags);
+	return do_clone(parent,
+			(unsigned long)child_stack,
+			flags);
 }
 
