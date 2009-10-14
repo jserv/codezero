@@ -510,186 +510,65 @@ int new_file_pages(struct vm_file *f, unsigned long start, unsigned long end)
 
 #define page_offset(x)	((unsigned long)(x) & PAGE_MASK)
 
-/*
- * Writes user data in buffer into pages in cache. If a page is not
- * found, it's a bug. The writeable page range must have been readied
- * by read_file_pages()/new_file_pages().
- */
-int read_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
-		     unsigned long pfn_start, unsigned long pfn_end,
-		     unsigned long cursor_offset, int count)
-{
-	struct page *file_page;
-	unsigned long task_offset; /* Current copy offset on the task buffer */
-	unsigned long file_offset; /* Current copy offset on the file */
-	int copysize, left;
-	int empty;
-
-	task_offset = (unsigned long)buf;
-	file_offset = cursor_offset;
-	left = count;
-
-	/* Find the head of consecutive pages */
-	list_foreach_struct(file_page, &vmfile->vm_obj.page_cache, list) {
-		if (file_page->offset < pfn_start)
-			continue;
-		else if (file_page->offset == pfn_end || left == 0)
-			break;
-
-		empty = PAGE_SIZE - page_offset(file_offset);
-
-		/* Copy until a single page cache page is filled */
-		while (empty && left) {
-			copysize = min(PAGE_SIZE - page_offset(file_offset), left);
-		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
-/*
-			printf("empty: %d, left: %d, copysize: "
-			       "%d, copy to page with pfn %lx, "
-			       "offset 0x%lx, from page with pfn "
-			       "%lx, offset 0x%lx\n", empty, left,
-			       copysize,
-			       task_virt_to_page(task,task_offset)->offset,
-			       page_offset(task_offset),
-			       file_page->offset,
-			       page_offset(file_offset));
-*/
-			page_copy(task_virt_to_page(task, task_offset),
-				  file_page,
-				  page_offset(task_offset),
-				  page_offset(file_offset),
-				  copysize);
-
-			empty -= copysize;
-			left -= copysize;
-			task_offset += copysize;
-			file_offset += copysize;
-		}
-	}
-	BUG_ON(left != 0);
-
-	return count - left;
-}
-
 
 /*
- * Writes user data in buffer into pages in cache. If a page is not
- * found, it's a bug. The writeable page range must have been readied
- * by read_file_pages()/new_file_pages().
- */
-int write_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
-		      unsigned long pfn_start, unsigned long pfn_end,
-		      unsigned long cursor_offset, int count)
-{
-	struct page *file_page;
-	unsigned long task_offset; /* Current copy offset on the task buffer */
-	unsigned long file_offset; /* Current copy offset on the file */
-	int copysize, left;
-	int empty;
-
-	task_offset = (unsigned long)buf;
-	file_offset = cursor_offset;
-	left = count;
-
-	/* Find the head of consecutive pages */
-	list_foreach_struct(file_page, &vmfile->vm_obj.page_cache, list) {
-		if (file_page->offset < pfn_start)
-			continue;
-		else if (file_page->offset == pfn_end || left == 0)
-			break;
-
-		empty = PAGE_SIZE - page_offset(file_offset);
-
-		/* Copy until a single page cache page is filled */
-		while (empty && left) {
-			copysize = min(PAGE_SIZE - page_offset(file_offset), left);
-		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
-/*
-			printf("empty: %d, left: %d, copysize: "
-			       "%d, copy to page with pfn %lx, "
-			       "offset 0x%lx, from page with pfn "
-			       "%lx, offset 0x%lx\n", empty, left,
-			       copysize, file_page->offset,
-			       page_offset(file_offset),
-			       task_virt_to_page(task,task_offset)->offset,
-			       page_offset(task_offset));
-*/
-			page_copy(file_page,
-				  task_virt_to_page(task, task_offset),
-				  page_offset(file_offset),
-				  page_offset(task_offset),
-				  copysize);
-
-			empty -= copysize;
-			left -= copysize;
-			task_offset += copysize;
-			file_offset += copysize;
-		}
-		file_page->flags |= VM_DIRTY;
-		file_page->owner->flags |= VM_DIRTY;
-	}
-	BUG_ON(left != 0);
-
-	return count - left;
-}
-
-/*
- * Reads a page range from an ordered list of pages into buffer.
+ * Reads a page range from an ordered list of pages into a buffer,
+ * from those pages, or from the buffer, into those pages, depending on
+ * the read flag.
  *
  * NOTE:
  * This assumes the page range is consecutively available in the cache
- * and count bytes are available. To ensure this, read_file_pages must
- * be called first and count must be checked. Since it has read-checking
- * assumptions, count must be satisfied.
+ * and count bytes are available. To ensure this,
+ * read/write/new_file_pages must have been called first and count
+ * must have been checked. Since it has these checking assumptions,
+ * count must be satisfied.
  */
-int read_cache_pages_orig(struct vm_file *vmfile, struct tcb *task, void *buf,
+int copy_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 		     unsigned long pfn_start, unsigned long pfn_end,
-		     unsigned long cursor_offset, int count)
+		     unsigned long cursor_offset, int count, int read)
 {
-	struct page *head, *this;
+	struct page *file_page;
+	unsigned long task_offset; /* Current copy offset on the task buffer */
+	unsigned long file_offset; /* Current copy offset on the file */
 	int copysize, left;
-	unsigned long last_pgoff;	/* Last copied page's offset */
-	unsigned long copy_offset;	/* Current copy offset on the buffer */
+	int empty;
 
-	printf("%s: cursor_offset: 0x%lx, count: 0x%x, buf: %p\n", __FUNCTION__, cursor_offset, count, buf);
-
-	/* Find the head of consecutive pages */
-	list_foreach_struct(head, &vmfile->vm_obj.page_cache, list)
-		if (head->offset == pfn_start)
-			goto copy;
-
-	/* Page not found, nothing read */
-	return 0;
-
-copy:
+	task_offset = (unsigned long)buf;
+	file_offset = cursor_offset;
 	left = count;
 
-	/* Copy the first page and unmap. */
-	copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-	copy_offset = (unsigned long)buf;
-	page_copy(task_virt_to_page(task, copy_offset), head,
-		  PAGE_MASK & copy_offset, cursor_offset, copysize);
-	left -= copysize;
-	last_pgoff = head->offset;
-
-	/* Map the rest, copy and unmap. */
-	list_foreach_struct(this, &head->list, list) {
-		if (left == 0 || this->offset == pfn_end)
+	/* Find the head of consecutive pages */
+	list_foreach_struct(file_page, &vmfile->vm_obj.page_cache, list) {
+		if (file_page->offset < pfn_start)
+			continue;
+		else if (file_page->offset == pfn_end || left == 0)
 			break;
 
-		/* Make sure we're advancing on pages consecutively */
-		BUG_ON(this->offset != last_pgoff + 1);
+		empty = PAGE_SIZE - page_offset(file_offset);
 
-		/* Get copying size and start offset */
-		copysize = (left < PAGE_SIZE) ? left : PAGE_SIZE;
-		copy_offset = (unsigned long)buf + count - left;
+		/* Copy until a single page cache page is filled */
+		while (empty && left) {
+			copysize = min(PAGE_SIZE - page_offset(file_offset), left);
+		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
 
-		/* MUST be page aligned */
-		BUG_ON(!is_page_aligned(copy_offset));
+			if (read)
+				page_copy(task_virt_to_page(task, task_offset),
+					  file_page,
+					  page_offset(task_offset),
+					  page_offset(file_offset),
+					  copysize);
+			else
+				page_copy(file_page,
+					  task_virt_to_page(task, task_offset),
+					  page_offset(file_offset),
+					  page_offset(task_offset),
+					  copysize);
 
-		page_copy(task_virt_to_page(task, copy_offset),
-			  this, 0, 0, copysize);
-		left -= copysize;
-		last_pgoff = this->offset;
+			empty -= copysize;
+			left -= copysize;
+			task_offset += copysize;
+			file_offset += copysize;
+		}
 	}
 	BUG_ON(left != 0);
 
@@ -745,8 +624,8 @@ int sys_read(struct tcb *task, int fd, void *buf, int count)
 		return ret;
 
 	/* Read it into the user buffer from the cache */
-	if ((count = read_cache_pages(vmfile, task, buf, pfn_start, pfn_end,
-				      cursor, count)) < 0)
+	if ((count = copy_cache_pages(vmfile, task, buf, pfn_start, pfn_end,
+				      cursor, count, 1)) < 0)
 		return count;
 
 	/* Update cursor on success */
@@ -849,8 +728,8 @@ int sys_write(struct tcb *task, int fd, void *buf, int count)
 	 * to be written are expected to be in the page cache. Write.
 	 */
 	//byte_offset = PAGE_MASK & cursor;
-	if ((ret = write_cache_pages(vmfile, task, buf, pfn_wstart,
-				     pfn_wend, cursor, count)) < 0)
+	if ((ret = copy_cache_pages(vmfile, task, buf, pfn_wstart,
+				     pfn_wend, cursor, count, 0)) < 0)
 		return ret;
 
 	/*
@@ -1079,157 +958,4 @@ out:
 	pathdata_destroy(pdata);
 	return retval;
 }
-
-#if 0
-/*
- * Different from vfs_open(), which validates an already opened
- * file descriptor, this call opens a new vfs file by the pager
- * using the given path. The vnum handle and file length is returned
- * since the pager uses this information to access file pages.
- */
-int vfs_open_bypath(const char *pathname, unsigned long *vnum, unsigned long *length)
-{
-	struct pathdata *pdata;
-	struct tcb *task = 0;
-	struct vnode *v;
-	int retval;
-
-	/* Parse path data */
-	if (IS_ERR(pdata = pathdata_parse(pathname,
-					  alloca(strlen(pathname) + 1),
-					  task)))
-		return (int)pdata;
-
-	/* Search the vnode by that path */
-	if (IS_ERR(v = vfs_lookup_bypath(pdata))) {
-		retval = (int)v;
-		goto out;
-	}
-
-	*vnum = v->vnum;
-	*length = v->size;
-
-	return 0;
-
-out:
-	pathdata_destroy(pdata);
-	return retval;
-}
-
-/*
- * Initialise a new file and the descriptor for it from given file data.
- * Could be called by an actual task or a pager
- */
-struct vm_file *do_open2(struct tcb *task, int fd, unsigned long vnum, unsigned long length)
-{
-	struct vm_file *vmfile;
-
-	/* Is this an open by a task (as opposed to by the pager)? */
-	if (task) {
-		/* fd slot must be empty */
-		BUG_ON(task->files->fd[fd].vnum != 0);
-		BUG_ON(task->files->fd[fd].cursor != 0);
-
-		/* Assign vnum to given fd on the task */
-		task->files->fd[fd].vnum = vnum;
-		task->files->fd[fd].cursor = 0;
-	}
-
-	/* Check if that vm_file is already in the list */
-	list_foreach_struct(vmfile, &global_vm_files.list, list) {
-
-		/* Check whether it is a vfs file and if so vnums match. */
-		if ((vmfile->type & VM_FILE_VFS) &&
-		    vm_file_to_vnum(vmfile) == vnum) {
-
-			/* Task opener? */
-			if (task)
-				/* Add a reference to it from the task */
-				task->files->fd[fd].vmfile = vmfile;
-
-			vmfile->openers++;
-			return vmfile;
-		}
-	}
-
-	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vfs_file_create()))
-		return vmfile;
-
-	/* Initialise and add a reference to it from the task */
-	vm_file_to_vnum(vmfile) = vnum;
-	vmfile->length = length;
-	vmfile->vm_obj.pager = &file_pager;
-
-	/* Task opener? */
-	if (task)
-		task->files->fd[fd].vmfile = vmfile;
-	vmfile->openers++;
-
-	/* Add to file list */
-	global_add_vm_file(vmfile);
-
-	return vmfile;
-}
-
-/*
- * When a task does a read/write/mmap request on a file, if
- * the file descriptor is unknown to the pager, this call
- * asks vfs if that file has been opened, and any other
- * relevant information.
- */
-int file_open(struct tcb *task, int fd)
-{
-	struct vnode *v;
-	struct vm_file *vmfile;
-
-	if (fd < 0 || fd > TASK_FILES_MAX)
-		return -EINVAL;
-
-	/* Check if that fd has been opened */
-	if (!task->files->fd[fd].vnum)
-		return -EBADF;
-
-	/* Search the vnode by that vnum */
-	if (IS_ERR(v = vfs_lookup_byvnum(vfs_root.pivot->sb,
-					 task->files->fd[fd].vnum)))
-		return (int)v;
-
-	/* Cursor must be zero */
-	BUG_ON(task->files->fd[fd].cursor != 0);
-
-	/* Check that vm_file is already in the list */
-	list_foreach_struct(vmfile, &global_vm_files.list, list) {
-
-		/* Check whether it is a vfs file and if so vnums match. */
-		if ((vmfile->type & VM_FILE_VFS) &&
-		    vm_file_to_vnum(vmfile) == v->vnum) {
-
-			/* Add a reference to it from the task */
-			task->files->fd[fd].vmfile = vmfile;
-			vmfile->openers++;
-			return 0;
-		}
-	}
-
-	/* Otherwise allocate a new one for this vnode */
-	if (IS_ERR(vmfile = vfs_file_create()))
-		return (int)vmfile;
-
-	/* Assign file information */
-	vm_file_to_vnum(vmfile) = v->vnum;
-	vmfile->length = v->size;
-
-	/* Add a reference to it from the task */
-	vmfile->vm_obj.pager = &file_pager;
-	task->files->fd[fd].vmfile = vmfile;
-	vmfile->openers++;
-
-	/* Add to file list */
-	global_add_vm_file(vmfile);
-
-	return 0;
-}
-
-#endif
 
