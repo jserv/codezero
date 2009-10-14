@@ -148,6 +148,10 @@ class LinuxBuilder:
         self.linux_lds_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.lds")
         self.linux_S_in = join(self.LINUX_KERNELDIR, "linux.S.in")
         self.linux_S_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.S")
+
+        self.linux_h_in = join(self.LINUX_KERNELDIR, "linux.h.in")
+        self.linux_h_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.h")
+
         self.linux_elf_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.elf")
 
         self.container = container
@@ -167,13 +171,18 @@ class LinuxBuilder:
                   "CROSS_COMPILE=arm-none-linux-gnueabi- O=" + \
                   self.LINUX_KERNEL_BUILDDIR)
 
+        with open(self.linux_h_out, 'w+') as output:
+            with open(self.linux_h_in, 'r') as input:
+                output.write(input.read() % {'cn' : self.container.id})
+
         with open(self.linux_S_in, 'r') as input:
             with open(self.linux_S_out, 'w+') as output:
                 content = input.read() % self.kernel_binary_image
                 output.write(content)
 
-        os.system("arm-none-linux-gnueabi-cpp -P " + \
-                  "%s > %s" % (self.linux_lds_in, self.linux_lds_out))
+        os.system("arm-none-linux-gnueabi-cpp -I%s -P %s > %s" % \
+                  (self.LINUX_KERNEL_BUILDDIR, self.linux_lds_in, \
+                   self.linux_lds_out))
         os.system("arm-none-linux-gnueabi-gcc -nostdlib -o %s -T%s %s" % \
                   (self.linux_elf_out, self.linux_lds_out, self.linux_S_out))
 
