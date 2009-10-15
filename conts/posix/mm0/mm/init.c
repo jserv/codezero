@@ -43,16 +43,12 @@ struct memdesc physmem;		/* Initial, primitive memory descriptor */
 struct membank membank[1];	/* The memory bank */
 struct page *page_array;	/* The physical page array based on mem bank */
 
-struct container_memory_regions {
-	struct capability *shmem;
-	struct capability *utcb;
-	struct capability *task;
-	struct capability *pager;
-	struct capability *physmem;
-} cont_mem_regions;
 
 /* Capability descriptor list */
 struct cap_list capability_list;
+
+/* Memory region capabilities */
+struct container_memory_regions cont_mem_regions;
 
 __initdata static struct capability *caparray;
 __initdata static int total_caps = 0;
@@ -117,8 +113,8 @@ int pager_setup_task(void)
 	task->map_end = PAGER_MMAP_END;
 
 	/* Task's total map boundaries */
-	task->start = task->text_start;
-	task->end = 0xF0000000;
+	task->start = __pfn_to_addr(cont_mem_regions.pager->start);
+	task->end = __pfn_to_addr(cont_mem_regions.pager->end);
 
 	/*
 	 * Map all regions as anonymous (since no real
@@ -146,7 +142,8 @@ int pager_setup_task(void)
 	 * microkernel for this pager. Ensure that we also get
 	 * the same from our internal utcb bookkeeping.
 	 */
-	BUG_ON(task->utcb_address != UTCB_AREA_START);
+	BUG_ON(task->utcb_address !=
+	       __pfn_to_addr(cont_mem_regions.utcb->start));
 
 	/* Pager must prefault its utcb */
 	prefault_page(task, task->utcb_address,
@@ -192,8 +189,6 @@ int read_pager_capabilities()
 		       " capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_NCAPS request.\n");
 		BUG();
-	} else {
-		printf("There are %d capabilities defined.\n", ncaps);
 	}
 	total_caps = ncaps;
 
@@ -225,16 +220,16 @@ int read_pager_capabilities()
 		if ((cap->type & CAP_RTYPE_MASK)
 		    == CAP_RTYPE_VIRTMEM) {
 
-			printf("Capability range 0x%lx - 0x%lx\n",
-			       __pfn_to_addr(cap->start), __pfn_to_addr(cap->end));
 			/* Pager address region (get from linker-defined) */
 			if (__pfn_to_addr(cap->start)
 			    == (unsigned long)virtual_base)
 				cont_mem_regions.pager = cap;
 
 			/* UTCB address region */
-			else if (UTCB_REGION_START == __pfn_to_addr(cap->start)) {
-				if (UTCB_REGION_END != __pfn_to_addr(cap->end)) {
+			else if (UTCB_REGION_START ==
+				 __pfn_to_addr(cap->start)) {
+				if (UTCB_REGION_END !=
+				    __pfn_to_addr(cap->end)) {
 					printf("FATAL: Region designated "
 					       "for UTCB allocation does not "
 					       "match on start/end marks");
@@ -251,8 +246,10 @@ int read_pager_capabilities()
 			}
 
 			/* Shared memory disjoint region */
-			else if (SHMEM_REGION_START == __pfn_to_addr(cap->start)) {
-				if (SHMEM_REGION_END != __pfn_to_addr(cap->end)) {
+			else if (SHMEM_REGION_START ==
+				 __pfn_to_addr(cap->start)) {
+				if (SHMEM_REGION_END !=
+				    __pfn_to_addr(cap->end)) {
 					printf("FATAL: Region designated "
 					       "for SHM allocation does not "
 					       "match on start/end marks");
@@ -263,11 +260,13 @@ int read_pager_capabilities()
 			}
 
 			/* Task memory region */
-			else if (TASK_REGION_START == __pfn_to_addr(cap->start)) {
-				if (TASK_REGION_END != __pfn_to_addr(cap->end)) {
+			else if (TASK_REGION_START ==
+				 __pfn_to_addr(cap->start)) {
+				if (TASK_REGION_END !=
+				    __pfn_to_addr(cap->end)) {
 					printf("FATAL: Region designated "
-					       "for Task address space does not "
-					       "match on start/end marks");
+					       "for Task address space does"
+					       "not match on start/end mark.");
 					BUG();
 				}
 				cont_mem_regions.task = cap;
@@ -283,7 +282,9 @@ int read_pager_capabilities()
 		printf("%s: Error, pager does not have one of the required"
 	 	       "mem capabilities defined. (TASK, SHM, PHYSMEM, UTCB)\n",
 		       __TASKNAME__);
-		printf("%p, %p, %p, %p, %p\n", cont_mem_regions.task, cont_mem_regions.shmem, cont_mem_regions.utcb, cont_mem_regions.physmem, cont_mem_regions.pager);
+		printf("%p, %p, %p, %p, %p\n", cont_mem_regions.task,
+		       cont_mem_regions.shmem, cont_mem_regions.utcb,
+		       cont_mem_regions.physmem, cont_mem_regions.pager);
 		BUG();
 	}
 

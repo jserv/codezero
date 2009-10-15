@@ -519,8 +519,8 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 	char *args_on_stack;
 	void *mapped;
 
-	task->stack_end = USER_AREA_END;
-	task->stack_start = USER_AREA_END - DEFAULT_STACK_SIZE;
+	task->stack_end = __pfn_to_addr(cont_mem_regions.task->end);
+	task->stack_start = __pfn_to_addr(cont_mem_regions.task->end) - DEFAULT_STACK_SIZE;
 	task->args_end = task->stack_end;
 	task->args_start = task->stack_end - stack_used;
 
@@ -636,8 +636,8 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	int text_size, data_size;
 
 	/* Set up task's user boundary regions */
-	task->start = USER_AREA_START;
-	task->end = USER_AREA_END;
+	task->start = __pfn_to_addr(cont_mem_regions.task->start);
+	task->end = __pfn_to_addr(cont_mem_regions.task->end);
 	task->map_start = task->start;
 	task->map_end = task->end;
 

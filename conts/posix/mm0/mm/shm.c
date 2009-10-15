@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <task.h>
 #include <mmap.h>
+#include <memory.h>
 #include <vm_area.h>
 #include <globals.h>
 #include <lib/malloc.h>
@@ -62,8 +63,11 @@ int shm_pool_init()
 	}
 
 	/* Initialise the global shm virtual address pool */
-	if ((err = address_pool_init(&shm_vaddr_pool,
-				     SHM_AREA_START, SHM_AREA_END)) < 0) {
+	if ((err =
+	     address_pool_init(&shm_vaddr_pool,
+			       __pfn_to_addr(cont_mem_regions.shmem->start),
+			       __pfn_to_addr(cont_mem_regions.shmem->end)))
+	     < 0) {
 		printf("SHM Address pool initialisation failed.\n");
 		return err;
 	}

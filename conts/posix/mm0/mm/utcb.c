@@ -10,6 +10,7 @@
 #include <utcb.h>
 #include <lib/malloc.h>
 #include <vm_area.h>
+#include <memory.h>
 
 /*
  * UTCB management in Codezero
@@ -23,8 +24,11 @@ int utcb_pool_init()
 	int err;
 
 	/* Initialise the global shm virtual address pool */
-	if ((err = address_pool_init(&utcb_region_pool,
-				     UTCB_AREA_START, UTCB_AREA_END)) < 0) {
+	if ((err =
+	     address_pool_init(&utcb_region_pool,
+			       __pfn_to_addr(cont_mem_regions.utcb->start),
+			       __pfn_to_addr(cont_mem_regions.utcb->end)))
+	    < 0) {
 		printf("UTCB address pool initialisation failed.\n");
 		return err;
 	}
