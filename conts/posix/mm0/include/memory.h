@@ -10,6 +10,16 @@
 #include <init.h>
 #include <physmem.h>
 #include <linker.h>
+#include <capability.h>
+
+struct container_memory_regions {
+	struct capability *shmem;
+	struct capability *utcb;
+	struct capability *task;
+	struct capability *pager;
+	struct capability *physmem;
+};
+extern struct container_memory_regions cont_mem_regions;
 
 #define PAGER_MMAP_SEGMENT		SZ_4MB
 #define PAGER_MMAP_START		(page_align_up(__stack))
