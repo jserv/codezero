@@ -43,13 +43,19 @@ struct memdesc physmem;		/* Initial, primitive memory descriptor */
 struct membank membank[1];	/* The memory bank */
 struct page *page_array;	/* The physical page array based on mem bank */
 
+struct container_memory_regions {
+	struct capability *shmem;
+	struct capability *utcb;
+	struct capability *task;
+	struct capability *pager;
+	struct capability *physmem;
+} cont_mem_regions;
 
 /* Capability descriptor list */
 struct cap_list capability_list;
 
 __initdata static struct capability *caparray;
 __initdata static int total_caps = 0;
-
 
 void print_pfn_range(int pfn, int size)
 {
@@ -153,10 +159,11 @@ int pager_setup_task(void)
 }
 
 /* Copy all init-memory allocated capabilities */
-void copy_boot_capabilities()
+void copy_boot_capabilities(int ncaps)
 {
 	struct capability *cap;
 
+	link_init(&capability_list.caps);
 	for (int i = 0; i < total_caps; i++) {
 		cap = kzalloc(sizeof(struct capability));
 
@@ -167,14 +174,16 @@ void copy_boot_capabilities()
 		link_init(&cap->list);
 
 		/* Add capability to global cap list */
-		list_insert(&capability_list.caps, &cap->list);
+		list_insert(&cap->list, &capability_list.caps);
 	}
+	capability_list.ncaps = ncaps;
 }
 
 int read_pager_capabilities()
 {
 	int ncaps;
 	int err;
+	struct capability *cap;
 
 	/* Read number of capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
@@ -182,7 +191,9 @@ int read_pager_capabilities()
 		printf("l4_capability_control() reading # of"
 		       " capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_NCAPS request.\n");
-		goto error;
+		BUG();
+	} else {
+		printf("There are %d capabilities defined.\n", ncaps);
 	}
 	total_caps = ncaps;
 
@@ -195,33 +206,88 @@ int read_pager_capabilities()
 		printf("l4_capability_control() reading of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
-		goto error;
+		BUG();
 	}
 
-	/* Set up initdata pointer to important capabilities */
-	initdata.bootcaps = caparray;
-	for (int i = 0; i < ncaps; i++) {
-		/*
-		 * TODO: There may be multiple physmem caps!
-		 * This really needs to be considered as multiple
-		 * membanks!!!
-		 */
-		if ((caparray[i].type & CAP_RTYPE_MASK)
-		    == CAP_RTYPE_PHYSMEM) {
-			initdata.physmem = &caparray[i];
-			return 0;
+	/* Copy them to real allocated structures */
+	copy_boot_capabilities(ncaps);
+
+	memset(&cont_mem_regions, 0, sizeof(cont_mem_regions));
+
+	/* Set up pointers to important capabilities */
+	list_foreach_struct(cap, &capability_list.caps, list) {
+		/* Physical memory bank */
+		if ((cap->type & CAP_RTYPE_MASK)
+		    == CAP_RTYPE_PHYSMEM)
+			cont_mem_regions.physmem = cap;
+
+		/* Virtual regions */
+		if ((cap->type & CAP_RTYPE_MASK)
+		    == CAP_RTYPE_VIRTMEM) {
+
+			printf("Capability range 0x%lx - 0x%lx\n",
+			       __pfn_to_addr(cap->start), __pfn_to_addr(cap->end));
+			/* Pager address region (get from linker-defined) */
+			if (__pfn_to_addr(cap->start)
+			    == (unsigned long)virtual_base)
+				cont_mem_regions.pager = cap;
+
+			/* UTCB address region */
+			else if (UTCB_REGION_START == __pfn_to_addr(cap->start)) {
+				if (UTCB_REGION_END != __pfn_to_addr(cap->end)) {
+					printf("FATAL: Region designated "
+					       "for UTCB allocation does not "
+					       "match on start/end marks");
+					BUG();
+				}
+
+				if (!(cap->access & CAP_MAP_UTCB_BIT)) {
+					printf("FATAL: Region designated "
+					       "for UTCB allocation does not "
+					       "have UTCB map permissions");
+					BUG();
+				}
+				cont_mem_regions.utcb = cap;
+			}
+
+			/* Shared memory disjoint region */
+			else if (SHMEM_REGION_START == __pfn_to_addr(cap->start)) {
+				if (SHMEM_REGION_END != __pfn_to_addr(cap->end)) {
+					printf("FATAL: Region designated "
+					       "for SHM allocation does not "
+					       "match on start/end marks");
+					BUG();
+				}
+
+				cont_mem_regions.shmem = cap;
+			}
+
+			/* Task memory region */
+			else if (TASK_REGION_START == __pfn_to_addr(cap->start)) {
+				if (TASK_REGION_END != __pfn_to_addr(cap->end)) {
+					printf("FATAL: Region designated "
+					       "for Task address space does not "
+					       "match on start/end marks");
+					BUG();
+				}
+				cont_mem_regions.task = cap;
+			}
 		}
 	}
 
-	printf("%s: Error, pager has no physmem "
-	       "capability defined.\n", __TASKNAME__);
-
-	goto error;
+	if (!cont_mem_regions.task ||
+	    !cont_mem_regions.shmem ||
+	    !cont_mem_regions.utcb ||
+	    !cont_mem_regions.physmem ||
+	    !cont_mem_regions.pager) {
+		printf("%s: Error, pager does not have one of the required"
+	 	       "mem capabilities defined. (TASK, SHM, PHYSMEM, UTCB)\n",
+		       __TASKNAME__);
+		printf("%p, %p, %p, %p, %p\n", cont_mem_regions.task, cont_mem_regions.shmem, cont_mem_regions.utcb, cont_mem_regions.physmem, cont_mem_regions.pager);
+		BUG();
+	}
 
 	return 0;
-
-error:
-	BUG();
 }
 
 /*
@@ -230,12 +296,6 @@ error:
  */
 void release_initdata()
 {
-	/*
-	 * Copy boot capabilities to a list of
-	 * real capabilities
-	 */
-	copy_boot_capabilities();
-
 	/* Free and unmap init memory:
 	 *
 	 * FIXME: We can and do safely unmap the boot
@@ -397,14 +457,14 @@ void init_physmem_primary()
 	/* Allocate page map structure */
 	initdata.page_map =
 		alloc_bootmem(sizeof(struct page_bitmap) +
-			      ((initdata.physmem->end -
-			        initdata.physmem->start)
+			      ((cont_mem_regions.physmem->end -
+			        cont_mem_regions.physmem->start)
 			       >> 5) + 1, 0);
 
 	/* Initialise page map from physmem capability */
 	init_page_map(initdata.page_map,
-		      initdata.physmem->start,
-		      initdata.physmem->end);
+		      cont_mem_regions.physmem->start,
+		      cont_mem_regions.physmem->end);
 
 	/* Mark pager and other boot task areas as used */
 	for (int i = 0; i < bootdesc->total_images; i++) {
@@ -419,8 +479,8 @@ void init_physmem_primary()
 			     pfn_end - pfn_start, 1);
 	}
 
-	physmem.start = initdata.physmem->start;
-	physmem.end = initdata.physmem->end;
+	physmem.start = cont_mem_regions.physmem->start;
+	physmem.end = cont_mem_regions.physmem->end;
 
 	physmem.free_cur = pfn_images_end;
 	physmem.free_end = physmem.end;

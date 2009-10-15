@@ -4,7 +4,7 @@
  * Copyright (C) 2007 - 2009 Bahadir Balban
  */
 
-virtual_base = 0xE0000000;
+virtual_base = %s;
 physical_base = %s;
 
 pager_offset = virtual_base - physical_base;

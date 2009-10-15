@@ -56,7 +56,6 @@ def configure_kernel(cml_file):
     cml2_update_config_h(CONFIG_H, config)
 
     configuration_save(config)
-    #config.config_print()
 
     # Generate bare container files if new ones defined
     bare_cont_gen = BareContGenerator()
@@ -65,7 +64,11 @@ def configure_kernel(cml_file):
     # Generate kernel cinfo structure for container definitions
     generate_kernel_cinfo(config, KERNEL_CINFO_PATH)
 
+    return config
+
 if __name__ == "__main__":
-    build_parse_options()
-    configure_kernel(join(CML2_CONFIG_SRCDIR, "out.cml"))
+    opts, args = build_parse_options()
+    config = configure_kernel(join(CML2_CONFIG_SRCDIR, "out.cml"))
+    if opts.print_config:
+        config.config_print()
 
