@@ -35,18 +35,27 @@ def build_parse_options():
                       default = False, dest = "backup_config",
                       help = "Backs up old configuration file settings to a .saved file"
                              "(Subsequent calls would overwrite. Only meaningful with -r)")
+    parser.add_option("-p", "--print-config", action = "store_true",
+                      default = False, dest = "print_config",
+                      help = "Prints out configuration settings"
+                             "(Symbol values and container parameters are printed)")
 
 
     (options, args) = parser.parse_args()
 
-    autogen_true = len(sys.argv) > 1 or not os.path.exists(CML2_CML_FILE)
+    autogen_true = options.backup_config or options.reset_old_config \
+                   or options.cml_file or options.config \
+                   or options.ncont or options.arch or not os.path.exists(CML2_CML_FILE)
 
+    # Prepare default if arch not supplied
     if autogen_true and not options.arch:
         print "No arch supplied (-a), using `arm' as default."
         options.arch = "arm"
+
+    # Prepare default if number of containers not supplied
     if autogen_true and not options.ncont:
         options.ncont = 4
-        print "Max container count not supplied (-c), using %d as default." % options.ncont
+        print "Max container count not supplied (-n), using %d as default." % options.ncont
 
     # Regenerate cml file if options are supplied or the file doesn't exist.
     if autogen_true:

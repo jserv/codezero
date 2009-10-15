@@ -13,6 +13,12 @@ class Container:
         self.pager_lma = 0
         self.pager_vma = 0
         self.pager_size = 0
+        self.pager_task_region_start = 0
+        self.pager_task_region_end = 0
+        self.pager_shm_region_start = 0
+        self.pager_shm_region_end = 0
+        self.pager_utcb_region_start = 0
+        self.pager_utcb_region_end = 0
         self.linux_page_offset = 0
         self.linux_phys_offset = 0
         self.linux_mapsize = 0
@@ -31,6 +37,12 @@ class Container:
         print 'Container Name: %s' % self.name
         print 'Container Pager lma: %s' % conv_hex(self.pager_lma)
         print 'Container Pager vma: %s' % conv_hex(self.pager_vma)
+        print 'Container Pager shm region start: %s' % conv_hex(self.pager_shm_region_start)
+        print 'Container Pager shm region end: %s' % conv_hex(self.pager_shm_region_end)
+        print 'Container Pager task region start: %s' % conv_hex(self.pager_task_region_start)
+        print 'Container Pager task region end: %s' % conv_hex(self.pager_task_region_end)
+        print 'Container Pager utcb region start: %s' % conv_hex(self.pager_utcb_region_start)
+        print 'Container Pager utcb region end: %s' % conv_hex(self.pager_utcb_region_end)
         print 'Container Pager size: %s' % conv_hex(self.pager_size)
         print 'Container Virtual regions: %s' % self.virt_regions
         print 'Container Physical regions: %s' % self.phys_regions
@@ -86,6 +98,18 @@ class configuration:
             self.containers[id].pager_lma = int(val, 0)
         elif param[:len("PAGER_VMA")] == "PAGER_VMA":
             self.containers[id].pager_vma = int(val, 0)
+        elif param[:len("PAGER_UTCB_START")] == "PAGER_UTCB_START":
+            self.containers[id].pager_utcb_region_start = int(val, 0)
+        elif param[:len("PAGER_UTCB_END")] == "PAGER_UTCB_END":
+            self.containers[id].pager_utcb_region_end = int(val, 0)
+        elif param[:len("PAGER_SHM_START")] == "PAGER_SHM_START":
+            self.containers[id].pager_shm_region_start = int(val, 0)
+        elif param[:len("PAGER_SHM_END")] == "PAGER_SHM_END":
+            self.containers[id].pager_shm_region_end = int(val, 0)
+        elif param[:len("PAGER_TASK_START")] == "PAGER_TASK_START":
+            self.containers[id].pager_task_region_start = int(val, 0)
+        elif param[:len("PAGER_TASK_END")] == "PAGER_TASK_END":
+            self.containers[id].pager_task_region_end = int(val, 0)
         elif param[:len("PAGER_SIZE")] == "PAGER_SIZE":
             self.containers[id].pager_size = int(val, 0)
         elif param[:len("LINUX_MAPSIZE")] == "LINUX_MAPSIZE":

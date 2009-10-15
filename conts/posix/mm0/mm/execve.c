@@ -228,7 +228,8 @@ int do_execve(struct tcb *sender, char *filename,
 	return 0;
 }
 
-int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
+int sys_execve(struct tcb *sender, char *pathname,
+	       char *argv[], char *envp[])
 {
 	int ret;
 	char *path;
@@ -242,17 +243,19 @@ int sys_execve(struct tcb *sender, char *pathname, char *argv[], char *envp[])
 	memset(&env, 0, sizeof(env));
 
 	/* Copy the executable path string */
-	if ((ret = copy_user_string(sender, path, pathname, PATH_MAX)) < 0)
+	if ((ret = copy_user_string(sender, path,
+				    pathname, PATH_MAX)) < 0)
 		return ret;
-	// printf("%s: Copied pathname: %s\n", __FUNCTION__, path);
 
 	/* Copy the args */
-	if (argv && ((ret = copy_user_args(sender, &args, argv, ARGS_MAX)) < 0))
+	if (argv && ((ret = copy_user_args(sender, &args,
+					   argv, ARGS_MAX)) < 0))
 		goto out1;
 
 	/* Copy the env */
 	if (envp && ((ret = copy_user_args(sender, &env, envp,
-					   ARGS_MAX - args.size)) < 0))
+					   ARGS_MAX - args.size))
+		     < 0))
 		goto out2;
 
 	ret = do_execve(sender, path, &args, &env);
