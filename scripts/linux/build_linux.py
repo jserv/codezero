@@ -33,13 +33,15 @@ class LinuxUpdateKernel:
     def __init__(self, container):
         # List for setting/unsetting .config params of linux
         self.config_param_list = \
-            (['MAGIC_SYSRQ', 'SET'],['DEBUG_KERNEL', 'SET'])
+            (['MAGIC_SYSRQ', 'SET'],['DEBUG_INFO', 'SET'])
 
         # List of CPUIDs, to be used by linux based on codezero config
         self.cpuid_list = (['ARM926', '0x41069265'],)
         # List of ARCHIDs, to be used by linux based on codezero config
         self.archid_list = (['PB926', '0x183'],
-                            ['AB926', '0x25E'],)
+                            ['AB926', '0x25E'],
+                            ['PB1176', '0x5E0'],
+                            ['REALVIEW_EB', '33B'],)
 
     # Replace line(having input_pattern) in filename with new_data
     def replace_line(self, filename, input_pattern, new_data, prev_line):
@@ -114,13 +116,10 @@ class LinuxUpdateKernel:
         cpuid_pattern = '#define CONFIG_CPU_'
         archid_pattern = '#define CONFIG_PLATFORM_'
 
-        # Need some better way to find relpath of config.h
-        config_h_relpath = join(PROJROOT, "include/l4")
-        config_h_relpath = os.path.relpath(config_h_relpath, os.getcwd())
-        config_h_relpath = join (config_h_relpath,'config.h')
+        config_h_path = join(PROJROOT, CONFIG_H)
 
         for pattern in cpuid_pattern, archid_pattern:
-            with open(config_h_relpath, 'r') as f:
+            with open(config_h_path, 'r') as f:
                 for line in f:
                     start = string.find(line, pattern)
                     if start == -1:
