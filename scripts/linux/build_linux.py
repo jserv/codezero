@@ -5,7 +5,7 @@
 #
 #  Copyright © 2009  B Labs Ltd
 #
-import os, sys, shelve
+import os, sys, shelve, string
 from os.path import join
 
 PROJRELROOT = '../../'
@@ -31,9 +31,15 @@ def source_to_builddir(srcdir, id):
 class LinuxUpdateKernel:
 
     def __init__(self, container):
-        self.list = (['MAGIC_SYSRQ', 'SET'],['DEBUG_KERNEL', 'SET'])
-        self.modify_kernel_config()
-        self.update_kernel_params(container)
+        # List for setting/unsetting .config params of linux
+        self.config_param_list = \
+            (['MAGIC_SYSRQ', 'SET'],['DEBUG_KERNEL', 'SET'])
+
+        # List of CPUIDs, to be used by linux based on codezero config
+        self.cpuid_list = (['ARM926', '0x41069265'],)
+        # List of ARCHIDs, to be used by linux based on codezero config
+        self.archid_list = (['PB926', '0x183'],
+                            ['AB926', '0x25E'],)
 
     # Replace line(having input_pattern) in filename with new_data
     def replace_line(self, filename, input_pattern, new_data, prev_line):
@@ -102,16 +108,49 @@ class LinuxUpdateKernel:
         prev_line = ''
         self.replace_line(file, data_to_replace, new_data, prev_line)
 
-        # Update ARCHID, CPUID and ATAGS ADDRESS
-        # Atags will be present at PHYS_OFFSET + 0x100
+    # Update ARCHID, CPUID and ATAGS ADDRESS
+    def modify_register_values(self, container):
+        # Patterns as defined in config.h
+        cpuid_pattern = '#define CONFIG_CPU_'
+        archid_pattern = '#define CONFIG_PLATFORM_'
+
+        # Need some better way to find relpath of config.h
+        config_h_relpath = join(PROJROOT, "include/l4")
+        config_h_relpath = os.path.relpath(config_h_relpath, os.getcwd())
+        config_h_relpath = join (config_h_relpath,'config.h')
+
+        for pattern in cpuid_pattern, archid_pattern:
+            with open(config_h_relpath, 'r') as f:
+                for line in f:
+                    start = string.find(line, pattern)
+                    if start == -1:
+                        continue
+                    else:
+                        end = start + len(pattern)
+                        start = end
+                        while line[end] != ' ':
+                            end = end + 1
+                        if pattern == cpuid_pattern:
+                            cpu_type = line[start:end]
+                        elif pattern == archid_pattern:
+                            arch_type = line[start:end]
+                        break
+        for i in self.cpuid_list:
+            if i[0] == cpu_type:
+                cpuid = i[1]
+                break
+        for i in self.archid_list:
+            if i[0] == arch_type:
+                archid = i[1]
+                break
+
         file = join(LINUX_KERNELDIR, 'arch/arm/kernel/head.S')
         prev_line = ''
-        # CPUID for versatile: 0x41069265
-        new_data = ('cpuid:  .word   ' + '0x41069265' + '\n')
+        new_data = ('cpuid:  .word   ' + cpuid + '\n')
         data_to_replace = "(cpuid:)"
         self.replace_line(file, data_to_replace, new_data, prev_line)
-        # ARCHID for versatile: 0x183
-        new_data = ('archid: .word   ' + '0x183' + '\n')
+
+        new_data = ('archid: .word   ' + archid + '\n')
         data_to_replace = "(archid:)"
         self.replace_line(file, data_to_replace, new_data, prev_line)
         # Atags will be present at PHYS_OFFSET + 0x100(=256)
@@ -122,7 +161,7 @@ class LinuxUpdateKernel:
 
     def modify_kernel_config(self):
         file = join(LINUX_KERNELDIR, 'arch/arm/configs/versatile_defconfig')
-        for i in self.list:
+        for i in self.config_param_list:
             param = 'CONFIG_' + i[0]
             prev_line = ''
             if i[1] == 'SET':
@@ -133,7 +172,6 @@ class LinuxUpdateKernel:
                 new_data = ('# ' + param + ' is not set' + '\n')
 
             self.replace_line(file, data_to_replace, new_data, prev_line)
-
 
 class LinuxBuilder:
 
@@ -166,6 +204,11 @@ class LinuxBuilder:
         os.chdir(self.LINUX_KERNELDIR)
         if not os.path.exists(self.LINUX_KERNEL_BUILDDIR):
             os.makedirs(self.LINUX_KERNEL_BUILDDIR)
+
+        self.kernel_updater.modify_kernel_config()
+        self.kernel_updater.update_kernel_params(self.container)
+        self.kernel_updater.modify_register_values(self.container)
+
         os.system("make defconfig ARCH=arm O=" + self.LINUX_KERNEL_BUILDDIR)
         os.system("make ARCH=arm " + \
                   "CROSS_COMPILE=arm-none-linux-gnueabi- O=" + \
