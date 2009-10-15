@@ -4,7 +4,7 @@
 /*
  * Linker script-defined memory markers.
  */
-
+extern unsigned long virtual_base[];
 extern unsigned long __start_text[];
 extern unsigned long __end_text[];
 extern unsigned long __start_data[];

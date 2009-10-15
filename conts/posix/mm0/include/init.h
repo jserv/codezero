@@ -18,8 +18,6 @@
 #include <capability.h>
 
 struct initdata {
-	struct capability *bootcaps;
-	struct capability *physmem;
 	struct bootdesc *bootdesc;
 	struct page_bitmap *page_map;
 	unsigned long pager_utcb_virt;

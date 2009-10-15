@@ -11,6 +11,8 @@ from tools.pyelf.lmanext import *
 
 src = [Glob('*.c') + Glob('test_exec.S') + Glob('src/*.[Sc]') + Glob('src/arch/arm/*.c')]
 
+container = next((c for c in config.containers if int(c.id) == int(contid)), None)
+
 asm_string = \
 '''
 .align 4
@@ -26,7 +28,7 @@ def generate_lma_lds(target, source, env):
     with open(source[1].path, 'r') as lds_in:
         with open(target[0].path, 'w+') as lds_out:
             linker_script = lds_in.read()
-            lds_out.write(linker_script % next_available_lma(source[0].path))
+            lds_out.write(linker_script % (container.pager_task_region_start, next_available_lma(source[0].path)))
 
 lma_lds = Command('include/linker.lds', [previmage, 'include/linker.lds.in'], generate_lma_lds)
 
