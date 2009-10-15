@@ -57,10 +57,11 @@ static struct pager_virtual_address_id_pool {
  */
 int pager_address_pool_init(void)
 {
-		address_pool_init_with_idpool(&pager_vaddr_pool,
-			  	      (struct id_pool *)
-				      &pager_virtual_address_id_pool,
-				      PAGER_MMAP_END, 0xF0000000);
+	address_pool_init_with_idpool(&pager_vaddr_pool,
+		  	      	      (struct id_pool *)
+			      	      &pager_virtual_address_id_pool,
+				      PAGER_MMAP_END,
+				      __pfn_to_addr(cont_mem_regions.pager->end));
 	return 0;
 }
 

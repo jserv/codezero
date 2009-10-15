@@ -113,8 +113,8 @@ int pager_setup_task(void)
 	task->map_end = PAGER_MMAP_END;
 
 	/* Task's total map boundaries */
-	task->start = task->text_start;
-	task->end = 0xF0000000;
+	task->start = __pfn_to_addr(cont_mem_regions.pager->start);
+	task->end = __pfn_to_addr(cont_mem_regions.pager->end);
 
 	/*
 	 * Map all regions as anonymous (since no real
@@ -142,7 +142,8 @@ int pager_setup_task(void)
 	 * microkernel for this pager. Ensure that we also get
 	 * the same from our internal utcb bookkeeping.
 	 */
-	BUG_ON(task->utcb_address != __pfn_to_addr(cont_mem_regions.utcb->start));
+	BUG_ON(task->utcb_address !=
+	       __pfn_to_addr(cont_mem_regions.utcb->start));
 
 	/* Pager must prefault its utcb */
 	prefault_page(task, task->utcb_address,
