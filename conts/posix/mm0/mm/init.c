@@ -142,7 +142,7 @@ int pager_setup_task(void)
 	 * microkernel for this pager. Ensure that we also get
 	 * the same from our internal utcb bookkeeping.
 	 */
-	BUG_ON(task->utcb_address != UTCB_AREA_START);
+	BUG_ON(task->utcb_address != __pfn_to_addr(cont_mem_regions.utcb->start));
 
 	/* Pager must prefault its utcb */
 	prefault_page(task, task->utcb_address,

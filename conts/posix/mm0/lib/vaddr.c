@@ -9,6 +9,7 @@
 #include INC_GLUE(memory.h)
 #include <lib/vaddr.h>
 #include <stdio.h>
+#include <memory.h>
 
 void vaddr_pool_init(struct id_pool *pool, unsigned long start, unsigned long end)
 {
@@ -22,12 +23,13 @@ void *vaddr_new(struct id_pool *pool, int npages)
 	if ((int)(shm_vpfn = ids_new_contiguous(pool, npages)) < 0)
 		return 0;
 
-	return (void *)__pfn_to_addr(shm_vpfn + SHM_AREA_START);
+	return (void *)__pfn_to_addr(shm_vpfn + cont_mem_regions.shmem->start);
 }
 
 int vaddr_del(struct id_pool *pool, void *vaddr, int npages)
 {
-	unsigned long idpfn = __pfn(page_align(vaddr) - SHM_AREA_START);
+	unsigned long idpfn = __pfn(page_align(vaddr) -
+				    __pfn_to_addr(cont_mem_regions.shmem->start));
 
 	if (ids_del_contiguous(pool, idpfn, npages) < 0) {
 		printf("%s: Invalid address range returned to "

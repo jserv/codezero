@@ -169,8 +169,8 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
 	if (vm_flags & VMA_PRIVATE) {
 		if ((map_address >= task->start &&
 	    	     map_address < task->end) ||
-		    (map_address >= UTCB_AREA_START &&
-		     map_address < UTCB_AREA_END)) {
+		    (map_address >= __pfn_to_addr(cont_mem_regions.utcb->start) &&
+		     map_address < __pfn_to_addr(cont_mem_regions.utcb->end))) {
 			return 1;
 		} else
 			return 0;
@@ -181,8 +181,8 @@ int mmap_address_validate(struct tcb *task, unsigned long map_address,
 	} else if (vm_flags & VMA_SHARED) {
 		if ((map_address >= task->start &&
 	    	     map_address < task->end) ||
-		    (map_address >= SHM_AREA_START &&
-	    	     map_address < SHM_AREA_END))
+		    (map_address >= __pfn_to_addr(cont_mem_regions.shmem->start) &&
+	    	     map_address < __pfn_to_addr(cont_mem_regions.shmem->end)))
 			return 1;
 		else
 			return 0;
