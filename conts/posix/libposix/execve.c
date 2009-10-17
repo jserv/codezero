@@ -36,7 +36,7 @@ static inline int l4_execve(const char *pathname, char *const argv[], char *cons
 
 
 	/* Call pager with open() request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_EXECVE)) < 0) {
+	if ((err = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_EXECVE)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}

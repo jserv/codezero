@@ -27,6 +27,8 @@ __l4_mutex_control_t __l4_mutex_control = 0;
 
 struct kip *kip;
 
+l4id_t pagerid;
+
 /*
  * Reference to private UTCB of this thread.
  * Used only for pushing/reading ipc message registers.

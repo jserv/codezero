@@ -36,13 +36,13 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 	write_mr(L4SYS_ARG1, count);
 
 	/* Call pager with readdir() request. Check ipc error. */
-	if ((err = l4_send(PAGER_TID, L4_IPC_TAG_READDIR)) < 0) {
+	if ((err = l4_send(pagerid, L4_IPC_TAG_READDIR)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
 
 	/* Call pager with readdir() request. Check ipc error. */
-	if ((err = l4_receive_extended(PAGER_TID,
+	if ((err = l4_receive_extended(pagerid,
 				       L4_IPC_EXTENDED_MAX_SIZE,
 				       buf)) < 0) {
 		print_err("%s: L4 Extended IPC error: %d.\n", __FUNCTION__, err);
@@ -68,7 +68,7 @@ static inline int l4_readdir(int fd, void *buf, size_t count)
 	write_mr(L4SYS_ARG2, count);
 
 	/* Call pager with readdir() request. Check ipc error. */
-	if ((cnt = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_READDIR)) < 0) {
+	if ((cnt = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_READDIR)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
 	}
@@ -91,7 +91,7 @@ static inline int l4_read(int fd, void *buf, size_t count)
 	write_mr(L4SYS_ARG2, count);
 
 	/* Call pager with read() request. Check ipc error. */
-	if ((cnt = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_READ)) < 0) {
+	if ((cnt = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_READ)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, cnt);
 		return cnt;
 	}

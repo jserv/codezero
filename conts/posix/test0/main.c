@@ -13,6 +13,8 @@
 #include <tests.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <atoi.h>
+#include <stdlib.h>
 
 void wait_pager(l4id_t partner)
 {
@@ -24,6 +26,7 @@ void wait_pager(l4id_t partner)
 }
 
 pid_t parent_of_all;
+pid_t pagerid;
 
 int main(int argc, char *argv[])
 {
@@ -31,6 +34,8 @@ int main(int argc, char *argv[])
 	printf("\n%s: Started with thread id %d\n", __TASKNAME__, getpid());
 
 	parent_of_all = getpid();
+
+	pagerid = ascii_to_int(getenv("pagerid"));
 
 	wait_pager(0);
 

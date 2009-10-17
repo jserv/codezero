@@ -23,7 +23,7 @@ int l4_shmget(l4id_t key, int size, int shmflg)
 	write_mr(L4SYS_ARG2, shmflg);
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_SHMGET)) < 0) {
+	if ((err = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_SHMGET)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -46,7 +46,7 @@ void *l4_shmat(l4id_t shmid, const void *shmaddr, int shmflg)
 	write_mr(L4SYS_ARG2, shmflg);
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_SHMAT)) < 0) {
+	if ((err = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_SHMAT)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return PTR_ERR(err);
 	}
@@ -67,7 +67,7 @@ int l4_shmdt(const void *shmaddr)
 	write_mr(L4SYS_ARG0, (unsigned long)shmaddr);
 
 	/* Call pager with shmget() request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_SHMDT)) < 0) {
+	if ((err = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_SHMDT)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return -1;
 	}

@@ -20,7 +20,7 @@ static inline int l4_fork(void)
 	int err;
 
 	/* Call pager with open() request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_FORK)) < 0) {
+	if ((err = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_FORK)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -67,7 +67,7 @@ int clone(int (*fn)(void *), void *child_stack, int flags, void *arg, ...)
 	write_mr(L4SYS_ARG1, flags);
 
 	/* Perform an ipc but with different return logic. See implementation. */
-	if ((ret = arch_clone(PAGER_TID, PAGER_TID, 0)) < 0) {
+	if ((ret = arch_clone(pagerid, pagerid, 0)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, ret);
 		return ret;
 	}

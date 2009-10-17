@@ -25,7 +25,7 @@ void ipc_full_test(void)
 	}
 
 	/* Call the pager */
-	if ((ret = l4_sendrecv_full(PAGER_TID, PAGER_TID,
+	if ((ret = l4_sendrecv_full(pagerid, pagerid,
 				    L4_IPC_TAG_SYNC_FULL)) < 0) {
 		printf("%s: Failed with %d\n", __FUNCTION__, ret);
 		BUG();

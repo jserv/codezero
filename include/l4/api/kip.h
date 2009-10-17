@@ -71,14 +71,6 @@ struct kip {
 	struct kernel_descriptor kdesc;
 } __attribute__((__packed__));
 
-/*
- * Task id defs for priviledged server tasks. These are dynamically allocated
- * from the id pool, but still the pool should allocate them in this order.
- */
-#define PAGER_TID			0
-#define VFS_TID				1
-#define BLKDEV_TID			2
-
 #define __PAGERNAME__			"mm0"
 #define __VFSNAME__			"fs0"
 #define __BLKDEVNAME__			"blkdev0"

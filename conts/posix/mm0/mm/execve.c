@@ -42,7 +42,7 @@ int init_execve(char *filepath)
 	struct exec_file_desc efd;
 	struct tcb *new_task, *self;
 	struct args_struct args, env;
-	char *env_string = "pagerid=0";
+	char env_string[30];
 	int err;
 	int fd;
 
@@ -51,6 +51,8 @@ int init_execve(char *filepath)
 		.spid = TASK_ID_INVALID,
 		.tgid = TASK_ID_INVALID,
 	};
+
+	sprintf(env_string, "pagerid=%d", self_tid());
 
 	/* Set up args_struct */
 	args.argc = 1;

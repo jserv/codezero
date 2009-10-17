@@ -10,6 +10,7 @@
 #include <string.h>
 #include <errno.h>
 #include <alloca.h>
+#include <l4lib/ipcdefs.h>
 
 #define PAGE_SIZE	0x1000
 
@@ -22,10 +23,11 @@ int exectest(pid_t parent_of_all)
 	void *exec_start = (void *)_start_test_exec;
 	unsigned long size = _end_test_exec - _start_test_exec;
 	char filename[128];
-	char env_string[30];
+	char env_string1[30];
+	char env_string2[30];
 	int left, cnt;
 	char *argv[5];
-	char *envp[2];
+	char *envp[3];
 
 	memset(filename, 0, 128);
 	sprintf(filename, "/home/bahadir/execfile%d", getpid());
@@ -90,10 +92,14 @@ int exectest(pid_t parent_of_all)
 	argv[3] = "FOURTH ARG";
 	argv[4] = 0;
 
-	memset(env_string, 0, 30);
-	sprintf(env_string, "parent_of_all=%d", parent_of_all);
-	envp[0] = env_string;
-	envp[1] = 0; /* This is important as the array needs to end with a null */
+	memset(env_string1, 0, 30);
+	memset(env_string2, 0, 30);
+	sprintf(env_string1, "parent_of_all=%d", parent_of_all);
+	sprintf(env_string2, "pagerid=%d", pagerid);
+
+	envp[0] = env_string1;
+	envp[1] = env_string2;
+	envp[2] = 0; /* This is important as the array needs to end with a null */
 
 	/* Execute the file */
 	err = execve(filename, argv, envp);

@@ -43,7 +43,7 @@ static inline void *l4_mmap(void *start, size_t length, int prot, int flags, int
 	write_mr(L4SYS_ARG0, (unsigned long)&desc);
 
 	/* Call pager with MMAP request. Check ipc error. */
-	if ((ret = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MMAP)) < 0) {
+	if ((ret = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_MMAP)) < 0) {
 		print_err("%s: IPC Error: %d.\n", __FUNCTION__, ret);
 		return PTR_ERR(ret);
 	}
@@ -79,7 +79,7 @@ int l4_munmap(void *start, size_t length)
 	write_mr(L4SYS_ARG1, length);
 
 	/* Call pager with MMAP request. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MUNMAP)) < 0) {
+	if ((err = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_MUNMAP)) < 0) {
 		print_err("%s: IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -111,7 +111,7 @@ int l4_msync(void *start, size_t length, int flags)
 	write_mr(L4SYS_ARG2, flags);
 
 	/* Call pager with MMAP request. */
-	if ((errno = l4_sendrecv(PAGER_TID, PAGER_TID, L4_IPC_TAG_MSYNC)) < 0) {
+	if ((errno = l4_sendrecv(pagerid, pagerid, L4_IPC_TAG_MSYNC)) < 0) {
 		print_err("%s: IPC Error: %d.\n", __FUNCTION__, errno);
 		return -1;
 	}

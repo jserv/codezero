@@ -30,7 +30,7 @@ static inline int l4_open(const char *pathname, int flags, mode_t mode)
 	write_mr(L4SYS_ARG1, (u32)mode);
 
 	/* Call pager with open() request. Check ipc error. */
-	if ((fd = l4_sendrecv_full(PAGER_TID, PAGER_TID, L4_IPC_TAG_OPEN)) < 0) {
+	if ((fd = l4_sendrecv_full(pagerid, pagerid, L4_IPC_TAG_OPEN)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
 		return fd;
 	}

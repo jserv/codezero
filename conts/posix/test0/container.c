@@ -15,14 +15,11 @@ int main(int argc, char *argv[]);
 int __container_init(int argc, char **argv)
 {
 	void *envp = &argv[argc + 1];
-	char *pagerval;
 
 	if ((char *)envp == *argv)
 		envp = &argv[argc];
 
 	__libposix_init(envp);
-
-	pagerval = getenv("pagerid");
 
 	/* Generic L4 thread initialisation */
 	__l4_init();

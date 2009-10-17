@@ -46,7 +46,7 @@ static void *shared_page_address(void)
 	write_mr(L4SYS_ARG0, self_tid());
 
 	/* Call pager with utcb address request. Check ipc error. */
-	if ((err = l4_sendrecv(PAGER_TID, PAGER_TID,
+	if ((err = l4_sendrecv(pagerid, pagerid,
 			       L4_IPC_TAG_SHPAGE)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return PTR_ERR(err);
@@ -76,7 +76,7 @@ int shared_page_init(void)
 	 * Initialise shared page only if we're not the pager.
 	 * The pager does it differently for itself.
 	 */
-	BUG_ON(self_tid() == PAGER_TID);
+	BUG_ON(self_tid() == pagerid);
 
 	/* Obtain our shared page address */
 	shared_page = shared_page_address();

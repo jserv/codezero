@@ -9,6 +9,7 @@
 
 char **__environ;
 
+
 /*
  * Search for given name in name=value string pairs located
  * in the environment segment, and return the pointer to value

@@ -30,7 +30,7 @@ static inline int l4_fstat(int fd, void *buffer)
 	write_mr(L4SYS_ARG1, (unsigned long)buffer);
 
 	/* Call pager with open() request. Check ipc error. */
-	if ((err = l4_sendrecv_full(PAGER_TID, PAGER_TID, L4_IPC_TAG_FSTAT)) < 0) {
+	if ((err = l4_sendrecv_full(pagerid, pagerid, L4_IPC_TAG_FSTAT)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}
@@ -75,7 +75,7 @@ static inline int l4_stat(const char *pathname, void *buffer)
 	write_mr(L4SYS_ARG1, (unsigned long)&ks);
 
 	/* Call vfs with stat() request. Check ipc error. */
-	if ((err = l4_sendrecv_full(PAGER_TID, PAGER_TID, L4_IPC_TAG_STAT)) < 0) {
+	if ((err = l4_sendrecv_full(pagerid, pagerid, L4_IPC_TAG_STAT)) < 0) {
 		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
 		return err;
 	}

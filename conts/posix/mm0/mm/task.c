@@ -434,8 +434,6 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
  *
  * (low) |->argc|argv[0]|argv[1]|...|argv[argc] = 0|envp[0]|envp[1]|...|NULL| (high)
  *
- * IOW:
- *
  * argc
  * argv pointers
  * null
@@ -447,8 +445,10 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
  * space, heap seems to get used in uClibc.
  *
  */
-int task_copy_args_to_user(char *user_stack, unsigned long user_ptr,
-			   struct args_struct *args, struct args_struct *env)
+int task_copy_args_to_user(char *user_stack,
+			   unsigned long user_ptr,
+			   struct args_struct *args,
+			   struct args_struct *env)
 {
 	char **argv_start, **envp_start;
 
@@ -503,6 +503,7 @@ int task_copy_args_to_user(char *user_stack, unsigned long user_ptr,
 			 | ((unsigned long)user_stack &
 			    PAGE_MASK));
 
+		/* Update location */
 		user_stack += strlen(env->argv[i]) + 1;
 	}
 
