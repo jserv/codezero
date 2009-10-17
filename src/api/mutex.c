@@ -234,7 +234,7 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 	}
 
 	/* Check valid user virtual address */
-	if (!USER_ADDR(mutex_address)) {
+	if (KERN_ADDR(mutex_address)) {
 		printk("Invalid args to %s.\n", __FUNCTION__);
 		return -EINVAL;
 	}

@@ -75,26 +75,6 @@ static inline void be32_to_cpu(unsigned int x)
 	p[2] = tmp;
 }
 
-/* Some anticipated values in terms of memory consumption */
-#define TASK_AVERAGE_SIZE		SZ_16MB
-#define TASKS_PER_1MB_GRANT		28
-
-/*
- * Each time a pager grants memory to the kernel, these parameters are called
- * for in order to distribute the granted memory for different purposes.
- *
- * The granted memory is used in an architecture-specific way, e.g. for pgds,
- * pmds, and kernel stack. Therefore this should be defined per-arch.
- */
-typedef struct grant_kmem_usage {
-	unsigned long total_size;
-	unsigned long total_tasks;
-	unsigned long total_pgds;
-	unsigned long total_pmds;
-	unsigned long total_tcbs;
-	unsigned long extra;
-} grant_kmem_usage_t;
-
 void paging_init(void);
 
 unsigned int space_flags_to_ptflags(unsigned int flags);

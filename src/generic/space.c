@@ -147,10 +147,6 @@ int check_access_task(unsigned long vaddr, unsigned long size,
 	int err;
 	unsigned long start, end, mapsize;
 
-	/* Do not allow ridiculously big sizes */
-	if (size >= USER_AREA_SIZE)
-		return -EINVAL;
-
 	/* Get lower and upper page boundaries */
 	start = page_align(vaddr);
 	end = page_align_up(vaddr + size);
