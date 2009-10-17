@@ -20,6 +20,33 @@ asm_string = \
 .incbin "%s"
 '''
 
+test_exec_linker_lds_in = \
+'''
+/*
+ * Simple linker script for userspace or svc tasks.
+ *
+ * Copyright (C) 2007 Bahadir Balban
+ */
+
+virtual_base = %s;
+
+/* First page before the env/args */
+
+
+ENTRY(_start)
+
+SECTIONS
+{
+	. = virtual_base;
+	.text : { *(.text.head) *(.text) }
+	.rodata : { *(.rodata) }
+	.rodata1 : { *(.rodata1) }
+	. = ALIGN(4K);
+	.data :	{ *(.data) }
+	.bss : { *(.bss) }
+}
+'''
+
 def generate_incbin_asm(target, source, env):
     with open(target[0].path, 'w+') as asm_out:
         asm_out.write(asm_string % source[0].path)
@@ -28,15 +55,20 @@ def generate_lma_lds(target, source, env):
     with open(source[1].path, 'r') as lds_in:
         with open(target[0].path, 'w+') as lds_out:
             linker_script = lds_in.read()
-            lds_out.write(linker_script % (container.pager_task_region_start, next_available_lma(source[0].path)))
+            lds_out.write(linker_script % (conv_hex(container.pager_task_region_start), next_available_lma(source[0].path)))
+
+def generate_test_exec_lds(target, source, env):
+    with open(target[0].path, 'w+') as lds_out:
+        lds_out.write(test_exec_linker_lds_in % conv_hex(container.pager_task_region_start))
 
 lma_lds = Command('include/linker.lds', [previmage, 'include/linker.lds.in'], generate_lma_lds)
+test_exec_lds = Command('include/test_exec_linker.lds', [], generate_test_exec_lds)
 
 env = environment.Clone()
 test_exec_env = environment.Clone()
 
 test_exec_env.Append(LIBS = ['posix', 'c-userspace'])
-test_exec_env.Append(LINKFLAGS = '-T' + "test0/include/test_exec_linker.lds")
+test_exec_env.Append(LINKFLAGS = '-T' + test_exec_lds[0].path)
 test_exec_env.Append(CPPFLAGS = ' -D__USERSPACE__')
 test_exec_env.Replace(PROGSUFFIX = '')
 test_exec_src = Glob('src/test_exec/*.[cS]')
@@ -44,7 +76,8 @@ test_exec_objs = test_exec_env.Object(test_exec_src)
 test_exec = test_exec_env.Program('src/test_exec/test_exec', test_exec_objs)
 test_exec_asm = Command('test_exec.S', test_exec, generate_incbin_asm)
 Depends(test_exec, test_exec_objs)
-Depends(test_exec, 'include/test_exec_linker.lds')
+Depends(test_exec, test_exec_lds)
+AlwaysBuild(test_exec_lds)
 
 env.Append(LIBS = ['posix', 'c-userspace'])
 env.Append(LINKFLAGS = '-T' + lma_lds[0].path)
@@ -84,5 +117,6 @@ Depends(elf_wrap_objs, test0)
 Depends(test0, lma_lds)
 Depends(test0, test_exec)
 Depends(lma_lds, previmage)
+AlwaysBuild(lma_lds)
 Depends(test0_elf_elf, elf_wrapped_lds)
 Return('test0_elf_elf')

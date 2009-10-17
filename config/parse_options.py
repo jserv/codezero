@@ -44,8 +44,8 @@ def build_parse_options():
     (options, args) = parser.parse_args()
 
     autogen_true = options.backup_config or options.reset_old_config \
-                   or options.cml_file or options.config \
-                   or options.ncont or options.arch or not os.path.exists(CML2_CML_FILE)
+                   or options.cml_file or options.ncont \
+                   or options.arch or not os.path.exists(CML2_CML_FILE)
 
     # Prepare default if arch not supplied
     if autogen_true and not options.arch:

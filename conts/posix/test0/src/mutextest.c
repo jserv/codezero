@@ -52,7 +52,7 @@ int user_mutex_test(void)
 			    __FUNCTION__, (int)base);
 		goto out_err;
 	} else
-		test_printf("mmap: Anonymous shared buffer at %p\n", base);
+		printf("mmap: Anonymous shared buffer at %p\n", base);
 
 	shared_page = base;
 

@@ -63,5 +63,7 @@ objs = e.Object(src)
 mm0 = e.Program('mm0.elf', objs)
 Depends(objs, container_h)
 Depends(mm0, lma_lds)
+Depends(mm0, container_h)
+AlwaysBuild(container_h)
 Return('mm0')
 

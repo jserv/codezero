@@ -4,7 +4,7 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 
-virtual_base = 0x10000000;
+virtual_base = %s;
 
 /* First page before the env/args */
 
