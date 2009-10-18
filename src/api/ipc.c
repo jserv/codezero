@@ -215,9 +215,12 @@ int ipc_handle_errors(void)
 /* Interruptible ipc */
 int ipc_send(l4id_t recv_tid, unsigned int flags)
 {
-	struct ktcb *receiver = tcb_find(recv_tid);
+	struct ktcb *receiver;
 	struct waitqueue_head *wqhs, *wqhr;
 	int ret = 0;
+
+	if (!(receiver = tcb_find(recv_tid)))
+		return -ESRCH;
 
 	wqhs = &receiver->wqh_send;
 	wqhr = &receiver->wqh_recv;

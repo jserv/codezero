@@ -4,6 +4,8 @@
  * Copyright (C) 2007, 2008 Bahadir Balban
  */
 #include <l4/generic/scheduler.h>
+#include <l4/generic/thread.h>
+#include <l4/api/thread.h>
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
 #include <l4/lib/printk.h>
@@ -62,9 +64,14 @@ void ipc_restore_state(struct ipc_state *state)
 /* Send data fault ipc to the faulty task's pager */
 void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 {
+	int err;
+
 	/* mr[0] has the fault tag. The rest is the fault structure */
-	u32 mr[MR_TOTAL] = { [MR_TAG] = L4_IPC_TAG_PFAULT,
-			     [MR_SENDER] = current->tid };
+	u32 mr[MR_TOTAL] = {
+		[MR_TAG] = L4_IPC_TAG_PFAULT,
+		[MR_SENDER] = current->tid
+	};
+
 	fault_kdata_t *fault = (fault_kdata_t *)&mr[MR_UNUSED_START];
 
 	/* Fill in fault information to pass over during ipc */
@@ -94,16 +101,22 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	/* Set current flags to short ipc */
 	tcb_set_ipc_flags(current, IPC_FLAGS_SHORT);
 
-	/* Send ipc to the task's pager */
-	ipc_sendrecv(current->pagerid, current->pagerid, 0);
+	/* Detect if a pager is self-faulting */
+	if (current->tid == current->pagerid) {
+		printk("Pager (%d) self-faulting. Exiting.\n",
+		       current->tid);
+		thread_destroy_self();
+	}
 
-	/*
-	 * FIXME: CHECK TASK KILL REPLY !!!
-	 * Here, pager has handled the request and sent us back a message.
-	 * It is natural that a pager might want to kill the task due to
-	 * illegal access. Here we ought to check this and kill it rather
-	 * than return back to it.
-	 */
+	/* Send ipc to the task's pager */
+	if ((err = ipc_sendrecv(current->pagerid,
+				current->pagerid, 0)) < 0) {
+		//printk("Thread (%d) faulted in kernel and its pager "
+		//       "returned error (%d). Suspending.\n",
+		//       current->tid, err);
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	}
 }
 
 /*
@@ -226,11 +239,6 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 {
 	set_abort_type(fsr, ARM_DABT);
 
-	/*
-	 * FIXME: Find why if we use a clause like if tid == PAGER_TID
-	 * this prints just the faulted_pc but not the text "Data abort @ PC:"
-	 * Strange.
-	 */
 	dbg_abort("Data abort @ PC: ", faulted_pc);
 
 	/* Check for more details */
@@ -244,6 +252,11 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 	/* This notifies the pager */
 	fault_ipc_to_pager(faulted_pc, fsr, far);
 
+	if (current->flags & TASK_SUSPENDING) {
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	}
+
 	return;
 
 error:
@@ -256,7 +269,6 @@ error:
 	while (1)
 		;
 }
-
 void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 {
 	set_abort_type(fsr, ARM_PABT);
@@ -268,6 +280,11 @@ void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 	if (KERN_ADDR(lr))
 		goto error;
 	fault_ipc_to_pager(faulted_pc, fsr, far);
+
+	if (current->flags & TASK_SUSPENDING) {
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	}
 	return;
 
 error:

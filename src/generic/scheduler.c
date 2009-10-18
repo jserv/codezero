@@ -236,11 +236,23 @@ void sched_suspend_sync(void)
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
 	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total <= 0);
+	BUG_ON(scheduler.prio_total < 0);
 	preempt_enable();
 
-	/* Async wake up any waiters */
-	wake_up_task(tcb_find(current->pagerid), 0);
+	/*
+	 * Async wake up any waiting pagers
+	 *
+	 * If we're not a pager, then a pager must have
+	 * signalled us to suspend, and it must have been
+	 * waiting for us to wake it up when we suspend.
+	 * We do it here.
+	 *
+	 * If though, we _are_ a pager that is suspending,
+	 * we silently do so. Noone is waiting us.
+	 */
+	if (current->pagerid != current->tid)
+		wake_up_task(tcb_find(current->pagerid), 0);
+
 	schedule();
 }
 
@@ -251,13 +263,25 @@ void sched_suspend_async(void)
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
 	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total <= 0);
+	BUG_ON(scheduler.prio_total < 0);
 
 	/* This will make sure we yield soon */
 	preempt_enable();
 
-	/* Async wake up any waiters */
-	wake_up_task(tcb_find(current->pagerid), 0);
+	/*
+	 * Async wake up any waiting pagers
+	 *
+	 * If we're not a pager, then a pager must have
+	 * signalled us to suspend, and it must have been
+	 * waiting for us to wake it up when we suspend.
+	 * We do it here.
+	 *
+	 * If though, we _are_ a pager that is suspending,
+	 * we silently do so. Noone is waiting us.
+	 */
+	if (current->pagerid != current->tid)
+		wake_up_task(tcb_find(current->pagerid), 0);
+
 	need_resched = 1;
 }
 

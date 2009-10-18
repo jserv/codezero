@@ -91,6 +91,8 @@ static inline int is_err(int x)
 
 #define BUG_ON(x)		{if (x) BUG();}
 
+#define WARN_ON(x)	{if (x) printk("%s, %s, %s: Warning something is off here.\n", __FILE__, __FUNCTION__, __LINE__); }
+
 #define BUG_ON_MSG(msg, x)	do {				\
 					printk(msg);		\
 					BUG_ON(x)		\

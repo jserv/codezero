@@ -28,6 +28,7 @@
 #define TASK_INTERRUPTED		(1 << 0)
 #define TASK_SUSPENDING			(1 << 1)
 #define TASK_RESUMING			(1 << 2)
+#define TASK_EXITING			(1 << 3)
 
 /* Task states */
 enum task_state {

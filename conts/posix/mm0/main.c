@@ -187,9 +187,16 @@ void handle_requests(void)
 
 void main(void)
 {
+	struct task_ids ids;
+
+	l4_getid(&ids);
+
 	printf("\n%s: Started with thread id %d\n", __TASKNAME__, self_tid());
 
 	init();
+
+	printf("\n%s: Destroying self (%d), along with any tasks.\n", __TASKNAME__, self_tid());
+	l4_thread_control(THREAD_DESTROY, &ids);
 
 	printf("%s: Memory/Process manager initialized. Listening requests.\n", __TASKNAME__);
 	while (1) {

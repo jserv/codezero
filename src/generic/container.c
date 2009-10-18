@@ -162,9 +162,10 @@ int init_first_pager(struct pager *pager,
 	space->pgd = current_pgd;
 	address_space_attach(task, space);
 
-	/* Initialize container relationships */
+	/* Initialize container/pager relationships */
 	pager->tcb = task;
 	task->pager = pager;
+	task->pagerid = task->tid;
 	task->container = cont;
 	task->cap_list_ptr = &pager->cap_list;
 
@@ -220,12 +221,13 @@ int init_pager(struct pager *pager, struct container *cont)
 
 	task->space = address_space_create(0);
 
-	/* Initialize container relationships */
+	/* Initialize container/pager relationships */
 	pager->tcb = task;
 	task->pager = pager;
 	task->container = cont;
-	task->cap_list_ptr = &pager->cap_list;
+	task->pagerid = task->tid;
 
+	task->cap_list_ptr = &pager->cap_list;
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
 			page_align_up(pager->memsize),
 			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
