@@ -256,8 +256,9 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 	new->context.pc = orig->syscall_regs->lr_usr;
 
 	/* Distribute original thread's ticks into two threads */
-	new->ticks_left = orig->ticks_left / 2;
-	orig->ticks_left /= 2;
+	new->ticks_left = (orig->ticks_left + 1) >> 1;
+	if (!(orig->ticks_left >>= 1))
+		orig->ticks_left = 1;
 
 	return 0;
 }

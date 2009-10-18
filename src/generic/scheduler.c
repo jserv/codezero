@@ -119,7 +119,7 @@ void sched_init(struct scheduler *scheduler)
 
 	scheduler->rq_runnable = &scheduler->sched_rq[0];
 	scheduler->rq_expired = &scheduler->sched_rq[1];
-	scheduler->prio_total = 0;
+	scheduler->prio_total = TASK_PRIO_TOTAL;
 }
 
 /* Swap runnable and expired runqueues. */
@@ -463,10 +463,8 @@ void schedule()
 	}
 
 	/* New tasks affect runqueue total priority. */
-	if (next->flags & TASK_RESUMING) {
-		scheduler.prio_total += next->priority;
+	if (next->flags & TASK_RESUMING)
 		next->flags &= ~TASK_RESUMING;
-	}
 
 	/* Zero ticks indicates task hasn't ran since last rq swap */
 	if (next->ticks_left == 0) {

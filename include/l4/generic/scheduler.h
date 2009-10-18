@@ -17,6 +17,7 @@
 #define TASK_PRIO_SERVER	6
 #define TASK_PRIO_NORMAL	4
 #define TASK_PRIO_LOW		2
+#define TASK_PRIO_TOTAL		30
 
 /* Ticks per second, try ticks = 1000 + timeslice = 1 for regressed preemption test. */
 #define SCHED_TICKS				100
@@ -25,7 +26,7 @@
  * A task can run continuously at this granularity,
  * even if it has a greater total time slice.
  */
-#define SCHED_GRANULARITY			SCHED_TICKS/10
+#define SCHED_GRANULARITY			SCHED_TICKS/50
 
 static inline struct ktcb *current_task(void)
 {
