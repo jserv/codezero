@@ -25,6 +25,7 @@ int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
 	return -EINVAL;
 
 found:
+	printk("%s (%d) Mapping from 0x%lx to 0x%lxp, %lu pages\n", __FUNCTION__, tid, phys, virt, npages);
 	add_mapping_pgd(phys, virt, npages << PAGE_BITS, flags, TASK_PGD(target));
 
 	return 0;

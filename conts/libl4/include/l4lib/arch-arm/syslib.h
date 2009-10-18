@@ -305,6 +305,9 @@ static inline void *l4_map_helper(void *phys, int npages)
 	struct task_ids ids;
 	void *virt = l4_new_virtual(npages);
 
+	if (!phys)
+		BUG();
+
 	l4_getid(&ids);
 	l4_map(phys, virt, npages, MAP_USR_RW_FLAGS, ids.tid);
 	return virt;
