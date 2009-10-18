@@ -126,6 +126,11 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 	int err = 0;
 	struct ktcb *task;
 
+	if ((err = check_access((unsigned long)exregs,
+				sizeof(*exregs),
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
+
 	/* Find tcb from its list */
 	if (!(task = tcb_find(tid)))
 		return -ESRCH;
