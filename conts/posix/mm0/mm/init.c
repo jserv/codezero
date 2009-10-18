@@ -6,7 +6,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/utcb.h>
-
+#include <l4lib/exregs.h>
 #include <l4/lib/list.h>
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
 #include <l4/api/capability.h>
@@ -70,7 +70,9 @@ int pager_setup_task(void)
 {
 	struct tcb *task;
 	struct task_ids ids;
+	struct exregs_data exregs;
 	void *mapped;
+	int err;
 
 	/*
 	 * The thread itself is already known by the kernel,
@@ -131,19 +133,21 @@ int pager_setup_task(void)
 		BUG();
 	}
 
-	task_setup_utcb(task);
 
 	/* Set pager as child and parent of itself */
 	list_insert(&task->child_ref, &task->children);
 	task->parent = task;
 
-	/*
-	 * The first UTCB address is already assigned by the
-	 * microkernel for this pager. Ensure that we also get
-	 * the same from our internal utcb bookkeeping.
-	 */
-	BUG_ON(task->utcb_address !=
-	       __pfn_to_addr(cont_mem_regions.utcb->start));
+	/* Allocate and set own utcb */
+	task_setup_utcb(task);
+	memset(&exregs, 0, sizeof(exregs));
+	exregs_set_utcb(&exregs, task->utcb_address);
+	if ((err = l4_exchange_registers(&exregs, task->tid)) < 0) {
+		printf("FATAL: Pager could not set own utcb. "
+		       "UTCB address: 0x%lx, error: %d\n",
+		       task->utcb_address, err);
+		BUG();
+	}
 
 	/* Pager must prefault its utcb */
 	prefault_page(task, task->utcb_address,

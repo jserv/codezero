@@ -188,9 +188,6 @@ void kip_init()
 	/* KIP + 0xFF0 is pointer to UTCB segment start address */
 	utcb_ref = (struct utcb **)((unsigned long)&kip + UTCB_KIP_OFFSET);
 
-	/* All thread utcbs are allocated starting from UTCB_AREA_START */
-	*utcb_ref = (struct utcb *)UTCB_AREA_START;
-
 	add_boot_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,
 			 MAP_USR_RO_FLAGS);
 	printk("%s: Kernel built on %s, %s\n", __KERNELNAME__,

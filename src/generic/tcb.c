@@ -156,10 +156,10 @@ unsigned int syscall_regs_offset = offsetof(struct ktcb, syscall_regs);
  * space as its context is loaded. The utcb region is a function of
  * this mapping and its offset that is reached via the KIP UTCB pointer
  */
-void task_update_utcb(struct ktcb *cur, struct ktcb *next)
+void task_update_utcb(struct ktcb *task)
 {
 	/* Update the KIP pointer */
-	kip.utcb = next->utcb_address;
+	kip.utcb = task->utcb_address;
 }
 
 /*

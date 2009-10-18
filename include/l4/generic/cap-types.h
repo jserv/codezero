@@ -18,6 +18,8 @@
 #define CAP_TYPE_UMUTEX		(1 << 5)
 #define CAP_TYPE_QUANTITY	(1 << 6)
 
+#define cap_type(c)	((c)->type & CAP_TYPE_MASK)
+
 /*
  * Resource types
  */
@@ -35,6 +37,8 @@
 #define CAP_RTYPE_MUTEXPOOL	(1 << 26)
 #define CAP_RTYPE_MAPPOOL	(1 << 27) /* For pmd spending */
 #define CAP_RTYPE_CAPPOOL	(1 << 28) /* For new cap generation */
+
+#define cap_rtype(c)	((c)->type & CAP_RTYPE_MASK)
 
 /*
  * Access permissions

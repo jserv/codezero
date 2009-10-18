@@ -10,6 +10,8 @@
 #include <l4/generic/resource.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/space.h>
+#include <l4/generic/capability.h>
+#include <l4/generic/container.h>
 #include <l4/api/space.h>
 #include <l4/api/ipc.h>
 #include <l4/api/kip.h>
@@ -33,6 +35,8 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
 {
 	task_context_t *context = &task->context;
 
+	if (!exregs->valid_vect)
+		goto flags;
 	/*
 	 * NOTE:
 	 * We don't care if register values point at invalid addresses
@@ -74,29 +78,48 @@ void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
 	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, pc))
 		context->pc = exregs->context.pc;
 
+flags:
 	/* Set thread's pager if one is supplied */
 	if (exregs->flags & EXREGS_SET_PAGER)
 		task->pagerid = exregs->pagerid;
 
 	/* Set thread's utcb if supplied */
-	if (exregs->flags & EXREGS_SET_UTCB)
+	if (exregs->flags & EXREGS_SET_UTCB) {
 		task->utcb_address = exregs->utcb_address;
+
+		/*
+		 * If task is the one currently runnable,
+		 * update kip utcb reference
+		 */
+		if (task == current)
+			task_update_utcb(task);
+	}
 }
 
 /*
  * exchange_registers()
  *
  * This call is used by the pagers to set (and in the future read)
- * the register context of a thread. The thread's registers can be
- * set only when the thread is in user mode. A newly created thread
- * that is the copy of another thread (forked or cloned) will also
- * be given its user mode context on the first chance to execute so
- * such threads can also be modified by this call before execution.
+ * the register context of a thread. The thread's registers that are
+ * set by this call are loaded whenever the thread gets a chance to
+ * run in user mode.
+ *
+ * It is ensured that whenever this call is made, the thread is
+ * either already running in user mode, or has been suspended in
+ * kernel mode, just before returning to user mode.
+ *
+ * A newly created thread that is the copy of another thread (forked
+ * or cloned) will also be given its user mode context on the first
+ * chance to execute so such threads can also be modified by this
+ * call before execution.
  *
  * A thread executing in the kernel cannot be modified since this
  * would compromise the kernel. Also the thread must be in suspended
  * condition so that the scheduler does not execute it as we modify
  * its context.
+ *
+ * FIXME: Still looks like suspended threads in the kernel
+ * need to be made immutable. see src/glue/arm/systable.c
  */
 int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 {
@@ -114,30 +137,27 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
 
-	/* Now check that the task is suspended */
-	if (task->state != TASK_INACTIVE) {
+	/*
+	 * Now check that the task is suspended.
+	 *
+	 * Only modification of non-register fields are
+	 * allowed on active tasks and those tasks must
+	 * be the pagers making the call on themselves.
+	 */
+	if (task->state != TASK_INACTIVE && exregs->valid_vect &&
+	    current != task && task->pager->tcb != current) {
 		err = -EACTIVE;
 		goto out;
 	}
 
-#if 0
-	A suspended thread implies it cannot do any harm
-	even if it is in kernel mode.
 	/*
-	 * The thread must be in user mode for its context
-	 * to be modified.
+	 * FIXME:
+	 * Capability Check.
+	 * Whose clist are we ought to check? Pager's or threads?
+	 * Need to check exregs capability
+	 * Need to check utcb capability if present.
+	 * if ((exregs->flags & EXREGS_SET_UTCB) &&
 	 */
-	if (!TASK_IN_USER(task)) {
-		err = -EPERM;
-		goto out;
-	}
-#endif
-
-	/* Check UTCB is in valid range */
-	if (exregs->flags & EXREGS_SET_UTCB &&
-	    !(exregs->utcb_address >= UTCB_AREA_START &&
-	    exregs->utcb_address < UTCB_AREA_END))
-		return -EINVAL;
 
 	/* Copy registers */
 	do_exchange_registers(task, exregs);

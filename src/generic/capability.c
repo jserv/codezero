@@ -61,10 +61,8 @@ struct capability *capability_find_by_rtype(struct cap_list *clist,
 {
 	struct capability *cap;
 
-	list_foreach_struct(cap, &clist->caps, list) {
+	list_foreach_struct(cap, &clist->caps, list)
 		if ((cap->type & CAP_RTYPE_MASK) == rtype)
 			return cap;
-	}
 	return 0;
 }
-

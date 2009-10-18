@@ -274,7 +274,7 @@ static inline void context_switch(struct ktcb *next)
 	arch_hardware_flush(TASK_PGD(next));
 
 	/* Update utcb region for next task */
-	task_update_utcb(cur, next);
+	task_update_utcb(next);
 
 	/* Switch context */
 	arch_switch(cur, next);

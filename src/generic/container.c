@@ -23,7 +23,7 @@ int container_init(struct container *c)
 	init_ktcb_list(&c->ktcb_list);
 	init_mutex_queue_head(&c->mutex_queue_head);
 
-	/* Ini pager structs */
+	/* Init pager structs */
 	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++)
 		cap_list_init(&c->pager[i].cap_list);
 
@@ -48,23 +48,23 @@ void kcont_insert_container(struct container *c,
 }
 
 /*
+ * FIXME: Remove completely. Need to be done in userspace.
  * This searches pager capabilities and if it has a virtual memory area
  * defined as a UTCB, uses the first entry as its utcb. If not, it is
  * not an error, perhaps another pager will map its utcb.
  */
-void task_setup_utcb(struct ktcb *task, struct pager *pager)
+void pager_init_utcb(struct ktcb *task, struct pager *pager)
 {
 	struct capability *cap;
 
 	/* Find a virtual memory capability with UTCB map permissions */
 	list_foreach_struct(cap, &pager->cap_list.caps, list) {
-		if (((cap->type & CAP_RTYPE_MASK) ==
-		     CAP_RTYPE_VIRTMEM) &&
-		    (cap->access & CAP_MAP_UTCB)) {
-			/* Use first address slot as pager's utcb */
-			task->utcb_address = __pfn_to_addr(cap->start);
-			return;
-		}
+		if (cap_rtype(cap) == CAP_RTYPE_VIRTMEM &&
+		    cap->access & CAP_MAP_UTCB) {
+ 			/* Use first address slot as pager's utcb */
+ 			task->utcb_address = __pfn_to_addr(cap->start);
+			break;
+ 		}
 	}
 }
 
@@ -146,7 +146,8 @@ int init_first_pager(struct pager *pager,
 
 	/* Initialize ktcb */
 	task_init_registers(task, pager->start_vma);
-	task_setup_utcb(task, pager);
+
+	pager_init_utcb(task, pager);
 
 	/* Allocate space structure */
 	if (!(space = alloc_space()))
@@ -215,7 +216,7 @@ int init_pager(struct pager *pager, struct container *cont)
 
 	task_init_registers(task, pager->start_vma);
 
-	task_setup_utcb(task, pager);
+	pager_init_utcb(task, pager);
 
 	task->space = address_space_create(0);
 

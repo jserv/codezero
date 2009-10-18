@@ -9,7 +9,7 @@ static inline int set_intersection(unsigned long a, unsigned long b,
 				   unsigned long c, unsigned long d)
 {
 	/*
-	 * Below is the complement (') of the intersection
+	 * Below is the complement set (') of the intersection
 	 * of 2 ranges, much simpler ;-)
 	 */
 	if (b <= c || a >= d)

@@ -161,7 +161,7 @@ struct ktcb *tcb_alloc_init(void);
 void tcb_delete(struct ktcb *tcb);
 
 void init_ktcb_list(struct ktcb_list *ktcb_list);
-void task_update_utcb(struct ktcb *cur, struct ktcb *next);
+void task_update_utcb(struct ktcb *task);
 int tcb_check_and_lazy_map_utcb(struct ktcb *task);
 
 #endif /* __TCB_H__ */
