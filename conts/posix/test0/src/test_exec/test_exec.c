@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include "atoi.h"
 
 void wait_pager(l4id_t partner)
 {
@@ -22,6 +23,8 @@ void wait_pager(l4id_t partner)
 	l4_send(partner, L4_IPC_TAG_SYNC);
 	// printf("Pager synced with us.\n");
 }
+
+pid_t pagerid;
 
 int main(int argc, char *argv[])
 {
@@ -43,13 +46,14 @@ int main(int argc, char *argv[])
 
 	/* Get parent of all pid as a string from environment */
 	parent_of_all = getenv("parent_of_all");
+	pagerid = ascii_to_int(getenv("pagerid"));
 
 	/* Compare two pid strings. We use strings because we dont have atoi() */
 	if (!strcmp(pidbuf, parent_of_all)) {
 		printf("EXECVE TEST         -- PASSED --\n");
 		printf("\nThread (%d): Continues to sync with the pager...\n\n", getpid());
 		while (1)
-			wait_pager(0);
+			wait_pager(pagerid);
 	}
 out:
 	_exit(0);

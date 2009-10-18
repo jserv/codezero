@@ -385,7 +385,7 @@ elf_loadFile(void *elfFile, bool phys)
 //		printf("Memory cleared.\n");
 	}
 // And this one
-	//printf("\n");
+//	printf("\n");
 
 	return true;
 }

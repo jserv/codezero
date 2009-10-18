@@ -268,7 +268,8 @@ static inline void context_switch(struct ktcb *next)
 {
 	struct ktcb *cur = current;
 
-	// printk("(%d) to (%d)\n", cur->tid, next->tid);
+	//printk("(%d) to (%d)\n", cur->tid, next->tid);
+
 
 	/* Flush caches and everything */
 	arch_hardware_flush(TASK_PGD(next));

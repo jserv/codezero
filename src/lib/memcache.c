@@ -23,7 +23,7 @@ void *mem_cache_alloc(struct mem_cache *cache)
 {
 	int bit;
 	int err;
-
+	printk("%s Called\n", __FUNCTION__);
 	if (cache->free > 0) {
 		if ((err = mutex_lock(&cache->mutex)) < 0)
 			return PTR_ERR(err);	/* Interruptible mutex */

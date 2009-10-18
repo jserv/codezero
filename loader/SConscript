@@ -17,11 +17,6 @@ PROJRELROOT = '../../'
 from config.projpaths import *
 from scripts.loader.generate_loader_asm import *
 
-#loader_ksyms = generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \
-#                                       join(BUILDDIR, 'kernel.elf'))
-
-#loader_ksyms = Command([]'ksyms.S', 'kernel.elf', ksym_to_loader)
-
 def ksym_to_loader(target, source, env):
     generate_ksym_to_loader(target[0].path, source[0].path)
 

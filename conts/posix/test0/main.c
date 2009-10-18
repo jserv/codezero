@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 
 	pagerid = ascii_to_int(getenv("pagerid"));
 
-	wait_pager(0);
+	wait_pager(pagerid);
 
 	printf("\n%s: Running POSIX API tests.\n", __TASKNAME__);
 
@@ -66,6 +66,6 @@ int main(int argc, char *argv[])
 	exectest(parent_of_all);
 
 	while (1)
-		wait_pager(0);
+		wait_pager(pagerid);
 }
 
