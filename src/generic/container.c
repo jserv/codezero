@@ -169,15 +169,15 @@ int init_first_pager(struct pager *pager,
 	task->container = cont;
 	task->cap_list_ptr = &pager->cap_list;
 
-	/* Map the task's space */
-	add_mapping_pgd(pager->start_lma, pager->start_vma,
-			page_align_up(pager->memsize),
-			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
-
 	printk("%s: Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
 	       __KERNELNAME__,
 	       __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
+
+	/* Map the task's space */
+	add_mapping_pgd(pager->start_lma, pager->start_vma,
+			page_align_up(pager->memsize),
+			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
 
 	/* Initialize task scheduler parameters */
 	sched_init_task(task, TASK_PRIO_PAGER);
@@ -228,13 +228,14 @@ int init_pager(struct pager *pager, struct container *cont)
 	task->pagerid = task->tid;
 
 	task->cap_list_ptr = &pager->cap_list;
-	add_mapping_pgd(pager->start_lma, pager->start_vma,
-			page_align_up(pager->memsize),
-			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
 
 	printk("%s: Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
 	       __KERNELNAME__, __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
+
+	add_mapping_pgd(pager->start_lma, pager->start_vma,
+			page_align_up(pager->memsize),
+			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
 
 	/* Initialize task scheduler parameters */
 	sched_init_task(task, TASK_PRIO_PAGER);

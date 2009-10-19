@@ -111,8 +111,8 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 
 	/* Detect if a pager is self-faulting */
 	if (current->tid == current->pagerid) {
-		printk("Pager (%d) self-faulting. Exiting.\n",
-		       current->tid);
+		printk("Pager (%d) faulted on itself. FAR: 0x%x, PC: 0x%x Exiting.\n",
+		       current->tid, fault->far, fault->faulty_pc);
 		task_destroy_current();
 	}
 

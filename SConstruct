@@ -41,3 +41,4 @@ objects += SConscript('src/api/SConscript', exports = {'symbols' : all_syms, 'en
 
 kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
 Alias('kernel', kernel_elf)
+Depends(kernel_elf, 'include/l4/config.h')
