@@ -171,8 +171,6 @@ void task_make_zombie(struct ktcb *task)
 	wake_up_all(&task->wqh_send, 0);
 	wake_up_all(&task->wqh_recv, 0);
 
-	printk("Thread (%d) becoming zombie. (Current: (%d))\n", task->tid, current->tid);
-
 	BUG_ON(!(task->flags & TASK_EXITING));
 
 	/* Add to zombie list, to be destroyed later */
@@ -220,7 +218,6 @@ int task_resume(struct ktcb *task)
 
 	return 0;
 }
-
 
 /* Runs a thread for the first time */
 int thread_start(struct task_ids *ids)
@@ -433,8 +430,6 @@ static inline int thread_suspend(struct task_ids *ids)
 static inline int thread_destroy(struct task_ids *ids)
 {
 	struct ktcb *task;
-
-	printk("%s: Destroying (%d)\n", __FUNCTION__, ids->tid);
 
 	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
