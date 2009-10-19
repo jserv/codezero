@@ -347,6 +347,10 @@ int set_page_map(struct page_bitmap *page_map,
 		goto error;
 	}
 
+	/* Adjust bases so words get set from index 0 */
+	pfn_start -= page_map->pfn_start;
+	pfn_end -= page_map->pfn_start;
+
 	if (val)
 		for (int i = pfn_start; i < pfn_end; i++)
 			page_map->map[BITWISE_GETWORD(i)] |= BITWISE_GETBIT(i);
@@ -384,7 +388,7 @@ void init_physmem_secondary(struct membank *membank)
 	/* First find the first free page after last used page */
 	for (int i = 0; i < npages; i++)
 		if ((pmap->map[BITWISE_GETWORD(i)] & BITWISE_GETBIT(i)))
-			membank[0].free = (i + 1) * PAGE_SIZE;
+			membank[0].free = membank[0].start + (i + 1) * PAGE_SIZE;
 	BUG_ON(membank[0].free >= membank[0].end);
 
 	/*
@@ -420,8 +424,7 @@ void init_physmem_secondary(struct membank *membank)
 	membank[0].free += pg_npages * PAGE_SIZE;
 
 	/* Update page bitmap for the pages used for the page array */
-	for (int i = pg_spfn; i < pg_epfn; i++)
-		pmap->map[BITWISE_GETWORD(i)] |= BITWISE_GETBIT(i);
++	set_page_map(pmap, pg_spfn, pg_epfn - pg_spfn, 1);
 
 	/* Initialise the page array */
 	for (int i = 0; i < npages; i++) {
@@ -435,7 +438,7 @@ void init_physmem_secondary(struct membank *membank)
 		      & BITWISE_GETBIT(i)))
 			membank[0].page_array[i].refcnt = -1;
 		else	/* Last page used +1 is free */
-			ffree_addr = (i + 1) * PAGE_SIZE;
+			ffree_addr = membank[0].start + (i + 1) * PAGE_SIZE;
 	}
 
 	/*
@@ -489,7 +492,7 @@ void init_physmem_primary()
 
 	physmem.free_cur = pfn_images_end;
 	physmem.free_end = physmem.end;
-	physmem.numpages = __pfn(physmem.end - physmem.start);
+	physmem.numpages = physmem.end - physmem.start;
 }
 
 void init_physmem(void)
