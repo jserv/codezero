@@ -41,13 +41,9 @@ int sys_thread_switch(void)
  * already gone, the state is already TASK_INACTIVE so the pager
  * won't sleep at all.
  */
-int thread_suspend(l4id_t tid, unsigned int flags)
+int task_suspend(struct ktcb *task, unsigned int flags)
 {
-	struct ktcb *task;
 	int ret = 0;
-
-	if (!(task = tcb_find(tid)))
-		return -ESRCH;
 
 	if (task->state == TASK_INACTIVE)
 		return 0;
@@ -106,7 +102,7 @@ int thread_recycle(struct task_ids *ids)
 	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
 
-	if ((ret = thread_suspend(ids->tid, 0)) < 0)
+	if ((ret = task_suspend(task, 0)) < 0)
 		return ret;
 
 	/*
@@ -128,27 +124,23 @@ int thread_recycle(struct task_ids *ids)
 	return 0;
 }
 
-void thread_destroy_current();
+void task_destroy_current();
 
-int thread_destroy(l4id_t tid)
+int task_destroy(struct ktcb *task)
 {
-	struct ktcb *task;
 	int ret;
-
-	printk("%s: Destroying (%d)\n", __FUNCTION__, tid);
 
 	/*
 	 * Pager destroying itself
 	 */
-	if (tid == current->tid) {
-		thread_destroy_current();
+	if (task == current) {
+		task_destroy_current();
+
+		/* It should not return */
 		BUG();
 	}
 
-	if (!(task = tcb_find(tid)))
-		return -ESRCH;
-
-	if ((ret = thread_suspend(tid, 0)) < 0)
+	if ((ret = task_suspend(task, 0)) < 0)
 		return ret;
 
 	/* Remove tcb from global list so any callers will get -ESRCH */
@@ -167,7 +159,7 @@ int thread_destroy(l4id_t tid)
 	return 0;
 }
 
-void thread_make_zombie(struct ktcb *task)
+void task_make_zombie(struct ktcb *task)
 {
 	/* Remove from its list, callers get -ESRCH */
 	tcb_remove(task);
@@ -192,7 +184,7 @@ void thread_make_zombie(struct ktcb *task)
  * address or voluntarily. All threads managed also get
  * destroyed.
  */
-void thread_destroy_current(void)
+void task_destroy_current(void)
 {
 	struct ktcb *task, *n;
 
@@ -204,7 +196,7 @@ void thread_destroy_current(void)
 		if (task->tid == current->tid)
 			continue;
 		spin_unlock(&curcont->ktcb_list.list_lock);
-		thread_suspend(task->tid, TASK_EXITING);
+		task_suspend(task, TASK_EXITING);
 		spin_lock(&curcont->ktcb_list.list_lock);
 	}
 	spin_unlock(&curcont->ktcb_list.list_lock);
@@ -215,13 +207,8 @@ void thread_destroy_current(void)
 	sched_suspend_sync();
 }
 
-int thread_resume(struct task_ids *ids)
+int task_resume(struct ktcb *task)
 {
-	struct ktcb *task;
-
-	if (!(task = tcb_find(ids->tid)))
-		return -ESRCH;
-
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
 
@@ -230,8 +217,10 @@ int thread_resume(struct task_ids *ids)
 
 	/* Release lock and return */
 	mutex_unlock(&task->thread_control_lock);
+
 	return 0;
 }
+
 
 /* Runs a thread for the first time */
 int thread_start(struct task_ids *ids)
@@ -420,6 +409,39 @@ out_err:
 	return err;
 }
 
+
+static inline int thread_resume(struct task_ids *ids)
+{
+	struct ktcb *task;
+
+	if (!(task = tcb_find(ids->tid)))
+		return -ESRCH;
+
+	return task_resume(task);
+}
+
+static inline int thread_suspend(struct task_ids *ids)
+{
+	struct ktcb *task;
+
+	if (!(task = tcb_find(ids->tid)))
+		return -ESRCH;
+
+	return task_suspend(task, 0);
+}
+
+static inline int thread_destroy(struct task_ids *ids)
+{
+	struct ktcb *task;
+
+	printk("%s: Destroying (%d)\n", __FUNCTION__, ids->tid);
+
+	if (!(task = tcb_find(ids->tid)))
+		return -ESRCH;
+
+	return task_destroy(task);
+}
+
 /*
  * Creates, destroys and modifies threads. Also implicitly creates an address
  * space for a thread that doesn't already have one, or destroys it if the last
@@ -441,13 +463,13 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		ret = thread_start(ids);
 		break;
 	case THREAD_SUSPEND:
-		ret = thread_suspend(ids->tid, 0);
+		ret = thread_suspend(ids);
 		break;
 	case THREAD_RESUME:
 		ret = thread_resume(ids);
 		break;
 	case THREAD_DESTROY:
-		ret = thread_destroy(ids->tid);
+		ret = thread_destroy(ids);
 		break;
 	case THREAD_RECYCLE:
 		ret = thread_recycle(ids);

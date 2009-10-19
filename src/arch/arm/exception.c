@@ -113,7 +113,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	if (current->tid == current->pagerid) {
 		printk("Pager (%d) self-faulting. Exiting.\n",
 		       current->tid);
-		thread_destroy_current();
+		task_destroy_current();
 	}
 
 	/* Send ipc to the task's pager */

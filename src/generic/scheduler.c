@@ -241,7 +241,7 @@ void sched_suspend_sync(void)
 	preempt_enable();
 
 	if (current->flags & TASK_EXITING)
-		thread_make_zombie(current);
+		task_make_zombie(current);
 
 	/*
 	 * Async wake up any waiting pagers
