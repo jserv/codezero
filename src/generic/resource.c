@@ -399,6 +399,8 @@ void init_kernel_container(struct kernel_container *kcont)
 	memcap_unmap(&kcont->physmem_free, kernel_area->start,
 		     kernel_area->end);
 
+	init_ktcb_list(&kcont->zombie_list);
+
 	/* TODO:
 	 * Add all virtual memory areas used by the kernel
 	 * e.g. kernel virtual area, syscall page, kip page,

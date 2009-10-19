@@ -133,13 +133,6 @@ union ktcb_union {
 	char kstack[PAGE_SIZE];
 };
 
-/* Hash table for all existing tasks */
-struct ktcb_list {
-	struct link list;
-	struct spinlock list_lock;
-	int count;
-};
-
 /*
  * Each task is allocated a unique global id. A thread group can only belong to
  * a single leader, and every thread can only belong to a single thread group.
@@ -161,6 +154,8 @@ void tcb_init(struct ktcb *tcb);
 struct ktcb *tcb_alloc_init(void);
 void tcb_delete(struct ktcb *tcb);
 
+
+void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list);
 void init_ktcb_list(struct ktcb_list *ktcb_list);
 void task_update_utcb(struct ktcb *task);
 int tcb_check_and_lazy_map_utcb(struct ktcb *task);

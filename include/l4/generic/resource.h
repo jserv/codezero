@@ -8,8 +8,6 @@
 #define __RESOURCES_H__
 
 /* Number of containers defined at compile-time */
-#include <l4/config.h>
-
 #include <l4/generic/capability.h>
 #include <l4/lib/idpool.h>
 #include INC_SUBARCH(mm.h)
@@ -40,6 +38,13 @@ container_head_init(struct container_head *chead)
 	chead->ncont = 0;
 	link_init(&chead->list);
 }
+
+/* Hash table for all existing tasks */
+struct ktcb_list {
+	struct link list;
+	struct spinlock list_lock;
+	int count;
+};
 
 /*
  * Everything on the platform is described and stored
@@ -81,6 +86,9 @@ struct kernel_container {
 	struct mem_cache *mutex_cache;
 	struct mem_cache *cap_cache;
 	struct mem_cache *cont_cache;
+
+	/* Zombie thread list */
+	struct ktcb_list zombie_list;
 };
 
 extern struct kernel_container kernel_container;

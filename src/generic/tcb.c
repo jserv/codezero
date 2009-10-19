@@ -127,6 +127,15 @@ struct ktcb *tcb_find(l4id_t tid)
 	return 0;
 }
 
+void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list)
+{
+	spin_lock(&ktcb_list->list_lock);
+	BUG_ON(!list_empty(&new->task_list));
+	BUG_ON(!++ktcb_list->count);
+	list_insert(&new->task_list, &ktcb_list->list);
+	spin_unlock(&ktcb_list->list_lock);
+}
+
 void tcb_add(struct ktcb *new)
 {
 	struct container *c = new->container;

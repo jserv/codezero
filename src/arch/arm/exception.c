@@ -79,21 +79,29 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	fault->fsr = fsr;
 	fault->far = far;
 
-	/* Write pte of the abort address, which is different on pabt/dabt */
+	/*
+	 * Write pte of the abort address,
+	 * which is different on pabt/dabt
+	 */
 	if (is_prefetch_abort(fsr))
 		fault->pte = virt_to_pte(faulty_pc);
 	else
 		fault->pte = virt_to_pte(far);
 
 	/*
-	 * System calls save arguments (and message registers) on the kernel
-	 * stack. They are then referenced from the caller's ktcb. Here, we
-	 * forge a fault structure as if an ipc syscall has occured. Then
-	 * the reference to the fault structure is set in the ktcb such that
-	 * it lies on the mr0 offset when referred as the syscall context.
+	 * System calls save arguments (and message registers)
+	 * on the kernel stack. They are then referenced from
+	 * the caller's ktcb. Here, we forge a fault structure
+	 * as if an ipc syscall has occured. Then the reference
+	 * to the fault structure is set in the ktcb such that
+	 * it lies on the mr0 offset when referred as the syscall
+	 * context.
 	 */
 
-	/* Assign fault such that it overlaps as the MR0 reference in ktcb. */
+	/*
+	 * Assign fault such that it overlaps
+	 * as the MR0 reference in ktcb.
+	 */
 	current->syscall_regs = (syscall_context_t *)
 				((unsigned long)&mr[0] -
 				 offsetof(syscall_context_t, r3));
@@ -105,25 +113,28 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	if (current->tid == current->pagerid) {
 		printk("Pager (%d) self-faulting. Exiting.\n",
 		       current->tid);
-		thread_destroy_self();
+		thread_destroy_current();
 	}
 
 	/* Send ipc to the task's pager */
 	if ((err = ipc_sendrecv(current->pagerid,
 				current->pagerid, 0)) < 0) {
-		//printk("Thread (%d) faulted in kernel and its pager "
-		//       "returned error (%d). Suspending.\n",
-		//       current->tid, err);
+		printk("Thread (%d) faulted in kernel and its pager "
+		       "returned error (%d). Suspend and exiting thread.\n",
+		       current->tid, err);
 		BUG_ON(current->nlocks);
+		current->flags |= TASK_EXITING;
 		sched_suspend_sync();
 	}
 }
 
 /*
- * When a task calls the kernel and the supplied user buffer is not mapped, the kernel
- * generates a page fault to the task's pager so that the pager can make the decision
- * on mapping the buffer. Remember that if a task maps its own user buffer to itself
- * this way, the kernel can access it, since it shares that task's page table.
+ * When a task calls the kernel and the supplied user buffer is
+ * not mapped, the kernel generates a page fault to the task's
+ * pager so that the pager can make the decision on mapping the
+ * buffer. Remember that if a task maps its own user buffer to
+ * itself this way, the kernel can access it, since it shares
+ * that task's page table.
  */
 int pager_pagein_request(unsigned long addr, unsigned long size,
 			 unsigned int flags)
@@ -251,12 +262,6 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 
 	/* This notifies the pager */
 	fault_ipc_to_pager(faulted_pc, fsr, far);
-
-	if (current->flags & TASK_SUSPENDING) {
-		BUG_ON(current->nlocks);
-		sched_suspend_sync();
-	}
-
 	return;
 
 error:
@@ -269,6 +274,7 @@ error:
 	while (1)
 		;
 }
+
 void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 {
 	set_abort_type(fsr, ARM_PABT);
@@ -280,11 +286,6 @@ void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 	if (KERN_ADDR(lr))
 		goto error;
 	fault_ipc_to_pager(faulted_pc, fsr, far);
-
-	if (current->flags & TASK_SUSPENDING) {
-		BUG_ON(current->nlocks);
-		sched_suspend_sync();
-	}
 	return;
 
 error:
@@ -306,14 +307,17 @@ void dump_undef_abort(u32 undef_addr)
 }
 
 extern int current_irq_nest_count;
+
 /*
- * This is called right where the nest count is increased in case the nesting
- * is beyond the predefined max limit. It is another matter whether this
- * limit is enough to guarantee the kernel stack is not overflown.
+ * This is called right where the nest count is increased
+ * in case the nesting is beyond the predefined max limit.
+ * It is another matter whether this limit is enough to
+ * guarantee the kernel stack is not overflown.
  */
 void irq_overnest_error(void)
 {
-	dprintk("Irqs nested beyond limit. Current count: ", current_irq_nest_count);
+	dprintk("Irqs nested beyond limit. Current count: ",
+		current_irq_nest_count);
 	printascii("Halting system...\n");
 	while(1)
 		;

@@ -24,9 +24,24 @@ int sys_thread_switch(void)
 
 /*
  * This suspends a thread which is in either suspended,
- * sleeping or runnable state.
+ * sleeping or runnable state. `flags' field specifies an additional
+ * status for the thread, that implies an additional action as well
+ * as suspending. For example, a TASK_EXITING flag ensures the task
+ * is moved to a zombie queue during suspension.
+ *
+ * Why no race?
+ *
+ * There is no race between the pager setting TASK_SUSPENDING,
+ * and waiting for TASK_INACTIVE non-atomically because the target
+ * task starts suspending only when it sees TASK_SUSPENDING set and
+ * it only wakes up the pager after it has switched state to
+ * TASK_INACTIVE.
+ *
+ * If the pager hasn't come to wait_event() and the wake up call is
+ * already gone, the state is already TASK_INACTIVE so the pager
+ * won't sleep at all.
  */
-int thread_suspend(l4id_t tid)
+int thread_suspend(l4id_t tid, unsigned int flags)
 {
 	struct ktcb *task;
 	int ret = 0;
@@ -38,7 +53,7 @@ int thread_suspend(l4id_t tid)
 		return 0;
 
 	/* Signify we want to suspend the thread */
-	task->flags |= TASK_SUSPENDING;
+	task->flags |= TASK_SUSPENDING | flags;
 
 	/* Wake it up if it's sleeping */
 	wake_up_task(task, WAKEUP_INTERRUPT | WAKEUP_SYNC);
@@ -91,7 +106,7 @@ int thread_recycle(struct task_ids *ids)
 	if (!(task = tcb_find(ids->tid)))
 		return -ESRCH;
 
-	if ((ret = thread_suspend(ids->tid)) < 0)
+	if ((ret = thread_suspend(ids->tid, 0)) < 0)
 		return ret;
 
 	/*
@@ -113,7 +128,7 @@ int thread_recycle(struct task_ids *ids)
 	return 0;
 }
 
-void thread_destroy_self();
+void thread_destroy_current();
 
 int thread_destroy(l4id_t tid)
 {
@@ -126,14 +141,14 @@ int thread_destroy(l4id_t tid)
 	 * Pager destroying itself
 	 */
 	if (tid == current->tid) {
-		thread_destroy_self();
+		thread_destroy_current();
 		BUG();
 	}
 
 	if (!(task = tcb_find(tid)))
 		return -ESRCH;
 
-	if ((ret = thread_suspend(tid)) < 0)
+	if ((ret = thread_suspend(tid, 0)) < 0)
 		return ret;
 
 	/* Remove tcb from global list so any callers will get -ESRCH */
@@ -152,16 +167,36 @@ int thread_destroy(l4id_t tid)
 	return 0;
 }
 
+void thread_make_zombie(struct ktcb *task)
+{
+	/* Remove from its list, callers get -ESRCH */
+	tcb_remove(task);
+
+	/*
+	 * If there are any sleepers on any of the task's
+	 * waitqueues, we need to wake those tasks up.
+	 */
+	wake_up_all(&task->wqh_send, 0);
+	wake_up_all(&task->wqh_recv, 0);
+
+	printk("Thread (%d) becoming zombie. (Current: (%d))\n", task->tid, current->tid);
+
+	BUG_ON(!(task->flags & TASK_EXITING));
+
+	/* Add to zombie list, to be destroyed later */
+	ktcb_list_add(task, &kernel_container.zombie_list);
+}
+
 /*
  * Pagers destroy themselves either by accessing an illegal
  * address or voluntarily. All threads managed also get
  * destroyed.
  */
-void thread_destroy_self(void)
+void thread_destroy_current(void)
 {
 	struct ktcb *task, *n;
 
-	/* Destroy all threads under control of this pager */
+	/* Suspend all threads under control of this pager */
 	spin_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_removable_struct(task, n,
 				      &curcont->ktcb_list.list,
@@ -169,41 +204,15 @@ void thread_destroy_self(void)
 		if (task->tid == current->tid)
 			continue;
 		spin_unlock(&curcont->ktcb_list.list_lock);
-		thread_destroy(task->tid);
+		thread_suspend(task->tid, TASK_EXITING);
 		spin_lock(&curcont->ktcb_list.list_lock);
 	}
 	spin_unlock(&curcont->ktcb_list.list_lock);
 
-	/*
-	 * Indicate intention to destroy to any
-	 * destroyer code we will add later on
-	 */
+	/* Indicate we want to become zombie on suspend */
 	current->flags |= TASK_EXITING;
 
-	tcb_remove(current);
-
-	/*
-	 * If there are any sleepers on any of the task's
-	 * waitqueues, we need to wake those tasks up.
-	 *
-	 * These could be tasks that have called us from
-	 * other containers.
-	 */
-	wake_up_all(&current->wqh_send, 0);
-	wake_up_all(&current->wqh_recv, 0);
-
-	printk("%s: Suspending self (%d)\n", __FUNCTION__, current->tid);
-
-	/* Remain as a zombie for now */
 	sched_suspend_sync();
-
-	/* NOTE:
-	 * If we deleted ourself here, probably that would be
-	 * the end of what we need to do and could get away
-	 * with that because ktcb's are cached and always mapped.
-	 * It wouldn't hurt to delete ourself inside a
-	 * non-preemptable point and schedule never to return.
-	 */
 }
 
 int thread_resume(struct task_ids *ids)
@@ -432,7 +441,7 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		ret = thread_start(ids);
 		break;
 	case THREAD_SUSPEND:
-		ret = thread_suspend(ids->tid);
+		ret = thread_suspend(ids->tid, 0);
 		break;
 	case THREAD_RESUME:
 		ret = thread_resume(ids);

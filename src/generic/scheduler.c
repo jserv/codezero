@@ -14,6 +14,7 @@
 #include <l4/generic/resource.h>
 #include <l4/generic/container.h>
 #include <l4/generic/preempt.h>
+#include <l4/generic/thread.h>
 #include <l4/generic/irq.h>
 #include <l4/generic/tcb.h>
 #include <l4/api/errno.h>
@@ -238,6 +239,9 @@ void sched_suspend_sync(void)
 	scheduler.prio_total -= current->priority;
 	BUG_ON(scheduler.prio_total < 0);
 	preempt_enable();
+
+	if (current->flags & TASK_EXITING)
+		thread_make_zombie(current);
 
 	/*
 	 * Async wake up any waiting pagers
