@@ -29,7 +29,7 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
 			     '-std=gnu99', '-Wall', '-Werror'],
-		  LINKFLAGS = ['-nostdlib', '-T' + "loader/linker.lds", "-u_start"],
+		  LINKFLAGS = ['-nostdlib', '-T' + join(BUILDDIR, 'loader/linker.lds'), "-u_start"],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',
 		  ENV = {'PATH' : os.environ['PATH']},

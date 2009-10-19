@@ -3,11 +3,13 @@
  *
  * Copyright (C) 2008-2009 B Labs Ltd.
  */
+
+lma_codezero = %s;
 ENTRY(_start)
 
 SECTIONS
 {
-	. = 0x3000000;
+	. = lma_codezero;
 	.text : { *(.text.head) *(.text) }
 	.rodata : { *(.rodata) }
 	.rodata1 : { *(.rodata1) }
