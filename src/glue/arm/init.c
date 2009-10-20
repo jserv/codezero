@@ -45,26 +45,6 @@ void init_kernel_mappings(void)
 	add_section_mapping_init(align(virt_to_phys(_start_text),SZ_1MB),
 				 align(virt_to_phys(_start_text),SZ_1MB),
 				 1, 0);
-
-#if 0
-	/* Map page table to its virtual region */
-	add_section_mapping_init(virt_to_phys(_start_kspace),
-				 (unsigned int)_start_kspace,
-				 1, 0);
-
-	/* Clean current before first time access. */
-	memset(current, 0, sizeof(struct ktcb));
-
-	/*
-	 * We are currently on the bootstack. End of bootstack would
-	 * eventually become the ktcb of the first pager. We use a
-	 * statically allocated address_space structure for the pager.
-	 */
-	current->space = &pager_space;
-
-	/* Access physical address of pager_space to assign with initial pgd */
-	((struct address_space *)virt_to_phys(current->space))->pgd = &init_pgd;
-#endif
 }
 
 void print_sections(void)
@@ -171,6 +151,9 @@ void kip_init()
 {
 	struct utcb **utcb_ref;
 
+	/*
+	 * TODO: Adding utcb size might be useful
+	 */
 	memset(&kip, 0, PAGE_SIZE);
 	memcpy(&kip, "L4\230K", 4); /* Name field = l4uK */
 	kip.api_version 	= 0xBB;
@@ -179,7 +162,6 @@ void kip_init()
 	kip.kdesc.magic		= 0xBBB;
 	kip.kdesc.version	= CODEZERO_VERSION;
 	kip.kdesc.subversion	= CODEZERO_SUBVERSION;
-	// kip.kdesc.gendate 	= (__YEAR__ << 9)|(__MONTH__ << 5)|(__DAY__);
 	strncpy(kip.kdesc.date, __DATE__, KDESC_DATE_SIZE);
 	strncpy(kip.kdesc.time, __TIME__, KDESC_TIME_SIZE);
 
@@ -254,111 +236,11 @@ void switch_to_user(struct ktcb *task)
 	jump(task);
 }
 
-#if 0
-/*
- * Initialize the pager in the system.
- *
- * The pager uses the bootstack as its ktcb, the initial kspace as its pgd,
- * (kernel pmds are shared among all tasks) and a statically allocated
- * pager_space struct for its space structure.
- */
-void init_pager(char *name, struct task_ids *ids)
-{
-	struct svc_image *taskimg = 0;
-	struct ktcb *task;
-	int task_pages;
-
-	BUG_ON(strcmp(name, __PAGERNAME__));
-	task = current;
-
-	tcb_init(task);
-
-	/*
-	 * Search the compile-time generated boot descriptor for
-	 * information on available task images.
-	 */
-	for (int i = 0; i < bootdesc->total_images; i++) {
-		if (!strcmp(name, bootdesc->images[i].name)) {
-			taskimg = &bootdesc->images[i];
-			break;
-		}
-	}
-	BUG_ON(!taskimg);
-
-	if (taskimg->phys_start & PAGE_MASK)
-		printk("Warning, image start address not page aligned.\n");
-
-	/* Calculate the number of pages the task sections occupy. */
-	task_pages = __pfn((page_align_up(taskimg->phys_end) -
-			    page_align(taskimg->phys_start)));
-	task->context.pc = INITTASK_AREA_START;
-
-	/* Stack starts one page above the end of image. */
-	task->context.sp = INITTASK_AREA_END - 8;
-	task->context.spsr = ARM_MODE_USR;
-
-	set_task_ids(task, ids);
-
-	/* Pager gets first UTCB area available by default */
-	task->utcb_address = UTCB_AREA_START;
-
-	BUG_ON(!TASK_PGD(task));
-
-	/*
-	 * This task's userspace mapping. This should allocate a new pmd, if not
-	 * existing, and a new page entry on its private pgd.
-	 */
-	add_mapping_pgd(taskimg->phys_start, INITTASK_AREA_START,
-			task_pages * PAGE_SIZE, MAP_USR_DEFAULT_FLAGS,
-			TASK_PGD(task));
-	//printk("Mapping %d pages from 0x%x to 0x%x for %s\n", task_pages,
-	//       taskimg->phys_start, INITTASK_AREA_START, name);
-
-	/* Add the physical pages used by the task to the page map */
-	set_page_map(taskimg->phys_start, task_pages, 1);
-
-	/* Task's rendezvous point */
-	waitqueue_head_init(&task->wqh_send);
-	waitqueue_head_init(&task->wqh_recv);
-	waitqueue_head_init(&task->wqh_pager);
-
-	/* Global hashlist that keeps all existing tasks */
-	tcb_add(task);
-
-	/* Scheduler initialises the very first task itself */
-}
-
-void init_tasks()
-{
-	struct task_ids ids;
-
-	/* Initialise thread and space id pools */
-	thread_id_pool = id_pool_new_init(THREAD_IDS_MAX);
-	space_id_pool = id_pool_new_init(SPACE_IDS_MAX);
-	ids.tid = id_new(thread_id_pool);
-	ids.spid = id_new(space_id_pool);
-	ids.tgid = ids.tid;
-
-	/* Initialise the global task and address space lists */
-	//init_ktcb_list();
-	//init_address_space_list();
-	//init_mutex_queue_head();
-
-	printk("%s: Initialized. Starting %s as pager.\n",
-	       __KERNELNAME__, __PAGERNAME__);
-	/*
-	 * This must come last so that other tasks can copy its pgd before it
-	 * modifies it for its own specifics.
-	 */
-	// init_pager(__PAGERNAME__, &ids);
-}
-#endif
-
 void setup_dummy_current()
 {
 	/*
-	 * Initialize the beginning of last page of
-	 * stack as the current ktcb
+	 * Temporarily iInitialize the beginning of
+	 * last page of stack as the current ktcb
 	 */
 	memset(current, 0, sizeof(struct ktcb));
 
@@ -388,7 +270,7 @@ void init_finalize(struct kernel_resources *kres)
 	/* Switch to new stack */
 	stack = newstack;
 
-	/* -- Point of no stack unwinding/referencing -- */
+	/* -- Point of no stack unwinding -- */
 
 	/*
 	 * Unmap boot memory, and add it as
@@ -411,39 +293,54 @@ void init_finalize(struct kernel_resources *kres)
 	 * Start the scheduler, jumping to task
 	 */
 	scheduler_start();
-
-	/* FIXME: Make sure SP_SVC is reset in jump() */
 }
 
 void start_kernel(void)
 {
 	printascii("\n"__KERNELNAME__": start kernel...\n");
 
-	/* Print section boundaries for kernel image */
-	// print_sections();
-
-	/* Initialise section mappings for the kernel area */
+	/*
+	 * Initialise section mappings
+	 * for the kernel area
+	 */
 	init_kernel_mappings();
 
-	/* Enable virtual memory and jump to virtual addresses */
+	/*
+	 * Enable virtual memory
+	 * and jump to virtual addresses
+	 */
 	start_vm();
 
-	/* Set up a dummy current ktcb on boot stack with initial pgd */
+	/*
+	 * Set up a dummy current ktcb on
+	 * boot stack with initial pgd
+	 */
 	setup_dummy_current();
 
-	/* Initialise platform-specific page mappings, and peripherals */
+	/*
+	 * Initialise platform-specific
+	 * page mappings, and peripherals
+	 */
 	platform_init();
 
-	printk("%s: Virtual memory enabled.\n", __KERNELNAME__);
+	/* Can only print when uart is mapped */
+	printk("%s: Virtual memory enabled.\n",
+	       __KERNELNAME__);
 
-	/* Map and enable high vector page. Faults can be handled after here. */
+	/*
+	 * Map and enable high vector page.
+	 * Faults can be handled after here.
+	 */
 	vectors_init();
 
 	/* Remap 1MB kernel sections as 4Kb pages. */
 	remap_as_pages((void *)page_align(_start_kernel),
 		       (void *)page_align_up(_end_kernel));
 
-	/* Initialise kip and map for userspace access */
+	/*
+	 * Initialise kip and map
+	 * for userspace access
+	 */
 	kip_init();
 
 	/* Initialise system call page */
@@ -452,10 +349,16 @@ void start_kernel(void)
 	/* Init scheduler */
 	sched_init(&scheduler);
 
-	/* Evaluate system resources and set up resource pools */
+	/*
+	 * Evaluate system resources
+	 * and set up resource pools
+	 */
 	init_system_resources(&kernel_resources);
 
-	/* Free boot memory, jump to first task's stack and start scheduler */
+	/*
+	 * Free boot memory, switch to first
+	 * task's stack and start scheduler
+	 */
 	init_finalize(&kernel_resources);
 
 	BUG();

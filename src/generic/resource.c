@@ -478,17 +478,6 @@ int copy_container_info(struct container *c, struct container_info *cinfo)
 }
 
 /*
- * TODO:
- *
- * Rearrange as follows:
- * 1.) Move realloc_page_tables to before container_init_pagers()
- * 2.) Set up dummy current cap_list_ptr right after real capability list
- * has been created. -> Think! since there are many containers!!!!!!!
- * 3.) At this point, no need to do alloc_boot_pmd(), and current->cap_list_ptr
- * is valid, so no custom alloc functions.
- */
-
-/*
  * Create real containers from compile-time created cinfo structures
  */
 void setup_containers(struct boot_resources *bootres,
