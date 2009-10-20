@@ -14,277 +14,6 @@ CONT%(cn)d_PHYS2_END	'Container %(cn)d Physical Region 2 End Address'
 CONT%(cn)d_PHYS3_START	'Container %(cn)d Physical Region 3 Start Address'
 CONT%(cn)d_PHYS3_END	'Container %(cn)d Physical Region 3 End Address'
 
-cont%(cn)d_phys0_caps 	'Container %(cn)d Physical Region 0 Memory Capabilities'
-cont%(cn)d_phys1_caps 	'Container %(cn)d Physical Region 1 Memory Capabilities'
-cont%(cn)d_phys2_caps 	'Container %(cn)d Physical Region 2 Memory Capabilities'
-cont%(cn)d_phys3_caps 	'Container %(cn)d Physical Region 3 Memory Capabilities'
-
-cont%(cn)d_virt0_caps 	'Container %(cn)d Virtual Region 0 Memory Capabilities'
-cont%(cn)d_virt1_caps 	'Container %(cn)d Virtual Region 1 Memory Capabilities'
-cont%(cn)d_virt2_caps 	'Container %(cn)d Virtual Region 2 Memory Capabilities'
-cont%(cn)d_virt3_caps 	'Container %(cn)d Virtual Region 3 Memory Capabilities'
-cont%(cn)d_virt4_caps 	'Container %(cn)d Virtual Region 4 Memory Capabilities'
-cont%(cn)d_virt5_caps 	'Container %(cn)d Virtual Region 5 Memory Capabilities'
-
-CONT%(cn)d_PHYS0_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_PHYS0_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_PHYS0_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_PHYS0_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_PHYS1_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_PHYS1_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_PHYS1_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_PHYS1_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_PHYS2_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_PHYS2_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_PHYS2_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_PHYS2_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_PHYS3_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_PHYS3_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_PHYS3_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_PHYS3_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_VIRT0_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%(cn)d_VIRT0_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_VIRT0_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_VIRT0_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_VIRT0_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_VIRT1_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%(cn)d_VIRT1_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_VIRT1_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_VIRT1_CAP_MAP_EXEC 	'Exec permission'
-CONT%(cn)d_VIRT1_CAP_MAP_UNMAP 	'Unmap permission'
-
-CONT%(cn)d_VIRT2_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%(cn)d_VIRT2_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_VIRT2_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_VIRT2_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_VIRT2_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_VIRT3_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%(cn)d_VIRT3_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_VIRT3_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_VIRT3_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_VIRT3_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_VIRT4_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%(cn)d_VIRT4_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_VIRT4_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_VIRT4_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_VIRT4_CAP_MAP_UNMAP 	'Unmap Permission'
-
-CONT%(cn)d_VIRT5_CAP_MAP_UTCB	'Mappable as UTCB permission'
-CONT%(cn)d_VIRT5_CAP_MAP_READ 	'Read Permission'
-CONT%(cn)d_VIRT5_CAP_MAP_WRITE 	'Write Permission'
-CONT%(cn)d_VIRT5_CAP_MAP_EXEC 	'Exec Permission'
-CONT%(cn)d_VIRT5_CAP_MAP_UNMAP 	'Unmap Permission'
-
-#
-# These are real 0, 1 values derived from corresponding #define #undef
-# boolean pairs. Having real 0 and 1 values is more useful since we can
-# directly set/unset capability words in bitwise.
-#
-derive CONT%(cn)d_PHYS0_CAP_MAP_READ_	from (CONT%(cn)d_PHYS0_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_PHYS0_CAP_MAP_WRITE_	from (CONT%(cn)d_PHYS0_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_PHYS0_CAP_MAP_EXEC_	from (CONT%(cn)d_PHYS0_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_PHYS0_CAP_MAP_UNMAP_	from (CONT%(cn)d_PHYS0_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_PHYS1_CAP_MAP_READ_	from (CONT%(cn)d_PHYS1_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_PHYS1_CAP_MAP_WRITE_	from (CONT%(cn)d_PHYS1_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_PHYS1_CAP_MAP_EXEC_	from (CONT%(cn)d_PHYS1_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_PHYS1_CAP_MAP_UNMAP_	from (CONT%(cn)d_PHYS1_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_PHYS2_CAP_MAP_READ_	from (CONT%(cn)d_PHYS2_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_PHYS2_CAP_MAP_WRITE_	from (CONT%(cn)d_PHYS2_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_PHYS2_CAP_MAP_EXEC_	from (CONT%(cn)d_PHYS2_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_PHYS2_CAP_MAP_UNMAP_	from (CONT%(cn)d_PHYS2_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_PHYS3_CAP_MAP_READ_	from (CONT%(cn)d_PHYS3_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_PHYS3_CAP_MAP_WRITE_	from (CONT%(cn)d_PHYS3_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_PHYS3_CAP_MAP_EXEC_	from (CONT%(cn)d_PHYS3_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_PHYS3_CAP_MAP_UNMAP_	from (CONT%(cn)d_PHYS3_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_VIRT0_CAP_MAP_UTCB_	from (CONT%(cn)d_VIRT0_CAP_MAP_UTCB == y) ? 1 : 0
-derive CONT%(cn)d_VIRT0_CAP_MAP_READ_	from (CONT%(cn)d_VIRT0_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_VIRT0_CAP_MAP_WRITE_	from (CONT%(cn)d_VIRT0_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_VIRT0_CAP_MAP_EXEC_	from (CONT%(cn)d_VIRT0_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_VIRT0_CAP_MAP_UNMAP_	from (CONT%(cn)d_VIRT0_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_VIRT1_CAP_MAP_UTCB_	from (CONT%(cn)d_VIRT1_CAP_MAP_UTCB == y) ? 1 : 0
-derive CONT%(cn)d_VIRT1_CAP_MAP_READ_ 	from (CONT%(cn)d_VIRT1_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_VIRT1_CAP_MAP_WRITE_ 	from (CONT%(cn)d_VIRT1_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_VIRT1_CAP_MAP_EXEC_ 	from (CONT%(cn)d_VIRT1_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_VIRT1_CAP_MAP_UNMAP_ 	from (CONT%(cn)d_VIRT1_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_VIRT2_CAP_MAP_UTCB_	from (CONT%(cn)d_VIRT2_CAP_MAP_UTCB == y) ? 1 : 0
-derive CONT%(cn)d_VIRT2_CAP_MAP_READ_ 	from (CONT%(cn)d_VIRT2_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_VIRT2_CAP_MAP_WRITE_ 	from (CONT%(cn)d_VIRT2_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_VIRT2_CAP_MAP_EXEC_ 	from (CONT%(cn)d_VIRT2_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_VIRT2_CAP_MAP_UNMAP_ 	from (CONT%(cn)d_VIRT2_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_VIRT3_CAP_MAP_UTCB_	from (CONT%(cn)d_VIRT3_CAP_MAP_UTCB == y) ? 1 : 0
-derive CONT%(cn)d_VIRT3_CAP_MAP_READ_ 	from (CONT%(cn)d_VIRT3_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_VIRT3_CAP_MAP_WRITE_ 	from (CONT%(cn)d_VIRT3_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_VIRT3_CAP_MAP_EXEC_ 	from (CONT%(cn)d_VIRT3_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_VIRT3_CAP_MAP_UNMAP_ 	from (CONT%(cn)d_VIRT3_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_VIRT4_CAP_MAP_UTCB_	from (CONT%(cn)d_VIRT4_CAP_MAP_UTCB == y) ? 1 : 0
-derive CONT%(cn)d_VIRT4_CAP_MAP_READ_ 	from (CONT%(cn)d_VIRT4_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_VIRT4_CAP_MAP_WRITE_ 	from (CONT%(cn)d_VIRT4_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_VIRT4_CAP_MAP_EXEC_ 	from (CONT%(cn)d_VIRT4_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_VIRT4_CAP_MAP_UNMAP_ 	from (CONT%(cn)d_VIRT4_CAP_MAP_UNMAP == y) ? 1 : 0
-
-derive CONT%(cn)d_VIRT5_CAP_MAP_UTCB_	from (CONT%(cn)d_VIRT5_CAP_MAP_UTCB == y) ? 1 : 0
-derive CONT%(cn)d_VIRT5_CAP_MAP_READ_ 	from (CONT%(cn)d_VIRT5_CAP_MAP_READ == y) ? 1 : 0
-derive CONT%(cn)d_VIRT5_CAP_MAP_WRITE_ 	from (CONT%(cn)d_VIRT5_CAP_MAP_WRITE == y) ? 1 : 0
-derive CONT%(cn)d_VIRT5_CAP_MAP_EXEC_ 	from (CONT%(cn)d_VIRT5_CAP_MAP_EXEC == y) ? 1 : 0
-derive CONT%(cn)d_VIRT5_CAP_MAP_UNMAP_ 	from (CONT%(cn)d_VIRT5_CAP_MAP_UNMAP == y) ? 1 : 0
-
-default CONT%(cn)d_PHYS0_CAP_MAP_READ	from y
-default CONT%(cn)d_PHYS0_CAP_MAP_WRITE	from y
-default CONT%(cn)d_PHYS0_CAP_MAP_EXEC	from y
-default CONT%(cn)d_PHYS0_CAP_MAP_UNMAP	from y
-
-default CONT%(cn)d_PHYS1_CAP_MAP_READ	from y
-default CONT%(cn)d_PHYS1_CAP_MAP_WRITE	from y
-default CONT%(cn)d_PHYS1_CAP_MAP_EXEC	from y
-default CONT%(cn)d_PHYS1_CAP_MAP_UNMAP	from y
-
-default CONT%(cn)d_PHYS2_CAP_MAP_READ	from y
-default CONT%(cn)d_PHYS2_CAP_MAP_WRITE	from y
-default CONT%(cn)d_PHYS2_CAP_MAP_EXEC	from y
-default CONT%(cn)d_PHYS2_CAP_MAP_UNMAP	from y
-
-default CONT%(cn)d_PHYS3_CAP_MAP_READ	from y
-default CONT%(cn)d_PHYS3_CAP_MAP_WRITE	from y
-default CONT%(cn)d_PHYS3_CAP_MAP_EXEC	from y
-default CONT%(cn)d_PHYS3_CAP_MAP_UNMAP	from y
-
-default CONT%(cn)d_VIRT0_CAP_MAP_UTCB	from n
-default CONT%(cn)d_VIRT0_CAP_MAP_READ	from y
-default CONT%(cn)d_VIRT0_CAP_MAP_WRITE	from y
-default CONT%(cn)d_VIRT0_CAP_MAP_EXEC	from y
-default CONT%(cn)d_VIRT0_CAP_MAP_UNMAP	from y
-
-default CONT%(cn)d_VIRT1_CAP_MAP_UTCB	from n
-default CONT%(cn)d_VIRT1_CAP_MAP_READ 	from y
-default CONT%(cn)d_VIRT1_CAP_MAP_WRITE 	from y
-default CONT%(cn)d_VIRT1_CAP_MAP_EXEC 	from y
-default CONT%(cn)d_VIRT1_CAP_MAP_UNMAP 	from y
-
-default CONT%(cn)d_VIRT2_CAP_MAP_UTCB	from n
-default CONT%(cn)d_VIRT2_CAP_MAP_READ 	from y
-default CONT%(cn)d_VIRT2_CAP_MAP_WRITE 	from y
-default CONT%(cn)d_VIRT2_CAP_MAP_EXEC 	from y
-default CONT%(cn)d_VIRT2_CAP_MAP_UNMAP 	from y
-
-default CONT%(cn)d_VIRT3_CAP_MAP_UTCB	from n
-default CONT%(cn)d_VIRT3_CAP_MAP_READ 	from y
-default CONT%(cn)d_VIRT3_CAP_MAP_WRITE 	from y
-default CONT%(cn)d_VIRT3_CAP_MAP_EXEC 	from y
-default CONT%(cn)d_VIRT3_CAP_MAP_UNMAP 	from y
-
-default CONT%(cn)d_VIRT4_CAP_MAP_UTCB	from n
-default CONT%(cn)d_VIRT4_CAP_MAP_READ 	from y
-default CONT%(cn)d_VIRT4_CAP_MAP_WRITE 	from y
-default CONT%(cn)d_VIRT4_CAP_MAP_EXEC 	from y
-default CONT%(cn)d_VIRT4_CAP_MAP_UNMAP 	from y
-
-default CONT%(cn)d_VIRT5_CAP_MAP_UTCB	from n
-default CONT%(cn)d_VIRT5_CAP_MAP_READ 	from y
-default CONT%(cn)d_VIRT5_CAP_MAP_WRITE 	from y
-default CONT%(cn)d_VIRT5_CAP_MAP_EXEC 	from y
-default CONT%(cn)d_VIRT5_CAP_MAP_UNMAP 	from y
-
-menu cont%(cn)d_phys0_caps
-	CONT%(cn)d_PHYS0_START@
-	CONT%(cn)d_PHYS0_END@
-	CONT%(cn)d_PHYS0_CAP_MAP_READ
-	CONT%(cn)d_PHYS0_CAP_MAP_WRITE
-	CONT%(cn)d_PHYS0_CAP_MAP_EXEC
-	CONT%(cn)d_PHYS0_CAP_MAP_UNMAP
-
-menu cont%(cn)d_phys1_caps
-	CONT%(cn)d_PHYS1_START@
-	CONT%(cn)d_PHYS1_END@
-	CONT%(cn)d_PHYS1_CAP_MAP_READ
-	CONT%(cn)d_PHYS1_CAP_MAP_WRITE
-	CONT%(cn)d_PHYS1_CAP_MAP_EXEC
-	CONT%(cn)d_PHYS1_CAP_MAP_UNMAP
-
-menu cont%(cn)d_phys2_caps
-	CONT%(cn)d_PHYS2_START@
-	CONT%(cn)d_PHYS2_END@
-	CONT%(cn)d_PHYS2_CAP_MAP_READ
-	CONT%(cn)d_PHYS2_CAP_MAP_WRITE
-	CONT%(cn)d_PHYS2_CAP_MAP_EXEC
-	CONT%(cn)d_PHYS2_CAP_MAP_UNMAP
-
-menu cont%(cn)d_phys3_caps
-	CONT%(cn)d_PHYS3_START@
-	CONT%(cn)d_PHYS3_END@
-	CONT%(cn)d_PHYS3_CAP_MAP_READ
-	CONT%(cn)d_PHYS3_CAP_MAP_WRITE
-	CONT%(cn)d_PHYS3_CAP_MAP_EXEC
-	CONT%(cn)d_PHYS3_CAP_MAP_UNMAP
-
-menu cont%(cn)d_virt0_caps
-	CONT%(cn)d_VIRT0_START@
-	CONT%(cn)d_VIRT0_END@
-	CONT%(cn)d_VIRT0_CAP_MAP_UTCB
-	CONT%(cn)d_VIRT0_CAP_MAP_READ
-	CONT%(cn)d_VIRT0_CAP_MAP_WRITE
-	CONT%(cn)d_VIRT0_CAP_MAP_EXEC
-	CONT%(cn)d_VIRT0_CAP_MAP_UNMAP
-
-menu cont%(cn)d_virt1_caps
-	CONT%(cn)d_VIRT1_START@
-	CONT%(cn)d_VIRT1_END@
-	CONT%(cn)d_VIRT1_CAP_MAP_UTCB
-	CONT%(cn)d_VIRT1_CAP_MAP_READ
-	CONT%(cn)d_VIRT1_CAP_MAP_WRITE
-	CONT%(cn)d_VIRT1_CAP_MAP_EXEC
-	CONT%(cn)d_VIRT1_CAP_MAP_UNMAP
-
-menu cont%(cn)d_virt2_caps
-	CONT%(cn)d_VIRT2_START@
-	CONT%(cn)d_VIRT2_END@
-	CONT%(cn)d_VIRT2_CAP_MAP_UTCB
-	CONT%(cn)d_VIRT2_CAP_MAP_READ
-	CONT%(cn)d_VIRT2_CAP_MAP_WRITE
-	CONT%(cn)d_VIRT2_CAP_MAP_EXEC
-	CONT%(cn)d_VIRT2_CAP_MAP_UNMAP
-
-menu cont%(cn)d_virt3_caps
-	CONT%(cn)d_VIRT3_START@
-	CONT%(cn)d_VIRT3_END@
-	CONT%(cn)d_VIRT3_CAP_MAP_UTCB
-	CONT%(cn)d_VIRT3_CAP_MAP_READ
-	CONT%(cn)d_VIRT3_CAP_MAP_WRITE
-	CONT%(cn)d_VIRT3_CAP_MAP_EXEC
-	CONT%(cn)d_VIRT3_CAP_MAP_UNMAP
-
-menu cont%(cn)d_virt4_caps
-	CONT%(cn)d_VIRT4_START@
-	CONT%(cn)d_VIRT4_END@
-	CONT%(cn)d_VIRT4_CAP_MAP_UTCB
-	CONT%(cn)d_VIRT4_CAP_MAP_READ
-	CONT%(cn)d_VIRT4_CAP_MAP_WRITE
-	CONT%(cn)d_VIRT4_CAP_MAP_EXEC
-	CONT%(cn)d_VIRT4_CAP_MAP_UNMAP
-
-menu cont%(cn)d_virt5_caps
-	CONT%(cn)d_VIRT5_START@
-	CONT%(cn)d_VIRT5_END@
-	CONT%(cn)d_VIRT5_CAP_MAP_UTCB
-	CONT%(cn)d_VIRT5_CAP_MAP_READ
-	CONT%(cn)d_VIRT5_CAP_MAP_WRITE
-	CONT%(cn)d_VIRT5_CAP_MAP_EXEC
-	CONT%(cn)d_VIRT5_CAP_MAP_UNMAP
-
 symbols
 
 CONT%(cn)d_VIRTMEM_REGIONS	'Container %(cn)d Number of Virtual Regions'
@@ -333,32 +62,35 @@ default CONT%(cn)d_VIRTMEM_REGIONS from 1
 default CONT%(cn)d_PHYSMEM_REGIONS from 1
 
 # Define limits on virtual and physical memory regions of a _single_ container 0. Too much code!
-when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress cont%(cn)d_virt1_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress cont%(cn)d_virt2_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress cont%(cn)d_virt3_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress cont%(cn)d_virt4_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress cont%(cn)d_virt5_caps
+when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress CONT%(cn)d_VIRT1_START CONT%(cn)d_VIRT1_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress CONT%(cn)d_VIRT2_START CONT%(cn)d_VIRT2_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress CONT%(cn)d_VIRT3_START CONT%(cn)d_VIRT3_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress CONT%(cn)d_VIRT4_START CONT%(cn)d_VIRT4_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 2 suppress CONT%(cn)d_VIRT5_START CONT%(cn)d_VIRT5_END
 
-when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress cont%(cn)d_virt2_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress cont%(cn)d_virt3_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress cont%(cn)d_virt4_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress cont%(cn)d_virt5_caps
+when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress CONT%(cn)d_VIRT2_START CONT%(cn)d_VIRT2_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress CONT%(cn)d_VIRT3_START CONT%(cn)d_VIRT3_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress CONT%(cn)d_VIRT4_START CONT%(cn)d_VIRT4_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 3 suppress CONT%(cn)d_VIRT5_START CONT%(cn)d_VIRT5_END
 
-when CONT%(cn)d_VIRTMEM_REGIONS < 4 suppress cont%(cn)d_virt3_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 4 suppress cont%(cn)d_virt4_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 4 suppress cont%(cn)d_virt5_caps
+when CONT%(cn)d_VIRTMEM_REGIONS < 4 suppress CONT%(cn)d_VIRT3_START CONT%(cn)d_VIRT3_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 4 suppress CONT%(cn)d_VIRT4_START CONT%(cn)d_VIRT4_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 4 suppress CONT%(cn)d_VIRT5_START CONT%(cn)d_VIRT5_END
 
-when CONT%(cn)d_VIRTMEM_REGIONS < 5 suppress cont%(cn)d_virt4_caps
-when CONT%(cn)d_VIRTMEM_REGIONS < 5 suppress cont%(cn)d_virt5_caps
+when CONT%(cn)d_VIRTMEM_REGIONS < 5 suppress CONT%(cn)d_VIRT4_START CONT%(cn)d_VIRT4_END
+when CONT%(cn)d_VIRTMEM_REGIONS < 5 suppress CONT%(cn)d_VIRT5_START CONT%(cn)d_VIRT5_END
 
-when CONT%(cn)d_VIRTMEM_REGIONS < 6 suppress cont%(cn)d_virt5_caps
+when CONT%(cn)d_VIRTMEM_REGIONS < 6 suppress CONT%(cn)d_VIRT5_START CONT%(cn)d_VIRT5_END
 
-when CONT%(cn)d_PHYSMEM_REGIONS < 2 suppress cont%(cn)d_phys1_caps
-when CONT%(cn)d_PHYSMEM_REGIONS < 2 suppress cont%(cn)d_phys2_caps
-when CONT%(cn)d_PHYSMEM_REGIONS < 2 suppress cont%(cn)d_phys3_caps
-when CONT%(cn)d_PHYSMEM_REGIONS < 3 suppress cont%(cn)d_phys2_caps
-when CONT%(cn)d_PHYSMEM_REGIONS < 3 suppress cont%(cn)d_phys3_caps
-when CONT%(cn)d_PHYSMEM_REGIONS < 4 suppress cont%(cn)d_phys3_caps
+
+when CONT%(cn)d_PHYSMEM_REGIONS < 2 suppress CONT%(cn)d_PHYS1_START CONT%(cn)d_PHYS1_END
+when CONT%(cn)d_PHYSMEM_REGIONS < 2 suppress CONT%(cn)d_PHYS2_START CONT%(cn)d_PHYS2_END
+when CONT%(cn)d_PHYSMEM_REGIONS < 2 suppress CONT%(cn)d_PHYS3_START CONT%(cn)d_PHYS3_END
+
+when CONT%(cn)d_PHYSMEM_REGIONS < 3 suppress CONT%(cn)d_PHYS2_START CONT%(cn)d_PHYS2_END
+when CONT%(cn)d_PHYSMEM_REGIONS < 3 suppress CONT%(cn)d_PHYS3_START CONT%(cn)d_PHYS3_END
+
+when CONT%(cn)d_PHYSMEM_REGIONS < 4 suppress CONT%(cn)d_PHYS3_START CONT%(cn)d_PHYS3_END
 
 default CONT%(cn)d_PHYS0_START	from 0x0
 default CONT%(cn)d_PHYS0_END	from 0x0
@@ -420,19 +152,29 @@ menu cont%(cn)d_linux_pager_params
 
 menu cont%(cn)d_virtmem_list
 	CONT%(cn)d_VIRTMEM_REGIONS%
-	cont%(cn)d_virt0_caps
-	cont%(cn)d_virt1_caps
-	cont%(cn)d_virt2_caps
-	cont%(cn)d_virt3_caps
-	cont%(cn)d_virt4_caps
-	cont%(cn)d_virt5_caps
+	CONT%(cn)d_VIRT0_START@
+	CONT%(cn)d_VIRT0_END@
+	CONT%(cn)d_VIRT1_START@
+	CONT%(cn)d_VIRT1_END@
+	CONT%(cn)d_VIRT2_START@
+	CONT%(cn)d_VIRT2_END@
+	CONT%(cn)d_VIRT3_START@
+	CONT%(cn)d_VIRT3_END@
+	CONT%(cn)d_VIRT4_START@
+	CONT%(cn)d_VIRT4_END@
+	CONT%(cn)d_VIRT5_START@
+	CONT%(cn)d_VIRT5_END@
 
 menu cont%(cn)d_physmem_list
 	CONT%(cn)d_PHYSMEM_REGIONS%
-	cont%(cn)d_phys0_caps
-	cont%(cn)d_phys1_caps
-	cont%(cn)d_phys2_caps
-	cont%(cn)d_phys3_caps
+	CONT%(cn)d_PHYS0_START@
+	CONT%(cn)d_PHYS0_END@
+	CONT%(cn)d_PHYS1_START@
+	CONT%(cn)d_PHYS1_END@
+	CONT%(cn)d_PHYS2_START@
+	CONT%(cn)d_PHYS2_END@
+	CONT%(cn)d_PHYS3_START@
+	CONT%(cn)d_PHYS3_END@
 
 menu container%(cn)d_options
 	CONT%(cn)d_OPT_NAME$

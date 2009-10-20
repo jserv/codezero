@@ -76,11 +76,8 @@ cap_virtmem = \
 '''
 \t\t\t[%(capidx)d] = {
 \t\t\t\t.type = CAP_TYPE_MAP | CAP_RTYPE_VIRTMEM,
-\t\t\t\t.access = (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_READ_ << CAP_MAP_READ_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_WRITE_ << CAP_MAP_WRITE_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_EXEC_ << CAP_MAP_EXEC_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_UNMAP_ << CAP_MAP_UNMAP_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_VIRT%(vn)d_CAP_MAP_UTCB_ << CAP_MAP_UTCB_BIT),
+\t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC
+\t\t\t\t\t| CAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
 \t\t\t\t.start = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_START),
 \t\t\t\t.end = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_END),
 \t\t\t\t.size = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_END - CONFIG_CONT%(cn)d_VIRT%(vn)d_START),
@@ -91,10 +88,8 @@ cap_physmem = \
 '''
 \t\t\t[%(capidx)d] = {
 \t\t\t\t.type = CAP_TYPE_MAP | CAP_RTYPE_PHYSMEM,
-\t\t\t\t.access = (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_READ_ << CAP_MAP_READ_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_WRITE_ << CAP_MAP_WRITE_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_EXEC_ << CAP_MAP_EXEC_BIT) |
-\t\t\t\t          (CONFIG_CONT%(cn)d_PHYS%(pn)d_CAP_MAP_UNMAP_ << CAP_MAP_UNMAP_BIT),
+\t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
+\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
 \t\t\t\t.start = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_START),
 \t\t\t\t.end = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_END),
 \t\t\t\t.size = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_END - CONFIG_CONT%(cn)d_PHYS%(pn)d_START),
