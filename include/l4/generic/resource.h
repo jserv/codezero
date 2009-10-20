@@ -50,7 +50,7 @@ struct ktcb_list {
  * Everything on the platform is described and stored
  * in the structure below.
  */
-struct kernel_container {
+struct kernel_resources {
 	l4id_t cid;
 
 	/* System id pools */
@@ -91,7 +91,7 @@ struct kernel_container {
 	struct ktcb_list zombie_list;
 };
 
-extern struct kernel_container kernel_container;
+extern struct kernel_resources kernel_resources;
 
 void free_pgd(void *addr);
 void free_pmd(void *addr);
@@ -110,8 +110,8 @@ struct capability *boot_alloc_capability(void);
 struct capability *alloc_capability(void);
 struct container *alloc_container(void);
 struct mutex_queue *alloc_user_mutex(void);
-int free_boot_memory(struct kernel_container *kcont);
+int free_boot_memory(struct kernel_resources *kres);
 
-int init_system_resources(struct kernel_container *kcont);
+int init_system_resources(struct kernel_resources *kres);
 
 #endif /* __RESOURCES_H__ */

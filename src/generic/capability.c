@@ -11,7 +11,7 @@
 
 void capability_init(struct capability *cap)
 {
-	cap->capid = id_new(&kernel_container.capability_ids);
+	cap->capid = id_new(&kernel_resources.capability_ids);
 	link_init(&cap->list);
 }
 

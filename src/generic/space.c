@@ -83,7 +83,7 @@ void address_space_delete(struct address_space *space)
 	delete_page_tables(space);
 
 	/* Return the space id */
-	id_del(&kernel_container.space_ids, space->spid);
+	id_del(&kernel_resources.space_ids, space->spid);
 
 	/* Deallocate the space structure */
 	free_space(space);
@@ -118,7 +118,7 @@ struct address_space *address_space_create(struct address_space *orig)
 	 * is not allowed since spid field is used to indicate the space to
 	 * copy from.
 	 */
-	space->spid = id_new(&kernel_container.space_ids);
+	space->spid = id_new(&kernel_resources.space_ids);
 
 	/* If an original space is supplied */
 	if (orig) {

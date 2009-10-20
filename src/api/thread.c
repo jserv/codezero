@@ -174,7 +174,7 @@ void task_make_zombie(struct ktcb *task)
 	BUG_ON(!(task->flags & TASK_EXITING));
 
 	/* Add to zombie list, to be destroyed later */
-	ktcb_list_add(task, &kernel_container.zombie_list);
+	ktcb_list_add(task, &kernel_resources.zombie_list);
 }
 
 /*

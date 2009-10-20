@@ -15,7 +15,7 @@
 int container_init(struct container *c)
 {
 	/* Allocate new container id */
-	c->cid = id_new(&kernel_container.container_ids);
+	c->cid = id_new(&kernel_resources.container_ids);
 
 	/* Init data structures */
 	link_init(&c->pager_list);
@@ -40,11 +40,11 @@ struct container *container_create(void)
 	return c;
 }
 
-void kcont_insert_container(struct container *c,
-			    struct kernel_container *kcont)
+void kres_insert_container(struct container *c,
+			    struct kernel_resources *kres)
 {
-	list_insert(&c->list, &kcont->containers.list);
-	kcont->containers.ncont++;
+	list_insert(&c->list, &kres->containers.list);
+	kres->containers.ncont++;
 }
 
 /*
@@ -154,7 +154,7 @@ int init_first_pager(struct pager *pager,
 		return -ENOMEM;
 
 	/* Set up space id */
-	space->spid = id_new(&kernel_container.space_ids);
+	space->spid = id_new(&kernel_resources.space_ids);
 
 	/* Initialize space structure */
 	link_init(&space->list);
@@ -254,14 +254,14 @@ int init_pager(struct pager *pager, struct container *cont)
  * Initialize all containers with their initial set of tasks,
  * spaces, scheduler parameters such that they can be started.
  */
-int container_init_pagers(struct kernel_container *kcont,
+int container_init_pagers(struct kernel_resources *kres,
 			  pgd_table_t *current_pgd)
 {
 	struct container *cont;
 	struct pager *pager;
  	int pgidx = 0;
 
-	list_foreach_struct(cont, &kcont->containers.list, list) {
+	list_foreach_struct(cont, &kres->containers.list, list) {
 		for (int i = 0; i < cont->npagers; i++) {
 			pager = &cont->pager[i];
 

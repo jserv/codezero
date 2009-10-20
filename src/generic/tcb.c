@@ -50,7 +50,7 @@ struct ktcb *tcb_alloc_init(void)
 	if (!(tcb = alloc_ktcb()))
 		return 0;
 
-	ids.tid = id_new(&kernel_container.ktcb_ids);
+	ids.tid = id_new(&kernel_resources.ktcb_ids);
 	ids.tgid = L4_NILTHREAD;
 	ids.spid = L4_NILTHREAD;
 
@@ -91,7 +91,7 @@ void tcb_delete(struct ktcb *tcb)
 	address_space_reference_unlock();
 
 	/* Deallocate tcb ids */
-	id_del(&kernel_container.ktcb_ids, tcb->tid);
+	id_del(&kernel_resources.ktcb_ids, tcb->tid);
 
 	/* Free the tcb */
 	free_ktcb(tcb);

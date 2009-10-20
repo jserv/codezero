@@ -105,15 +105,15 @@ struct container_info {
 
 extern struct container_info cinfo[];
 
-void kcont_insert_container(struct container *c,
-			    struct kernel_container *kcont);
+void kres_insert_container(struct container *c,
+			    struct kernel_resources *kres);
 
 struct container *container_create(void);
 
-int container_init_pagers(struct kernel_container *kcont,
+int container_init_pagers(struct kernel_resources *kres,
 			  pgd_table_t *current_pgd);
 
-int init_containers(struct kernel_container *kcont);
+int init_containers(struct kernel_resources *kres);
 
 #endif /* __CONTAINER_H__ */
 

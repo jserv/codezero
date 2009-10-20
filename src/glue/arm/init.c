@@ -366,7 +366,7 @@ void setup_dummy_current()
 	TASK_PGD(current) = &init_pgd;
 }
 
-void init_finalize(struct kernel_container *kcont)
+void init_finalize(struct kernel_resources *kres)
 {
 	volatile register unsigned int stack asm("sp");
 	volatile register unsigned int newstack;
@@ -374,7 +374,7 @@ void init_finalize(struct kernel_container *kcont)
 	struct container *c;
 
 	/* Get the first container */
-	c = link_to_struct(kcont->containers.list.next,
+	c = link_to_struct(kres->containers.list.next,
 			   struct container,
 			   list);
 
@@ -394,7 +394,7 @@ void init_finalize(struct kernel_container *kcont)
 	 * Unmap boot memory, and add it as
 	 * an unused kernel memcap
 	 */
-	free_boot_memory(&kernel_container);
+	free_boot_memory(&kernel_resources);
 
 	/*
 	 * Set up KIP UTCB ref
@@ -453,10 +453,10 @@ void start_kernel(void)
 	sched_init(&scheduler);
 
 	/* Evaluate system resources and set up resource pools */
-	init_system_resources(&kernel_container);
+	init_system_resources(&kernel_resources);
 
 	/* Free boot memory, jump to first task's stack and start scheduler */
-	init_finalize(&kernel_container);
+	init_finalize(&kernel_resources);
 
 	BUG();
 }
