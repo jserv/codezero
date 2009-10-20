@@ -40,8 +40,8 @@ def add_container_constraint(cid):
 
 def generate_container_cml(arch, ncont):
     fbody = ""
-    with open(join(CML2_CONFIG_SRCDIR, arch + '.cml')) as in_cml:
-        fbody += in_cml.read()
+    with open(join(CML2_CONFIG_SRCDIR, arch + '.ruleset')) as in_ruleset:
+        fbody += in_ruleset.read()
 
     # Add container visibility constraint
     for cont in range(ncont):
@@ -63,8 +63,9 @@ def generate_container_cml(arch, ncont):
             fbody += defbody % { 'cn' : cont }
 
     # Write the result to output rules file.
-    with open(join(CML2_CONFIG_SRCDIR, "out.cml"), "w+") as out_cml:
+    with open(CML2_AUTOGEN_RULES, "w+") as out_cml:
         out_cml.write(fbody)
+    return CML2_AUTOGEN_RULES
 
 if __name__ == "__main__":
     generate_container_cml('arm', 4)

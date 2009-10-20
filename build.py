@@ -21,8 +21,7 @@ def main():
     #
     # Configure
     #
-    if options.config or not os.path.exists(CML2_OLDCONFIG_FILE):
-        configure_kernel(CML2_CML_FILE)
+    configure_system(options, args)
 
     #
     # Build the kernel
