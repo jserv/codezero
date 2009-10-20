@@ -76,8 +76,8 @@ def build_parse_options():
     parser.add_option("-f", "--use-file", dest = "cml_file",
                       help = "Supply user-defined cml file "
                              "(Use only if you want to override default)")
-    parser.add_option("-r", "--reset-old-config", action = "store_true",
-                      default = False, dest = "reset_old_config",
+    parser.add_option("-r", "--reset-config", action = "store_true",
+                      default = False, dest = "reset_config",
                       help = "Reset configuration file settings "
                              "(If you had configured before and changing the "
                              "rule file, this will reset existing values to default)")
@@ -91,6 +91,14 @@ def build_parse_options():
                              "(Symbol values and container parameters are printed)")
 
     (options, args) = parser.parse_args()
+
+    if options.cml_file and options.reset_config:
+        parser.error("options -f and -r are mutually exclusive")
+        exit()
+
+    # -f implies -c
+    if options.cml_file:
+        options.config = 1
 
     return options, args
 
@@ -109,10 +117,11 @@ def configure_system(options, args):
     # If we have an existing config file or one supplied in options
     # and we're not forced to autogenerate, we use the config file.
     #
-    # Otherwise we autogenerate a ruleset and compile it.
+    # Otherwise we autogenerate a ruleset and compile it, and create
+    # a configuration file from it from scratch.
     #
-    if options.cml_file or os.path.exists(CML2_CONFIG_FILE) \
-            and not options.reset_old_config:
+    if (options.cml_file or os.path.exists(CML2_CONFIG_FILE)) \
+            and not options.reset_config:
         if options.cml_file:
             cml2_config_file = options.cml_file
         else:
@@ -131,7 +140,7 @@ def configure_system(options, args):
 
         # Create configuration from existing file
         os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + \
-                  CML2_CONFIG_FILE + ' -i ' + CML2_CONFIG_FILE + \
+                  CML2_CONFIG_FILE + ' -i ' + cml2_config_file + \
                   ' ' + CML2_COMPILED_RULES)
     else:
         rules_file = autogen_rules_file(options, args)
@@ -169,7 +178,7 @@ def configure_system(options, args):
     generate_kernel_cinfo(config, KERNEL_CINFO_PATH)
 
     # Print out the configuration if asked
-    if opts.print_config:
+    if options.print_config:
         config.config_print()
 
     return config

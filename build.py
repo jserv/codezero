@@ -16,12 +16,11 @@ from configure import *
 from config.parse_options import *
 
 def main():
-    options, args = build_parse_options()
-
+    opts, args = build_parse_options()
     #
     # Configure
     #
-    configure_system(options, args)
+    configure_system(opts, args)
 
     #
     # Build the kernel

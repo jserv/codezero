@@ -39,6 +39,7 @@ def add_container_constraint(cid):
     return cml_string
 
 def generate_container_cml(arch, ncont):
+    print "Autogenerating new rule file"
     fbody = ""
     with open(join(CML2_CONFIG_SRCDIR, arch + '.ruleset')) as in_ruleset:
         fbody += in_ruleset.read()
