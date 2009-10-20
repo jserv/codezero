@@ -417,6 +417,7 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 	struct capability *cap;
 	struct cap_info *cap_info;
 
+	pager->start_address = pinfo->start_address;
 	pager->start_lma = __pfn_to_addr(pinfo->pager_lma);
 	pager->start_vma = __pfn_to_addr(pinfo->pager_vma);
 	pager->memsize = __pfn_to_addr(pinfo->pager_size);
