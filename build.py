@@ -48,5 +48,8 @@ def main():
     print "\nBuilding the loader and packing..."
     os.system("scons -f SConstruct.loader")
 
+    print "\nBuild complete."
+
+
 if __name__ == "__main__":
     main()
