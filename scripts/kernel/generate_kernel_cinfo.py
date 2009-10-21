@@ -178,7 +178,7 @@ pager_ifdefs = \
     #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_SIZE CONFIG_CONT%(cn)d_LINUX_MAPSIZE
 #else
-    #define CONFIG_CONT%(cn)d_INIT_PROG_COUNTER (CONFIG_CONT%(cn)d_PAGER_LMA)
+    #define CONFIG_CONT%(cn)d_INIT_PROG_COUNTER (CONFIG_CONT%(cn)d_PAGER_VMA)
 #endif
 '''
 def generate_pager_memory_ifdefs(containers):
