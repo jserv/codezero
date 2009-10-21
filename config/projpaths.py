@@ -25,11 +25,13 @@ KERNEL_CINFO_PATH = join(PROJROOT, "src/generic/cinfo.c")
 LINUXDIR = join(PROJROOT, 'conts/linux')
 LINUX_KERNELDIR = join(LINUXDIR, 'linux-2.6.28.10')
 LINUX_ROOTFSDIR = join(LINUXDIR, 'rootfs')
+LINUX_ATAGSDIR = join(LINUXDIR, 'atags')
 
 POSIXDIR = join(PROJROOT, 'conts/posix')
 POSIX_BOOTDESCDIR = join(POSIXDIR, 'bootdesc')
 
 projpaths = {   \
+    'LINUX_ATAGSDIR'  : LINUX_ATAGSDIR, \
     'LINUX_ROOTFSDIR' : LINUX_ROOTFSDIR, \
     'LINUX_KERNELDIR' : LINUX_KERNELDIR, \
     'LINUXDIR' : LINUXDIR, \

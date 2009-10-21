@@ -39,9 +39,10 @@ CONT%(cn)d_PAGER_TASK_START	'Container %(cn)d Task Address Space Region Start'
 CONT%(cn)d_PAGER_TASK_END	'Container %(cn)d Task Address Space Region End'
 CONT%(cn)d_PAGER_UTCB_START	'Container %(cn)d UTCB Mappings Region Start'
 CONT%(cn)d_PAGER_UTCB_END	'Container %(cn)d UTCB Mappings Region End'
-
+CONT%(cn)d_LINUX_ZRELADDR         'Container %(cn)d Linux ZRELADDR parameter'
 CONT%(cn)d_LINUX_PAGE_OFFSET	'Container %(cn)d Linux PAGE_OFFSET Parameter'
 CONT%(cn)d_LINUX_PHYS_OFFSET	'Container %(cn)d Linux PHYS_OFFSET Parameter'
+CONT%(cn)d_LINUX_ROOTFS_ADDRESS	'Container %(cn)d Linux ROOTFS Address'
 CONT%(cn)d_LINUX_MAPSIZE	'Container %(cn)d Linux Initial Kernel Map Size Parameter'
 
 default CONT%(cn)d_PAGER_LMA	 from 0x0
@@ -53,9 +54,10 @@ default CONT%(cn)d_PAGER_TASK_START	 from 0x0
 default CONT%(cn)d_PAGER_TASK_END	 from 0x0
 default CONT%(cn)d_PAGER_UTCB_START	 from 0x0
 default CONT%(cn)d_PAGER_UTCB_END	 from 0x0
-
+default CONT%(cn)d_LINUX_ZRELADDR  from 0x0
 default CONT%(cn)d_LINUX_PAGE_OFFSET from 0x0
 default CONT%(cn)d_LINUX_PHYS_OFFSET from 0x0
+default CONT%(cn)d_LINUX_ROOTFS_ADDRESS	 from 0x0
 default CONT%(cn)d_LINUX_MAPSIZE	 from 0x0
 
 default CONT%(cn)d_VIRTMEM_REGIONS from 1
@@ -146,8 +148,10 @@ menu cont%(cn)d_posix_pager_params
 
 
 menu cont%(cn)d_linux_pager_params
+	CONT%(cn)d_LINUX_ZRELADDR@
 	CONT%(cn)d_LINUX_PAGE_OFFSET@
 	CONT%(cn)d_LINUX_PHYS_OFFSET@
+	CONT%(cn)d_LINUX_ROOTFS_ADDRESS@
 	CONT%(cn)d_LINUX_MAPSIZE@
 
 menu cont%(cn)d_virtmem_list

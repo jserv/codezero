@@ -105,7 +105,7 @@ int init_pager(struct pager *pager,
 	}
 
 	/* Initialize ktcb */
-	task_init_registers(task, pager->start_vma);
+	task_init_registers(task, pager->start_address);
 
 	/* Initialize container/pager relationships */
 	pager->tcb = task;

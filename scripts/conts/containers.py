@@ -17,6 +17,7 @@ from config.projpaths import *
 from config.configuration import *
 from scripts.linux.build_linux import *
 from scripts.linux.build_rootfs import *
+from scripts.linux.build_atags import *
 from pack import *
 from packall import *
 
@@ -25,9 +26,12 @@ def build_linux_container(projpaths, container):
     linux_builder.build_linux()
     rootfs_builder = RootfsBuilder(projpaths, container)
     rootfs_builder.build_rootfs()
+    atags_builder = AtagsBuilder(projpaths, container)
+    atags_builder.build_atags()
     linux_container_packer = LinuxContainerPacker(container, \
                                                   linux_builder, \
-                                                  rootfs_builder)
+                                                  rootfs_builder, \
+                                                  atags_builder)
     return linux_container_packer.pack_container()
 
 def glob_by_walk(arg, dirname, names):

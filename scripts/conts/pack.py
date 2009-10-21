@@ -53,7 +53,7 @@ def source_to_builddir(srcdir, id):
     return join(BUILDDIR, cont_builddir)
 
 class LinuxContainerPacker:
-    def __init__(self, container, linux_builder, rootfs_builder):
+    def __init__(self, container, linux_builder, rootfs_builder, atags_builder):
 
         # Here, we simply attempt to get PROJROOT/conts as
         # PROJROOT/build/cont[0-9]
@@ -67,6 +67,7 @@ class LinuxContainerPacker:
                                       'container' + str(container.id) + '.elf')
         self.kernel_image_in = linux_builder.kernel_image
         self.rootfs_elf_in = rootfs_builder.rootfs_elf_out
+        self.atags_elf_in = atags_builder.atags_elf_out
 
     def generate_container_assembler(self, source):
         with open(self.container_S_out, 'w+') as f:
@@ -92,9 +93,11 @@ class LinuxContainerPacker:
 
     def pack_container(self):
         self.generate_container_lds([self.kernel_image_in, \
-                                     self.rootfs_elf_in])
+                                     self.rootfs_elf_in, \
+                                     self.atags_elf_in])
         self.generate_container_assembler([self.kernel_image_in, \
-                                           self.rootfs_elf_in])
+                                           self.rootfs_elf_in, \
+                                           self.atags_elf_in])
         os.system("arm-none-linux-gnueabi-gcc " + "-nostdlib -o %s -T%s %s" \
                   % (self.container_elf_out, \
                      self.container_lds_out,
