@@ -13,7 +13,6 @@ from config.projpaths import *
 from config.configuration import *
 from scripts.conts import containers
 from configure import *
-from config.parse_options import *
 
 def main():
     opts, args = build_parse_options()
