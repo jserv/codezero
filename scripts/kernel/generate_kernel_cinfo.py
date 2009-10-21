@@ -60,7 +60,7 @@ cinfo_end = \
 pager_start = \
 '''
 \t\t[0] = {
-\t\t\t.start_address = (CONFIG_CONT%d_INIT_PROG_COUNTER),
+\t\t\t.start_address = (CONFIG_CONT%d_START_PC_ADDR),
 \t\t\t.pager_lma = __pfn(CONFIG_CONT%d_PAGER_LMA),
 \t\t\t.pager_vma = __pfn(CONFIG_CONT%d_PAGER_VMA),
 \t\t\t.pager_size = __pfn(CONFIG_CONT%d_PAGER_SIZE),
@@ -171,14 +171,14 @@ pager_ifdefs_todotext = \
 pager_ifdefs = \
 '''
 #if defined(CONFIG_CONT%(cn)d_TYPE_LINUX)
-    #define CONFIG_CONT%(cn)d_INIT_PROG_COUNTER  \
-        (CONFIG_CONT%(cn)d_LINUX_ZRELADDR - CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET + \
+    #define CONFIG_CONT%(cn)d_START_PC_ADDR \\
+        (CONFIG_CONT%(cn)d_LINUX_ZRELADDR - CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET + \\
          CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_LMA  (CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_SIZE CONFIG_CONT%(cn)d_LINUX_MAPSIZE
 #else
-    #define CONFIG_CONT%(cn)d_INIT_PROG_COUNTER (CONFIG_CONT%(cn)d_PAGER_VMA)
+    #define CONFIG_CONT%(cn)d_START_PC_ADDR (CONFIG_CONT%(cn)d_PAGER_VMA)
 #endif
 '''
 def generate_pager_memory_ifdefs(containers):

@@ -96,8 +96,8 @@ def build_parse_options():
         parser.error("options -f and -r are mutually exclusive")
         exit()
 
-    # -f implies -c
-    if options.cml_file:
+    # -f or -r or -n or -a implies -c
+    if options.cml_file or options.ncont or options.arch or options.reset_config:
         options.config = 1
 
     return options, args
