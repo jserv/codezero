@@ -22,11 +22,6 @@ int sys_fork(struct tcb *parent)
 	struct tcb *child;
 	struct exregs_data exregs;
 	struct task_ids ids;
-//	 	= {
-//		.tid = TASK_ID_INVALID,
-//		.spid = parent->spid,		/* spid to copy from */
-//		.tgid = TASK_ID_INVALID,	/* FIXME: !!! FIX THIS */
-//	};
 
 	/* Make all shadows in this task read-only */
 	vm_freeze_shadows(parent);
@@ -36,8 +31,8 @@ int sys_fork(struct tcb *parent)
 	 * kernel stack and kernel-side tcb copied
 	 */
 	if (IS_ERR(child = task_create(parent, &ids,
-				       THREAD_COPY_SPACE,
-			    	       TCB_NO_SHARING)))
+			    	       TCB_NO_SHARING,
+				       TC_COPY_SPACE)))
 		return (int)child;
 
 	/* Set child's fork return value to 0 */
@@ -64,27 +59,17 @@ int sys_fork(struct tcb *parent)
 	return child->tid;
 }
 
-int do_clone(struct tcb *parent,
-	     unsigned long child_stack,
-	     unsigned int flags)
+int do_clone(struct tcb *parent, unsigned long child_stack,
+	     unsigned int flags, unsigned int sysflags)
 {
 	struct exregs_data exregs;
 	struct task_ids ids;
 	struct tcb *child;
 	int err;
 
-	/*
-	 * Determine whether the cloned
-	 * thread is in parent's thread group
-	 */
-	if (flags & TCB_SHARED_TGROUP)
-		ids.tgid = parent->tgid;
-	else
-		ids.tgid = TASK_ID_INVALID;
-
 	if (IS_ERR(child = task_create(parent, &ids,
-				       THREAD_SAME_SPACE,
-				       flags)))
+				       flags,
+				       sysflags)))
 		return (int)child;
 
 	/* Set up child stack marks with given stack argument */
@@ -122,23 +107,28 @@ int sys_clone(struct tcb *parent,
 	      unsigned int clone_flags)
 {
 	unsigned int flags = 0;
+	unsigned int sysflags = 0;
 
 	if (!child_stack)
 		return -EINVAL;
 
-	if (clone_flags & CLONE_VM)
+	if (clone_flags & CLONE_VM) {
 		flags |= TCB_SHARED_VM;
+		sysflags |= TC_SHARE_SPACE;
+	}
 	if (clone_flags & CLONE_FS)
 		flags |= TCB_SHARED_FS;
 	if (clone_flags & CLONE_FILES)
 		flags |= TCB_SHARED_FILES;
-	if (clone_flags & CLONE_THREAD)
+	if (clone_flags & CLONE_THREAD) {
 		flags |= TCB_SHARED_TGROUP;
+		sysflags |= TC_SHARE_GROUP;
+	}
 	if (clone_flags & CLONE_PARENT)
 		flags |= TCB_SHARED_PARENT;
 
 	return do_clone(parent,
 			(unsigned long)child_stack,
-			flags);
+			flags, sysflags);
 }
 

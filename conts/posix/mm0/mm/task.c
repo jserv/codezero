@@ -342,7 +342,7 @@ int copy_tcb(struct tcb *to, struct tcb *from, unsigned int share_flags)
 }
 
 struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
-			unsigned int ctrl_flags, unsigned int share_flags)
+			unsigned int share_flags, unsigned int ctrl_flags)
 {
 	struct tcb *task;
 	int err;
@@ -354,15 +354,7 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 	if (parent) {
 		ids->tid = parent->tid;
 		ids->spid = parent->spid;
-
-		/*
-		 * Determine whether the cloned thread
-		 * is in parent's thread group
-		 */
-		if (share_flags & TCB_SHARED_TGROUP)
-			ids->tgid = parent->tgid;
-		else
-			ids->tgid = TASK_ID_INVALID;
+		ids->tgid = parent->tgid;
 	}
 
 	/* Create the thread structures and address space */

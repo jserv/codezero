@@ -242,19 +242,19 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 			  unsigned int flags)
 {
 	/* New threads just need their mode set up */
-	if ((flags & THREAD_CREATE_MASK) == THREAD_NEW_SPACE) {
+	if (flags & TC_NEW_SPACE) {
 		BUG_ON(orig);
 		new->context.spsr = ARM_MODE_USR;
 		return 0;
 	}
 
+	BUG_ON(!orig);
 	/*
 	 * For duplicated threads pre-syscall context is saved on
 	 * the kernel stack. We copy this context of original
 	 * into the duplicate thread's current context structure
 	 *
-	 * We don't lock for context modification because the
-	 * thread is not known to the system yet.
+	 * No locks needed as the thread is not known to the system yet.
 	 */
 	BUG_ON(!(new->context.spsr = orig->syscall_regs->spsr)); /* User mode */
 	new->context.r0 = orig->syscall_regs->r0;
@@ -281,37 +281,18 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 	return 0;
 }
 
-/*
- * Sets up the thread, thread group and space id of newly created thread
- * according to supplied flags.
- */
-int thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
-			 struct ktcb *new, struct ktcb *orig)
+static inline void
+thread_setup_new_ids(struct task_ids *ids, unsigned int flags,
+		     struct ktcb *new, struct ktcb *orig)
 {
+	if (flags & TC_SHARE_GROUP)
+		new->tgid = orig->tgid;
+	else
+		new->tgid = new->tid;
+
+	/* Update ids to be returned back to caller */
 	ids->tid = new->tid;
-
-	/*
-	 * If thread space is new or copied,
-	 * thread gets same group id as its thread id
-	 */
-	if (flags == THREAD_NEW_SPACE ||
-	    flags == THREAD_COPY_SPACE) {
-		ids->tgid = ids->tid;
-		new->tgid = new->tid;
-	}
-
-	/*
-	 * If the tgid of original thread is supplied, that implies the
-	 * new thread wants to be in the same group, and we leave it as
-	 * it is. Otherwise the thread gets the same group id as its
-	 * unique thread id.
-	 */
-	if (flags == THREAD_SAME_SPACE && ids->tgid != orig->tgid) {
-		ids->tgid = ids->tid;
-		new->tgid = new->tid;
-	}
-
-	return 0;
+	ids->tgid = new->tgid;
 }
 
 int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flags)
@@ -321,14 +302,14 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 
 	address_space_reference_lock();
 
-	if (flags == THREAD_SAME_SPACE) {
+	if (flags & TC_SHARE_SPACE) {
 		if (!(space = address_space_find(ids->spid))) {
 			ret = -ESRCH;
 			goto out;
 		}
 		address_space_attach(tcb, space);
 	}
-	if (flags == THREAD_COPY_SPACE) {
+	if (flags & TC_COPY_SPACE) {
 		if (!(space = address_space_find(ids->spid))) {
 			ret = -ESRCH;
 			goto out;
@@ -342,7 +323,7 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 		address_space_attach(tcb, new);
 		address_space_add(new);
 	}
-	if (flags == THREAD_NEW_SPACE) {
+	if (flags & TC_NEW_SPACE) {
 		if (IS_ERR(new = address_space_create(0))) {
 			ret = (int)new;
 			goto out;
@@ -364,7 +345,21 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	struct ktcb *parent = 0;
 	int err;
 
+	/* Clear flags to just include creation flags */
 	flags &= THREAD_CREATE_MASK;
+
+	/* Can't have multiple space directives in flags */
+	if ((flags & TC_SHARE_SPACE & TC_COPY_SPACE & TC_NEW_SPACE)
+	    || !flags)
+		return -EINVAL;
+
+	/* Can't request shared utcb or tgid without shared space */
+	if (!(flags & TC_SHARE_SPACE)) {
+		if ((flags & TC_SHARE_UTCB) ||
+		    (flags & TC_SHARE_GROUP)) {
+			return -EINVAL;
+		}
+	}
 
 	if (!(new = tcb_alloc_init()))
 		return -ENOMEM;
@@ -374,8 +369,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		goto out_err;
 
 	/* Obtain parent thread if there is one */
-	if (flags == THREAD_SAME_SPACE ||
-	    flags == THREAD_COPY_SPACE) {
+	if (flags & TC_SHARE_SPACE || flags & TC_COPY_SPACE) {
 		if (!(parent = tcb_find(ids->tid))) {
 			err = -EINVAL;
 			goto out_err;

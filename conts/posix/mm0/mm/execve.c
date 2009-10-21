@@ -79,8 +79,8 @@ int init_execve(char *filepath)
 	vmfile = self->files->fd[fd].vmfile;
 
 	if (IS_ERR(new_task = task_create(0, &ids,
-					  THREAD_NEW_SPACE,
-					  TCB_NO_SHARING))) {
+					  TCB_NO_SHARING,
+					  TC_NEW_SPACE))) {
 		sys_close(self, fd);
 		return (int)new_task;
 	}
