@@ -28,9 +28,9 @@ def find_loader_load_address(target, source, env):
         for line in file:
             begin = line.rfind(" ")
             end = len(line)
-            if re.search("(PHYS)(.)(_START)", line):
+            if re.search("(PHYS)([0-9]){1,4}(_START)", line):
                 array_start.append(int(line[begin : end], 16))
-            elif re.search("(PHYS)(.)(_END)", line):
+            elif re.search("(PHYS)([0-9]){1,4}(_END)", line):
                 array_end.append(int(line[begin : end], 16))
     array_start.sort()
     array_end.sort()
