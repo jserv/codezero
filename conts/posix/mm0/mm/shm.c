@@ -10,7 +10,7 @@
 #include <memory.h>
 #include <vm_area.h>
 #include <globals.h>
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <lib/idpool.h>

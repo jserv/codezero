@@ -15,7 +15,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/exregs.h>
 #include <l4lib/ipcdefs.h>
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 #include <l4/api/space.h>
 
 

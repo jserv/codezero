@@ -51,7 +51,7 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
            		  ASFLAGS = ['-D__ASSEMBLY__'],
            		  PROGSUFFIX = '.elf',
            		  ENV = {'PATH' : os.environ['PATH']},
-           		  LIBS = ['gcc', 'libl4', 'c-userspace', 'libmm', 'libmc', 'gcc'],
+           		  LIBS = ['gcc', 'libl4', 'c-userspace', 'libmm', 'libmc', 'libmalloc', 'gcc'],
                   CPPPATH = ['include', LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE],
                   LIBPATH = [LIBC_LIBPATH, LIBL4_LIBPATH, LIBMEM_LIBPATH, LIBPOSIX_LIBPATH],
           		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')

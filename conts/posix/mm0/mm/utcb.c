@@ -8,7 +8,7 @@
 #include INC_GLUE(memlayout.h)
 #include <mmap.h>
 #include <utcb.h>
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 #include <vm_area.h>
 #include <memory.h>
 

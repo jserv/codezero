@@ -5,7 +5,7 @@
 #include <l4/lib/list.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 #include <mm/alloc_page.h>
 #include <vm_area.h>
 #include <string.h>

@@ -5,7 +5,7 @@
  */
 #include <l4/lib/math.h>
 #include <vm_area.h>
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 #include INC_API(errno.h)
 #include <posix/sys/types.h>
 #include <l4lib/arch/syscalls.h>

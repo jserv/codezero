@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <mm/alloc_page.h>
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 #include <lib/bit.h>
 
 #include <task.h>

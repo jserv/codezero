@@ -10,5 +10,5 @@
 #include <l4/api/capability.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
-#include <lib/malloc.h>
+#include <malloc/malloc.h>
 
