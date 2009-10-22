@@ -349,8 +349,8 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	flags &= THREAD_CREATE_MASK;
 
 	/* Can't have multiple space directives in flags */
-	if ((flags & TC_SHARE_SPACE & TC_COPY_SPACE & TC_NEW_SPACE)
-	    || !flags)
+	if ((flags & TC_SHARE_SPACE
+	     & TC_COPY_SPACE & TC_NEW_SPACE) || !flags)
 		return -EINVAL;
 
 	/* Can't request shared utcb or tgid without shared space */

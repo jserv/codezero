@@ -19,6 +19,7 @@
 
 /* use this to place code/data in a certain section */
 #define SECTION(x) __attribute__((section(x)))
+#define ALIGN(x) __attribute__((aligned (x)))
 
 /* Functions for critical path optimizations */
 #if (__GNUC__ >= 3)

@@ -97,6 +97,7 @@ int init_pager(struct pager *pager,
 		/* Initialize space structure */
 		link_init(&space->list);
 		mutex_init(&space->lock);
+		cap_list_init(&space->cap_list);
 		space->pgd = current_pgd;
 		address_space_attach(task, space);
 	} else {

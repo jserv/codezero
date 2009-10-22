@@ -56,15 +56,15 @@ int read_task_capabilities(void *userbuf)
 int capability_share(unsigned int share_flags)
 {
 	switch (share_flags) {
-	case CAP_SHARE_WITH_SPACE:
+	case CAP_SHARE_SPACE:
 		cap_list_move(&current->space->cap_list,
 			      &current->cap_list);
 		break;
-	case CAP_SHARE_WITH_CONTAINER:
+	case CAP_SHARE_CONTAINER:
 		cap_list_move(&curcont->cap_list,
 			      &current->cap_list);
 		break;
-	case CAP_SHARE_WITH_TGROUP: {
+	case CAP_SHARE_GROUP: {
 		struct ktcb *tgr_leader;
 
 	       	BUG_ON(!(tgr_leader = tcb_find(current->tgid)));
