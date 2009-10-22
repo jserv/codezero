@@ -98,7 +98,7 @@ def build_parse_options():
 
     # -f or -r or -n or -a implies -c
     if options.cml_file or options.ncont or options.arch or options.reset_config \
-       or not os.path.exists(BUILDDIR):
+       or not os.path.exists(BUILDDIR) or not os.path.exists(CONFIG_SHELVE_DIR):
         options.config = 1
 
     return options, args
@@ -138,6 +138,13 @@ def configure_system(options, args):
             # Compile rules file.
             os.system(CML2TOOLSDIR + '/cmlcompile.py -o ' + \
                       CML2_COMPILED_RULES + ' ' + rules_file)
+
+        #
+        # If there was an existing config file in default cml path
+        # and -s was supplied, save it.
+        #
+        if os.path.exists(CML2_CONFIG_FILE) and options.backup_config:
+            shutil.copy(CML2_CONFIG_FILE, CML2_CONFIG_FILE_SAVED)
 
         # Create configuration from existing file
         os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + \
