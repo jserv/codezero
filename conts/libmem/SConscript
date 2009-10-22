@@ -28,7 +28,9 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 
 objmm = env.StaticObject(Glob('mm/*.c'))
 objmc = env.StaticObject(Glob('memcache/*.[cS]'))
+objmalloc = env.StaticObject(Glob('malloc/*.[cS]'))
 libmm = env.StaticLibrary('mm', objmm)
 libmc = env.StaticLibrary('mc', objmc)
+libmalloc = env.StaticLibrary('malloc', objmalloc)
 
-Return('libmm', 'libmc')
+Return('libmm', 'libmc', 'libmalloc')
