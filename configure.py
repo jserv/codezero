@@ -97,7 +97,8 @@ def build_parse_options():
         exit()
 
     # -f or -r or -n or -a implies -c
-    if options.cml_file or options.ncont or options.arch or options.reset_config:
+    if options.cml_file or options.ncont or options.arch or options.reset_config \
+       or not os.path.exists(BUILDDIR):
         options.config = 1
 
     return options, args
