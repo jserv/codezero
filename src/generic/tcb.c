@@ -32,6 +32,7 @@ void tcb_init(struct ktcb *new)
 
 	cap_list_init(&new->cap_list);
 	cap_list_init(&new->tgr_cap_list);
+	cap_list_init(&new->pager_cap_list);
 
 	/* Initialise task's scheduling state and parameters. */
 	sched_init_task(new, TASK_PRIO_NORMAL);
@@ -116,6 +117,9 @@ struct ktcb *tcb_find_by_space(l4id_t spid)
 struct ktcb *tcb_find(l4id_t tid)
 {
 	struct ktcb *task;
+
+	if (current->tid == tid)
+		return current;
 
 	spin_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_struct(task, &curcont->ktcb_list.list, task_list) {

@@ -112,6 +112,7 @@ int init_pager(struct pager *pager,
 	pager->tcb = task;
 	task->pager = pager;
 	task->pagerid = task->tid;
+	task->tgid = task->tid;
 	task->container = cont;
 
 	/* Initialize uninitialized capability fields while on dummy */

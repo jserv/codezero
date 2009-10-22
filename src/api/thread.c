@@ -191,7 +191,8 @@ void task_destroy_current(void)
 	list_foreach_removable_struct(task, n,
 				      &curcont->ktcb_list.list,
 				      task_list) {
-		if (task->tid == current->tid)
+		if (task->tid == current->tid ||
+		    task->pagerid != current->tid)
 			continue;
 		spin_unlock(&curcont->ktcb_list.list_lock);
 		task_suspend(task, TASK_EXITING);
@@ -342,7 +343,7 @@ out:
 int thread_create(struct task_ids *ids, unsigned int flags)
 {
 	struct ktcb *new;
-	struct ktcb *parent = 0;
+	struct ktcb *orig = 0;
 	int err;
 
 	/* Clear flags to just include creation flags */
@@ -351,6 +352,10 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	/* Can't have multiple space directives in flags */
 	if ((flags & TC_SHARE_SPACE
 	     & TC_COPY_SPACE & TC_NEW_SPACE) || !flags)
+		return -EINVAL;
+
+	/* Can't have multiple pager specifiers */
+	if (flags & TC_SHARE_PAGER & TC_AS_PAGER)
 		return -EINVAL;
 
 	/* Can't request shared utcb or tgid without shared space */
@@ -370,27 +375,40 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 
 	/* Obtain parent thread if there is one */
 	if (flags & TC_SHARE_SPACE || flags & TC_COPY_SPACE) {
-		if (!(parent = tcb_find(ids->tid))) {
+		if (!(orig = tcb_find(ids->tid))) {
 			err = -EINVAL;
 			goto out_err;
 		}
 	}
 
 	/*
-	 * Setup container-generic fields from current task
+	 * Note this is a kernel-level relationship
+	 * between the creator and the new thread.
 	 *
-	 * NOTE: If a new container is created, this needs
-	 * to assign the new pager and container
+	 * Any higher layer may define parent/child
+	 * relationships between orig and new separately.
 	 */
-	new->pagerid = current->pagerid;
-	new->pager = current->pager;
+	if (flags & TC_AS_PAGER)
+		new->pagerid = current->tid;
+	else if (flags & TC_SHARE_PAGER)
+		new->pagerid = current->pagerid;
+	else
+		new->pagerid = new->tid;
+
+	/*
+	 * Setup container-generic fields from current task
+	 */
 	new->container = current->container;
 
 	/* Set up new thread context by using parent ids and flags */
-	thread_setup_new_ids(ids, flags, new, parent);
-	arch_setup_new_thread(new, parent, flags);
+	thread_setup_new_ids(ids, flags, new, orig);
+	arch_setup_new_thread(new, orig, flags);
 
 	tcb_add(new);
+
+	//printk("%s: %d created: %d, %d, %d \n",
+	//       __FUNCTION__, current->tid, ids->tid,
+	//       ids->tgid, ids->spid);
 
 	return 0;
 

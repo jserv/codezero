@@ -68,7 +68,7 @@ int capability_share(unsigned int share_flags)
 		struct ktcb *tgr_leader;
 
 	       	BUG_ON(!(tgr_leader = tcb_find(current->tgid)));
-		cap_list_move(&tgr_leader->cap_list,
+		cap_list_move(&tgr_leader->tgr_cap_list,
 			      &current->cap_list);
 		break;
 	}

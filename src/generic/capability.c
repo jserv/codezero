@@ -81,6 +81,7 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 					    unsigned int rtype)
 {
 	struct capability *cap;
+	struct ktcb *tgleader;
 
 	/* Search task's own list */
 	list_foreach_struct(cap, &task->cap_list.caps, list)
@@ -92,8 +93,11 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 		if (cap_rtype(cap) == rtype)
 			return cap;
 
+	/* Find group leader */
+	BUG_ON(!(tgleader = tcb_find(task->tgid)));
+
 	/* Search thread group list */
-	list_foreach_struct(cap, &task->tgr_cap_list.caps, list)
+	list_foreach_struct(cap, &tgleader->tgr_cap_list.caps, list)
 		if (cap_rtype(cap) == rtype)
 			return cap;
 

@@ -60,10 +60,9 @@ struct ktcb {
 	struct link rq_list;
 	struct runqueue *rq;
 
-	/* Thread information */
+	/* Thread Id information (See space for space id) */
 	l4id_t tid;		/* Global thread id */
 	l4id_t tgid;		/* Global thread group id */
-	/* See space for space id */
 
 	/* Flags to indicate various task status */
 	unsigned int flags;
@@ -105,6 +104,7 @@ struct ktcb {
 	/* Capability lists */
 	struct cap_list cap_list;
 	struct cap_list tgr_cap_list;
+	struct cap_list pager_cap_list;
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;
