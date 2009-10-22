@@ -30,7 +30,8 @@ void tcb_init(struct ktcb *new)
 	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
 
-	link_init(&new->cap_list.caps);
+	cap_list_init(&new->cap_list);
+	cap_list_init(&new->tgr_cap_list);
 
 	/* Initialise task's scheduling state and parameters. */
 	sched_init_task(new, TASK_PRIO_NORMAL);

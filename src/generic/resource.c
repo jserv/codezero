@@ -24,7 +24,7 @@ pmd_table_t *alloc_pmd(void)
 {
 	struct capability *cap;
 
-	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	if (!(cap = capability_find_by_rtype(current,
 					     CAP_RTYPE_MAPPOOL)))
 		return 0;
 
@@ -38,7 +38,7 @@ struct address_space *alloc_space(void)
 {
 	struct capability *cap;
 
-	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	if (!(cap = capability_find_by_rtype(current,
 					     CAP_RTYPE_SPACEPOOL)))
 		return 0;
 
@@ -60,7 +60,7 @@ struct ktcb *alloc_ktcb(void)
 {
 	struct capability *cap;
 
-	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	if (!(cap = capability_find_by_rtype(current,
 					     CAP_RTYPE_THREADPOOL)))
 		return 0;
 
@@ -73,7 +73,8 @@ struct ktcb *alloc_ktcb(void)
 /*
  * This version is boot-time only and it has no
  * capability checking. Imagine the case where the
- * initial capabilities are created.
+ * initial capabilities are created and there is no
+ * capability to check this allocation.
  */
 struct capability *boot_alloc_capability(void)
 {
@@ -84,7 +85,7 @@ struct capability *alloc_capability(void)
 {
 	struct capability *cap;
 
-	if (!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	if (!(cap = capability_find_by_rtype(current,
 					     CAP_RTYPE_CAPPOOL)))
 		return 0;
 
@@ -103,7 +104,7 @@ struct mutex_queue *alloc_user_mutex(void)
 {
 	struct capability *cap;
 
-	if (!(cap = capability_find_by_rtype(current->pager->tcb->cap_list_ptr,
+	if (!(cap = capability_find_by_rtype(current,
 					     CAP_RTYPE_MUTEXPOOL)))
 		return 0;
 
@@ -122,7 +123,7 @@ void free_pmd(void *addr)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	BUG_ON(!(cap = capability_find_by_rtype(current,
 						CAP_RTYPE_MAPPOOL)));
 	capability_free(cap, 1);
 
@@ -133,7 +134,7 @@ void free_space(void *addr)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	BUG_ON(!(cap = capability_find_by_rtype(current,
 						CAP_RTYPE_SPACEPOOL)));
 	capability_free(cap, 1);
 
@@ -144,7 +145,7 @@ void free_ktcb(void *addr)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	BUG_ON(!(cap = capability_find_by_rtype(current,
 						CAP_RTYPE_THREADPOOL)));
 	capability_free(cap, 1);
 
@@ -155,7 +156,7 @@ void free_capability(void *addr)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current->cap_list_ptr,
+	BUG_ON(!(cap = capability_find_by_rtype(current,
 						CAP_RTYPE_CAPPOOL)));
 	capability_free(cap, 1);
 
@@ -171,7 +172,7 @@ void free_user_mutex(void *addr)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current->pager->tcb->cap_list_ptr,
+	BUG_ON(!(cap = capability_find_by_rtype(current,
 						CAP_RTYPE_MUTEXPOOL)));
 	capability_free(cap, 1);
 
@@ -399,6 +400,7 @@ void init_kernel_resources(struct kernel_resources *kres)
 	memcap_unmap(&kres->physmem_free, kernel_area->start,
 		     kernel_area->end);
 
+	/* Initialize zombie pager list */
 	init_ktcb_list(&kres->zombie_list);
 
 	/* TODO:
@@ -443,8 +445,8 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 	 * Find pager's capability capability, check its
 	 * current use count and initialize it
 	 */
-	cap = capability_find_by_rtype(&pager->cap_list,
-				       CAP_RTYPE_CAPPOOL);
+	cap = cap_list_find_by_rtype(&pager->cap_list,
+				     CAP_RTYPE_CAPPOOL);
 
 	/* Verify that we did not excess allocated */
 	if (!cap || cap->size < pinfo->ncaps) {
@@ -496,6 +498,14 @@ void setup_containers(struct boot_resources *bootres,
 	 * amount of memory from the boot allocators.
 	 */
 	current_pgd = realloc_page_tables();
+
+	/* Move it back
+	 *
+	 * FIXME: Merge until this part of code with
+	 * kres_setup_capabilities and init_system_resources
+	 * it doesn't look good.
+	 */
+	cap_list_move(&kres->non_memory_caps, &current->cap_list);
 
 	/* Create all containers but leave pagers */
 	for (int i = 0; i < bootres->nconts; i++) {
@@ -575,7 +585,7 @@ void kres_setup_capabilities(struct boot_resources *bootres,
 	cap_list_insert(cap, &kres->non_memory_caps);
 
 	/* Set up dummy current cap-list for below functions to use */
-	current->cap_list_ptr = &kres->non_memory_caps;
+	cap_list_move(&current->cap_list, &kres->non_memory_caps);
 
 	copy_boot_capabilities(&kres->physmem_used);
 	copy_boot_capabilities(&kres->physmem_free);
@@ -836,8 +846,6 @@ int setup_boot_resources(struct boot_resources *bootres,
 }
 
 /*
- * FIXME: Add error handling
- *
  * Initializes all system resources and handling of those
  * resources. First descriptions are done by allocating from
  * boot memory, once memory caches are initialized, boot
@@ -845,7 +853,6 @@ int setup_boot_resources(struct boot_resources *bootres,
  */
 int init_system_resources(struct kernel_resources *kres)
 {
-	/* FIXME: Count kernel resources */
 	struct boot_resources bootres;
 
 	memset(&bootres, 0, sizeof(bootres));

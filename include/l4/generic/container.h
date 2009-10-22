@@ -48,6 +48,7 @@ struct container {
 	struct id_pool *space_id_pool;
 
 	struct mutex_queue_head mutex_queue_head; /* Userspace mutex list */
+	struct cap_list cap_list; /* Capabilities shared by whole container */
 
 	/*
 	 * Capabilities that apply to this container

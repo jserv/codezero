@@ -73,6 +73,18 @@ static inline void list_remove_init(struct link *link)
 	link->prev = link;
 }
 
+/* Cuts the whole list from head and returns it */
+static inline struct link *list_detach(struct link *head)
+{
+	struct link *next = head->next;
+
+	/* Detach head from rest of the list */
+	list_remove_init(head);
+
+	/* Return detached list */
+	return next;
+}
+
 static inline int list_empty(struct link *list)
 {
 	return list->prev == list && list->next == list;

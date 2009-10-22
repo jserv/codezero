@@ -107,6 +107,7 @@ struct address_space *address_space_create(struct address_space *orig)
 
 	/* Initialize space structure */
 	link_init(&space->list);
+	cap_list_init(&space->cap_list);
 	mutex_init(&space->lock);
 	space->pgd = pgd;
 

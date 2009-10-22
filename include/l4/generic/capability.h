@@ -9,6 +9,16 @@
 #include <l4/lib/list.h>
 
 /*
+ * Some resources that capabilities possess don't
+ * have unique ids or need ids at all.
+ *
+ * E.g. a threadpool does not need a resource id.
+ * A virtual memory capability does not require
+ * a resource id, its capid is sufficient.
+ */
+#define CAP_RESID_NONE		-1
+
+/*
  * A capability is a unique representation of security
  * qualifiers on a particular resource.
  *
@@ -65,6 +75,7 @@ struct capability {
 };
 
 struct cap_list {
+	int ktcb_refs;
 	int ncaps;
 	struct link caps;
 };
@@ -87,12 +98,43 @@ static inline void cap_list_insert(struct capability *cap,
 	clist->ncaps++;
 }
 
+/* Detach a whole list of capabilities from list head */
+static inline struct capability *
+cap_list_detach(struct cap_list *clist)
+{
+	struct link *list = list_detach(&clist->caps);
+	clist->ncaps = 0;
+	return link_to_struct(list, struct capability, list);
+}
+
+/* Attach a whole list of capabilities to list head */
+static inline void cap_list_attach(struct capability *cap,
+				   struct cap_list *clist)
+{
+	/* Attach as if cap is the list and clist is the element */
+	list_insert(&clist->caps, &cap->list);
+
+	/* Count the number of caps attached */
+	list_foreach_struct(cap, &clist->caps, list)
+		clist->ncaps++;
+}
+
+static inline void cap_list_move(struct cap_list *to,
+				 struct cap_list *from)
+{
+	struct capability *cap_head = cap_list_detach(from);
+	cap_list_attach(cap_head, to);
+}
+
+struct ktcb;
 /* Capability checking for quantitative capabilities */
 int capability_consume(struct capability *cap, int quantity);
 int capability_free(struct capability *cap, int quantity);
-struct capability *capability_find_by_rtype(struct cap_list *clist,
+struct capability *capability_find_by_rtype(struct ktcb *task,
 					    unsigned int rtype);
 
+struct capability *cap_list_find_by_rtype(struct cap_list *clist,
+					  unsigned int rtype);
 #if 0
 /* Virtual memory space allocated to container */
 struct capability cap_virtmap = {

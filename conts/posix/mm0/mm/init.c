@@ -200,7 +200,7 @@ int read_pager_capabilities()
 	caparray = alloc_bootmem(sizeof(struct capability) * ncaps, 0);
 
 	/* Read all capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_READ_CAPS,
+	if ((err = l4_capability_control(CAP_CONTROL_READ,
 					 0, caparray)) < 0) {
 		printf("l4_capability_control() reading of "
 		       "capabilities failed.\n Could not "

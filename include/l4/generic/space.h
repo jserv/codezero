@@ -24,6 +24,7 @@
 #include <l4/lib/list.h>
 #include <l4/lib/mutex.h>
 #include <l4/lib/idpool.h>
+#include <l4/generic/capability.h>
 #include INC_SUBARCH(mm.h)
 
 /* A simple page table with a reference count */
@@ -32,6 +33,9 @@ struct address_space {
 	struct link list;
 	struct mutex lock;
 	pgd_table_t *pgd;
+
+	/* Capabilities shared by threads in same space */
+	struct cap_list cap_list;
 	int ktcb_refs;
 };
 

@@ -102,9 +102,9 @@ struct ktcb {
 	struct container *container;
 	struct pager *pager;
 
-	/* Capability list */
-	struct cap_list *cap_list_ptr;
+	/* Capability lists */
 	struct cap_list cap_list;
+	struct cap_list tgr_cap_list;
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;

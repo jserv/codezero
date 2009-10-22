@@ -22,6 +22,7 @@ int container_init(struct container *c)
 	init_address_space_list(&c->space_list);
 	init_ktcb_list(&c->ktcb_list);
 	init_mutex_queue_head(&c->mutex_queue_head);
+	cap_list_init(&c->cap_list);
 
 	/* Init pager structs */
 	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++)
@@ -73,15 +74,14 @@ int init_pager(struct pager *pager,
 	struct ktcb *task;
 	struct address_space *space;
 	int first = !!current_pgd;
+	struct capability *cap;
 
 	/*
-	 * Initialize dummy current capability list pointer
-	 * so that capability accounting can be done as normal
-	 *
-	 * FYI: We're still on bootstack instead of current's
-	 * real stack. Hence this is a dummy.
+	 * Set up dummy current cap_list so that cap accounting
+	 * can be done to this pager. Note, that we're still on
+	 * bootstack.
 	 */
-	current->cap_list_ptr = &pager->cap_list;
+	cap_list_move(&current->cap_list, &pager->cap_list);
 
 	/* New ktcb allocation is needed */
 	task = tcb_alloc_init();
@@ -112,7 +112,25 @@ int init_pager(struct pager *pager,
 	task->pager = pager;
 	task->pagerid = task->tid;
 	task->container = cont;
-	task->cap_list_ptr = &pager->cap_list;
+
+	/* Initialize uninitialized capability fields while on dummy */
+	list_foreach_struct(cap, &current->cap_list.caps, list) {
+		/* Initialize owner */
+		cap->owner = task->tid;
+
+		/*
+		 * Initialize resource id, if possible.
+		 * Currently this is a temporary hack where
+		 * we allow only container ids and _assume_
+		 * that container is pager's own container.
+		 *
+		 * See capability resource ids for info
+		 */
+		if (cap_rtype(cap) == CAP_RTYPE_CONTAINER)
+			cap->resid = task->container->cid;
+		else
+			cap->resid = CAP_RESID_NONE;
+	}
 
 	printk("%s: Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
 	       __KERNELNAME__,
@@ -123,6 +141,9 @@ int init_pager(struct pager *pager,
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
 			page_align_up(pager->memsize),
 			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
+
+	/* Move capability list from dummy to task's cap list */
+	cap_list_move(&task->cap_list, &current->cap_list);
 
 	/* Initialize task scheduler parameters */
 	sched_init_task(task, TASK_PRIO_PAGER);
