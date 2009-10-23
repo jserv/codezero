@@ -102,9 +102,9 @@ struct ktcb {
 	struct pager *pager;
 
 	/* Capability lists */
-	struct cap_list cap_list;
-	struct cap_list tgr_cap_list;
-	struct cap_list pager_cap_list;
+	struct cap_list cap_list;	 /* Own private capabilities */
+	struct cap_list tgroup_cap_list; /* Caps shared with thread group */
+	struct cap_list pager_cap_list;	 /* Caps shared with paged children */
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;

@@ -232,7 +232,8 @@ int simple_pager_thread(void *arg)
 		}
 
 	/* Destroy thread we created */
-	if (err == 0 && res == 0)
+	if (err == 0 &&
+	    res == 0)
 		l4_thread_control(THREAD_DESTROY, &ids);
 
 	result = testres;

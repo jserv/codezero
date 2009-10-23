@@ -81,7 +81,7 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 					    unsigned int rtype)
 {
 	struct capability *cap;
-	struct ktcb *tgleader;
+	struct ktcb *tgleader, *pager;
 
 	/* Search task's own list */
 	list_foreach_struct(cap, &task->cap_list.caps, list)
@@ -97,7 +97,15 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 	BUG_ON(!(tgleader = tcb_find(task->tgid)));
 
 	/* Search thread group list */
-	list_foreach_struct(cap, &tgleader->tgr_cap_list.caps, list)
+	list_foreach_struct(cap, &tgleader->tgroup_cap_list.caps, list)
+		if (cap_rtype(cap) == rtype)
+			return cap;
+
+	/* Find pager */
+	BUG_ON(!(pager = tcb_find(task->pagerid)));
+
+	/* Search pager's paged-children capability list */
+	list_foreach_struct(cap, &pager->pager_cap_list.caps, list)
 		if (cap_rtype(cap) == rtype)
 			return cap;
 

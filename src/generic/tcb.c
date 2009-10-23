@@ -31,7 +31,7 @@ void tcb_init(struct ktcb *new)
 	mutex_init(&new->thread_control_lock);
 
 	cap_list_init(&new->cap_list);
-	cap_list_init(&new->tgr_cap_list);
+	cap_list_init(&new->tgroup_cap_list);
 	cap_list_init(&new->pager_cap_list);
 
 	/* Initialise task's scheduling state and parameters. */

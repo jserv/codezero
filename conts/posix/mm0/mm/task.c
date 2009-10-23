@@ -357,8 +357,10 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 		ids->tgid = parent->tgid;
 	}
 
-	/* Create the thread structures and address space */
-	if ((err = l4_thread_control(THREAD_CREATE | ctrl_flags, ids)) < 0) {
+	/* Create the thread structures and address space as the pager */
+	if ((err = l4_thread_control(THREAD_CREATE |
+				     TC_AS_PAGER |
+				     ctrl_flags, ids)) < 0) {
 		printf("l4_thread_control failed with %d.\n", err);
 		return PTR_ERR(err);
 	}

@@ -395,6 +395,8 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	else
 		new->pagerid = new->tid;
 
+	//printk("Thread (%d) pager set as (%d)\n", new->tid, new->pagerid);
+
 	/*
 	 * Setup container-generic fields from current task
 	 */

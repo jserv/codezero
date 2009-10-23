@@ -208,6 +208,16 @@ int read_pager_capabilities()
 		BUG();
 	}
 
+	/* Share all of them with paged children */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
+					 CAP_SHARE_CHILD,
+					 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request.\n");
+		BUG();
+	}
+
 	/* Copy them to real allocated structures */
 	copy_boot_capabilities(ncaps);
 

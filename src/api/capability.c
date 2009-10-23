@@ -48,10 +48,14 @@ int read_task_capabilities(void *userbuf)
 }
 
 /*
- * Currently shares _all_ capabilities of a task
- * with a collection of threads
+ * Currently shares _all_ capabilities of a task with a
+ * collection of threads
  *
  * FIXME: Check ownership for sharing.
+ *
+ * Currently we don't need to check since we _only_ share
+ * the ones from our own private list. If we shared from
+ * a collection's list, we would need to check ownership.
  */
 int capability_share(unsigned int share_flags)
 {
@@ -64,11 +68,32 @@ int capability_share(unsigned int share_flags)
 		cap_list_move(&curcont->cap_list,
 			      &current->cap_list);
 		break;
-	case CAP_SHARE_GROUP: {
-		struct ktcb *tgr_leader;
+	case CAP_SHARE_CHILD:
+		/*
+		 * Move own capabilities to paged-children
+		 * cap list so that all children can benefit
+		 * from our own capabilities.
+		 */
+		cap_list_move(&current->pager_cap_list,
+			      &current->cap_list);
+		break;
+	case CAP_SHARE_SIBLING: {
+		/* Find our pager */
+		struct ktcb *pager = tcb_find(current->pagerid);
 
-	       	BUG_ON(!(tgr_leader = tcb_find(current->tgid)));
-		cap_list_move(&tgr_leader->tgr_cap_list,
+		/*
+		 * Add own capabilities to its
+		 * paged-children cap_list
+		 */
+		cap_list_move(&pager->pager_cap_list,
+			      &current->cap_list);
+		break;
+	}
+	case CAP_SHARE_GROUP: {
+		struct ktcb *tgroup_leader;
+
+	       	BUG_ON(!(tgroup_leader = tcb_find(current->tgid)));
+		cap_list_move(&tgroup_leader->tgroup_cap_list,
 			      &current->cap_list);
 		break;
 	}
