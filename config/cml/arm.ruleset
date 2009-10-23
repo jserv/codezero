@@ -25,16 +25,10 @@ PLATFORM_PB926		'Versatile PB926 Platform'
 PLATFORM_PB11MPCORE	'Realview PB11MPCore Platform'
 PLATFORM_PBA8		'Realview PB-A8 Platform'
 
-DRIVER_UART_PL011	'ARM UART Primecell driver PL011'
-DRIVER_TIMER_SP804	'ARM Dual Timer Primecell driver SP804'
-DRIVER_IRQ_PL190	'ARM Vectored Interrupt Controller PL190'
-DRIVER_IRQ_GIC		'ARM Generic Interrupt Controller GIC'
-
 main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
 arm_cpu_menu		'ARM CPU type'
 arm_platform_menu	'ARM Platform Type'
-drivers_menu		'Platform Drivers'
 containers_menu		'Container Setup'
 arch_type		'Main architecture'
 
@@ -80,17 +74,10 @@ menu arm_cpu_menu
 menu arm_platform_menu
 	arm_platform_type
 
-menu drivers_menu
-	DRIVER_UART_PL011
-	DRIVER_TIMER_SP804
-	DRIVER_IRQ_PL190
-	DRIVER_IRQ_GIC
-
 menu arm_menu
 	arm_subarch_type
 	arm_cpu_menu
 	arm_platform_menu
-	drivers_menu
 
 menu main_menu
 	arch_type
@@ -123,14 +110,11 @@ unless SUBARCH_V7 suppress CPU_CORTEXA8
 
 unless SUBARCH_V5 suppress PLATFORM_PB926
 unless ARCH_ARM suppress arm_menu
-unless PLATFORM_PB926 or PLATFORM_AB926 suppress DRIVER_IRQ_PL190
 unless PLATFORM_EB suppress CPU_ARM1136
-unless PLATFORM_EB or PLATFORM_PBA8 or PLATFORM_PB11MPCORE suppress DRIVER_IRQ_GIC
-default DRIVER_UART_PL011 from y
-default DRIVER_TIMER_SP804 from y
-default DRIVER_IRQ_PL190 from y
-default DRIVER_IRQ_GIC from y
-
+derive DRIVER_UART_PL011 from SUBARCH_V5 or SUBARCH_V6 or SUBARCH_V7
+derive DRIVER_TIMER_SP804 from SUBARCH_V5 or SUBARCH_V6 or SUBARCH_V7
+derive DRIVER_IRQ_PL190 from SUBARCH_V5
+derive DRIVER_IRQ_GIC from SUBARCH_V6 or SUBARCH_V7
 
 prefix CONFIG_
 
