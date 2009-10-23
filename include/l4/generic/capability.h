@@ -3,8 +3,8 @@
  *
  * Copyright (C) 2009 Bahadir Balban
  */
-#ifndef __CAPABILITY_H__
-#define __CAPABILITY_H__
+#ifndef __GENERIC_CAPABILITY_H__
+#define __GENERIC_CAPABILITY_H__
 
 #include <l4/lib/list.h>
 
@@ -245,4 +245,4 @@ struct capability cap_cpuprio = {
 
 #endif
 
-#endif /* __CAPABILITY_H__ */
+#endif /* __GENERIC_CAPABILITY_H__ */

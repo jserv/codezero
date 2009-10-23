@@ -32,7 +32,7 @@ linker_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_lin
 
 container_h = Command('include/container.h', 'include/container.h.in', generate_container_h)
 
-src = [Glob('*.[cS]') + Glob('src/*.[cS]')]
+src = [Glob('*.[cS]') + Glob('src/*.[cS]') + Glob('src/arch/*.[cS]')]
 
 env.Append(LINKFLAGS = ['-T' + linker_lds[0].path, '-u_start'])
 env.Append(CPPPATH = [CONTAINER_INCLUDE])

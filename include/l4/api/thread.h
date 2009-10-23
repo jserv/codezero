@@ -1,5 +1,5 @@
-#ifndef __THREAD_H__
-#define __THREAD_H__
+#ifndef __API_THREAD_H__
+#define __API_THREAD_H__
 
 #define THREAD_ACTION_MASK	0x000F
 #define THREAD_CREATE		0x0000
@@ -19,4 +19,4 @@
 #define TC_SHARE_PAGER		0x0400  /* New thread, shared pager */
 #define TC_AS_PAGER		0x0800	/* Set new thread as child */
 
-#endif /* __THREAD_H__ */
+#endif /* __API_THREAD_H__ */

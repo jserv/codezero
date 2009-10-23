@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2007 Bahadir Balban
  */
-#ifndef __THREAD_H__
-#define __THREAD_H__
+#ifndef __GENERIC_THREAD_H__
+#define __GENERIC_THREAD_H__
 
 #include <l4/generic/tcb.h>
 
@@ -14,4 +14,4 @@ int thread_id_del(int tid);
 void task_destroy_current(void);
 void task_make_zombie(struct ktcb *task);
 
-#endif /* __THREAD_H__ */
+#endif /* __GENERIC_THREAD_H__ */

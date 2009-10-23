@@ -158,19 +158,6 @@ struct cap_split_desc {
 
 struct capability *capability_diff(struct capability *cap, struct cap_split_desc *split)
 {
-	if (split->valid & FIELD_TO_BIT(struct cap_split_desc, access)) {
-		new->access = orig->access & split->access;
-		orig->access &= ~split->access;
-	}
-	if (split->valid & FIELD_TO_BIT(struct cap_split_desc, size)) {
-		new->size = orig->size - split->size;
-		orig->size -= split->size;
-	}
-	if (split->valid & FIELD_TO_BIT(struct cap_split_desc, start)) {
-		memcap_unmap(cap, split->start, split->end);
-		new->size = orig->size - split->size;
-		orig->size -= split->size;
-	}
 
 }
 
@@ -178,4 +165,28 @@ int capability_split(struct ktcb *recv, struct ktcb *send, struct capability *ca
 {
 	capability_diff(orig, new, split);
 }
+
+int capability_split(struct capability *orig, struct capability *diff, unsigned int valid)
+{
+	struct capability *new;
+
+	if (!(new = alloc_capability()))
+		return -ENOMEM;
+
+	if (valid & FIELD_TO_BIT(struct capability, access)) {
+		new->access = orig->access & diff->access;
+		orig->access &= ~diff->access;
+	}
+	if (valid & FIELD_TO_BIT(struct capability, size)) {
+		new->size = orig->size - diff->size;
+		orig->size -= diff->size;
+	}
+	if (valid & FIELD_TO_BIT(struct capability, start)) {
+		/* This gets complicated, may return -ENOSYS for now */
+		memcap_unmap(cap, diff->start, diff->end);
+		new->size = orig->size - split->size;
+		orig->size -= split->size;
+	}
+}
+
 #endif

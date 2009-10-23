@@ -3,7 +3,7 @@ Import('env')
 Import('symbols')
 
 # The set of source files associated with this SConscript file.
-src_local = ['kip.c', 'syscall.c', 'thread.c', 'ipc.c', 'space.c', 'mutex.c', 'capability.c']
+src_local = ['kip.c', 'syscall.c', 'thread.c', 'ipc.c', 'map.c', 'mutex.c', 'capability.c', 'exregs.c']
 
 obj = env.Object(src_local)
 
