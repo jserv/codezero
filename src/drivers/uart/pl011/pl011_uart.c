@@ -6,22 +6,9 @@
 
 #include <l4/drivers/uart/pl011/pl011_uart.h>
 #include <l4/lib/bit.h>
+#include INC_PLAT(platform.h)
 
-struct pl011_uart uart = {
-	.base 	= PL011_BASE,
-	.ops 	= {
-		.initialise 	= pl011_initialise_device,
-		.tx_char	= pl011_tx_char,
-		.rx_char	= pl011_rx_char,
-		.set_baudrate	= pl011_set_baudrate,
-		.set_irq_mask	= pl011_set_irq_mask,
-		.clr_irq_mask	= pl011_clr_irq_mask,
-	},
-	.frame_errors 		= 0,
-	.parity_errors 		= 0,
-	.break_errors		= 0,
-	.rx_timeout_errors 	= 0,
-};
+struct pl011_uart uart;
 
 /* UART-specific internal error codes.
  * TODO: Replace them when generic error codes are in place */
@@ -44,56 +31,53 @@ struct pl011_uart uart = {
 #define PL011_DSR		(1 << 1)
 #define PL011_CTS		(1 << 0)
 
-int pl011_tx_char(char c)
+int pl011_tx_char(unsigned int uart_base, char c)
 {
-	unsigned int val;
-	val = 0;
+	unsigned int val = 0;
 
-	read(val, PL011_UARTFR);
-	if(val & PL011_TXFF) {		/* TX FIFO Full */
+	read(val, (uart_base + PL011_UARTFR));
+
+	if(val & PL011_TXFF) {
+		/* TX FIFO Full */
 		return -PL011_EAGAIN;
 	}
-	write(c, PL011_UARTDR);
+
+	write(c, (uart_base + PL011_UARTDR));
 	return 0;
 }
 
-int pl011_rx_char(char * c)
+int pl011_rx_char(unsigned int uart_base, char * c)
 {
 	unsigned int data;
-	unsigned int val;
-	val = 0;
+	unsigned int val = 0;
 
-	read(val, PL011_UARTFR);
-	if(val & PL011_RXFE) {		/* RX FIFO Empty */
+	read(val, (uart_base + PL011_UARTFR));
+	if(val & PL011_RXFE) {
+		/* RX FIFO Empty */
 		return -PL011_EAGAIN;
 	}
 
-	read(data, PL011_UARTDR);
+	read(data, (uart_base + PL011_UARTDR));
 	*c = (char) data;
 
-	if((data >> 8) & 0xF) {		/* There were errors */
-		return -1;		/* Signal error in xfer */
+	if((data >> 8) & 0xF) {
+		/* There were errors, signal error */
+		return -1;
 	}
-	return 0;			/* No error return */
+	return 0;
 }
-
 
 /*
  * Sets the baud rate in kbps. It is recommended to use
  * standard rates such as: 1200, 2400, 3600, 4800, 7200,
  * 9600, 14400, 19200, 28800, 38400, 57600 76800, 115200.
  */
-void pl011_set_baudrate(unsigned int baud, unsigned int clkrate)
+void pl011_set_baudrate(unsigned int uart_base, unsigned int baud, \
+							unsigned int clkrate)
 {
 	const unsigned int uartclk = 24000000;	/* 24Mhz clock fixed on pb926 */
-	unsigned int val;
-	unsigned int ipart, fpart;
-	unsigned int remainder;
-
-	remainder = 0;
-	ipart = 0;
-	fpart = 0;
-	val   = 0;
+	unsigned int val = 0;
+	unsigned int ipart = 0, fpart = 0;
 
 	/* Use default pb926 rate if no rate is supplied */
 	if(clkrate == 0)
@@ -104,55 +88,56 @@ void pl011_set_baudrate(unsigned int baud, unsigned int clkrate)
 	/* 24000000 / (16 * 38400) */
 	ipart = 39;
 
-	write(ipart, PL011_UARTIBRD);
-	write(fpart, PL011_UARTFBRD);
+	write(ipart, (uart_base + PL011_UARTIBRD));
+	write(fpart, (uart_base + PL011_UARTFBRD));
 
-	/* For the IBAUD and FBAUD to update, we need to
+	/*
+	 * For the IBAUD and FBAUD to update, we need to
 	 * write to UARTLCR_H because the 3 registers are
 	 * actually part of a single register in hardware
-	 * which only updates by a write to UARTLCR_H */
-	read(val, PL011_UARTLCR_H);
-	write(val, PL011_UARTLCR_H);
+	 * which only updates by a write to UARTLCR_H
+	 */
+	read(val, (uart_base + PL011_UARTLCR_H));
+	write(val, (uart_base + PL011_UARTLCR_H));
 	return;
-
 }
-
 
 /* Masks the irqs given in the flags bitvector. */
-void pl011_set_irq_mask(unsigned int flags)
+void pl011_set_irq_mask(unsigned int uart_base, unsigned int flags)
 {
-	unsigned int val;
-	val = 0;
+	unsigned int val = 0;
 
-	if(flags > 0x3FF) {	/* Invalid irqmask bitvector */
+	if(flags > 0x3FF) {
+		/* Invalid irqmask bitvector */
 		return;
 	}
 
-	read(val, PL011_UARTIMSC);
+	read(val, (uart_base + PL011_UARTIMSC));
 	val |= flags;
-	write(val, PL011_UARTIMSC);
+	write(val, (uart_base + PL011_UARTIMSC));
 	return;
 }
-
 
 /* Clears the irqs given in flags from masking */
-void pl011_clr_irq_mask(unsigned int flags)
+void pl011_clr_irq_mask(unsigned int uart_base, unsigned int flags)
 {
-	unsigned int val;
-	val = 0;
+	unsigned int val = 0;
 
-	if(flags > 0x3FF) {	/* Invalid irqmask bitvector */
+	if(flags > 0x3FF) {
+		/* Invalid irqmask bitvector */
 		return;
 	}
 
-	read(val, PL011_UARTIMSC);
+	read(val, (uart_base + PL011_UARTIMSC));
 	val &= ~flags;
-	write(val, PL011_UARTIMSC);
+	write(val, (uart_base + PL011_UARTIMSC));
 	return;
 }
 
-/* Produces 1 character from data register and appends it into
- * rx buffer keeps record of timeout errors if one occurs. */
+/*
+ * Produces 1 character from data register and appends it into
+ * rx buffer keeps record of timeout errors if one occurs.
+ */
 void pl011_rx_irq_handler(struct pl011_uart * uart, unsigned int flags)
 {
 	/*
@@ -165,7 +150,6 @@ void pl011_rx_irq_handler(struct pl011_uart * uart, unsigned int flags)
 /* Consumes 1 character from tx buffer and attempts to transmit it */
 void pl011_tx_irq_handler(struct pl011_uart * uart, unsigned int flags)
 {
-
 	/*
 	 * Currently we do nothing for uart irqs, because there's no external
 	 * client to send/receive data (e.g. userspace processes kernel threads).
@@ -214,7 +198,7 @@ void pl011_irq_handler(struct pl011_uart * uart)
 	int handler_index;
 	void (* handler)(struct pl011_uart *, unsigned int);
 
-	val = pl011_read_irqstat();
+	val = pl011_read_irqstat(uart->base);
 
 	handler_index = 32 - __clz(val);
 	if(!handler_index) {	/* No irq */
@@ -224,15 +208,16 @@ void pl011_irq_handler(struct pl011_uart * uart)
 	handler = (void (*) (struct pl011_uart *, unsigned int))
 			pl011_handlers[handler_index];
 
-	if(handler) {	/* If a handler is available */
-		(*handler)(uart, val);	/* Call it */
-	}
+	/* If a handler is available, call it */
+	if(handler)
+		(*handler)(uart, val);
+
 	return;
 }
 
 void pl011_initialise_driver(void)
 {
-	uart.ops.initialise(&uart);
+	pl011_initialise_device(&uart);
 }
 
 /* Initialises the uart class data structures, and the device.
@@ -246,32 +231,33 @@ int pl011_initialise_device(struct pl011_uart * uart)
 	uart->overrun_errors = 0;
 
 	/* Initialise data register for 8 bit data read/writes */
-	pl011_set_word_width(8);
+	pl011_set_word_width(uart->base, 8);
 
-	/* Fifos are disabled because by default it is assumed the port
+	/* 
+	 * Fifos are disabled because by default it is assumed the port
 	 * will be used as a user terminal, and in that case the typed
 	 * characters will only show up when fifos are flushed, rather than
 	 * when each character is typed. We avoid this by not using fifos.
 	 */
-	pl011_disable_fifos();
+	pl011_disable_fifos(uart->base);
 
 	/* Set default baud rate of 38400 */
-	pl011_set_baudrate(38400, 24000000);
+	pl011_set_baudrate(uart->base, 38400, 24000000);
 
 	/* Set default settings of 1 stop bit, no parity, no hw flow ctrl */
-	pl011_set_stopbits(1);
-	pl011_parity_disable();
+	pl011_set_stopbits(uart->base, 1);
+	pl011_parity_disable(uart->base);
 
 	/* Install the irq handler */
 	/* TODO: INSTALL IT HERE */
 
 	/* Enable all irqs */
-	pl011_clr_irq_mask(0x3FF);
+	pl011_clr_irq_mask(uart->base, 0x3FF);
 
 	/* Enable rx, tx, and uart chip */
-	pl011_tx_enable();
-	pl011_rx_enable();
-	pl011_uart_enable();
+	pl011_tx_enable(uart->base);
+	pl011_rx_enable(uart->base);
+	pl011_uart_enable(uart->base);
 
 	return 0;
 }

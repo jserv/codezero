@@ -10,7 +10,7 @@
 #include INC_PLAT(offsets.h)
 #include INC_GLUE(memlayout.h)
 
-#define PLATFORM_CONSOLE_BASE			PB926_UART0_VBASE
+#define PLATFORM_CONSOLE0_BASE			PB926_UART0_VBASE
 
 /* SP804 timer has TIMER1 at TIMER0 + 0x20 address */
 #define PLATFORM_TIMER0_BASE		PB926_TIMER01_VBASE

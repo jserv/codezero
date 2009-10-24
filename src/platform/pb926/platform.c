@@ -19,9 +19,10 @@
 #include INC_PLAT(irq.h)
 #include INC_ARCH(asm.h)
 
+/* We will use UART0 for kernel as well as user tasks, so map it to kernel and user space */
 void init_platform_console(void)
 {
-	add_boot_mapping(PB926_UART0_BASE, PL011_BASE, PAGE_SIZE,
+	add_boot_mapping(PB926_UART0_BASE, PLATFORM_CONSOLE0_BASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
 
 	/*
@@ -35,13 +36,13 @@ void init_platform_console(void)
 	uart_init();
 }
 
+/*
+ * We are using TIMER0 only, so we map TIMER0 base,
+ * incase any other timer is needed we need to map it
+ * to userspace or kernel space as needed
+ */
 void init_platform_timer(void)
 {
-	/*
-	 * We are using TIMER0 only, so we map TIMER0 base,
-	 * incase any other timer is needed we need to map it
-	 * to userspace or kernel space as needed
-	 */
 	add_boot_mapping(PB926_TIMER01_BASE, PLATFORM_TIMER0_BASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
 
