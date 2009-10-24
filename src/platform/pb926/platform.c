@@ -37,8 +37,14 @@ void init_platform_console(void)
 
 void init_platform_timer(void)
 {
-	add_boot_mapping(PB926_TIMER01_BASE, PLATFORM_TIMER_BASE, PAGE_SIZE,
+	/*
+	 * We are using TIMER0 only, so we map TIMER0 base,
+	 * incase any other timer is needed we need to map it
+	 * to userspace or kernel space as needed
+	 */
+	add_boot_mapping(PB926_TIMER01_BASE, PLATFORM_TIMER0_BASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
+
 	add_boot_mapping(PB926_SYSCTRL_BASE,	PB926_SYSCTRL_VBASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
 	timer_init();

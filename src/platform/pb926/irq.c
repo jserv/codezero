@@ -41,12 +41,18 @@ struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
 
 static int platform_timer_handler(void)
 {
-	sp804_irq_handler();
+	/*
+	 * Microkernel is using just TIMER0,
+	 * so we call handler with TIMER01 index
+	 */
+	sp804_irq_handler(PLATFORM_TIMER0_BASE);
 	return do_timer_irq();
 }
 
-/* Built-in irq handlers initialised at compile time.
- * Else register with register_irq() */
+/*
+ * Built-in irq handlers initialised at compile time.
+ * Else register with register_irq()
+ */
 struct irq_desc irq_desc_array[IRQS_MAX] = {
 	[IRQ_TIMER01] = {
 		.name = "Timer01",
