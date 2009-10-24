@@ -10,22 +10,17 @@
 #include <l4/api/space.h>
 
 int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
-	    unsigned long flags, unsigned int tid)
+	    unsigned int flags, l4id_t tid)
 {
 	struct ktcb *target;
+	int err;
 
-	if (tid == current->tid) { /* The easiest case */
-		target = current;
-		goto found;
-	} else 	/* else search the tcb from its hash list */
-		if ((target = tcb_find(tid)))
-			goto found;
+	if ((err = cap_map_check(phys, virt, npages, flags, tid)) < 0)
+		return err;
 
-	BUG();
-	return -EINVAL;
+	if (!(target = tcb_find(tid)))
+		return -ESRCH;
 
-found:
-//	printk("%s (%d) Mapping from 0x%lx to 0x%lxp, %lu pages\n", __FUNCTION__, tid, phys, virt, npages);
 	add_mapping_pgd(phys, virt, npages << PAGE_BITS, flags, TASK_PGD(target));
 
 	return 0;

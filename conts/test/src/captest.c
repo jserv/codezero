@@ -79,7 +79,7 @@ int capability_test(void)
 	int TEST_MUST_SUCCEED = 1;
 
 	/* Read pager capabilities */
-	read_pager_capabilities();
+	caps_read_all();
 
 	/*
 	 * Create new thread that will attempt

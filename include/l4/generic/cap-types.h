@@ -37,6 +37,7 @@
 #define CAP_RTYPE_MUTEXPOOL	(1 << 26)
 #define CAP_RTYPE_MAPPOOL	(1 << 27) /* For pmd spending */
 #define CAP_RTYPE_CAPPOOL	(1 << 28) /* For new cap generation */
+#define CAP_RTYPE_PGGROUP	(1 << 29) /* Group of paged threads */
 
 #define cap_rtype(c)	((c)->type & CAP_RTYPE_MASK)
 

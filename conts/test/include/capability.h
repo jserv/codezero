@@ -5,10 +5,8 @@
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
 
-void print_capability(struct capability *cap);
+void capability_print(struct capability *cap);
 
-int read_pager_capabilities();
-
-
+int caps_read_all();
 
 #endif /* __CAPABILITY_H__ */

@@ -576,6 +576,10 @@ int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 		goto error;
 	}
 
+	/* Everything in place, now check capability */
+	if ((err = cap_ipc_check(to, from, flags, ipc_type)) < 0)
+		return -ENOCAP;
+
 	/* Encode ipc type in task flags */
 	tcb_set_ipc_flags(current, flags);
 

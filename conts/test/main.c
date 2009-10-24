@@ -1,5 +1,7 @@
 /*
  * Main function for all tests
+ *
+ * Copyright (C) 2009 B Labs Ltd.
  */
 #include <l4/api/errno.h>
 #include <container.h>
@@ -9,7 +11,6 @@
 
 int main(void)
 {
-
 	printf("%s: Container %s started\n",
 	       __CONTAINER__, __CONTAINER_NAME__);
 

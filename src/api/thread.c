@@ -464,6 +464,9 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 				MAP_USR_RW_FLAGS, 1)) < 0)
 		return err;
 
+	if ((err = cap_thread_check(flags, ids)) < 0)
+		return err;
+
 	switch (flags & THREAD_ACTION_MASK) {
 	case THREAD_CREATE:
 		ret = thread_create(ids, flags);
