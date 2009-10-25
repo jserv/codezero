@@ -17,7 +17,7 @@
 #define CAP_TYPE_SCHED		(1 << 4)
 #define CAP_TYPE_UMUTEX		(1 << 5)
 #define CAP_TYPE_QUANTITY	(1 << 6)
-
+#define CAP_TYPE_CAP		(1 << 7)
 #define cap_type(c)	((c)->type & CAP_TYPE_MASK)
 
 /*
@@ -57,7 +57,7 @@
 #define CAP_EXREGS_RW_UTCB	(1 << 1)
 #define CAP_EXREGS_RW_SP	(1 << 2)
 #define CAP_EXREGS_RW_PC	(1 << 3)
-#define CAP_EXREGS_RW_REGS	(1 << 4)
+#define CAP_EXREGS_RW_REGS	(1 << 4) /* Other regular regs */
 #define CAP_EXREGS_RW_CPU	(1 << 5)
 #define CAP_EXREGS_RW_CPUTIME	(1 << 6)
 
@@ -90,12 +90,12 @@
 
 /* Userspace mutex capability */
 #define CAP_UMUTEX_LOCK		(1 << 0)
+#define CAP_UMUTEX_UNLOCK	(1 << 1)
 
 /* Capability control capability */
-#define CAP_CAP_SPLIT		(1 << 0)
-#define CAP_CAP_SPLICE		(1 << 1)
-#define CAP_CAP_REDUCE		(1 << 2)
-#define CAP_CAP_REVOKE		(1 << 3)
-#define CAP_CAP_GRANT		(1 << 4)
+#define CAP_CAP_MODIFY		(1 << 0)
+#define CAP_CAP_GRANT		(1 << 1)
+#define CAP_CAP_READ		(1 << 2)
+#define CAP_CAP_SHARE		(1 << 3)
 
 #endif /* __CAP_TYPES_H__ */

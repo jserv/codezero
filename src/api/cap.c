@@ -110,6 +110,13 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 {
 	int err;
 
+	/*
+	 * Check capability to do a capability operation.
+	 * Supported only on current's caps for time being.
+	 */
+	if ((err = cap_cap_check(current, req, flags)) < 0)
+		return err;
+
 	switch(req) {
 	/* Return number of capabilities the thread has */
 	case CAP_CONTROL_NCAPS:

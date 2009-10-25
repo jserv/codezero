@@ -7,6 +7,7 @@
 #define __GENERIC_CAPABILITY_H__
 
 #include <l4/lib/list.h>
+#include <l4/api/exregs.h>
 
 /*
  * Some resources that capabilities possess don't
@@ -126,7 +127,10 @@ static inline void cap_list_move(struct cap_list *to,
 	cap_list_attach(cap_head, to);
 }
 
+/* Have to have these as tcb.h includes this file */
 struct ktcb;
+struct task_ids;
+
 /* Capability checking for quantitative capabilities */
 int capability_consume(struct capability *cap, int quantity);
 int capability_free(struct capability *cap, int quantity);
@@ -135,6 +139,18 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 
 struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 					  unsigned int rtype);
+
+/* Capability checking on system calls */
+int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
+		  unsigned long npages, unsigned int flags, l4id_t tid);
+int cap_thread_check(struct ktcb *task, unsigned int flags,
+		     struct task_ids *ids);
+int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs);
+int cap_ipc_check(l4id_t to, l4id_t from,
+		  unsigned int flags, unsigned int ipc_type);
+int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags);
+int cap_mutex_check(unsigned long mutex_address, int mutex_op);
+
 #if 0
 /* Virtual memory space allocated to container */
 struct capability cap_virtmap = {

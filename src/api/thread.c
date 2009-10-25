@@ -13,6 +13,7 @@
 #include <l4/lib/mutex.h>
 #include <l4/lib/wait.h>
 #include <l4/generic/resource.h>
+#include <l4/generic/capability.h>
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
 
@@ -41,7 +42,7 @@ int sys_thread_switch(void)
  * already gone, the state is already TASK_INACTIVE so the pager
  * won't sleep at all.
  */
-int task_suspend(struct ktcb *task, unsigned int flags)
+int thread_suspend(struct ktcb *task, unsigned int flags)
 {
 	int ret = 0;
 
@@ -94,15 +95,11 @@ int arch_clear_thread(struct ktcb *tcb)
 	return 0;
 }
 
-int thread_recycle(struct task_ids *ids)
+int thread_recycle(struct ktcb *task)
 {
-	struct ktcb *task;
 	int ret;
 
-	if (!(task = tcb_find(ids->tid)))
-		return -ESRCH;
-
-	if ((ret = task_suspend(task, 0)) < 0)
+	if ((ret = thread_suspend(task, 0)) < 0)
 		return ret;
 
 	/*
@@ -124,9 +121,9 @@ int thread_recycle(struct task_ids *ids)
 	return 0;
 }
 
-void task_destroy_current();
+void thread_destroy_current();
 
-int task_destroy(struct ktcb *task)
+int thread_destroy(struct ktcb *task)
 {
 	int ret;
 
@@ -134,13 +131,13 @@ int task_destroy(struct ktcb *task)
 	 * Pager destroying itself
 	 */
 	if (task == current) {
-		task_destroy_current();
+		thread_destroy_current();
 
 		/* It should not return */
 		BUG();
 	}
 
-	if ((ret = task_suspend(task, 0)) < 0)
+	if ((ret = thread_suspend(task, 0)) < 0)
 		return ret;
 
 	/* Remove tcb from global list so any callers will get -ESRCH */
@@ -182,7 +179,7 @@ void task_make_zombie(struct ktcb *task)
  * address or voluntarily. All threads managed also get
  * destroyed.
  */
-void task_destroy_current(void)
+void thread_destroy_current(void)
 {
 	struct ktcb *task, *n;
 
@@ -195,7 +192,7 @@ void task_destroy_current(void)
 		    task->pagerid != current->tid)
 			continue;
 		spin_unlock(&curcont->ktcb_list.list_lock);
-		task_suspend(task, TASK_EXITING);
+		thread_suspend(task, TASK_EXITING);
 		spin_lock(&curcont->ktcb_list.list_lock);
 	}
 	spin_unlock(&curcont->ktcb_list.list_lock);
@@ -206,7 +203,7 @@ void task_destroy_current(void)
 	sched_suspend_sync();
 }
 
-int task_resume(struct ktcb *task)
+int thread_resume(struct ktcb *task)
 {
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
@@ -221,13 +218,8 @@ int task_resume(struct ktcb *task)
 }
 
 /* Runs a thread for the first time */
-int thread_start(struct task_ids *ids)
+int thread_start(struct ktcb *task)
 {
-	struct ktcb *task;
-
-	if (!(task = tcb_find(ids->tid)))
-       		return -ESRCH;
-
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
 
@@ -420,37 +412,6 @@ out_err:
 	return err;
 }
 
-
-static inline int thread_resume(struct task_ids *ids)
-{
-	struct ktcb *task;
-
-	if (!(task = tcb_find(ids->tid)))
-		return -ESRCH;
-
-	return task_resume(task);
-}
-
-static inline int thread_suspend(struct task_ids *ids)
-{
-	struct ktcb *task;
-
-	if (!(task = tcb_find(ids->tid)))
-		return -ESRCH;
-
-	return task_suspend(task, 0);
-}
-
-static inline int thread_destroy(struct task_ids *ids)
-{
-	struct ktcb *task;
-
-	if (!(task = tcb_find(ids->tid)))
-		return -ESRCH;
-
-	return task_destroy(task);
-}
-
 /*
  * Creates, destroys and modifies threads. Also implicitly creates an address
  * space for a thread that doesn't already have one, or destroys it if the last
@@ -458,13 +419,18 @@ static inline int thread_destroy(struct task_ids *ids)
  */
 int sys_thread_control(unsigned int flags, struct task_ids *ids)
 {
+	struct ktcb *task = 0;
 	int err, ret = 0;
 
 	if ((err = check_access((unsigned long)ids, sizeof(*ids),
 				MAP_USR_RW_FLAGS, 1)) < 0)
 		return err;
 
-	if ((err = cap_thread_check(flags, ids)) < 0)
+	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE)
+		if (!(task = tcb_find(ids->tid)))
+			return -ESRCH;
+
+	if ((err = cap_thread_check(task, flags, ids)) < 0)
 		return err;
 
 	switch (flags & THREAD_ACTION_MASK) {
@@ -472,19 +438,19 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		ret = thread_create(ids, flags);
 		break;
 	case THREAD_RUN:
-		ret = thread_start(ids);
+		ret = thread_start(task);
 		break;
 	case THREAD_SUSPEND:
-		ret = thread_suspend(ids);
+		ret = thread_suspend(task, flags);
 		break;
 	case THREAD_RESUME:
-		ret = thread_resume(ids);
+		ret = thread_resume(task);
 		break;
 	case THREAD_DESTROY:
-		ret = thread_destroy(ids);
+		ret = thread_destroy(task);
 		break;
 	case THREAD_RECYCLE:
-		ret = thread_recycle(ids);
+		ret = thread_recycle(task);
 		break;
 	default:
 		ret = -EINVAL;

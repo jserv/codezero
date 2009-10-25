@@ -137,14 +137,8 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 		goto out;
 	}
 
-	/*
-	 * FIXME:
-	 * Capability Check.
-	 * Whose clist are we ought to check? Pager's or threads?
-	 * Need to check exregs capability
-	 * Need to check utcb capability if present.
-	 * if ((exregs->flags & EXREGS_SET_UTCB) &&
-	 */
+	if ((err = cap_exregs_check(task, exregs)) < 0)
+		return -ENOCAP;
 
 	/* Copy registers */
 	do_exchange_registers(task, exregs);

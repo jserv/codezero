@@ -10,7 +10,7 @@
 #define MAP_USR_RW_FLAGS	0	/* CB as one would expect */
 #define MAP_USR_RO_FLAGS	1	/* CB as one would expect */
 #define MAP_SVC_RW_FLAGS	2	/* CB as one would expect */
-#define MAP_USR_IO_FLAGS	3	/* Non-CB, RW */
+#define MAP_USR_IO_FLAGS	3	/* Non-CB, RW TODO: How about RO one? */
 #define MAP_SVC_IO_FLAGS	4	/* Non-CB, RW */
 
 /* Some default aliases */

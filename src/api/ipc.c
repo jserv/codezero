@@ -15,17 +15,6 @@
 #include INC_GLUE(message.h)
 #include INC_GLUE(ipc.h)
 
-/*
- * ipc syscall uses an ipc_type variable and send/recv
- * details are embedded in this variable.
- */
-enum IPC_TYPE {
-	IPC_INVALID = 0,
-	IPC_SEND = 1,
-	IPC_RECV = 2,
-	IPC_SENDRECV = 3,
-};
-
 int ipc_short_copy(struct ktcb *to, struct ktcb *from)
 {
 	unsigned int *mr0_src = KTCB_REF_MR0(from);
@@ -373,7 +362,7 @@ int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags)
 
 int ipc_sendrecv_extended(l4id_t to, l4id_t from, unsigned int flags)
 {
-	return 0;
+	return -ENOSYS;
 }
 
 /*
@@ -577,8 +566,8 @@ int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 	}
 
 	/* Everything in place, now check capability */
-	if ((err = cap_ipc_check(to, from, flags, ipc_type)) < 0)
-		return -ENOCAP;
+	if ((ret = cap_ipc_check(to, from, flags, ipc_type)) < 0)
+		return ret;
 
 	/* Encode ipc type in task flags */
 	tcb_set_ipc_flags(current, flags);

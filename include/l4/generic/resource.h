@@ -9,6 +9,7 @@
 
 /* Number of containers defined at compile-time */
 #include <l4/generic/capability.h>
+#include <l4/lib/list.h>
 #include <l4/lib/idpool.h>
 #include INC_SUBARCH(mm.h)
 

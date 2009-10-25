@@ -12,6 +12,17 @@
 
 #if defined (__KERNEL__)
 
+/*
+ * ipc syscall uses an ipc_type variable and send/recv
+ * details are embedded in this variable.
+ */
+enum IPC_TYPE {
+	IPC_INVALID = 0,
+	IPC_SEND = 1,
+	IPC_RECV = 2,
+	IPC_SENDRECV = 3,
+};
+
 /* These are for internally created ipc paths. */
 int ipc_send(l4id_t to, unsigned int flags);
 int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags);

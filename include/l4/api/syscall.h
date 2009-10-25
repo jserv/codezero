@@ -40,7 +40,7 @@ int sys_unmap(unsigned long virtual, unsigned long npages, unsigned int tid);
 int sys_space_control(void);
 int sys_ipc_control(void);
 int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
-	    unsigned long flags, unsigned int tid);
+	    unsigned int flags, l4id_t tid);
 int sys_getid(struct task_ids *ids);
 int sys_capability_control(unsigned int req, unsigned int flags, void *addr);
 int sys_container_control(unsigned int req, unsigned int flags, void *addr);

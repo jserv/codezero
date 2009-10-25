@@ -8,8 +8,13 @@
 #include <l4/generic/container.h>
 #include <l4/generic/cap-types.h>
 #include <l4/generic/tcb.h>
+#include <l4/api/capability.h>
 #include <l4/api/errno.h>
 #include <l4/lib/printk.h>
+#include <l4/api/thread.h>
+#include <l4/api/exregs.h>
+#include <l4/api/ipc.h>
+#include INC_GLUE(message.h)
 
 void capability_init(struct capability *cap)
 {
@@ -76,12 +81,16 @@ struct capability *cap_list_find_by_rtype(struct cap_list *cap_list,
  * mutexes, if a mutex is freed, it needs to be accounted to private
  * pool first if that is not full, because freeing it into shared
  * pool may lose the mutex right to another task.
+ *
+ * In conclusion freeing of pool-type capabilities need to be done
+ * in order of privacy. -> It may get confusing as a space, thread
+ * group id or paged-thread group is not necessarily in a different
+ * privacy ring.
  */
 struct capability *capability_find_by_rtype(struct ktcb *task,
 					    unsigned int rtype)
 {
 	struct capability *cap;
-	struct ktcb *tgleader, *pager;
 
 	/* Search task's own list */
 	list_foreach_struct(cap, &task->cap_list.caps, list)
@@ -101,280 +110,316 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 	return 0;
 }
 
-typedef struct capability *(cap_match_func *)
-	(struct capability *cap, void *match_args)
-	cap_match_func_t;
+typedef struct capability *(*cap_match_func_t) \
+		(struct capability *cap, void *match_args);
 
 struct capability *cap_find(struct ktcb *task, cap_match_func_t cap_match_func,
-			    void *match_args, unsigned int val)
+			     void *match_args, unsigned int cap_type)
 {
 	struct capability *cap;
-	struct ktcb *tgleader, *pager;
 
 	/* Search task's own list */
 	list_foreach_struct(cap, &task->cap_list.caps, list)
-		if ((cap = cap_match_func(cap, match_args, val)))
+		if (cap_type(cap) == cap_type &&
+		    ((cap = cap_match_func(cap, match_args))))
 			return cap;
 
 	/* Search space list */
 	list_foreach_struct(cap, &task->space->cap_list.caps, list)
-		if ((cap = cap_match_func(cap, match_args, val)))
+		if (cap_type(cap) == cap_type &&
+		    ((cap = cap_match_func(cap, match_args))))
 			return cap;
 
 	/* Search container list */
 	list_foreach_struct(cap, &task->container->cap_list.caps, list)
-		if ((cap = cap_match_func(cap, match_args, val)))
+		if (cap_type(cap) == cap_type &&
+		    ((cap = cap_match_func(cap, match_args))))
 			return cap;
 
 	return 0;
 }
 
+struct sys_mutex_args {
+	unsigned long address;
+	unsigned int op;
+};
 
 struct capability *
-cap_match_mem(struct capability *cap,
-	      void *match_args, unsigned int valid)
+cap_match_mutex(struct capability *cap, void *args)
 {
-	struct capability *match = match_args;
+	/* Unconditionally expect these flags */
+	unsigned int perms = CAP_UMUTEX_LOCK | CAP_UMUTEX_UNLOCK;
 
-	/* Equality-check these fields based on valid vector */
-	if (valid & FIELD_TO_BIT(struct capability, capid))
-		if (cap->capid != match->capid)
-			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, resid))
-		if (cap->resid != match->resid)
-			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, owner))
-		if (cap->owner != match->owner)
-			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, type))
-		if (cap->type != match->type)
-			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, access))
-		if ((cap->access & match->access)
-		    != match->access)
-			return 0;
+	if ((cap->access & perms) != perms)
+		return 0;
 
-	/* Checked these together as a range */
-	if (valid & FIELD_TO_BIT(struct capability, start) ||
-	    valid & FIELD_TO_BIT(struct capability, end))
-		if (!(match->start >= cap->start &&
-		      match->end <= cap->end &&
-		      match->start < match->end))
+	/* Now check the usual restype/resid pair */
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (current->tid != cap->resid)
 			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (current->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (current->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
+	}
 
-	/* It is a match */
 	return cap;
 }
 
-struct ipc_match = {
-	l4id_t tid;
-	l4id_t tgid;
-	l4id_t spid;
-	l4id_t cid;
-	struct capability *cap;
+int cap_mutex_check(unsigned long mutex_address, int mutex_op)
+{
+	struct sys_mutex_args args = {
+		.address = mutex_address,
+		.op = mutex_op,
+	};
+
+	if (!(cap_find(current, cap_match_mutex,
+		       &args, CAP_TYPE_UMUTEX)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+struct sys_capctrl_args {
+	unsigned int req;
+	unsigned int flags;
+	struct ktcb *task;
+};
+
+struct capability *
+cap_match_capctrl(struct capability *cap, void *args_ptr)
+{
+	struct sys_capctrl_args *args = args_ptr;
+	unsigned int req = args->req;
+	struct ktcb *target = args->task;
+
+	/* Check operation privileges */
+	if (req == CAP_CONTROL_NCAPS ||
+	    req == CAP_CONTROL_READ)
+		if (!(cap->access & CAP_CAP_READ))
+			return 0;
+	if (req == CAP_CONTROL_SHARE)
+		if (!(cap->access & CAP_CAP_SHARE))
+			return 0;
+	if (req == CAP_CONTROL_GRANT)
+		if (!(cap->access & CAP_CAP_GRANT))
+			return 0;
+	if (req == CAP_CONTROL_MODIFY)
+		if (!(cap->access & CAP_CAP_MODIFY))
+			return 0;
+
+	/* Now check the usual restype/resid pair */
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
+	}
+
+	return cap;
+}
+
+int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags)
+{
+	struct sys_capctrl_args args = {
+		.req = req,
+		.flags = flags,
+		.task = task,
+	};
+
+	if (!(cap_find(task, cap_match_capctrl,
+		       &args, CAP_TYPE_CAP)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+struct sys_ipc_args {
+	struct ktcb *task;
+	unsigned int ipc_type;
+	unsigned int flags;
 };
 
 /*
  * In an ipc, we could look for access bits, resource type and target id
  */
 struct capability *
-cap_match_ipc(struct capability *cap, void *match_args, unsigned int valid)
+cap_match_ipc(struct capability *cap, void *args_ptr)
 {
-	struct ipc_match *ipc_match = match_args;
-	struct capability *cap = ipc_match->cap;
+	struct sys_ipc_args *args = args_ptr;
+	struct ktcb *target = args->task;
 
-	/*
-	 * Check these for basic equality.
-	 */
-	if (valid & FIELD_TO_BIT(struct capability, capid))
-		if (cap->capid != match->capid)
+	/* Check operation privileges */
+	if (args->flags & IPC_FLAGS_SHORT)
+		if (!(cap->access & CAP_IPC_SHORT))
 			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, owner))
-		if (cap->owner != match->owner)
+	if (args->flags & IPC_FLAGS_FULL)
+		if (!(cap->access & CAP_IPC_FULL))
 			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, access))
-		if ((cap->access & match->access)
-		    != match->access)
+	if (args->flags & IPC_FLAGS_EXTENDED)
+		if (!(cap->access & CAP_IPC_EXTENDED))
 			return 0;
 
+	/* Assume we have both send and receive unconditionally */
+	if (!((cap->access & CAP_IPC_SEND) &&
+	      (cap->access & CAP_IPC_RECV)))
+		return 0;
+
 	/*
-	 * Check these optimised/specially.
-	 * rtype and target are checked against each
-	 * other all at once
+	 * We have a target thread, check if capability match
+	 * any resource fields in target
 	 */
-	if (valid & FIELD_TO_BIT(struct capability, resid)) {
-		switch (cap_rtype(cap)) {
-		case CAP_RTYPE_THREAD:
-			if (ipc_matcher->tid != resid)
-				return 0;
-			break;
-		case CAP_RTYPE_TGROUP:
-			if (ipc_matcher->tgid != resid)
-				return 0;
-			break;
-		case CAP_RTYPE_SPACE:
-			if (ipc_matcher->spid != resid)
-				return 0;
-			break;
-		case CAP_RTYPE_CONTAINER:
-			if (ipc_matcher->cid != resid)
-				return 0;
-			break;
-		/*
-		 * It's simply a bug to
-		 * get an unknown resource here
-		 */
-		default:
-			BUG();
-		}
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
 	}
+
 	return cap;
 }
 
-int cap_ipc_check(struct ktcb *target, l4id_t from,
+/*
+ * Limitation: We currently only check from sender's
+ * perspective. Sender always targets a real thread.
+ * Does sender have the right to do this ipc?
+ */
+int cap_ipc_check(l4id_t to, l4id_t from,
 		  unsigned int flags, unsigned int ipc_type)
 {
-	unsigned int valid = 0;
-	struct capability ipccap = {
-		.access = ipc_flags_type_to_access(flags, ipc_type);
-	};
+	struct ktcb *target;
+	struct sys_ipc_args args;
+
+	/* Receivers can get away from us (for now) */
+	if (ipc_type != IPC_SEND  && ipc_type != IPC_SENDRECV)
+		return 0;
 
 	/*
-	 * All these ids will get checked at once,
-	 * depending on the encountered capability's
-	 * rtype field
+	 * We're the sender, meaning we have
+	 * a real target
 	 */
-	struct ipc_matcher ipc_matcher = {
-		.tid = target->tid,
-		.tgid = target->tgid,
-		.spid = target->space->spid,
-		.cid = target->container->cid,
-		.ipccap = ipccap,
-	};
+	if (!(target = tcb_find(to)))
+		return -ESRCH;
 
-	valid |= FIELD_TO_BIT(struct capability, access);
-	valid |= FIELD_TO_BIT(struct capability, resid);
+	/* Set up other args */
+	args.flags = flags;
+	args.ipc_type = ipc_type;
+	args.task = target;
 
-	if (!(cap_find(task, cap_match_ipc,
-		       &ipc_matcher, valid)))
+	if (!(cap_find(target, cap_match_ipc,
+		       &args, CAP_TYPE_IPC)))
 		return -ENOCAP;
+
 	return 0;
 }
 
-struct exregs_match = {
-	l4id_t tid
-	l4id_t pagerid;
-	l4id_t tgid;
-	l4id_t spid;
-	l4id_t cid;
-	struct capability *cap;
+struct sys_exregs_args {
+	struct exregs_data *exregs;
+	struct ktcb *task;
 };
 
-
+/*
+ * CAP_TYPE_EXREGS already matched upon entry
+ */
 struct capability *
-cap_match_thread(struct capability *cap, void *match_args, unsigned int valid)
+cap_match_exregs(struct capability *cap, void *args_ptr)
 {
-	struct thread_match *match = match_args;
-	struct capability *cap = match->cap;
+	struct sys_exregs_args *args = args_ptr;
+	struct exregs_data *exregs = args->exregs;
+	struct ktcb *target = args->task;
+
+	/* Check operation privileges */
+	if (exregs->valid_vect & EXREGS_VALID_REGULAR_REGS)
+		if (!(cap->access & CAP_EXREGS_RW_REGS))
+			return 0;
+	if (exregs->valid_vect & EXREGS_VALID_SP)
+		if (!(cap->access & CAP_EXREGS_RW_SP))
+			return 0;
+	if (exregs->valid_vect & EXREGS_VALID_PC)
+		if (!(cap->access & CAP_EXREGS_RW_PC))
+			return 0;
+	if (args->exregs->valid_vect & EXREGS_SET_UTCB)
+		if (!(cap->access & CAP_EXREGS_RW_UTCB))
+			return 0;
+	if (args->exregs->valid_vect & EXREGS_SET_PAGER)
+		if (!(cap->access & CAP_EXREGS_RW_PAGER))
+			return 0;
 
 	/*
-	 * Check these for basic equality.
+	 * We have a target thread, check if capability
+	 * match any resource fields in target.
 	 */
-	if (valid & FIELD_TO_BIT(struct capability, capid))
-		if (cap->capid != match->capid)
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
 			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, owner))
-		if (cap->owner != match->owner)
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
 			return 0;
-	if (valid & FIELD_TO_BIT(struct capability, access))
-		if ((cap->access & match->access)
-		    != match->access)
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
 			return 0;
-
-	/*
-	 * Check these optimised/specially.
-	 * rtype and target are checked against each
-	 * other all at once
-	 */
-	if (valid & FIELD_TO_BIT(struct capability, resid)) {
-		switch (cap_rtype(cap)) {
-		/* Ability to thread_control over a paged group */
-		case CAP_RTYPE_PGGROUP:
-			if (match->pagerid != resid)
-				return 0;
-			break;
-		case CAP_RTYPE_TGROUP:
-			if (match->tgid != resid)
-				return 0;
-			break;
-		case CAP_RTYPE_SPACE:
-			if (match->spid != resid)
-				return 0;
-			break;
-		case CAP_RTYPE_CONTAINER:
-			if (match->cid != resid)
-				return 0;
-			break;
-		/*
-		 * It's simply a bug to
-		 * get an unknown resource here
-		 */
-		default:
-			BUG();
-		}
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
 	}
+
 	return cap;
 }
 
-/*
- * TODO: We are here!!!
- */
-int cap_exregs_check(unsigned int flags, struct task_ids *ids)
+int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs)
 {
-	struct capability cap = {
-		.access = thread_control_flags_to_access(flags);
-		/* all resid's checked all at once by comparing against rtype */
+	struct sys_exregs_args args = {
+		.exregs = exregs,
+		.task = task,
 	};
-	struct thread_match match = {
-		.pagerid = current->tid
-		.tgid = current->tgid,
-		.spid = current->spid,
-		.cid = current->cid,
-		.cap = threadmatch,
-	};
-	unsigned int valid = 0;
 
-	valid |= FIELD_TO_BIT(struct capability, access);
-	valid |= FIELD_TO_BIT(struct capability, resid);
-
-	if (!(cap_find(task, cap_match_thread,
-		       &thread_match, valid)))
+	if (!(cap_find(task, cap_match_exregs,
+		       &args, CAP_TYPE_EXREGS)))
 		return -ENOCAP;
+
 	return 0;
 }
 
 /*
- * FIXME: As new pagers, thread groups,
+ * FIXME: Issues on capabilities:
+ *
+ * As new pagers, thread groups,
  * thread ids, spaces are created, we need to
  * give them thread_control capabilities dynamically,
  * based on those ids!!! How do we get to do that, so that
  * in userspace it looks not so difficult ???
- */
-struct thread_match = {
-	l4id_t tgid;
-	l4id_t tid;
-	l4id_t pagerid;
-	l4id_t spid;
-	l4id_t cid;
-	unsigned int thread_control_flags;
-};
-
-def thread_create():
-	new_space, same_tgid, same_pager,
-	check_existing_ids(tid, same_tgid, same_pager, thread_create)
-	thread_create(new_space)
-	thread_add_cap(new_space, all other caps)
-/*
+ *
  * What do you match here?
  *
  * THREAD_CREATE:
@@ -396,59 +441,187 @@ def thread_create():
  *   New thread -> New set of caps for that thread!
  *   New space -> New set of caps for that space! So many capabilities!
  */
-itn cap_thread_check(struct ktcb *task, unsigned int flags, struct task_ids *ids)
-{
-	struct thread_matcher = {
-		.pagerid = current->tid
-		.tgid = current->tgid,
-		.spid = current->spid,
-		.cid = current->cid,
-		.thread_control_flags = flags;
-	};
-	unsigned int valid = 0;
 
-	valid |= FIELD_TO_BIT(struct capability, access);
-	valid |= FIELD_TO_BIT(struct capability, resid);
+struct sys_tctrl_args {
+	struct ktcb *task;
+	unsigned int flags;
+	struct task_ids *ids;
+};
+
+/*
+ * CAP_TYPE_TCTRL matched upon entry
+ */
+struct capability *cap_match_thread(struct capability *cap,
+				    void *args_ptr)
+{
+	struct sys_tctrl_args *args = args_ptr;
+	struct ktcb *target = args->task;
+
+	/* Check operation privileges */
+	if (args->flags & THREAD_CREATE)
+		if (!(cap->access & CAP_TCTRL_CREATE))
+			return 0;
+	if (args->flags & THREAD_DESTROY)
+		if (!(cap->access & CAP_TCTRL_DESTROY))
+			return 0;
+	if (args->flags & THREAD_SUSPEND)
+		if (!(cap->access & CAP_TCTRL_SUSPEND))
+			return 0;
+	if (args->flags & THREAD_RESUME)
+		if (!(cap->access & CAP_TCTRL_RESUME))
+			return 0;
+
+	/* If no target and create, or vice versa, it really is a bug */
+	BUG_ON(!target && !(args->flags & THREAD_CREATE));
+	BUG_ON(target && (args->flags & THREAD_CREATE));
+
+	if (args->flags & THREAD_CREATE) {
+		/*
+		 * FIXME: Add cid to task_ids arg.
+		 *
+		 * Its a thread create and we have no knowledge of
+		 * thread id, space id, or any other id.
+		 *
+		 * We _assume_ target is the largest group,
+		 * e.g. same container as current. We check
+		 * for `container' as target in capability
+		 */
+		if (cap_rtype(cap) != CAP_RTYPE_CONTAINER)
+			return 0;
+		if (cap->resid != current->container->cid)
+			return 0;
+		/* Resource type and it match, success */
+		return cap;
+	}
+
+	/*
+	 * We have a target thread, check if capability match
+	 * any resource fields in target
+	 */
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
+	}
+	return cap;
+}
+
+int cap_thread_check(struct ktcb *task,
+		     unsigned int flags,
+		     struct task_ids *ids)
+{
+	struct sys_tctrl_args args = {
+		.task = task,
+		.flags = flags,
+		.ids = ids,
+	};
 
 	if (!(cap_find(task, cap_match_thread,
-		       &thread_matcher, valid)))
+		       &args, CAP_TYPE_TCTRL)))
 		return -ENOCAP;
+
 	return 0;
+}
+
+struct sys_map_args {
+	struct ktcb *task;
+	unsigned long phys;
+	unsigned long virt;
+	unsigned long npages;
+	unsigned int flags;
+	unsigned int rtype;
+	l4id_t tid;
+};
+
+/*
+ * CAP_TYPE_MAP already matched upon entry
+ */
+struct capability *cap_match_mem(struct capability *cap,
+				 void *args_ptr)
+{
+	struct sys_map_args *args = args_ptr;
+	unsigned long pfn;
+	unsigned int perms;
+
+	/* Set base according to what type of mem type we're matching */
+	if (args->rtype == CAP_RTYPE_PHYSMEM)
+		pfn = __pfn(args->phys);
+	else
+		pfn = __pfn(args->virt);
+
+	/* Check range */
+	if (cap->start > pfn || cap->end < pfn + args->npages)
+		return 0;
+
+	/* Check permissions */
+	switch (args->flags) {
+	case MAP_USR_RW_FLAGS:
+		perms = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_CACHED;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	case MAP_USR_RO_FLAGS:
+		perms = CAP_MAP_READ | CAP_MAP_CACHED;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	case MAP_USR_IO_FLAGS:
+		perms = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_UNCACHED;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	default:
+		/* Anything else is an invalid/unrecognised argument */
+		return 0;
+	}
+
+	return cap;
+
+	/*
+	 * TODO: Does it make sense to have a meaningful resid field
+	 * in a memory resource? E.g. Which resources may I map it to?
+	 * It might, as I can map an arbitrary mapping to an arbitrary
+	 * thread in my container and break it's memory integrity.
+	 *
+	 * It seems it would be reasonable for a pager to have memory
+	 * capabilities with a resid of its own id, and rtype of
+	 * CAP_RTYPE_PGGROUP, effectively allowing it to do map
+	 * operations on itself and its group of paged children.
+	 */
 }
 
 int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
 		  unsigned long npages, unsigned int flags, l4id_t tid)
 {
 	struct capability *physmem, *virtmem;
-	struct capability physmatch = {
-		.start = __pfn(phys),
-		.end = __pfn(phys) + npages,
-		.type = CAP_TYPE_PHYSMEM,
-		.flags = map_flags_to_cap_flags(flags),
-	}
-	struct capability virtmatch = {
-		.start = __pfn(virt),
-		.end = __pfn(virt) + npages,
-		.type = CAP_TYPE_VIRTMEM,
-		.flags = map_flags_to_cap_flags(flags),
-	}
-	unsigned int virt_valid = 0;
-	unsigned int phys_valid = 0;
+	struct sys_map_args args = {
+		.task = task,
+		.phys = phys,
+		.virt = virt,
+		.npages = npages,
+		.flags = flags,
+		.tid = tid,
+	};
 
-	virt_valid |= FIELD_TO_BIT(struct capability, access);
-	virt_valid |= FIELD_TO_BIT(struct capability, start);
-	virt_valid |= FIELD_TO_BIT(struct capability, end);
-
-	phys_valid |= FIELD_TO_BIT(struct capability, access);
-	phys_valid |= FIELD_TO_BIT(struct capability, start);
-	phys_valid |= FIELD_TO_BIT(struct capability, end);
-
+	args.rtype = CAP_RTYPE_PHYSMEM;
 	if (!(physmem =	cap_find(task, cap_match_mem,
-				 &physmatch, phys_valid)))
+				 &args, CAP_TYPE_MAP)))
 		return -ENOCAP;
 
+	args.rtype = CAP_RTYPE_VIRTMEM;
 	if (!(virtmem = cap_find(task, cap_match_mem,
-				 &virtmatch, virt_valid)))
+				 &args, CAP_TYPE_MAP)))
 		return -ENOCAP;
 
 	return 0;

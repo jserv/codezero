@@ -239,7 +239,17 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 		return -EINVAL;
 	}
 
-	/* Find and check physical address for virtual mutex address */
+	if ((ret = cap_mutex_check(mutex_address, mutex_op)) < 0)
+		return ret;
+
+	/*
+	 * Find and check physical address for virtual mutex address
+	 *
+	 * FIXME: Could we check this as a capability? Perhaps not
+	 * since not always the caller but its pager possesses
+	 * relevant memory capability. Maybe check on behalf of
+	 * its pager?
+	 */
 	if (!(mutex_physical =
 		virt_to_phys_by_pgd(mutex_address,
 				    TASK_PGD(current))))

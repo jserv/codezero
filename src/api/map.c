@@ -15,11 +15,11 @@ int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
 	struct ktcb *target;
 	int err;
 
-	if ((err = cap_map_check(phys, virt, npages, flags, tid)) < 0)
-		return err;
-
 	if (!(target = tcb_find(tid)))
 		return -ESRCH;
+
+	if ((err = cap_map_check(target, phys, virt, npages, flags, tid)) < 0)
+		return err;
 
 	add_mapping_pgd(phys, virt, npages << PAGE_BITS, flags, TASK_PGD(target));
 
