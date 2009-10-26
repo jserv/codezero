@@ -3,8 +3,8 @@
  *
  * Copyright (C) 2009 B Labs Ltd.
  */
-#include <capability.h>
 #include <stdio.h>
+#include <capability.h>
 #include <l4lib/arch/syscalls.h>
 
 static struct capability cap_array[30];
