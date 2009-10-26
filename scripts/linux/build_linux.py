@@ -33,7 +33,12 @@ class LinuxUpdateKernel:
     def __init__(self, container):
         # List for setting/unsetting .config params of linux
         self.config_param_list = \
-            (['MAGIC_SYSRQ', 'SET'],['DEBUG_INFO', 'SET'])
+            (['PCI', 'SET'],['AEABI', 'SET'],
+            ['SCSI', 'SET'],['BLK_DEV_SD', 'SET'],
+            ['SYM53C8XX_2', 'SET'],['INPUT_EVDEV', 'SET'],
+            ['INOTIFY', 'SET'],['DEBUG_INFO', 'SET'],
+            ['USB_SUPPORT', 'UNSET'],['SOUND', 'UNSET'],
+            ['MMC', 'UNSET'],)
 
         # List of CPUIDs, to be used by linux based on codezero config
         self.cpuid_list = (['ARM926', '0x41069265'],)
