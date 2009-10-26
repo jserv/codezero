@@ -5,6 +5,102 @@ int mutex_user_thread(void *arg)
 	/* TODO: Create and access a mutex */
 }
 
+int independent_thread(void *arg)
+{
+	/* TODO: Do whatever syscall available */
+}
+
+
+/*
+ * This example demonstrates how the capability-based
+ * security model can be bypassed and taken out of the
+ * way for the sake of implementing an application that
+ * doesn't worry too much about security.
+ *
+ * The benefit is that the user does neither worry about
+ * capabilities nor using its api to design correctly
+ * secure systems. The downside is that the system is
+ * less security-enforced, i.e. all parties must be
+ * trusted.
+ */
+int multi_threaded_nocaps_example(void)
+{
+	/*
+	 * We are the first pager with capabilities to
+	 * create new tasks, spaces, in its own container.
+	 */
+	pager_read_caps();
+
+	/*
+	 * We have all our capabilities private to us.
+	 *
+	 * If we create a new task, it won't be able to
+	 * any kernel operations that we can do, because
+	 * we hold our capabilities privately.
+	 *
+	 * In order to settle all capability access issues
+	 * once and for all threads we will create and manage,
+	 * we share our capabilities with the most global
+	 * collection possible.
+	 */
+
+	/*
+	 * Share all of our capabilities with all threads
+	 * in the same container.
+	 *
+	 * From this point onwards, any thread we create and
+	 * manage (i.e. whose container id is equal to our
+	 * container id) will have the ability to leverage
+	 * all of our capabilities as defined for us at
+	 * configuration time.
+	 */
+	l4_cap_share(0, CAP_SHARE_CONTAINER | CAP_SHARE_ALL, self_tid());
+
+
+	/*
+	 * Lets try it.
+	 *
+	 * Create new thread that we don't have any hieararchical
+	 * relationship, i.e. one that is a pager of itself, one
+	 * that runs in a new address space, and in a new thread
+	 * group. All we share is the container.
+	 */
+	if ((err = thread_create(independent_thread, 0,
+				 TC_NO_SHARING, &ids)) < 0) {
+		printf("mutex_user_thread creation failed.\n");
+		goto out_err;
+	}
+
+	/*
+	 * We can inspect the new thread by doing an ipc to it.
+	 * NOTE:
+	 *
+	 * We are able to send to this thread from the start,
+	 * as we had a container-wide ipc capability defined at
+	 * config-time.
+	 *
+	 * But we would not be able to receive from it, if we
+	 * did not share this capability with the container. It
+	 * would have no rights to do a send to us. But because
+	 * we're in the same container, and we shared our
+	 * capability, it now can.
+	 */
+	if ((err = l4_recv(ids->tid, ids->tid, 0)) < 0) {
+		print_err("%s: L4 IPC Error: %d.\n", __FUNCTION__, fd);
+		goto out_err;
+	}
+
+	/*
+	 * From this point onwards we can create more threads
+	 * without worrying about whether they have the caps
+	 * to do certain ops, and the caps api. because we shared
+	 * them all at the beginning.
+	 */
+
+out_err:
+	BUG();
+}
+
 /*
  * This example demonstrates how a pager would
  * share part of its capabilities on the system
@@ -42,7 +138,7 @@ int multi_threaded_capability_sharing_example(void)
 	if ((err = thread_create(mutex_user_thread, 0,
 				 TC_SHARE_SPACE |
 				 TC_AS_PAGER, &ids)) < 0) {
-		printf("Mutex_user creation failed.\n");
+		printf("mutex_user_thread creation failed.\n");
 		goto out_err;
 	}
 
@@ -78,9 +174,10 @@ int multi_threaded_capability_sharing_example(void)
 	/*
 	 * Share the split part with paged-children.
 	 *
-	 * From this point onwards, any thread we create
-	 * will have the ability to use mutexes, as defined
-	 * by cap_new we created.
+	 * From this point onwards, any thread we create and
+	 * manage (i.e. whose pagerid == self_tid()) will have
+	 * the ability to use mutexes, as defined by cap_new
+	 * we created.
 	 */
 	l4_cap_share(cap_new, CAP_SHARE_PGGROUP, self_tid());
 
@@ -92,7 +189,7 @@ int multi_threaded_capability_sharing_example(void)
 	if ((err = thread_create(mutex_user_thread, 0,
 				 TC_SHARE_SPACE |
 				 TC_AS_PAGER, &ids)) < 0) {
-		printf("Mutex_user creation failed.\n");
+		printf("mutex_user_thread creation failed.\n");
 		goto out_err;
 	}
 
