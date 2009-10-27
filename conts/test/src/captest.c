@@ -110,7 +110,7 @@ int capability_test(void)
 	 * group
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
-					 CAP_SHARE_GROUP, 0)) < 0) {
+					 CAP_SHARE_CONTAINER, 0)) < 0) {
 		printf("Sharing capability with thread group failed.\n");
 		goto out_err;
 	}

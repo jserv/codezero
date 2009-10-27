@@ -119,9 +119,6 @@ void cap_print(struct capability *cap)
 	case CAP_RTYPE_CONTAINER:
 		printf("Capability resource type:\t%s\n", "Container");
 		break;
-	case CAP_RTYPE_UMUTEX:
-		printf("Capability resource type:\t%s\n", "Mutex");
-		break;
 	case CAP_RTYPE_VIRTMEM:
 		printf("Capability resource type:\t%s\n", "Virtual Memory");
 		break;
