@@ -322,4 +322,15 @@ static inline void *l4_unmap_helper(void *virt, int npages)
 	return 0;
 }
 
+#define L4_EXIT_MASK		0xFFFF
+
+static inline void l4_exit(unsigned int exit_code)
+{
+	struct task_ids ids;
+	l4_getid(&ids);
+	l4_thread_control(THREAD_DESTROY |
+			  (exit_code & L4_EXIT_MASK),
+			  &ids);
+}
+
 #endif /* __L4LIB_SYSLIB_H__ */

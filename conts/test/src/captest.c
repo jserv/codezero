@@ -3,14 +3,14 @@
 #include <container.h>
 #include <tests.h>
 #include <l4/api/errno.h>
-static int result = 1;
+#include <l4lib/arch/syslib.h>
 
 int simple_pager_thread(void *arg)
 {
 	int err;
 	int res = *(int *)arg;
 	struct task_ids ids;
-	int testres;
+	int testres = 0;
 
 	l4_getid(&ids);
 
@@ -30,7 +30,7 @@ int simple_pager_thread(void *arg)
 			printf("Creation was supposed to fail "
 			       "with %d or %d, but err = %d\n",
 			       -ENOMEM, -ENOCAP, err);
-			testres = -1;
+			testres = 1;
 		}
 	else
 		if (err == 0) {
@@ -39,7 +39,7 @@ int simple_pager_thread(void *arg)
 		} else {
 			printf("Creation was supposed to succeed, "
 			       "but err = %d\n", err);
-			testres = -1;
+			testres = 1;
 		}
 
 	/* Destroy thread we created */
@@ -47,27 +47,25 @@ int simple_pager_thread(void *arg)
 	    res == 0)
 		l4_thread_control(THREAD_DESTROY, &ids);
 
-	result = testres;
-
 	/* Destroy self */
-	l4_getid(&ids);
-	l4_thread_control(THREAD_DESTROY, &ids);
+	l4_exit(testres);
 
 	return 0;
 }
 
-int wait_check_test(void)
+int wait_check_test(struct task_ids *ids)
 {
-	/* Wait for thread to finish */
-	while (result > 0)
-		;
-		//l4_thread_switch(0);
+	int result;
 
-	if (result != 0) {
-		printf("Top-level test has failed\n");
+	/* Wait for thread to finish */
+	result = l4_thread_control(THREAD_WAIT, ids);
+	if (result < 0) {
+		printf("Waiting on (%d)'s exit failed.\n", ids->tid);
 		return -1;
+	} else if (result > 0) {
+		printf("Top-level test has failed\n");
 	}
-	result = 1;
+	/* Else it is a success */
 	return 0;
 }
 
@@ -94,7 +92,7 @@ int capability_test(void)
 	}
 
 	/* Wait for test to finish and check result */
-	if (wait_check_test() < 0)
+	if (wait_check_test(&ids) < 0)
 		goto out_err;
 
 #if 0
@@ -129,7 +127,7 @@ int capability_test(void)
 	}
 
 	/* Wait for test to finish and check result */
-	if (wait_check_test() < 0)
+	if (wait_check_test(&ids) < 0)
 		goto out_err;
 
 #if 0
