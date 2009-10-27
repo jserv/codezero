@@ -14,7 +14,6 @@ sys.path.append(PROJRELROOT)
 from config.projpaths import *
 from config.configuration import *
 
-
 config = configuration_retrieve()
 arch = config.arch
 
@@ -31,8 +30,7 @@ LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
 LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
                 join(LIBC_DIR, 'include/arch' + '/' + arch)]
 
-
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+env = Environment(CC = config.user_toolchain + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', \

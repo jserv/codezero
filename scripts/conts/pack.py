@@ -92,15 +92,18 @@ class LinuxContainerPacker:
             f.close()
 
     def pack_container(self):
+        # TODO: Need to sort this, we cannot call it in global space
+        # as configuration file is not presnt in beginning
+        config = configuration_retrieve()
+
         self.generate_container_lds([self.kernel_image_in, \
                                      self.rootfs_elf_in, \
                                      self.atags_elf_in])
         self.generate_container_assembler([self.kernel_image_in, \
                                            self.rootfs_elf_in, \
                                            self.atags_elf_in])
-        os.system("arm-none-linux-gnueabi-gcc " + "-nostdlib -o %s -T%s %s" \
-                  % (self.container_elf_out, \
-                     self.container_lds_out,
+        os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
+                  % (self.container_elf_out, self.container_lds_out, \
                      self.container_S_out))
         # Final file is returned so that the final packer needn't
         # get the packer object for this information
@@ -156,11 +159,14 @@ class DefaultContainerPacker:
             f.close()
 
     def pack_container(self):
+        # TODO: Need to sort this, we cannot call it in global space
+        # as configuration file is not presnt in beginning
+        config = configuration_retrieve()
+
         self.generate_container_lds(self.images_in)
         self.generate_container_assembler(self.images_in)
-        os.system("arm-none-linux-gnueabi-gcc " + "-nostdlib -o %s -T%s %s" \
-                  % (self.container_elf_out, \
-                     self.container_lds_out,
+        os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
+                  % (self.container_elf_out, self.container_lds_out, \
                      self.container_S_out))
         # Final file is returned so that the final packer needn't
         # get the packer object for this information

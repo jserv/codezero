@@ -9,11 +9,18 @@ import configure
 from configure import *
 from os.path import *
 
-env = Environment(CC = 'arm-none-eabi-gcc',
+config = configuration_retrieve()
+arch = config.arch
+subarch = config.subarch
+platform = config.platform
+gcc_cpu_flag = config.gcc_cpu_flag
+all_syms = config.all
+
+env = Environment(CC = config.kernel_toolchain + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
-		  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
-			     '-std=gnu99', '-Wall', '-Werror'],
+		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
+                     '-Werror', ('-mcpu=' + gcc_cpu_flag)],
 		  LINKFLAGS = ['-nostdlib', '-T' + "include/l4/arch/arm/linker.lds"],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable
@@ -21,13 +28,6 @@ env = Environment(CC = 'arm-none-eabi-gcc',
 		  LIBS = 'gcc',				# libgcc.a - This is required for division routines.
 		  CPPPATH = "#include",
 		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h -D__KERNEL__')
-
-
-config = configuration_retrieve()
-arch = config.arch
-subarch = config.subarch
-platform = config.platform
-all_syms = config.all
 
 objects = []
 objects += SConscript('src/drivers/SConscript', exports = {'symbols' : all_syms, 'env' : env})
@@ -42,3 +42,4 @@ objects += SConscript('src/api/SConscript', exports = {'symbols' : all_syms, 'en
 kernel_elf = env.Program(BUILDDIR + '/kernel.elf', objects)
 Alias('kernel', kernel_elf)
 Depends(kernel_elf, 'include/l4/config.h')
+

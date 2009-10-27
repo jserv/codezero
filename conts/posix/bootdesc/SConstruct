@@ -7,10 +7,12 @@ import os
 import sys
 import shutil
 from os.path import join
+from configure import *
 
+config = configuration_retrieve()
 builddir = ARGUMENTS.get('builddir', 'build/conts/posix')
 
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+env = Environment(CC = config.user_toolchain + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
 		  LINKFLAGS = ['-nostdlib','-Tlinker.lds'],
 		  ASFLAGS = ['-D__ASSEMBLY__'],

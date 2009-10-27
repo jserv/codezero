@@ -66,7 +66,7 @@ class LinuxUpdateKernel:
                         break
 
             if flag == 0:
-                print 'Warning: No match found for the parameter'
+                #print 'Warning: No match found for the parameter'
                 return
             else:
                 # Prevent recompilation in case kernel parameter is same
@@ -205,6 +205,10 @@ class LinuxBuilder:
 
     def build_linux(self):
         print '\nBuilding the linux kernel...'
+        # TODO: Need to sort this, we cannot call it in global space
+        # as configuration file is not presnt in beginning
+        config = configuration_retrieve()
+
         os.chdir(self.LINUX_KERNELDIR)
         if not os.path.exists(self.LINUX_KERNEL_BUILDDIR):
             os.makedirs(self.LINUX_KERNEL_BUILDDIR)
@@ -215,7 +219,7 @@ class LinuxBuilder:
 
         os.system("make defconfig ARCH=arm O=" + self.LINUX_KERNEL_BUILDDIR)
         os.system("make ARCH=arm " + \
-                  "CROSS_COMPILE=arm-none-linux-gnueabi- O=" + \
+                  "CROSS_COMPILE=" + config.user_toolchain + " O=" + \
                   self.LINUX_KERNEL_BUILDDIR)
 
         with open(self.linux_h_out, 'w+') as output:
@@ -227,10 +231,10 @@ class LinuxBuilder:
                 content = input.read() % self.kernel_binary_image
                 output.write(content)
 
-        os.system("arm-none-linux-gnueabi-cpp -I%s -P %s > %s" % \
+        os.system(config.user_toolchain + "cpp -I%s -P %s > %s" % \
                   (self.LINUX_KERNEL_BUILDDIR, self.linux_lds_in, \
                    self.linux_lds_out))
-        os.system("arm-none-linux-gnueabi-gcc -nostdlib -o %s -T%s %s" % \
+        os.system(config.user_toolchain + "gcc -nostdlib -o %s -T%s %s" % \
                   (self.linux_elf_out, self.linux_lds_out, self.linux_S_out))
 
         # Get the kernel image path

@@ -10,6 +10,9 @@ PROJRELROOT = '../..'
 sys.path.append(PROJRELROOT)
 
 from config.projpaths import *
+from configure import *
+
+config = configuration_retrieve()
 
 KERNEL_INCLUDE = join(PROJROOT, 'include')
 LIBL4_RELDIR = 'conts/libl4'
@@ -17,7 +20,7 @@ LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
 LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
 LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
 
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+env = Environment(CC = config.user_toolchain + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding'],
 		  LINKFLAGS = ['-nostdlib'],
 		  ASFLAGS = ['-D__ASSEMBLY__'],

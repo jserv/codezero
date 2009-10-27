@@ -9,11 +9,18 @@ import configure
 from configure import *
 from os.path import *
 
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+config = configuration_retrieve()
+arch = config.arch
+subarcn = config.subarch
+platform = config.platform
+gcc_cpu_flag = config.gcc_cpu_flag
+all_syms = config.all
+
+env = Environment(CC = config.user_toolchain + 'gcc',
                   # We don't use -nostdinc because sometimes we need standard headers,
                   # such as stdarg.h e.g. for variable args, as in printk().
-                  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
-                  '-std=gnu99', '-Wall', '-Werror'],
+                  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
+                             '-Werror', ('-mcpu=' + gcc_cpu_flag)],
                   LINKFLAGS = ['-nostdlib'],
                   ASFLAGS = ['-D__ASSEMBLY__'],
                   ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
@@ -21,11 +28,6 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
                   CPPPATH = "#include",
                   CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
-config = configuration_retrieve()
-arch = config.arch
-subarch = config.subarch
-platform = config.platform
-all_syms = config.all
 
 
 libl4 = SConscript('conts/libl4/SConscript', \

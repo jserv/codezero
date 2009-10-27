@@ -7,6 +7,9 @@ import glob
 import sys
 from os.path import join
 from string import split
+from configure import *
+
+config = configuration_retrieve()
 
 project_root = "../.."
 headers_root = join(project_root, "include/l4")
@@ -33,8 +36,7 @@ test_env = Environment(CC = 'gcc -m32',
 		  LIBPATH = ['#'],
 		  CPPPATH = ['#include', join(project_root, "include"), "#", libl4_headers])
 
-
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+env = Environment(CC = config.user_toolchain + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-Wall', '-Werror', '-ffreestanding', '-std=gnu99'],
 		  LINKFLAGS = ['-nostdlib'],
 		  ENV = {'PATH' : os.environ['PATH']},

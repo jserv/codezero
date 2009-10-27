@@ -2,7 +2,9 @@
 import os
 import sys
 
-compiler_prefix = "arm-none-linux-gnueabi-"
+from configure import *
+config = configuration_retrieve()
+
 objdump = "objdump"
 command = "-t"
 image_name = "inittask.axf"
@@ -10,7 +12,7 @@ linkoutput_file_suffix = "-linkinfo.txt"
 linkoutput_file = image_name + linkoutput_file_suffix
 
 def generate_bootdesc():
-	command = compiler_prefix + objdump + " -t " + image_name + " > " + linkoutput_file
+	command = config.user_toolchain + objdump + " -t " + image_name + " > " + linkoutput_file
 	print command
 	os.system(command)
 	f = open(linkoutput_file, "r")

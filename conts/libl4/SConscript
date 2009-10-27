@@ -24,10 +24,13 @@ PROJRELROOT = '../..'
 sys.path.append(PROJRELROOT)
 
 from config.projpaths import *
+from configure import *
 
 Import('arch')
 
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+config = configuration_retrieve()
+
+env = Environment(CC = config.user_toolchain + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding'],
 		  LINKFLAGS = ['-nostdlib'],
 		  ASFLAGS = ['-D__ASSEMBLY__'],

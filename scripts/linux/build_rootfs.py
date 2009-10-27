@@ -15,7 +15,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELR
 from config.projpaths import *
 from config.configuration import *
 
-
 # Create linux kernel build directory path as:
 # conts/linux -> build/cont[0-9]/linux
 def source_to_builddir(srcdir, id):
@@ -43,8 +42,11 @@ class RootfsBuilder:
 
     def build_rootfs(self):
         print 'Building the root filesystem...'
-        # IO files from this build
+        # TODO: Need to sort this, we cannot call it in global space
+        # as configuration file is not presnt in beginning
+        config = configuration_retrieve()
 
+        # IO files from this build
         os.chdir(LINUX_ROOTFSDIR)
         if not os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
             os.makedirs(self.LINUX_ROOTFS_BUILDDIR)
@@ -53,10 +55,10 @@ class RootfsBuilder:
             with open(self.rootfs_h_in, 'r') as input:
                 output.write(input.read() % {'cn' : self.cont_id})
 
-        os.system("arm-none-linux-gnueabi-cpp -I%s -P %s > %s" % \
+        os.system(config.user_toolchain + "cpp -I%s -P %s > %s" % \
                   (self.LINUX_ROOTFS_BUILDDIR, self.rootfs_lds_in, \
                    self.rootfs_lds_out))
-        os.system("arm-none-linux-gnueabi-gcc " + \
+        os.system(config.user_toolchain + "gcc " + \
                   "-nostdlib -o %s -T%s rootfs.S" % (self.rootfs_elf_out, \
                                                      self.rootfs_lds_out))
         print "Done..."

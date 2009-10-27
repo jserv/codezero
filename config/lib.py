@@ -7,3 +7,4 @@ def conv_hex(val):
     if hexval[-1:] == 'L':
         hexval = hexval[:-1]
     return hexval
+

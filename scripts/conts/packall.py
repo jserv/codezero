@@ -16,7 +16,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELR
 from config.projpaths import *
 from config.configuration import *
 
-
 containers_assembler_body = \
 '''
 .align 4
@@ -78,11 +77,14 @@ class AllContainerPacker:
             f.write(file_body)
 
     def pack_all(self):
+        # TODO: Need to sort this, we cannot call it in global space
+        # as configuration file is not presnt in beginning
+        config = configuration_retrieve()
+
         self.generate_container_lds(self.containers_lds_out)
         self.generate_container_S(self.containers_S_out)
-        os.system("arm-none-linux-gnueabi-gcc " + "-nostdlib -o %s -T%s %s" \
-                  % (self.containers_elf_out, \
-                     self.containers_lds_out,
+        os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
+                  % (self.containers_elf_out, self.containers_lds_out, \
                      self.containers_S_out))
 
         # Return the final image to calling script

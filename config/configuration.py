@@ -52,9 +52,24 @@ class Container:
 class configuration:
 
     def __init__(self):
+        # Mapping between platform selected and gcc flags for it
+        self.cpu_to_gcc_flag = (['PB926', 'arm926ej-s'],
+                                ['CORTEXA8', 'cortex-a8'],
+                                ['ARM11MPCORE', 'mpcore'],
+                                ['CORTEXA9', 'cortex-a9'],
+                                ['ARM1136', 'arm1136jf-s'],
+                                ['ARM1176', 'arm1176jz-s'],)
+
+        # Mapping between the processor architecture and toolchain
+        self.toolchain_kernel = (['ARM', 'arm-none-eabi-'],)
+        self.toolchain_user = (['ARM', 'arm-none-linux-gnueabi-'],)
+
         self.arch = None
         self.subarch = None
         self.platform = None
+        self.gcc_cpu_flag = None
+        self.user_toolchain = None
+        self.kernel_toolchain = None
         self.all = []
         self.containers = []
         self.ncontainers = 0
@@ -72,10 +87,17 @@ class configuration:
         return None
 
     # Extract architecture from a name value pair
+    # And based on this define the toolchains to be used
     def get_arch(self, name, val):
         if name[:len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
             parts = name.split("_", 3)
             self.arch = parts[2].lower()
+            for i in self.toolchain_kernel:
+                if i[0] == parts[2]:
+                    self.kernel_toolchain = i[1]
+            for i in self.toolchain_user:
+                if i[0] == parts[2]:
+                    self.user_toolchain = i[1]
 
     # Extract subarch from a name value pair
     def get_subarch(self, name, val):
@@ -88,6 +110,9 @@ class configuration:
         if name[:len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
             parts = name.split("_", 3)
             self.platform = parts[2].lower()
+            for i in self.cpu_to_gcc_flag:
+                if i[0] == parts[2]:
+                    self.gcc_cpu_flag = i[1]
 
     # Extract number of containers
     def get_ncontainers(self, name, val):

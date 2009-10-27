@@ -51,8 +51,11 @@ class AtagsBuilder:
 
     def build_atags(self):
         print 'Building Atags for linux kenel...'
-        # IO files from this build
+        # TODO: Need to sort this, we cannot call it in global space
+        # as configuration file is not presnt in beginning
+        config = configuration_retrieve()
 
+        # IO files from this build
         os.chdir(LINUX_ATAGSDIR)
         if not os.path.exists(self.LINUX_ATAGS_BUILDDIR):
             os.makedirs(self.LINUX_ATAGS_BUILDDIR)
@@ -65,7 +68,7 @@ class AtagsBuilder:
             with open(self.atags_h_in, 'r') as input:
                 output.write(input.read() % {'cn' : self.cont_id})
 
-        os.system("arm-none-linux-gnueabi-cpp -I%s -P %s > %s" % \
+        os.system(config.user_toolchain + "cpp -I%s -P %s > %s" % \
                   (self.LINUX_ATAGS_BUILDDIR, self.atags_lds_in, \
                    self.atags_lds_out))
 
@@ -73,7 +76,7 @@ class AtagsBuilder:
             with open(self.atags_c_in, 'r') as input:
                 output.write(input.read() % {'cn' : self.cont_id})
 
-        os.system("arm-none-linux-gnueabi-gcc " + \
+        os.system(config.user_toolchain + "gcc " + \
                   "-g -ffreestanding -std=gnu99 -Wall -Werror " + \
                   "-nostdlib -o %s -T%s %s" % \
                     (self.atags_elf_out, self.atags_lds_out, self.atags_c_out))

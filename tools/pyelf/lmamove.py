@@ -3,6 +3,7 @@
 import re, elf, sys, os
 from optparse import OptionParser
 
+# May need to do something about this
 toolprefix = "arm-none-linux-gnueabi-"
 objdump = toolprefix + "objdump"
 objcopy = toolprefix + "objcopy"

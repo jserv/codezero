@@ -8,6 +8,9 @@ import sys
 import shutil
 from os.path import join
 from glob import glob
+from configure import *
+
+config = configuration_retrieve()
 
 task_name = "test0"
 
@@ -54,8 +57,8 @@ def get_physical_base(source, target, env):
 	os.system(join(tools_root, "pyelf/readelf.py --first-free-page " + \
 		  prev_image + " >> " + physical_base_ld_script))
 
-# The kernel build environment:
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+# The kernel build environment
+env = Environment(CC = config.user_toolchain + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
@@ -71,7 +74,7 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 
 test_exec_ld_script = "include/test_exec_linker.lds"
 # The kernel build environment:
-test_exec_env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+test_exec_env = Environment(CC = config.user_toolchain + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-O3', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
