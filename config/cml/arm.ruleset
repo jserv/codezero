@@ -39,6 +39,7 @@ containers_menu		'Container Setup'
 arch_type		'Main architecture'
 
 CONTAINERS		'Number of containers'
+CAPABILITIES		'Enable capability checking'
 
 #############
 #  CHOICES  #
@@ -97,9 +98,11 @@ menu main_menu
 	CONTAINERS%
 	containers_menu
 
-#############
+#############`
 #   RULES   #
 #############
+#Capability rules:
+default CAPABILITIES from y
 
 #Platform rules:
 unless SUBARCH_V5 suppress PLATFORM_PB926

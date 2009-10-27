@@ -109,7 +109,7 @@ cap_all_others = \
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_TCTRL | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_TCTRL_CREATE | CAP_TCTRL_DESTROY
-\t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RESUME
+\t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RUN
 \t\t\t\t          | CAP_TCTRL_RECYCLE,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
@@ -118,6 +118,17 @@ cap_all_others = \
 \t\t\t\t.access = CAP_EXREGS_RW_PAGER
 \t\t\t\t          | CAP_EXREGS_RW_UTCB | CAP_EXREGS_RW_SP
 \t\t\t\t          | CAP_EXREGS_RW_PC | CAP_EXREGS_RW_REGS,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_CAP | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_CAP_MODIFY | CAP_CAP_GRANT
+\t\t\t\t| CAP_CAP_READ | CAP_CAP_SHARE,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+\t\t\t[%d] = {
+\t\t\t\t.type = CAP_TYPE_UMUTEX | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_UMUTEX_LOCK | CAP_UMUTEX_UNLOCK,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 \t\t\t[%d] = {
@@ -203,7 +214,7 @@ def generate_kernel_cinfo(config, cinfo_path):
 
     with open(cinfo_path, 'w+') as cinfo_file:
         fbody = cinfo_file_start % pager_ifdefs
-        total_other_caps = 9
+        total_other_caps = 11
         for c in containers:
             # Currently only these are considered as capabilities
             total_caps = c.virt_regions + c.phys_regions + total_other_caps
@@ -216,7 +227,7 @@ def generate_kernel_cinfo(config, cinfo_path):
             for mem_index in range(c.phys_regions):
                 fbody += cap_physmem % { 'capidx' : cap_index, 'cn' : c.id, 'pn' : mem_index }
                 cap_index += 1
-            fbody += cap_all_others % (tuple(range(cap_index, total_caps)))
+            fbody += cap_all_others % tuple(range(cap_index, total_caps))
             fbody += pager_end
             fbody += cinfo_end
         fbody += cinfo_file_end

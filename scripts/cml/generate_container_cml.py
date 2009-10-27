@@ -19,6 +19,7 @@ from config.configuration import *
 containers_menu = \
 '''
 menu containers_menu
+	CAPABILITIES
 '''
 
 containers_constraint = \

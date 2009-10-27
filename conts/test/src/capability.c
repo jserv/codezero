@@ -9,6 +9,7 @@
 
 static struct capability cap_array[30];
 
+#if 0
 struct cap_group {
 	struct cap_list virtmem;
 	struct cap_list physmem;
@@ -73,6 +74,7 @@ void cap_grant_single(struct capability *orig, struct capability *share, l4id_t 
 {
 }
 
+#endif
 
 void cap_print(struct capability *cap)
 {
@@ -151,7 +153,7 @@ void cap_print(struct capability *cap)
 	printf("\n");
 }
 
-int cap_read_all(void)
+int caps_read_all(void)
 {
 	int ncaps;
 	int err;

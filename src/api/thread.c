@@ -203,20 +203,6 @@ void thread_destroy_current(void)
 	sched_suspend_sync();
 }
 
-int thread_resume(struct ktcb *task)
-{
-	if (!mutex_trylock(&task->thread_control_lock))
-		return -EAGAIN;
-
-	/* Put task into runqueue as runnable */
-	sched_resume_async(task);
-
-	/* Release lock and return */
-	mutex_unlock(&task->thread_control_lock);
-
-	return 0;
-}
-
 /* Runs a thread for the first time */
 int thread_start(struct ktcb *task)
 {
@@ -442,9 +428,6 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		break;
 	case THREAD_SUSPEND:
 		ret = thread_suspend(task, flags);
-		break;
-	case THREAD_RESUME:
-		ret = thread_resume(task);
 		break;
 	case THREAD_DESTROY:
 		ret = thread_destroy(task);

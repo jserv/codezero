@@ -28,7 +28,7 @@
 #define CAP_RTYPE_TGROUP	(1 << 17)
 #define CAP_RTYPE_SPACE		(1 << 18)
 #define CAP_RTYPE_CONTAINER	(1 << 19)
-#define CAP_RTYPE_UMUTEX	(1 << 20) /* Don't mix with pool version */
+#define CAP_RTYPE_PGGROUP	(1 << 20) /* Group of paged threads */
 #define CAP_RTYPE_VIRTMEM	(1 << 21)
 #define CAP_RTYPE_PHYSMEM	(1 << 22)
 #define CAP_RTYPE_CPUPOOL	(1 << 23)
@@ -37,7 +37,6 @@
 #define CAP_RTYPE_MUTEXPOOL	(1 << 26)
 #define CAP_RTYPE_MAPPOOL	(1 << 27) /* For pmd spending */
 #define CAP_RTYPE_CAPPOOL	(1 << 28) /* For new cap generation */
-#define CAP_RTYPE_PGGROUP	(1 << 29) /* Group of paged threads */
 
 #define cap_rtype(c)	((c)->type & CAP_RTYPE_MASK)
 
@@ -48,9 +47,10 @@
 /* Thread control capability */
 #define CAP_TCTRL_CREATE	(1 << 0)
 #define CAP_TCTRL_DESTROY	(1 << 1)
-#define CAP_TCTRL_SUSPEND	(1 << 2)
-#define CAP_TCTRL_RESUME	(1 << 3)
+#define CAP_TCTRL_RUN		(1 << 2)
+#define CAP_TCTRL_SUSPEND	(1 << 3)
 #define CAP_TCTRL_RECYCLE	(1 << 4)
+#define CAP_TCTRL_WAIT		(1 << 5)
 
 /* Exchange registers capability */
 #define CAP_EXREGS_RW_PAGER	(1 << 0)

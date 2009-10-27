@@ -9,6 +9,7 @@
 #include <l4/generic/cap-types.h>
 #include <l4/generic/tcb.h>
 #include <l4/api/capability.h>
+#include <l4/api/thread.h>
 #include <l4/api/errno.h>
 #include <l4/lib/printk.h>
 #include <l4/api/thread.h>
@@ -44,6 +45,7 @@ struct capability *capability_create(void)
 	return cap;
 }
 
+#if defined(CONFIG_CAPABILITIES)
 int capability_consume(struct capability *cap, int quantity)
 {
 	if (cap->size < cap->used + quantity)
@@ -59,6 +61,18 @@ int capability_free(struct capability *cap, int quantity)
 	BUG_ON((cap->used -= quantity) < 0);
 	return 0;
 }
+
+#else
+int capability_consume(struct capability *cap, int quantity)
+{
+	return 0;
+}
+
+int capability_free(struct capability *cap, int quantity)
+{
+	return 0;
+}
+#endif
 
 struct capability *cap_list_find_by_rtype(struct cap_list *cap_list,
 					  unsigned int rtype)
@@ -77,10 +91,12 @@ struct capability *cap_list_find_by_rtype(struct cap_list *cap_list,
  * Search all capability lists that task is allowed.
  *
  * FIXME:
- * Tasks won't always search for a capability randomly. Consider
+ * Tasks should not always search for a capability randomly. Consider
  * mutexes, if a mutex is freed, it needs to be accounted to private
  * pool first if that is not full, because freeing it into shared
- * pool may lose the mutex right to another task.
+ * pool may lose the mutex right to another task. In other words,
+ * when you're freeing a mutex, we should know which capability pool
+ * to free it to.
  *
  * In conclusion freeing of pool-type capabilities need to be done
  * in order of privacy. -> It may get confusing as a space, thread
@@ -116,25 +132,25 @@ typedef struct capability *(*cap_match_func_t) \
 struct capability *cap_find(struct ktcb *task, cap_match_func_t cap_match_func,
 			     void *match_args, unsigned int cap_type)
 {
-	struct capability *cap;
+	struct capability *cap, *found;
 
 	/* Search task's own list */
 	list_foreach_struct(cap, &task->cap_list.caps, list)
 		if (cap_type(cap) == cap_type &&
-		    ((cap = cap_match_func(cap, match_args))))
-			return cap;
+		    ((found = cap_match_func(cap, match_args))))
+			return found;
 
 	/* Search space list */
 	list_foreach_struct(cap, &task->space->cap_list.caps, list)
 		if (cap_type(cap) == cap_type &&
-		    ((cap = cap_match_func(cap, match_args))))
-			return cap;
+		    ((found = cap_match_func(cap, match_args))))
+			return found;
 
 	/* Search container list */
 	list_foreach_struct(cap, &task->container->cap_list.caps, list)
 		if (cap_type(cap) == cap_type &&
-		    ((cap = cap_match_func(cap, match_args))))
-			return cap;
+		    ((found = cap_match_func(cap, match_args))))
+			return found;
 
 	return 0;
 }
@@ -144,6 +160,24 @@ struct sys_mutex_args {
 	unsigned int op;
 };
 
+/*
+ * Check broadly the ability to do mutex ops. Check it by
+ * the thread, space or container, (i.e. the group that can
+ * do this operation broadly)
+ *
+ * Note, that we check mutex_address elsewhere as a quick,
+ * per-task virt_to_phys translation that would not get
+ * easily/quickly satisfied by a memory capability checking.
+ *
+ * While this is not %100 right from a capability checking
+ * point-of-view, it is a shortcut that works and makes sense.
+ *
+ * For sake of completion, the right way to do it would be to
+ * add MUTEX_LOCKABLE, MUTEX_UNLOCKABLE attributes to both
+ * virtual and physical memory caps of a task, search those
+ * to validate the address. But we would have to translate
+ * from the page tables either ways.
+ */
 struct capability *
 cap_match_mutex(struct capability *cap, void *args)
 {
@@ -172,20 +206,6 @@ cap_match_mutex(struct capability *cap, void *args)
 	}
 
 	return cap;
-}
-
-int cap_mutex_check(unsigned long mutex_address, int mutex_op)
-{
-	struct sys_mutex_args args = {
-		.address = mutex_address,
-		.op = mutex_op,
-	};
-
-	if (!(cap_find(current, cap_match_mutex,
-		       &args, CAP_TYPE_UMUTEX)))
-		return -ENOCAP;
-
-	return 0;
 }
 
 struct sys_capctrl_args {
@@ -235,21 +255,6 @@ cap_match_capctrl(struct capability *cap, void *args_ptr)
 	}
 
 	return cap;
-}
-
-int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags)
-{
-	struct sys_capctrl_args args = {
-		.req = req,
-		.flags = flags,
-		.task = task,
-	};
-
-	if (!(cap_find(task, cap_match_capctrl,
-		       &args, CAP_TYPE_CAP)))
-		return -ENOCAP;
-
-	return 0;
 }
 
 struct sys_ipc_args {
@@ -305,40 +310,6 @@ cap_match_ipc(struct capability *cap, void *args_ptr)
 	}
 
 	return cap;
-}
-
-/*
- * Limitation: We currently only check from sender's
- * perspective. Sender always targets a real thread.
- * Does sender have the right to do this ipc?
- */
-int cap_ipc_check(l4id_t to, l4id_t from,
-		  unsigned int flags, unsigned int ipc_type)
-{
-	struct ktcb *target;
-	struct sys_ipc_args args;
-
-	/* Receivers can get away from us (for now) */
-	if (ipc_type != IPC_SEND  && ipc_type != IPC_SENDRECV)
-		return 0;
-
-	/*
-	 * We're the sender, meaning we have
-	 * a real target
-	 */
-	if (!(target = tcb_find(to)))
-		return -ESRCH;
-
-	/* Set up other args */
-	args.flags = flags;
-	args.ipc_type = ipc_type;
-	args.task = target;
-
-	if (!(cap_find(target, cap_match_ipc,
-		       &args, CAP_TYPE_IPC)))
-		return -ENOCAP;
-
-	return 0;
 }
 
 struct sys_exregs_args {
@@ -397,20 +368,6 @@ cap_match_exregs(struct capability *cap, void *args_ptr)
 	return cap;
 }
 
-int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs)
-{
-	struct sys_exregs_args args = {
-		.exregs = exregs,
-		.task = task,
-	};
-
-	if (!(cap_find(task, cap_match_exregs,
-		       &args, CAP_TYPE_EXREGS)))
-		return -ENOCAP;
-
-	return 0;
-}
-
 /*
  * FIXME: Issues on capabilities:
  *
@@ -456,26 +413,44 @@ struct capability *cap_match_thread(struct capability *cap,
 {
 	struct sys_tctrl_args *args = args_ptr;
 	struct ktcb *target = args->task;
+	unsigned int action_flags = args->flags & THREAD_ACTION_MASK;
 
 	/* Check operation privileges */
-	if (args->flags & THREAD_CREATE)
+	switch (action_flags) {
+	case THREAD_CREATE:
 		if (!(cap->access & CAP_TCTRL_CREATE))
 			return 0;
-	if (args->flags & THREAD_DESTROY)
+		break;
+	case THREAD_DESTROY:
 		if (!(cap->access & CAP_TCTRL_DESTROY))
 			return 0;
-	if (args->flags & THREAD_SUSPEND)
+		break;
+	case THREAD_SUSPEND:
 		if (!(cap->access & CAP_TCTRL_SUSPEND))
 			return 0;
-	if (args->flags & THREAD_RESUME)
-		if (!(cap->access & CAP_TCTRL_RESUME))
+		break;
+	case THREAD_RUN:
+		if (!(cap->access & CAP_TCTRL_RUN))
 			return 0;
+		break;
+	case THREAD_RECYCLE:
+		if (!(cap->access & CAP_TCTRL_RECYCLE))
+			return 0;
+		break;
+	case THREAD_WAIT:
+		if (!(cap->access & CAP_TCTRL_WAIT))
+			return 0;
+		break;
+	default:
+		/* We refuse to accept anything else */
+		return 0;
+	}
 
 	/* If no target and create, or vice versa, it really is a bug */
-	BUG_ON(!target && !(args->flags & THREAD_CREATE));
-	BUG_ON(target && (args->flags & THREAD_CREATE));
+	BUG_ON(!target && action_flags != THREAD_CREATE);
+	BUG_ON(target && action_flags == THREAD_CREATE);
 
-	if (args->flags & THREAD_CREATE) {
+	if (action_flags == THREAD_CREATE) {
 		/*
 		 * FIXME: Add cid to task_ids arg.
 		 *
@@ -490,7 +465,7 @@ struct capability *cap_match_thread(struct capability *cap,
 			return 0;
 		if (cap->resid != current->container->cid)
 			return 0;
-		/* Resource type and it match, success */
+		/* Resource type and id match, success */
 		return cap;
 	}
 
@@ -517,23 +492,6 @@ struct capability *cap_match_thread(struct capability *cap,
 	return cap;
 }
 
-int cap_thread_check(struct ktcb *task,
-		     unsigned int flags,
-		     struct task_ids *ids)
-{
-	struct sys_tctrl_args args = {
-		.task = task,
-		.flags = flags,
-		.ids = ids,
-	};
-
-	if (!(cap_find(task, cap_match_thread,
-		       &args, CAP_TYPE_TCTRL)))
-		return -ENOCAP;
-
-	return 0;
-}
-
 struct sys_map_args {
 	struct ktcb *task;
 	unsigned long phys;
@@ -541,7 +499,6 @@ struct sys_map_args {
 	unsigned long npages;
 	unsigned int flags;
 	unsigned int rtype;
-	l4id_t tid;
 };
 
 /*
@@ -589,7 +546,9 @@ struct capability *cap_match_mem(struct capability *cap,
 	return cap;
 
 	/*
-	 * TODO: Does it make sense to have a meaningful resid field
+	 * FIXME:
+	 *
+	 * Does it make sense to have a meaningful resid field
 	 * in a memory resource? E.g. Which resources may I map it to?
 	 * It might, as I can map an arbitrary mapping to an arbitrary
 	 * thread in my container and break it's memory integrity.
@@ -601,31 +560,162 @@ struct capability *cap_match_mem(struct capability *cap,
 	 */
 }
 
-int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
-		  unsigned long npages, unsigned int flags, l4id_t tid)
+#if defined(CONFIG_CAPABILITIES)
+int cap_mutex_check(unsigned long mutex_address, int mutex_op)
+{
+	struct sys_mutex_args args = {
+		.address = mutex_address,
+		.op = mutex_op,
+	};
+
+	if (!(cap_find(current, cap_match_mutex,
+		       &args, CAP_TYPE_UMUTEX)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags)
+{
+	struct sys_capctrl_args args = {
+		.req = req,
+		.flags = flags,
+		.task = task,
+	};
+
+	if (!(cap_find(current, cap_match_capctrl,
+		       &args, CAP_TYPE_CAP)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+int cap_map_check(struct ktcb *target, unsigned long phys, unsigned long virt,
+		  unsigned long npages, unsigned int flags)
 {
 	struct capability *physmem, *virtmem;
 	struct sys_map_args args = {
-		.task = task,
+		.task = target,
 		.phys = phys,
 		.virt = virt,
 		.npages = npages,
 		.flags = flags,
-		.tid = tid,
 	};
 
 	args.rtype = CAP_RTYPE_PHYSMEM;
-	if (!(physmem =	cap_find(task, cap_match_mem,
+	if (!(physmem =	cap_find(current, cap_match_mem,
 				 &args, CAP_TYPE_MAP)))
 		return -ENOCAP;
 
 	args.rtype = CAP_RTYPE_VIRTMEM;
-	if (!(virtmem = cap_find(task, cap_match_mem,
+	if (!(virtmem = cap_find(current, cap_match_mem,
 				 &args, CAP_TYPE_MAP)))
 		return -ENOCAP;
 
 	return 0;
 }
+
+/*
+ * Limitation: We currently only check from sender's
+ * perspective. Sender always targets a real thread.
+ * Does sender have the right to do this ipc?
+ */
+int cap_ipc_check(l4id_t to, l4id_t from,
+		  unsigned int flags, unsigned int ipc_type)
+{
+	struct ktcb *target;
+	struct sys_ipc_args args;
+
+	/* Receivers can get away from us (for now) */
+	if (ipc_type != IPC_SEND  && ipc_type != IPC_SENDRECV)
+		return 0;
+
+	/*
+	 * We're the sender, meaning we have
+	 * a real target
+	 */
+	if (!(target = tcb_find(to)))
+		return -ESRCH;
+
+	/* Set up other args */
+	args.flags = flags;
+	args.ipc_type = ipc_type;
+	args.task = target;
+
+	if (!(cap_find(current, cap_match_ipc,
+		       &args, CAP_TYPE_IPC)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs)
+{
+	struct sys_exregs_args args = {
+		.exregs = exregs,
+		.task = task,
+	};
+
+	/* We always search for current's caps */
+	if (!(cap_find(current, cap_match_exregs,
+		       &args, CAP_TYPE_EXREGS)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+int cap_thread_check(struct ktcb *task,
+		     unsigned int flags,
+		     struct task_ids *ids)
+{
+	struct sys_tctrl_args args = {
+		.task = task,
+		.flags = flags,
+		.ids = ids,
+	};
+
+	if (!(cap_find(current, cap_match_thread,
+		       &args, CAP_TYPE_TCTRL)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+#else /* Meaning !CONFIG_CAPABILITIES */
+int cap_mutex_check(unsigned long mutex_address, int mutex_op)
+{
+	return 0;
+}
+
+int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags)
+{
+	return 0;
+}
+
+int cap_ipc_check(l4id_t to, l4id_t from,
+		  unsigned int flags, unsigned int ipc_type)
+{
+	return 0;
+}
+
+int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
+		  unsigned long npages, unsigned int flags)
+{
+	return 0;
+}
+
+int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs)
+{
+	return 0;
+}
+
+int cap_thread_check(struct ktcb *task,
+		     unsigned int flags,
+		     struct task_ids *ids)
+{
+	return 0;
+}
+#endif
 
 /*
  * FIXME:
@@ -667,7 +757,6 @@ int capability_set_resource_id(struct capability *cap)
 	case CAP_RTYPE_TGROUP:
 	case CAP_RTYPE_SPACE:
 	case CAP_RTYPE_CONTAINER:
-	case CAP_RTYPE_UMUTEX:
 		break;
 	}
 	return 0;

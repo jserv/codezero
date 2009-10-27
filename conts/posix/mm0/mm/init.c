@@ -210,7 +210,7 @@ int read_pager_capabilities()
 
 	/* Share all of them with paged children */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
-					 CAP_SHARE_CHILD,
+					 CAP_SHARE_CONTAINER,
 					 0)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "

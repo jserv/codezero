@@ -1,4 +1,5 @@
 
+#if 0
 
 int mutex_user_thread(void *arg)
 {
@@ -215,5 +216,5 @@ out_err:
 
 
 
-
+#endif
 

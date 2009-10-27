@@ -142,7 +142,7 @@ struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 
 /* Capability checking on system calls */
 int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
-		  unsigned long npages, unsigned int flags, l4id_t tid);
+		  unsigned long npages, unsigned int flags);
 int cap_thread_check(struct ktcb *task, unsigned int flags,
 		     struct task_ids *ids);
 int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs);
