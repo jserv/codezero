@@ -8,7 +8,7 @@
 #include <l4lib/utcb.h>
 
 
-void main(void);
+extern void main(void);
 
 void __container_init(void)
 {
