@@ -14,8 +14,17 @@
  * such a driver so far, hopefully it will turn out to be useful.
  */
 
-/* FIXME: Select based on arch */
+/* Select the physcial base address of UART0 based on platform selected */
+#if defined(pb926)
 #define PL011_DEFAULT_PHYSICAL_BASE		0x101F1000
+#elif defined(eb)
+#define PL011_DEFAULT_PHYSICAL_BASE             0x10009000
+#elif defined(pb11mpcore)
+#define PL011_DEFAULT_PHYSICAL_BASE             0x10009000
+#elif defined(pba8)
+#define PL011_DEFAULT_PHYSICAL_BASE             0x10009000
+#endif
+
 #define PL011_BASE				PL011_DEFAULT_PHYSICAL_BASE
 
 /* Architecture specific memory access macros */
