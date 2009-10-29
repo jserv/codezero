@@ -33,7 +33,7 @@ CONT%(cn)d_VIRT5_END	'Container %(cn)d Virtual Region 5 End Address'
 
 CONT%(cn)d_PAGER_LMA	'Container %(cn)d Pager LMA'
 CONT%(cn)d_PAGER_VMA	'Container %(cn)d Pager VMA'
-CONT%(cn)d_PAGER_SIZE	'Container %(cn)d Pager Initial Map Size (Optional)'
+CONT%(cn)d_PAGER_MAPSIZE	'Container %(cn)d Pager Initial Map Size (Optional)'
 CONT%(cn)d_PAGER_SHM_START	'Container %(cn)d Shared Mappings Region Start'
 CONT%(cn)d_PAGER_SHM_END	'Container %(cn)d Shared Mappings Region End'
 CONT%(cn)d_PAGER_TASK_START	'Container %(cn)d Task Address Space Region Start'
@@ -48,7 +48,7 @@ CONT%(cn)d_LINUX_MAPSIZE	'Container %(cn)d Linux Initial Kernel Map Size Paramet
 
 default CONT%(cn)d_PAGER_LMA	 from 0x0
 default CONT%(cn)d_PAGER_VMA	 from 0x0
-default CONT%(cn)d_PAGER_SIZE	 from 0x0
+default CONT%(cn)d_PAGER_MAPSIZE	 from 0x0
 default CONT%(cn)d_PAGER_SHM_START	 from 0x0
 default CONT%(cn)d_PAGER_SHM_END	 from 0x0
 default CONT%(cn)d_PAGER_TASK_START	 from 0x0
@@ -138,7 +138,7 @@ cont%(cn)d_posix_pager_params	'Container %(cn)d POSIX Pager Parameters'
 menu cont%(cn)d_bare_pager_params
 	CONT%(cn)d_PAGER_LMA@
 	CONT%(cn)d_PAGER_VMA@
-	CONT%(cn)d_PAGER_SIZE@
+	CONT%(cn)d_PAGER_MAPSIZE@
 
 menu cont%(cn)d_posix_pager_params
 	CONT%(cn)d_PAGER_SHM_START@

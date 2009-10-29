@@ -137,7 +137,7 @@ class configuration:
             self.containers[id].pager_task_region_start = int(val, 0)
         elif param[:len("PAGER_TASK_END")] == "PAGER_TASK_END":
             self.containers[id].pager_task_region_end = int(val, 0)
-        elif param[:len("PAGER_SIZE")] == "PAGER_SIZE":
+        elif param[:len("PAGER_MAPSIZE")] == "PAGER_MAPSIZE":
             self.containers[id].pager_size = int(val, 0)
         elif param[:len("LINUX_MAPSIZE")] == "LINUX_MAPSIZE":
             self.containers[id].linux_mapsize = int(val, 0)
