@@ -15,8 +15,11 @@ from config.projpaths import *
 
 Import('env')
 
+LIBMEM_RELDIR = 'conts/libmem'
+LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
+
 e = env.Clone()
-e.Append(CPPPATH = ['include/l4thread'])
+e.Append(CPPPATH = ['include/l4thread', LIBMEM_DIR])
 
 source = [Glob('*.[cS]') + Glob('src/*.[cS]')]
 objects = e.StaticObject(source)
