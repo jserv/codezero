@@ -24,7 +24,7 @@ env = Environment(CC = config.kernel_toolchain + 'gcc',
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
 		  LIBS = 'gcc',				# libgcc.a - This is required for division routines.
-		  CPPPATH = "#include")
+		  CPPFLAGS = [])
 
 e = env.Clone()
 e.Append(CPPPATH = ['include/sys-' + variant + '/arch-' + arch])

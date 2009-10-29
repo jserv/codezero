@@ -80,7 +80,6 @@
 #include <stdint.h>
 #include <arch/pl011_uart.h>
 
-extern int __fputc(int c, FILE *stream);
 extern struct pl011_uart uart;
 
 /* UART-specific internal error codes */

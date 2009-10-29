@@ -16,13 +16,11 @@ from config.configuration import *
 from config.projpaths import *
 
 Import('env', 'arch', 'platform')
-
 variant = 'baremetal'
 
 e = env.Clone()
-
 e.Append(CPPPATH = ['include/sys-' + variant + '/arch-' + arch])
-e.Append(CCFLAGS = '-nostdinc')
+e.Append(CCFLAGS = ['-nostdinc', ('-D' + platform)])
 
 source = \
         Glob('src/*.c') + \
