@@ -23,7 +23,7 @@ void uart_putc(char c)
 	int res;
 	/* Platform specific uart implementation */
 	do {
-		res =pl011_tx_char(uart.base, c);
+		res = pl011_tx_char(uart.base, c);
 	} while (res < 0);
 }
 

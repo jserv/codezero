@@ -41,7 +41,7 @@ struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
 
 static int platform_timer_handler(void)
 {
-	sp804_irq_handler();
+	sp804_irq_handler(PLATFORM_TIMER0_BASE);
 	return do_timer_irq();
 }
 

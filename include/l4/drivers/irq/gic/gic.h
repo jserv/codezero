@@ -1,56 +1,35 @@
 /*
- * PL190 Primecell Vectored Interrupt Controller offsets
+ * Generic Interrupt Controller offsets
  *
  * Copyright (C) 2007 Bahadir Balban
  *
  */
 
-#ifndef __PL190_VIC_H__
-#define __PL190_VIC_H__
+#ifndef __ARM_GIC_H__
+#define __ARM_GIC_H__
 
 #include INC_PLAT(platform.h)
 
-#define PL190_BASE				PLATFORM_IRQCTRL_BASE
-#define PL190_SIC_BASE				PLATFORM_SIRQCTRL_BASE
+/* GIC CPU register offsets */
+#define ARM_GIC_CPU_ICR		0x00 /* Interface Control */
+#define ARM_GIC_CPUPMR		0x04 /* Interrupt Priority Mask */
+#define ARM_GIC_CPU_BPR		0x08 /* Binary Point */
+#define ARM_GIC_CPU_IAR		0x0c /* Interrupt Acknowledge */
+#define ARM_GIC_CPU_EOIR	0x10 /* End of Interrupt */
+#define ARM_GIC_CPU_RRI		0x14 /* Running Priority */
+#define ARM_GIC_CPU_HPIR	0x18 /* Highest Priority Interrupt*/
 
-/* VIC register offsets */
-#define PL190_VIC_IRQSTATUS			(PL190_BASE + 0x00)
-#define PL190_VIC_FIQSTATUS			(PL190_BASE + 0x04)
-#define PL190_VIC_RAWINTR			(PL190_BASE + 0x08)
-#define PL190_VIC_INTSELECT			(PL190_BASE + 0x0C)
-#define PL190_VIC_INTENABLE			(PL190_BASE + 0x10)
-#define PL190_VIC_INTENCLEAR			(PL190_BASE + 0x14)
-#define PL190_VIC_SOFTINT			(PL190_BASE + 0x18)
-#define PL190_VIC_SOFTINTCLEAR			(PL190_BASE + 0x1C)
-#define PL190_VIC_PROTECTION			(PL190_BASE + 0x20)
-#define PL190_VIC_VECTADDR			(PL190_BASE + 0x30)
-#define PL190_VIC_DEFVECTADDR			(PL190_BASE + 0x34)
-#define PL190_VIC_VECTADDR0			(PL190_BASE + 0x100)
-/* 15 PIC_VECTADDR registers up to	0x13C */
-#define PL190_VIC_VECTCNTL0			(PL190_BASE + 0x200)
-/* 15 PIC_VECTCNTL registers up to	0x23C */
+/* Distributor register map */
+#define ARM_GIC_DIST_CR		0x000 /* Control Register */
+#define ARM_GIC_DIST_ICTR	0x004 /* Interface Controller Type */
+#define ARM_GIC_DIST_ISER	0x100 /* Interrupt Set Enable */
+#define ARM_GIC_DIST_ICER	0x180 /* Interrupt Clear Enable */
+#define ARM_GIC_DIST_ISPR	0x200 /* Interrupt Set Pending */
+#define ARM_GIC_DIST_ICPR	0x280 /* Interrupt Clear Pending*/
+#define ARM_GIC_DIST_ABR	0x300 /* Active Bit */
+#define ARM_GIC_DIST_IPR	0x400 /* Interrupt Priority */
+#define ARM_GIC_DIST_IPTR	0x800 /* Interrupt Processor Target */
+#define ARM_GIC_DIST_ICR	0xc00 /* Interrupt Configuration */
+#define ARM_GIC_DIST_SGIR	0xf00 /* Software Generated Interrupt */
 
-#define PL190_SIC_STATUS			(PL190_SIC_BASE + 0x0)
-#define PL190_SIC_RAWSTAT			(PL190_SIC_BASE + 0x04)
-#define PL190_SIC_ENABLE			(PL190_SIC_BASE + 0x08)
-#define PL190_SIC_ENSET				(PL190_SIC_BASE + 0x08)
-#define PL190_SIC_ENCLR				(PL190_SIC_BASE + 0x0C)
-#define PL190_SIC_SOFTINTSET			(PL190_SIC_BASE + 0x10)
-#define PL190_SIC_SOFTINTCLR			(PL190_SIC_BASE + 0x14)
-#define PL190_SIC_PICENABLE			(PL190_SIC_BASE + 0x20)
-#define PL190_SIC_PICENSET			(PL190_SIC_BASE + 0x20)
-#define PL190_SIC_PICENCLR			(PL190_SIC_BASE + 0x24)
-
-void pl190_vic_init(void);
-void pl190_ack_irq(int irq);
-void pl190_mask_irq(int irq);
-void pl190_unmask_irq(int irq);
-int pl190_read_irq(void);
-
-int pl190_sic_read_irq(void);
-void pl190_sic_mask_irq(int irq);
-void pl190_sic_mask_irq(int irq);
-void pl190_sic_ack_irq(int irq);
-void pl190_sic_unmask_irq(int irq);
-void pl190_sic_init(void);
-#endif /* __PL190_VIC_H__ */
+#endif /* __ARM_GIC_H__ */

@@ -1,5 +1,5 @@
-#ifndef __PLATFORM__PB926__PRINTASCII__H__
-#define __PLATFORM__PB926__PRINTASCII__H__
+#ifndef __PLATFORM__PBA8__PRINTASCII__H__
+#define __PLATFORM__PBA8__PRINTASCII__H__
 
 #define	dprintk(str, val)		\
 {					\
@@ -12,4 +12,4 @@
 void printascii(char *str);
 void printhex8(unsigned int);
 
-#endif /* __PLATFORM__PB926__PRINTASCII__H__ */
+#endif /* __PLATFORM__PBA8__PRINTASCII__H__ */

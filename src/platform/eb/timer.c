@@ -13,16 +13,17 @@
 void timer_init(void)
 {
 	/* Set timer 0 to 1MHz */
-	sp810_set_timclk(0, 1);
+	sp810_set_timclk(PLATFORM_TIMER0, 1);
 
 	/* Initialise timer */
-	sp804_init();
+	sp804_init(PLATFORM_TIMER0_BASE, SP804_TIMER_RUNMODE_PERIODIC, \
+		   SP804_TIMER_WRAPMODE_WRAPPING, SP804_TIMER_WIDTH32BIT, \
+		   SP804_TIMER_IRQENABLE);
 }
 
 void timer_start(void)
 {
 	irq_enable(IRQ_TIMER01);
-	sp804_set_irq(0, 1);	/* Enable timer0 irq */
-	sp804_enable(0, 1);	/* Enable timer0 */
+	sp804_enable(PLATFORM_TIMER0_BASE, 1);	/* Enable timer0 */
 }
 

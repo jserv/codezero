@@ -5,13 +5,13 @@
  *
  */
 
-#ifndef __PLATFORM_PB926_UART_H__
-#define __PLATFORM_PB926_UART_H__
+#ifndef __PLATFORM_PBA8_UART_H__
+#define __PLATFORM_PBA8_UART_H__
 
 #include INC_PLAT(offsets.h)
 #include INC_GLUE(memlayout.h)
 
-#define PLATFORM_CONSOLE_BASE			PB926_UART0_VBASE
+#define PLATFORM_CONSOLE_BASE			PBA8_UART0_VBASE
 #include <l4/drivers/uart/pl011/pl011_uart.h>
 
 void uart_init(void);

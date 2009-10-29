@@ -3,19 +3,24 @@
  */
 #include INC_ARCH(asm.h)
 #include INC_GLUE(memlayout.h)
+#include INC_PLAT(offsets.h)
+#include INC_SUBARCH(mm.h)
 
 #define UART_DATA_OFFSET		0x0
+
+/* Physical base address of UART0 */
+uart0_phys_base_addr:
+	.word   PB11MPCORE_UART0_BASE
+
+/* Virtual base address of UART0 */
+uart0_virtual_base_addr:
+	.word   PB11MPCORE_UART0_VBASE
 
 	.macro uart_address rx
 	mrc	p15, 0, \rx, c1, c0
 	tst	\rx, #1		@ MMU enabled?
-	moveq	\rx, #0x10000000
-	orreq	\rx, \rx, #0x001F0000
-	orreq	\rx, \rx, #0x00001000
-	/* FIXME: This offset is incorrect */
-	movne	\rx,      #0xf9000000 @#IO_AREA0_VADDR
-	addne	\rx, \rx, #PB926_UART0_VOFFSET	@ UART0 page offset from
-						@ virtual io area base.
+	moveq	\rx, #uart0_phys_base_addr
+	movne	\rx, #uart0_virtual_base_addr
 	.endm
 
 	.macro uart_send, ry, rx
