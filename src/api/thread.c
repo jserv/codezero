@@ -200,7 +200,7 @@ void thread_destroy_current(void)
 	/* Indicate we want to become zombie on suspend */
 	current->flags |= TASK_EXITING;
 
-	sched_suspend_sync();
+	sched_die_sync();
 }
 
 /* Runs a thread for the first time */

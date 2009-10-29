@@ -68,6 +68,7 @@ int capability_share(unsigned int share_flags)
 		cap_list_move(&curcont->cap_list,
 			      &current->cap_list);
 		break;
+#if 0
 	case CAP_SHARE_CHILD:
 		/*
 		 * Move own capabilities to paged-children
@@ -97,6 +98,7 @@ int capability_share(unsigned int share_flags)
 			      &current->cap_list);
 		break;
 	}
+#endif
 	default:
 		return -EINVAL;
 	}

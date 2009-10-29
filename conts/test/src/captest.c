@@ -85,8 +85,7 @@ int capability_test(void)
 	 */
 	if ((err = thread_create(simple_pager_thread,
 				 &TEST_MUST_FAIL,
-				 TC_SHARE_SPACE |
-				 TC_AS_PAGER, &ids)) < 0) {
+				 TC_SHARE_SPACE, &ids)) < 0) {
 		printf("Top-level simple_pager creation failed.\n");
 		goto out_err;
 	}

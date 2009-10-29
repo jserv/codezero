@@ -226,6 +226,70 @@ void sched_resume_async(struct ktcb *task)
 			  RQ_ADD_FRONT);
 }
 
+#if 0
+/* FIXME: Disables preemption for unbounded time !!! */
+void tcb_delete_schedule(void)
+{
+	/* We lock all possible locks to do with */
+	address_space_lock();
+
+	/*
+	 * Lock ktcb mutex cache so that nobody can get me
+	 * during this period
+	 */
+	mutex_lock(&kernel_resources.ktcb_cache.lock);
+	tcb_delete(current);
+
+	preempt_disable();
+
+	sched_rq_remove_task(current);
+	current->state = TASK_INACTIVE;
+	scheduler.prio_total -= current->priority;
+	BUG_ON(scheduler.prio_total < 0);
+
+	ktcb_list_unlock();
+	address_space_list_unlock();
+
+	preempt_enable();
+	schedule();
+}
+#endif
+
+void sched_die_sync(void)
+{
+	/* Remove from its list, callers get -ESRCH */
+	tcb_remove(current);
+
+	/*
+	 * If there are any sleepers on any of the task's
+	 * waitqueues, we need to wake those tasks up.
+	 */
+	wake_up_all(&current->wqh_send, 0);
+	wake_up_all(&current->wqh_recv, 0);
+
+	/*
+	 * We're a self-paging thread. We're gonna
+	 * delete ourself and disappear from the
+	 * system as soon as we schedule
+	 */
+	preempt_disable();
+
+	/*
+	 * TOO LONG!
+	 */
+	tcb_delete(current);
+
+	sched_rq_remove_task(current);
+	current->state = TASK_INACTIVE;
+	scheduler.prio_total -= current->priority;
+	BUG_ON(scheduler.prio_total < 0);
+
+	/* As soon as we schedule, we're gone */
+	preempt_enable();
+	schedule();
+	BUG();
+}
+
 /*
  * NOTE: Could do these as sched_prepare_suspend()
  * + schedule() or need_resched = 1

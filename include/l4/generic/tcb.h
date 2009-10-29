@@ -64,6 +64,9 @@ struct ktcb {
 	l4id_t tid;		/* Global thread id */
 	l4id_t tgid;		/* Global thread group id */
 
+	/* Other related threads */
+	l4id_t pagerid;
+
 	/* Flags to indicate various task status */
 	unsigned int flags;
 
@@ -73,11 +76,9 @@ struct ktcb {
 	/* Lock for blocking thread state modifications via a syscall */
 	struct mutex thread_control_lock;
 
-	/* Other related threads */
-	l4id_t pagerid;
-
 	u32 ts_need_resched;	/* Scheduling flag */
 	enum task_state state;
+
 	struct link task_list; /* Global task list. */
 
 	/* UTCB related, see utcb.txt in docs */
@@ -102,9 +103,7 @@ struct ktcb {
 	struct pager *pager;
 
 	/* Capability lists */
-	struct cap_list cap_list;	 /* Own private capabilities */
-	struct cap_list tgroup_cap_list; /* Caps shared with thread group */
-	struct cap_list pager_cap_list;	 /* Caps shared with paged children */
+	struct cap_list cap_list; /* Own private capabilities */
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;

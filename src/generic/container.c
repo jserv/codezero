@@ -144,8 +144,8 @@ int init_pager(struct pager *pager,
 			page_align_up(pager->memsize),
 			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
 
-	/* Move capability list from dummy to task's cap list */
-	cap_list_move(&task->cap_list, &current->cap_list);
+	/* Move capability list from dummy to task's space cap list */
+	cap_list_move(&task->space->cap_list, &current->cap_list);
 
 	/* Initialize task scheduler parameters */
 	sched_init_task(task, TASK_PRIO_PAGER);

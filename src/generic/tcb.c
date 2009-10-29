@@ -31,8 +31,6 @@ void tcb_init(struct ktcb *new)
 	mutex_init(&new->thread_control_lock);
 
 	cap_list_init(&new->cap_list);
-	cap_list_init(&new->tgroup_cap_list);
-	cap_list_init(&new->pager_cap_list);
 
 	/* Initialise task's scheduling state and parameters. */
 	sched_init_task(new, TASK_PRIO_NORMAL);
@@ -71,8 +69,8 @@ void tcb_delete(struct ktcb *tcb)
 	BUG_ON(tcb->wqh_send.sleepers > 0);
 	BUG_ON(tcb->wqh_recv.sleepers > 0);
 	BUG_ON(!list_empty(&tcb->task_list));
-	BUG_ON(!list_empty(&tcb->rq_list));
-	BUG_ON(tcb->rq);
+	BUG_ON(!list_empty(&tcb->rq_list) && tcb != current);
+	BUG_ON(tcb->rq && tcb != current);
 	BUG_ON(tcb->nlocks);
 	BUG_ON(tcb->waiting_on);
 	BUG_ON(tcb->wq);
