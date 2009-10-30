@@ -232,7 +232,7 @@ void sched_resume_async(struct ktcb *task)
  */
 void sched_pager_exit(void)
 {
-	printk("Pager (%d) Exiting...\n", current->tid);
+	// printk("Pager (%d) Exiting...\n", current->tid);
 	/* Remove from its list, callers get -ESRCH */
 	tcb_remove(current);
 
@@ -251,7 +251,7 @@ void sched_pager_exit(void)
 	preempt_disable();
 
 	/*
-	 * TOO LONG!
+	 * FIXME: TOO LONG!
 	 */
 	tcb_delete(current);
 
@@ -265,75 +265,6 @@ void sched_pager_exit(void)
 	schedule();
 	BUG();
 }
-
-#if 0
-/*
- * A paged-thread leaves the system and waits on
- * its pager's task_dead queue.
- */
-void sched_die_child(void)
-{
-	int locked;
-
-	/*
-	 * Find pager, he _must_ be there because he never
-	 * quits before quitting us
-	 */
-	struct ktcb *pager = tcb_find(current->pagerid);
-
-	do {
-		/* Busy spin without disabling preemption */
-		locked = mutex_trylock(&pager->task_dead_mutex);
-	} while (!locked);
-
-	/* Remove from container task list,
-	 * callers get -ESRCH */
-	tcb_remove(current);
-
-	/*
-	 * If the pager searches for us to destroy,
-	 * he won't find us but he will block on the
-	 * task_dead mutex when searching whether
-	 * we died already.
-	 */
-
-	/*
-	 * If there are any sleepers on any of the task's
-	 * waitqueues, we need to wake those tasks up.
-	 */
-	wake_up_all(&current->wqh_send, 0);
-	wake_up_all(&current->wqh_recv, 0);
-
-	/*
-	 * Add self to pager's dead tasks list,
-	 * to be deleted by pager
-	 */
-	list_insert(&current->task_list, &pager->task_dead_list);
-
-	/* Now quit the scheduler */
-	preempt_disable();
-	sched_rq_remove_task(current);
-	current->state = TASK_INACTIVE;
-	current->flags &= ~TASK_SUSPENDING;
-	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total < 0);
-	preempt_enable();
-
-	/*
-	 * Clear pager waitqueue in case it issued
-	 * a suspend on us (for any reason)
-	 */
-	wake_up(&current->wqh_pager, 0);
-
-	/*
-	 * Unlock task_dead queue,
-	 * pager can safely delete us
-	 */
-	mutex_unlock(&pager->task_dead_mutex);
-	schedule();
-	BUG();
-}
-#endif
 
 void sched_exit_sync(void)
 {

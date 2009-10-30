@@ -140,12 +140,12 @@ void handle_requests(void)
 		break;
 	}
 	case L4_IPC_TAG_EXIT: {
+		/* Pager exit test
 		struct task_ids ids;
-
 		l4_getid(&ids);
-
 		printf("\n%s: Destroying self (%d), along with any tasks.\n", __TASKNAME__, self_tid());
 		l4_thread_control(THREAD_DESTROY, &ids);
+		*/
 
 		/* An exiting task has no receive phase */
 		sys_exit(sender, (int)mr[0]);

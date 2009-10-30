@@ -117,7 +117,6 @@ int mutex_lock(struct mutex *mutex)
 	 * undeterministic as to how many retries will result in success.
 	 * We may need to add priority-based locking.
 	 */
-	//printk("Thread (%d) locking (%p) nlocks: %d\n", current->tid, mutex, current->nlocks);
 	for (;;) {
 		spin_lock(&mutex->wqh.slock);
 		if (!__mutex_lock(&mutex->lock)) { /* Could not lock, sleep. */
@@ -132,7 +131,6 @@ int mutex_lock(struct mutex *mutex)
 
 			/* Did we wake up normally or get interrupted */
 			if (current->flags & TASK_INTERRUPTED) {
-				//printk("XXXXXXXXXXXXXXXX (%d) Interrupted\n", current->tid);
 				current->flags &= ~TASK_INTERRUPTED;
 				return -EINTR;
 			}
@@ -142,14 +140,12 @@ int mutex_lock(struct mutex *mutex)
 		}
 	}
 	spin_unlock(&mutex->wqh.slock);
-	//printk("Thread (%d) locked (%p) nlocks: %d\n", current->tid, mutex, current->nlocks);
 	return 0;
 }
 
 static inline void mutex_unlock_common(struct mutex *mutex, int sync)
 {
 	struct ktcb *c = current; if (c);
-	//printk("Thread (%d) unlocking (%p) nlocks: %d\n", c->tid, mutex, c->nlocks);
 	spin_lock(&mutex->wqh.slock);
 	__mutex_unlock(&mutex->lock);
 	current->nlocks--;
