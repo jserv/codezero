@@ -37,8 +37,7 @@ class LinuxUpdateKernel:
             ['SCSI', 'SET'],['BLK_DEV_SD', 'SET'],
             ['SYM53C8XX_2', 'SET'],['INPUT_EVDEV', 'SET'],
             ['INOTIFY', 'SET'],['DEBUG_INFO', 'SET'],
-            ['USB_SUPPORT', 'UNSET'],['SOUND', 'UNSET'],
-            ['MMC', 'UNSET'],)
+            ['USB_SUPPORT', 'UNSET'],['SOUND', 'UNSET'],)
 
         # List of CPUIDs, to be used by linux based on codezero config
         self.cpuid_list = (['ARM926', '0x41069265'],)

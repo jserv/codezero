@@ -8,19 +8,29 @@
 
 #define UART_DATA_OFFSET		0x0
 
-/* Physical base address of UART0 */
-uart0_phys_base_addr:
-	.word   PB11MPCORE_UART0_BASE
+/*
+ * FIXME: We need to divide into bytes as writing to register doesnot look
+ * possible directly, it gives some errors in compilation
+ */
+#define UART0_PHYS_BASE                 PB11MPCORE_UART0_BASE
+#define UART0_PHYS_BYTE1                (UART0_PHYS_BASE & 0xFF000000)
+#define UART0_PHYS_BYTE2                (UART0_PHYS_BASE & 0x00FF0000)
+#define UART0_PHYS_BYTE3_4              (UART0_PHYS_BASE & 0x0000FFFF)
 
-/* Virtual base address of UART0 */
-uart0_virtual_base_addr:
-	.word   PB11MPCORE_UART0_VBASE
+#define UART0_VIRT_BASE                 PB11MPCORE_UART0_VBASE
+#define UART0_VIRT_BYTE1                (UART0_VIRT_BASE & 0xFF000000)
+#define UART0_VIRT_BYTE2                (UART0_VIRT_BASE & 0x00FF0000)
+#define UART0_VIRT_BYTE3_4              (UART0_VIRT_BASE & 0x0000FFFF)
 
 	.macro uart_address rx
 	mrc	p15, 0, \rx, c1, c0
 	tst	\rx, #1		@ MMU enabled?
-	moveq	\rx, #uart0_phys_base_addr
-	movne	\rx, #uart0_virtual_base_addr
+        moveq   \rx, #UART0_PHYS_BYTE1
+        orreq   \rx, #UART0_PHYS_BYTE2
+        orreq   \rx, #UART0_PHYS_BYTE3_4
+        movne   \rx, #UART0_VIRT_BYTE1
+	orrne   \rx, #UART0_VIRT_BYTE2
+	orrne   \rx, #UART0_VIRT_BYTE3_4
 	.endm
 
 	.macro uart_send, ry, rx
