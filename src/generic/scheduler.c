@@ -255,7 +255,12 @@ void tcb_delete_schedule(void)
 }
 #endif
 
-void sched_die_sync(void)
+
+/*
+ * A self-paging thread deletes itself,
+ * schedules and disappears from the system.
+ */
+void sched_die_pager(void)
 {
 	/* Remove from its list, callers get -ESRCH */
 	tcb_remove(current);
@@ -291,6 +296,80 @@ void sched_die_sync(void)
 }
 
 /*
+ * A paged-thread leaves the system and waits on
+ * its pager's task_dead queue.
+ */
+void sched_die_child(void)
+{
+	/*
+	 * Find pager, he _must_ be there because he never
+	 * quits before quitting us
+	 */
+	struct ktcb *pager = tcb_find(current->pagerid);
+
+	/* Lock its task_dead queue */
+	mutex_lock(&pager->task_dead.list_lock);
+
+	/* Remove from container task list,
+	 * callers get -ESRCH */
+	tcb_remove(current);
+
+	/*
+	 * If the pager searches for us to destroy,
+	 * he won't find us but he will block on the
+	 * task_dead mutex when searching whether
+	 * we died already.
+	 */
+
+	/*
+	 * If there are any sleepers on any of the task's
+	 * waitqueues, we need to wake those tasks up.
+	 */
+	wake_up_all(&current->wqh_send, 0);
+	wake_up_all(&current->wqh_recv, 0);
+
+	/*
+	 * Add self to pager's dead tasks list,
+	 * to be deleted by pager
+	 */
+	ktcb_list_add(current, &pager->task_dead);
+
+	/* Now quit the scheduler */
+	preempt_disable();
+	sched_rq_remove_task(current);
+	current->state = TASK_INACTIVE;
+	current->flags &= ~TASK_SUSPENDING;
+	scheduler.prio_total -= current->priority;
+	BUG_ON(scheduler.prio_total < 0);
+	preempt_enable();
+
+	/*
+	 * Unlock task_dead queue,
+	 * pager can safely delete us
+	 */
+	mutex_unlock(&pager->task_dead.list_lock);
+	BUG();
+}
+
+void sched_die_sync(void)
+{
+	if (current->tid == current->pagerid)
+		sched_die_pager();
+	else
+		sched_die_child();
+}
+
+/*
+ * TODO:
+ * Instead of sched_suspend_sync()
+ * call sched_die_sync() on killer suspends:
+ * (e.g. if also kill flag set, call sched_die_sync instead)
+ * and handle dying on its own and dying over a pager
+ * in there. (e.g. put yourself in a task_dead queue, take
+ * care of pager calling destroy on you, calling wait on you etc.)
+ */
+
+/*
  * NOTE: Could do these as sched_prepare_suspend()
  * + schedule() or need_resched = 1
  */
@@ -303,9 +382,6 @@ void sched_suspend_sync(void)
 	scheduler.prio_total -= current->priority;
 	BUG_ON(scheduler.prio_total < 0);
 	preempt_enable();
-
-	if (current->flags & TASK_EXITING)
-		task_make_zombie(current);
 
 	/*
 	 * Async wake up any waiting pagers

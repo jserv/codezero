@@ -55,6 +55,7 @@ int main(void)
 
 	/* Now quit to demo self-paging quit */
 	l4_exit(0);
+
 	/* Now quit by null pointer */
 	//	*((int *)0) = 5;
 

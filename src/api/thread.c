@@ -183,23 +183,32 @@ void thread_destroy_current(void)
 {
 	struct ktcb *task, *n;
 
-	/* Suspend all threads under control of this pager */
-	spin_lock(&curcont->ktcb_list.list_lock);
+	/* Signal death to all threads under control of this pager */
+	mutex_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_removable_struct(task, n,
 				      &curcont->ktcb_list.list,
 				      task_list) {
 		if (task->tid == current->tid ||
 		    task->pagerid != current->tid)
 			continue;
-		spin_unlock(&curcont->ktcb_list.list_lock);
+		mutex_unlock(&curcont->ktcb_list.list_lock);
+
+		/* Here we wait for each to die */
 		thread_suspend(task, TASK_EXITING);
-		spin_lock(&curcont->ktcb_list.list_lock);
+		mutex_lock(&curcont->ktcb_list.list_lock);
 	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
+	mutex_unlock(&curcont->ktcb_list.list_lock);
 
-	/* Indicate we want to become zombie on suspend */
-	current->flags |= TASK_EXITING;
+	/* Destroy all children */
+	mutex_lock(&current->task_dead.list_lock);
+	list_foreach_removable_struct(task, n,
+				      &current->task_dead.list,
+				      task_list) {
+		tcb_delete(task);
+	}
+	mutex_unlock(&current->task_dead.list_lock);
 
+	/* Destroy self */
 	sched_die_sync();
 }
 

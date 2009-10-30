@@ -10,6 +10,7 @@
 /* Number of containers defined at compile-time */
 #include <l4/generic/capability.h>
 #include <l4/lib/list.h>
+#include <l4/lib/mutex.h>
 #include <l4/lib/idpool.h>
 #include INC_SUBARCH(mm.h)
 
@@ -43,7 +44,7 @@ container_head_init(struct container_head *chead)
 /* Hash table for all existing tasks */
 struct ktcb_list {
 	struct link list;
-	struct spinlock list_lock;
+	struct mutex list_lock;
 	int count;
 };
 

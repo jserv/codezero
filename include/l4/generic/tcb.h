@@ -80,6 +80,7 @@ struct ktcb {
 	enum task_state state;
 
 	struct link task_list; /* Global task list. */
+	struct ktcb_list task_dead; /* List of dead children */
 
 	/* UTCB related, see utcb.txt in docs */
 	unsigned long utcb_address;	/* Virtual ref to task's utcb area */

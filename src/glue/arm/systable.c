@@ -169,7 +169,10 @@ int syscall(syscall_context_t *regs, unsigned long swi_addr)
 
 	if (current->flags & TASK_SUSPENDING) {
 		BUG_ON(current->nlocks);
-		sched_suspend_sync();
+		if (current->flags & TASK_EXITING)
+			sched_die_sync();
+		else
+			sched_suspend_sync();
 	}
 
 	return ret;

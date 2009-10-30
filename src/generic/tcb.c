@@ -20,7 +20,7 @@
 void init_ktcb_list(struct ktcb_list *ktcb_list)
 {
 	memset(ktcb_list, 0, sizeof(*ktcb_list));
-	spin_lock_init(&ktcb_list->list_lock);
+	mutex_init(&ktcb_list->list_lock);
 	link_init(&ktcb_list->list);
 }
 
@@ -29,6 +29,8 @@ void tcb_init(struct ktcb *new)
 
 	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
+
+	init_ktcb_list(&new->task_dead);
 
 	cap_list_init(&new->cap_list);
 
@@ -101,14 +103,14 @@ struct ktcb *tcb_find_by_space(l4id_t spid)
 {
 	struct ktcb *task;
 
-	spin_lock(&curcont->ktcb_list.list_lock);
+	mutex_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_struct(task, &curcont->ktcb_list.list, task_list) {
 		if (task->space->spid == spid) {
-			spin_unlock(&curcont->ktcb_list.list_lock);
+			mutex_unlock(&curcont->ktcb_list.list_lock);
 			return task;
 		}
 	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
+	mutex_unlock(&curcont->ktcb_list.list_lock);
 	return 0;
 }
 
@@ -119,44 +121,44 @@ struct ktcb *tcb_find(l4id_t tid)
 	if (current->tid == tid)
 		return current;
 
-	spin_lock(&curcont->ktcb_list.list_lock);
+	mutex_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_struct(task, &curcont->ktcb_list.list, task_list) {
 		if (task->tid == tid) {
-			spin_unlock(&curcont->ktcb_list.list_lock);
+			mutex_unlock(&curcont->ktcb_list.list_lock);
 			return task;
 		}
 	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
+	mutex_unlock(&curcont->ktcb_list.list_lock);
 	return 0;
 }
 
 void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list)
 {
-	spin_lock(&ktcb_list->list_lock);
+	mutex_lock(&ktcb_list->list_lock);
 	BUG_ON(!list_empty(&new->task_list));
 	BUG_ON(!++ktcb_list->count);
 	list_insert(&new->task_list, &ktcb_list->list);
-	spin_unlock(&ktcb_list->list_lock);
+	mutex_unlock(&ktcb_list->list_lock);
 }
 
 void tcb_add(struct ktcb *new)
 {
 	struct container *c = new->container;
 
-	spin_lock(&c->ktcb_list.list_lock);
+	mutex_lock(&c->ktcb_list.list_lock);
 	BUG_ON(!list_empty(&new->task_list));
 	BUG_ON(!++c->ktcb_list.count);
 	list_insert(&new->task_list, &c->ktcb_list.list);
-	spin_unlock(&c->ktcb_list.list_lock);
+	mutex_unlock(&c->ktcb_list.list_lock);
 }
 
 void tcb_remove(struct ktcb *new)
 {
-	spin_lock(&curcont->ktcb_list.list_lock);
+	mutex_lock(&curcont->ktcb_list.list_lock);
 	BUG_ON(list_empty(&new->task_list));
 	BUG_ON(--curcont->ktcb_list.count < 0);
 	list_remove_init(&new->task_list);
-	spin_unlock(&curcont->ktcb_list.list_lock);
+	mutex_unlock(&curcont->ktcb_list.list_lock);
 }
 
 /* Offsets for ktcb fields that are accessed from assembler */
