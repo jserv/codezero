@@ -29,15 +29,25 @@ int exit_test(void)
 				 &ids)) < 0) {
 		printf("Top-level simple_pager creation failed.\n");
 		goto out_err;
-	}
+	} else
+		printf("Thread (%d) created successfully.\n", ids.tid);
 
+	/* Kill it */
+	printf("Killing Thread (%d).\n", ids.tid);
+	if ((ret = l4_thread_control(THREAD_DESTROY, &ids)) < 0)
+		printf("Error: Killing Thread (%d)\n", ids.tid);
+	else
+		printf("Success: Killed Thread (%d)\n", ids.tid);
+
+#if 0
 	/* Wait on it */
+	printf("Waiting on Thread (%d) to exit.\n", ids.tid);
 	if ((ret = l4_thread_control(THREAD_WAIT, &ids)) >= 0)
 		printf("Success. Paged child returned %d\n", ret);
 	else
 		printf("Error. Wait on (%d) failed. err = %d\n",
 		       ids.tid, ret);
-
+#endif
 	return 0;
 
 out_err:
@@ -51,10 +61,10 @@ int main(void)
 
 	//capability_test();
 
-	//exit_test();
+	exit_test();
 
 	/* Now quit to demo self-paging quit */
-	l4_exit(0);
+	//l4_exit(0);
 
 	/* Now quit by null pointer */
 	//	*((int *)0) = 5;

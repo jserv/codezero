@@ -444,6 +444,7 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 	case THREAD_RECYCLE:
 		ret = thread_recycle(task);
 		break;
+
 	default:
 		ret = -EINVAL;
 	}

@@ -141,6 +141,13 @@ void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list)
 	mutex_unlock(&ktcb_list->list_lock);
 }
 
+void __ktcb_list_add_nolock(struct ktcb *new, struct ktcb_list *ktcb_list)
+{
+	BUG_ON(!list_empty(&new->task_list));
+	BUG_ON(!++ktcb_list->count);
+	list_insert(&new->task_list, &ktcb_list->list);
+}
+
 void tcb_add(struct ktcb *new)
 {
 	struct container *c = new->container;

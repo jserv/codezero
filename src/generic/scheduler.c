@@ -344,6 +344,12 @@ void sched_die_child(void)
 	preempt_enable();
 
 	/*
+	 * Clear pager waitqueue in case it issued
+	 * a suspend on us (for any reason)
+	 */
+	wake_up(&current->wqh_pager, 0);
+
+	/*
 	 * Unlock task_dead queue,
 	 * pager can safely delete us
 	 */
@@ -395,7 +401,7 @@ void sched_suspend_sync(void)
 	 * we silently do so. Noone is waiting us.
 	 */
 	if (current->pagerid != current->tid)
-		wake_up_task(tcb_find(current->pagerid), 0);
+		wake_up(&current->wqh_pager, 0);
 
 	schedule();
 }
