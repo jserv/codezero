@@ -80,7 +80,8 @@ struct ktcb {
 	enum task_state state;
 
 	struct link task_list; /* Global task list. */
-	struct ktcb_list task_dead; /* List of dead children */
+	struct link task_dead_list;	/* List of dead children */
+	struct mutex task_dead_mutex;	/* Dead children list mutex */
 
 	/* UTCB related, see utcb.txt in docs */
 	unsigned long utcb_address;	/* Virtual ref to task's utcb area */
@@ -156,7 +157,6 @@ void tcb_delete(struct ktcb *tcb);
 
 
 void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list);
-void __ktcb_list_add_nolock(struct ktcb *new, struct ktcb_list *ktcb_list);
 void init_ktcb_list(struct ktcb_list *ktcb_list);
 void task_update_utcb(struct ktcb *task);
 int tcb_check_and_lazy_map_utcb(struct ktcb *task);

@@ -308,6 +308,7 @@ void dump_undef_abort(u32 undef_addr)
 {
 	dprintk("Undefined instruction at address: ", undef_addr);
 	printascii("Halting system...\n");
+	BUG();
 }
 
 extern int current_irq_nest_count;

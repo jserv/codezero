@@ -184,29 +184,29 @@ void thread_destroy_current(void)
 	struct ktcb *task, *n;
 
 	/* Signal death to all threads under control of this pager */
-	mutex_lock(&curcont->ktcb_list.list_lock);
+	spin_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_removable_struct(task, n,
 				      &curcont->ktcb_list.list,
 				      task_list) {
 		if (task->tid == current->tid ||
 		    task->pagerid != current->tid)
 			continue;
-		mutex_unlock(&curcont->ktcb_list.list_lock);
+		spin_unlock(&curcont->ktcb_list.list_lock);
 
 		/* Here we wait for each to die */
 		thread_suspend(task, TASK_EXITING);
-		mutex_lock(&curcont->ktcb_list.list_lock);
+		spin_lock(&curcont->ktcb_list.list_lock);
 	}
-	mutex_unlock(&curcont->ktcb_list.list_lock);
+	spin_unlock(&curcont->ktcb_list.list_lock);
 
 	/* Destroy all children */
-	mutex_lock(&current->task_dead.list_lock);
+	mutex_lock(&current->task_dead_mutex);
 	list_foreach_removable_struct(task, n,
-				      &current->task_dead.list,
+				      &current->task_dead_list,
 				      task_list) {
 		tcb_delete(task);
 	}
-	mutex_unlock(&current->task_dead.list_lock);
+	mutex_unlock(&current->task_dead_mutex);
 
 	/* Destroy self */
 	sched_die_sync();

@@ -262,6 +262,7 @@ void tcb_delete_schedule(void)
  */
 void sched_die_pager(void)
 {
+	printk("Pager (%d) Exiting...\n", current->tid);
 	/* Remove from its list, callers get -ESRCH */
 	tcb_remove(current);
 
@@ -301,7 +302,7 @@ void sched_die_pager(void)
  */
 void sched_die_child(void)
 {
-	int err;
+	int locked;
 
 	/*
 	 * Find pager, he _must_ be there because he never
@@ -309,9 +310,10 @@ void sched_die_child(void)
 	 */
 	struct ktcb *pager = tcb_find(current->pagerid);
 
-	/* Lock its task_dead queue */
-	if ((err = mutex_lock(&pager->task_dead.list_lock)) < 0)
-		return err;
+	do {
+		/* Busy spin without disabling preemption */
+		locked = mutex_trylock(&pager->task_dead_mutex);
+	} while (!locked);
 
 	/* Remove from container task list,
 	 * callers get -ESRCH */
@@ -335,7 +337,7 @@ void sched_die_child(void)
 	 * Add self to pager's dead tasks list,
 	 * to be deleted by pager
 	 */
-	__ktcb_list_add_nolock(current, &pager->task_dead);
+	list_insert(&current->task_list, &pager->task_dead_list);
 
 	/* Now quit the scheduler */
 	preempt_disable();
@@ -356,21 +358,17 @@ void sched_die_child(void)
 	 * Unlock task_dead queue,
 	 * pager can safely delete us
 	 */
-	mutex_unlock(&pager->task_dead.list_lock);
+	mutex_unlock(&pager->task_dead_mutex);
 	schedule();
 	BUG();
 }
 
 void sched_die_sync(void)
 {
-	/*
-	 * Infinitely retry if mutexes get interrupted
-	 */
-	while (1)
-		if (current->tid == current->pagerid)
-			sched_die_pager();
-		else
-			sched_die_child();
+	if (current->tid == current->pagerid)
+		sched_die_pager();
+	else
+		sched_die_child();
 }
 
 /*
@@ -397,17 +395,6 @@ void sched_suspend_sync(void)
 	BUG_ON(scheduler.prio_total < 0);
 	preempt_enable();
 
-	/*
-	 * Async wake up any waiting pagers
-	 *
-	 * If we're not a pager, then a pager must have
-	 * signalled us to suspend, and it must have been
-	 * waiting for us to wake it up when we suspend.
-	 * We do it here.
-	 *
-	 * If though, we _are_ a pager that is suspending,
-	 * we silently do so. Noone is waiting us.
-	 */
 	if (current->pagerid != current->tid)
 		wake_up(&current->wqh_pager, 0);
 
@@ -426,17 +413,6 @@ void sched_suspend_async(void)
 	/* This will make sure we yield soon */
 	preempt_enable();
 
-	/*
-	 * Async wake up any waiting pagers
-	 *
-	 * If we're not a pager, then a pager must have
-	 * signalled us to suspend, and it must have been
-	 * waiting for us to wake it up when we suspend.
-	 * We do it here.
-	 *
-	 * If though, we _are_ a pager that is suspending,
-	 * we silently do so. Noone is waiting us.
-	 */
 	if (current->pagerid != current->tid)
 		wake_up_task(tcb_find(current->pagerid), 0);
 

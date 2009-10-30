@@ -44,7 +44,7 @@ container_head_init(struct container_head *chead)
 /* Hash table for all existing tasks */
 struct ktcb_list {
 	struct link list;
-	struct mutex list_lock;
+	struct spinlock list_lock;
 	int count;
 };
 

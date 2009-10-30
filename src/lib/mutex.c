@@ -132,7 +132,7 @@ int mutex_lock(struct mutex *mutex)
 
 			/* Did we wake up normally or get interrupted */
 			if (current->flags & TASK_INTERRUPTED) {
-				printk("Thread (%d) interrupted on mutex sleep\n", current->tid);
+				printk("XXXXXXXXXXXXXXXX (%d) Interrupted\n", current->tid);
 				current->flags &= ~TASK_INTERRUPTED;
 				return -EINTR;
 			}
