@@ -39,6 +39,7 @@ def cml2_header_to_symbols(cml2_header, config):
                 config.get_arch(name, value)
                 config.get_subarch(name, value)
                 config.get_platform(name, value)
+                config.get_cpu(name, value)
                 config.get_ncontainers(name, value)
                 config.get_container_parameters(name, value)
 

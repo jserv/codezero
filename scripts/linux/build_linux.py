@@ -116,34 +116,15 @@ class LinuxUpdateKernel:
 
     # Update ARCHID, CPUID and ATAGS ADDRESS
     def modify_register_values(self, container):
-        # Patterns as defined in config.h
-        cpuid_pattern = '#define CONFIG_CPU_'
-        archid_pattern = '#define CONFIG_PLATFORM_'
 
-        config_h_path = join(PROJROOT, CONFIG_H)
-
-        for pattern in cpuid_pattern, archid_pattern:
-            with open(config_h_path, 'r') as f:
-                for line in f:
-                    start = string.find(line, pattern)
-                    if start == -1:
-                        continue
-                    else:
-                        end = start + len(pattern)
-                        start = end
-                        while line[end] != ' ':
-                            end = end + 1
-                        if pattern == cpuid_pattern:
-                            cpu_type = line[start:end]
-                        elif pattern == archid_pattern:
-                            arch_type = line[start:end]
-                        break
+        # TODO: This call needs to be made global
+        config = configuration_retrieve()
         for i in self.cpuid_list:
-            if i[0] == cpu_type:
+            if i[0] == config.cpu.upper():
                 cpuid = i[1]
                 break
         for i in self.archid_list:
-            if i[0] == arch_type:
+            if i[0] == config.platform.upper():
                 archid = i[1]
                 break
 

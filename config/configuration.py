@@ -67,6 +67,7 @@ class configuration:
         self.arch = None
         self.subarch = None
         self.platform = None
+        self.cpu = None
         self.gcc_cpu_flag = None
         self.user_toolchain = None
         self.kernel_toolchain = None
@@ -113,6 +114,12 @@ class configuration:
             for i in self.cpu_to_gcc_flag:
                 if i[0] == parts[2]:
                     self.gcc_cpu_flag = i[1]
+
+    # Extract cpu from a name value pair
+    def get_cpu(self, name, val):
+        if name[:len("CONFIG_CPU_")] == "CONFIG_CPU_":
+            parts = name.split("_", 3)
+            self.cpu = parts[2].lower()
 
     # Extract number of containers
     def get_ncontainers(self, name, val):
@@ -252,6 +259,7 @@ def configuration_save(config):
     config_shelve["arch"] = config.arch
     config_shelve["subarch"] = config.subarch
     config_shelve["platform"] = config.platform
+    config_shelve["cpu"] = config.cpu
     config_shelve["all_symbols"] = config.all
     config_shelve.close()
 
