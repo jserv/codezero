@@ -30,8 +30,7 @@ void tcb_init(struct ktcb *new)
 	link_init(&new->task_list);
 	mutex_init(&new->thread_control_lock);
 
-	mutex_init(&new->task_dead_mutex);
-	link_init(&new->task_dead_list);
+	init_ktcb_list(&new->child_exit_list);
 	cap_list_init(&new->cap_list);
 
 	/* Initialise task's scheduling state and parameters. */
@@ -160,6 +159,15 @@ void tcb_remove(struct ktcb *new)
 	BUG_ON(--curcont->ktcb_list.count < 0);
 	list_remove_init(&new->task_list);
 	spin_unlock(&curcont->ktcb_list.list_lock);
+}
+
+void ktcb_list_remove(struct ktcb *new, struct ktcb_list *ktcb_list)
+{
+	spin_lock(&ktcb_list->list_lock);
+	BUG_ON(list_empty(&new->task_list));
+	BUG_ON(--ktcb_list->count < 0);
+	list_remove(&new->task_list);
+	spin_unlock(&ktcb_list->list_lock);
 }
 
 /* Offsets for ktcb fields that are accessed from assembler */

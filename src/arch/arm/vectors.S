@@ -55,6 +55,7 @@ END_PROC(arm_reset_exception)
 BEGIN_PROC(arm_undef_exception)
 	sub	lr, lr, #4
 	mov	r0, lr		@ Get undefined abort address
+	mrs	r1, spsr	@ Get previous abort state
 	mov	r5, lr		@ Save it in r5 in case r0 is trashed
 	mov	lr, pc		@ Save return address
 	ldr	pc, =dump_undef_abort

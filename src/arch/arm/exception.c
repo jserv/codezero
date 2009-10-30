@@ -113,7 +113,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	if (current->tid == current->pagerid) {
 		printk("Pager (%d) faulted on itself. FAR: 0x%x, PC: 0x%x Exiting.\n",
 		       current->tid, fault->far, fault->faulty_pc);
-		thread_destroy_current();
+		thread_destroy(current);
 	}
 
 	/* Send ipc to the task's pager */
@@ -124,11 +124,9 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 		       current->tid, err);
 		BUG_ON(current->nlocks);
 
-		/* Declare our exit, currently only used by bug_on checks */
+		/* Exit as if signalled */
 		current->flags |= TASK_EXITING;
-		/* Try to die forever */
-		while (1)
-			sched_die_sync();
+		sched_exit_sync();
 	}
 }
 
@@ -256,6 +254,8 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 
 	dbg_abort("Data abort @ PC: ", faulted_pc);
 
+	//printk("Data abort: %d, PC: 0x%x\n", current->tid, faulted_pc);
+
 	/* Check for more details */
 	if (check_aborts(faulted_pc, fsr, far) < 0) {
 		printascii("This abort can't be handled by any pager.\n");
@@ -304,9 +304,12 @@ error:
 		;
 }
 
-void dump_undef_abort(u32 undef_addr)
+void dump_undef_abort(u32 undef_addr, unsigned int spsr)
 {
 	dprintk("Undefined instruction at address: ", undef_addr);
+	printk("Undefined instruction: %d, PC: 0x%x, Mode: %s\n",
+	       current->tid, undef_addr,
+	       (spsr & ARM_MODE_MASK) == ARM_MODE_SVC ? "SVC" : "User");
 	printascii("Halting system...\n");
 	BUG();
 }

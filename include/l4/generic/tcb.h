@@ -29,6 +29,7 @@
 #define TASK_SUSPENDING			(1 << 1)
 #define TASK_RESUMING			(1 << 2)
 #define TASK_EXITING			(1 << 3)
+#define TASK_PENDING_SIGNAL		(TASK_SUSPENDING | TASK_EXITING)
 
 /* Task states */
 enum task_state {
@@ -80,8 +81,7 @@ struct ktcb {
 	enum task_state state;
 
 	struct link task_list; /* Global task list. */
-	struct link task_dead_list;	/* List of dead children */
-	struct mutex task_dead_mutex;	/* Dead children list mutex */
+	struct ktcb_list child_exit_list;
 
 	/* UTCB related, see utcb.txt in docs */
 	unsigned long utcb_address;	/* Virtual ref to task's utcb area */
@@ -156,6 +156,7 @@ struct ktcb *tcb_alloc_init(void);
 void tcb_delete(struct ktcb *tcb);
 
 
+void ktcb_list_remove(struct ktcb *task, struct ktcb_list *ktcb_list);
 void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list);
 void init_ktcb_list(struct ktcb_list *ktcb_list);
 void task_update_utcb(struct ktcb *task);

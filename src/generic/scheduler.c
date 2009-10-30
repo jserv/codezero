@@ -226,41 +226,11 @@ void sched_resume_async(struct ktcb *task)
 			  RQ_ADD_FRONT);
 }
 
-#if 0
-/* FIXME: Disables preemption for unbounded time !!! */
-void tcb_delete_schedule(void)
-{
-	/* We lock all possible locks to do with */
-	address_space_lock();
-
-	/*
-	 * Lock ktcb mutex cache so that nobody can get me
-	 * during this period
-	 */
-	mutex_lock(&kernel_resources.ktcb_cache.lock);
-	tcb_delete(current);
-
-	preempt_disable();
-
-	sched_rq_remove_task(current);
-	current->state = TASK_INACTIVE;
-	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total < 0);
-
-	ktcb_list_unlock();
-	address_space_list_unlock();
-
-	preempt_enable();
-	schedule();
-}
-#endif
-
-
 /*
  * A self-paging thread deletes itself,
  * schedules and disappears from the system.
  */
-void sched_die_pager(void)
+void sched_pager_exit(void)
 {
 	printk("Pager (%d) Exiting...\n", current->tid);
 	/* Remove from its list, callers get -ESRCH */
@@ -296,6 +266,7 @@ void sched_die_pager(void)
 	BUG();
 }
 
+#if 0
 /*
  * A paged-thread leaves the system and waits on
  * its pager's task_dead queue.
@@ -362,13 +333,37 @@ void sched_die_child(void)
 	schedule();
 	BUG();
 }
+#endif
 
-void sched_die_sync(void)
+void sched_exit_sync(void)
 {
-	if (current->tid == current->pagerid)
-		sched_die_pager();
-	else
-		sched_die_child();
+	struct ktcb *pager = tcb_find(current->pagerid);
+
+	/* Quit global list */
+	tcb_remove(current);
+
+	/* Wake up waiters */
+	wake_up_all(&current->wqh_send, 0);
+	wake_up_all(&current->wqh_recv, 0);
+
+	/* Go to exit list */
+	ktcb_list_add(current, &pager->child_exit_list);
+
+	preempt_disable();
+
+	/* Hint pager we're ready */
+	wake_up(&current->wqh_pager, 0);
+
+	sched_rq_remove_task(current);
+	current->state = TASK_INACTIVE;
+	current->flags &= ~TASK_SUSPENDING;
+	scheduler.prio_total -= current->priority;
+	BUG_ON(scheduler.prio_total < 0);
+	preempt_enable();
+
+	/* Quit */
+	schedule();
+	BUG();
 }
 
 /*
@@ -517,7 +512,7 @@ void schedule()
 	 * If task is about to sleep and
 	 * it has pending events, wake it up.
 	 */
-	if (current->flags & TASK_SUSPENDING &&
+	if ((current->flags & TASK_PENDING_SIGNAL) &&
 	    current->state == TASK_SLEEPING)
 		wake_up_task(current, WAKEUP_INTERRUPT);
 

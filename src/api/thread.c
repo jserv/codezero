@@ -24,42 +24,34 @@ int sys_thread_switch(void)
 }
 
 /*
- * This suspends a thread which is in either suspended,
- * sleeping or runnable state. `flags' field specifies an additional
- * status for the thread, that implies an additional action as well
- * as suspending. For example, a TASK_EXITING flag ensures the task
- * is moved to a zombie queue during suspension.
- *
- * Why no race?
- *
- * There is no race between the pager setting TASK_SUSPENDING,
- * and waiting for TASK_INACTIVE non-atomically because the target
- * task starts suspending only when it sees TASK_SUSPENDING set and
- * it only wakes up the pager after it has switched state to
- * TASK_INACTIVE.
- *
- * If the pager hasn't come to wait_event() and the wake up call is
- * already gone, the state is already TASK_INACTIVE so the pager
- * won't sleep at all.
+ * This signals a thread so that the thread stops what it is
+ * doing, and take action on the signal provided. Currently this
+ * may be a suspension or an exit signal.
  */
-int thread_suspend(struct ktcb *task, unsigned int flags)
+int thread_signal_sync(struct ktcb *task, unsigned int flags,
+		       unsigned int task_state)
 {
 	int ret = 0;
 
-	if (task->state == TASK_INACTIVE)
+	if (task->state == task_state)
 		return 0;
 
 	/* Signify we want to suspend the thread */
-	task->flags |= TASK_SUSPENDING | flags;
+	task->flags |= flags;
 
 	/* Wake it up if it's sleeping */
 	wake_up_task(task, WAKEUP_INTERRUPT | WAKEUP_SYNC);
 
 	/* Wait until task suspends itself */
 	WAIT_EVENT(&task->wqh_pager,
-		   task->state == TASK_INACTIVE, ret);
+		   task->state == task_state, ret);
 
 	return ret;
+}
+
+int thread_suspend(struct ktcb *task)
+{
+	return thread_signal_sync(task, TASK_SUSPENDING, TASK_INACTIVE);
 }
 
 int arch_clear_thread(struct ktcb *tcb)
@@ -99,7 +91,7 @@ int thread_recycle(struct ktcb *task)
 {
 	int ret;
 
-	if ((ret = thread_suspend(task, 0)) < 0)
+	if ((ret = thread_suspend(task)) < 0)
 		return ret;
 
 	/*
@@ -121,95 +113,52 @@ int thread_recycle(struct ktcb *task)
 	return 0;
 }
 
-void thread_destroy_current();
-
 int thread_destroy(struct ktcb *task)
 {
 	int ret;
 
-	/*
-	 * Pager destroying itself
-	 */
-	if (task == current) {
-		thread_destroy_current();
+	/* If we're a self-destructing pager */
+	if (task == current &&
+	    current->tid == current->pagerid) {
+		struct ktcb *child, *n;
 
-		/* It should not return */
+		/* Make all children exit synchronously */
+		spin_lock(&curcont->ktcb_list.list_lock);
+		list_foreach_removable_struct(child, n,
+					      &curcont->ktcb_list.list,
+					      task_list) {
+			if (child->pagerid == current->tid &&
+			    child != current) {
+				spin_unlock(&curcont->ktcb_list.list_lock);
+				BUG_ON(thread_signal_sync(child, TASK_EXITING,
+						   TASK_INACTIVE) < 0);
+				spin_lock(&curcont->ktcb_list.list_lock);
+			}
+		}
+		spin_unlock(&curcont->ktcb_list.list_lock);
+
+		/* Delete all exited children */
+		spin_lock(&current->child_exit_list.list_lock);
+		list_foreach_removable_struct(child, n,
+					      &current->child_exit_list.list,
+					      task_list) {
+			list_remove(&child->task_list);
+			tcb_delete(child);
+		}
+		spin_unlock(&current->child_exit_list.list_lock);
+
+		/* Destroy yourself */
+		sched_pager_exit();
 		BUG();
 	}
 
-	if ((ret = thread_suspend(task, 0)) < 0)
+	if ((ret = thread_signal_sync(task, TASK_EXITING, TASK_INACTIVE)) < 0)
 		return ret;
 
-	/* Remove tcb from global list so any callers will get -ESRCH */
-	tcb_remove(task);
-
-	/*
-	 * If there are any sleepers on any of the task's
-	 * waitqueues, we need to wake those tasks up.
-	 */
-	wake_up_all(&task->wqh_send, 0);
-	wake_up_all(&task->wqh_recv, 0);
-
-	/* We can now safely delete the task */
+	ktcb_list_remove(task, &current->child_exit_list);
 	tcb_delete(task);
 
 	return 0;
-}
-
-void task_make_zombie(struct ktcb *task)
-{
-	/* Remove from its list, callers get -ESRCH */
-	tcb_remove(task);
-
-	/*
-	 * If there are any sleepers on any of the task's
-	 * waitqueues, we need to wake those tasks up.
-	 */
-	wake_up_all(&task->wqh_send, 0);
-	wake_up_all(&task->wqh_recv, 0);
-
-	BUG_ON(!(task->flags & TASK_EXITING));
-
-	/* Add to zombie list, to be destroyed later */
-	ktcb_list_add(task, &kernel_resources.zombie_list);
-}
-
-/*
- * Pagers destroy themselves either by accessing an illegal
- * address or voluntarily. All threads managed also get
- * destroyed.
- */
-void thread_destroy_current(void)
-{
-	struct ktcb *task, *n;
-
-	/* Signal death to all threads under control of this pager */
-	spin_lock(&curcont->ktcb_list.list_lock);
-	list_foreach_removable_struct(task, n,
-				      &curcont->ktcb_list.list,
-				      task_list) {
-		if (task->tid == current->tid ||
-		    task->pagerid != current->tid)
-			continue;
-		spin_unlock(&curcont->ktcb_list.list_lock);
-
-		/* Here we wait for each to die */
-		thread_suspend(task, TASK_EXITING);
-		spin_lock(&curcont->ktcb_list.list_lock);
-	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
-
-	/* Destroy all children */
-	mutex_lock(&current->task_dead_mutex);
-	list_foreach_removable_struct(task, n,
-				      &current->task_dead_list,
-				      task_list) {
-		tcb_delete(task);
-	}
-	mutex_unlock(&current->task_dead_mutex);
-
-	/* Destroy self */
-	sched_die_sync();
 }
 
 /* Runs a thread for the first time */
@@ -436,7 +385,7 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		ret = thread_start(task);
 		break;
 	case THREAD_SUSPEND:
-		ret = thread_suspend(task, flags);
+		ret = thread_suspend(task);
 		break;
 	case THREAD_DESTROY:
 		ret = thread_destroy(task);
