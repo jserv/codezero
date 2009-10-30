@@ -6,7 +6,7 @@
 #include <l4/macros.h>
 #include <libposix.h>
 
-static inline void __attribute__ ((noreturn)) l4_exit(int status)
+static inline void __attribute__ ((noreturn)) l4_exit_ipc(int status)
 {
 	int ret;
 
@@ -22,6 +22,6 @@ static inline void __attribute__ ((noreturn)) l4_exit(int status)
 
 void __attribute__ ((noreturn)) _exit(int status)
 {
-	l4_exit(status);
+	l4_exit_ipc(status);
 }
 

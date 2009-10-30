@@ -20,4 +20,8 @@
 #define CAP_SHARE_CHILD			0x08	/* All that we are pager of */
 #define CAP_SHARE_SIBLING		0x10	/* All that have a common pager */
 
+/* Task's primary capability list */
+#define TASK_CAP_LIST(task)	\
+	(&((task)->space->cap_list))
+
 #endif /* __API_CAPABILITY_H__ */

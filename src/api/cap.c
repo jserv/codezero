@@ -14,6 +14,10 @@
 #include <l4/api/errno.h>
 #include INC_API(syscall.h)
 
+/*
+ * FIXME: This is reading only a single list
+ * there may be more than one
+ */
 int read_task_capabilities(void *userbuf)
 {
 	int copy_size, copy_offset = 0;
@@ -27,8 +31,8 @@ int read_task_capabilities(void *userbuf)
 	if (current != current->pager->tcb)
 		return -EPERM;
 
-	/* Determine size of pager capabilities */
-	copy_size = current->cap_list.ncaps * sizeof(*cap);
+	/* Determine size of pager capabilities (FIXME: partial!) */
+	copy_size = TASK_CAP_LIST(current)->ncaps * sizeof(*cap);
 
 	/* Validate user buffer for this copy size */
 	if ((err = check_access((unsigned long)userbuf,
@@ -37,7 +41,7 @@ int read_task_capabilities(void *userbuf)
 		return err;
 
 	/* Copy capabilities from list to buffer */
-	list_foreach_struct(cap, &current->cap_list.caps,
+	list_foreach_struct(cap, &TASK_CAP_LIST(current)->caps,
 			    list) {
 		memcpy(userbuf + copy_offset,
 		       cap, sizeof(*cap));
@@ -62,11 +66,11 @@ int capability_share(unsigned int share_flags)
 	switch (share_flags) {
 	case CAP_SHARE_SPACE:
 		cap_list_move(&current->space->cap_list,
-			      &current->cap_list);
+			      TASK_CAP_LIST(current));
 		break;
 	case CAP_SHARE_CONTAINER:
 		cap_list_move(&curcont->cap_list,
-			      &current->cap_list);
+			      TASK_CAP_LIST(current));
 		break;
 #if 0
 	case CAP_SHARE_CHILD:
@@ -130,8 +134,8 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
 
-		/* Copy ncaps value */
-		*((int *)userbuf) = current->cap_list.ncaps;
+		/* Copy ncaps value. FIXME: This is only a partial list */
+		*((int *)userbuf) = TASK_CAP_LIST(current)->ncaps;
 		break;
 
 	/* Return all capabilities as an array of capabilities */
