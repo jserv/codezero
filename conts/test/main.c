@@ -11,6 +11,7 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4/api/space.h>
+#
 
 int exit_test_thread(void *arg)
 {
@@ -32,6 +33,7 @@ int exit_test(void)
 	} else
 		printf("Thread (%d) created successfully.\n", ids.tid);
 
+#if 0
 	/* Kill it */
 	printf("Killing Thread (%d).\n", ids.tid);
 	if ((ret = l4_thread_control(THREAD_DESTROY, &ids)) < 0)
@@ -39,7 +41,10 @@ int exit_test(void)
 	else
 		printf("Success: Killed Thread (%d)\n", ids.tid);
 
-#if 0
+#endif
+
+	l4_thread_switch(0);
+
 	/* Wait on it */
 	printf("Waiting on Thread (%d) to exit.\n", ids.tid);
 	if ((ret = l4_thread_control(THREAD_WAIT, &ids)) >= 0)
@@ -47,7 +52,6 @@ int exit_test(void)
 	else
 		printf("Error. Wait on (%d) failed. err = %d\n",
 		       ids.tid, ret);
-#endif
 	return 0;
 
 out_err:

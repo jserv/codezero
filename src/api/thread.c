@@ -49,6 +49,48 @@ int thread_signal_sync(struct ktcb *task, unsigned int flags,
 	return ret;
 }
 
+int thread_wait(struct task_ids *ids)
+{
+	struct ktcb *task, *n;
+	int ret;
+
+       	if (!(task = tcb_find(ids->tid))) {
+		/* Retry in own queue till we find it */
+retry:
+		spin_lock(&current->child_exit_list.list_lock);
+		list_foreach_removable_struct(task, n,
+					      &current->child_exit_list.list,
+					      task_list) {
+			if (task->tid == ids->tid) {
+				printk("%s: Found (%d) in exit queue.\n",
+				       __FUNCTION__, task->tid);
+				list_remove(&task->task_list);
+				tcb_delete(task);
+				spin_unlock(&current->child_exit_list.list_lock);
+				return 0;
+			}
+		}
+		spin_unlock(&current->child_exit_list.list_lock);
+		schedule();
+		goto retry;
+	}
+
+	printk("%s: Found (%d) in global queue.\n",
+	       __FUNCTION__, task->tid);
+
+	/* Got a handle on the task, wait on it conditionally */
+	WAIT_EVENT(&task->wqh_pager,
+		   task->state == TASK_INACTIVE, ret);
+
+	/*
+	 * We found it in global queue but
+	 * now it must be in exit queue
+	 */
+	ktcb_list_remove(task, &current->child_exit_list);
+	tcb_delete(task);
+	return 0;
+}
+
 int thread_suspend(struct ktcb *task)
 {
 	return thread_signal_sync(task, TASK_SUSPENDING, TASK_INACTIVE);
@@ -130,8 +172,10 @@ int thread_destroy(struct ktcb *task)
 			if (child->pagerid == current->tid &&
 			    child != current) {
 				spin_unlock(&curcont->ktcb_list.list_lock);
+
+				/* Its a bug since nobody can interrupt us */
 				BUG_ON(thread_signal_sync(child, TASK_EXITING,
-						   TASK_INACTIVE) < 0);
+						   	  TASK_INACTIVE) < 0);
 				spin_lock(&curcont->ktcb_list.list_lock);
 			}
 		}
@@ -370,7 +414,8 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 				MAP_USR_RW_FLAGS, 1)) < 0)
 		return err;
 
-	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE)
+	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE &&
+	    (flags & THREAD_ACTION_MASK) != THREAD_WAIT)
 		if (!(task = tcb_find(ids->tid)))
 			return -ESRCH;
 
@@ -392,6 +437,9 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		break;
 	case THREAD_RECYCLE:
 		ret = thread_recycle(task);
+		break;
+	case THREAD_WAIT:
+		ret = thread_wait(ids);
 		break;
 
 	default:

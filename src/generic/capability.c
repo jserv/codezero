@@ -447,10 +447,13 @@ struct capability *cap_match_thread(struct capability *cap,
 	}
 
 	/* If no target and create, or vice versa, it really is a bug */
-	BUG_ON(!target && action_flags != THREAD_CREATE);
-	BUG_ON(target && action_flags == THREAD_CREATE);
+	BUG_ON(!target && (action_flags != THREAD_CREATE &&
+			   action_flags != THREAD_WAIT));
+	BUG_ON(target && (action_flags == THREAD_CREATE ||
+			  action_flags == THREAD_WAIT));
 
-	if (action_flags == THREAD_CREATE) {
+	if (action_flags == THREAD_CREATE ||
+	    action_flags == THREAD_WAIT) {
 		/*
 		 * FIXME: Add cid to task_ids arg.
 		 *
