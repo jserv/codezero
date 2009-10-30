@@ -102,7 +102,8 @@ int init_pager(struct pager *pager,
 		address_space_attach(task, space);
 	} else {
 		/* Otherwise allocate conventionally */
-		task->space = address_space_create(0);
+		space = address_space_create(0);
+		address_space_attach(task, space);
 	}
 
 	/* Initialize ktcb */
@@ -114,6 +115,13 @@ int init_pager(struct pager *pager,
 	task->pagerid = task->tid;
 	task->tgid = task->tid;
 	task->container = cont;
+
+	/*
+	 * Setup dummy container pointer so that curcont works,
+	 * and add the address space to container space list
+	 */
+	current->container = cont;
+	address_space_add(task->space);
 
 	/* Initialize uninitialized capability fields while on dummy */
 	list_foreach_struct(cap, &current->cap_list.caps, list) {
@@ -156,7 +164,6 @@ int init_pager(struct pager *pager,
 
 	/* Container list that keeps all tasks */
 	tcb_add(task);
-
 	return 0;
 }
 
@@ -169,16 +176,19 @@ int container_init_pagers(struct kernel_resources *kres,
 {
 	struct container *cont;
 	struct pager *pager;
+	int first = 1;
 
 	list_foreach_struct(cont, &kres->containers.list, list) {
 		for (int i = 0; i < cont->npagers; i++) {
 			pager = &cont->pager[i];
 
 			/* First pager initializes specially */
-			if (i == 0)
+			if (first) {
 				init_pager(pager, cont, current_pgd);
-			else
+				first = 0;
+			} else {
 				init_pager(pager, cont, 0);
+			}
 		}
 	}
 

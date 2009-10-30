@@ -123,7 +123,12 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 		       "returned error (%d). Suspend and exiting thread.\n",
 		       current->tid, err);
 		BUG_ON(current->nlocks);
-		sched_die_sync();
+
+		/* Declare our exit, currently only used by bug_on checks */
+		current->flags |= TASK_EXITING;
+		/* Try to die forever */
+		while (1)
+			sched_die_sync();
 	}
 }
 

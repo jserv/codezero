@@ -68,7 +68,12 @@ void address_space_add(struct address_space *space)
 void address_space_remove(struct address_space *space)
 {
 	spin_lock(&curcont->space_list.list_lock);
-	BUG_ON(list_empty(&space->list));
+
+	/*
+	 * If current is quitting as the last task of this space,
+	 * its tcb may already be removed, and this is fine
+	 */
+	BUG_ON(list_empty(&space->list) && space != current->space);
 	BUG_ON(--curcont->space_list.count < 0);
 	list_remove_init(&space->list);
 	spin_unlock(&curcont->space_list.list_lock);

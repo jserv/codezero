@@ -301,6 +301,8 @@ void sched_die_pager(void)
  */
 void sched_die_child(void)
 {
+	int err;
+
 	/*
 	 * Find pager, he _must_ be there because he never
 	 * quits before quitting us
@@ -308,7 +310,8 @@ void sched_die_child(void)
 	struct ktcb *pager = tcb_find(current->pagerid);
 
 	/* Lock its task_dead queue */
-	mutex_lock(&pager->task_dead.list_lock);
+	if ((err = mutex_lock(&pager->task_dead.list_lock)) < 0)
+		return err;
 
 	/* Remove from container task list,
 	 * callers get -ESRCH */
@@ -332,7 +335,7 @@ void sched_die_child(void)
 	 * Add self to pager's dead tasks list,
 	 * to be deleted by pager
 	 */
-	ktcb_list_add(current, &pager->task_dead);
+	__ktcb_list_add_nolock(current, &pager->task_dead);
 
 	/* Now quit the scheduler */
 	preempt_disable();
@@ -354,15 +357,20 @@ void sched_die_child(void)
 	 * pager can safely delete us
 	 */
 	mutex_unlock(&pager->task_dead.list_lock);
+	schedule();
 	BUG();
 }
 
 void sched_die_sync(void)
 {
-	if (current->tid == current->pagerid)
-		sched_die_pager();
-	else
-		sched_die_child();
+	/*
+	 * Infinitely retry if mutexes get interrupted
+	 */
+	while (1)
+		if (current->tid == current->pagerid)
+			sched_die_pager();
+		else
+			sched_die_child();
 }
 
 /*

@@ -70,7 +70,8 @@ void tcb_delete(struct ktcb *tcb)
 	BUG_ON(tcb->wqh_pager.sleepers > 0);
 	BUG_ON(tcb->wqh_send.sleepers > 0);
 	BUG_ON(tcb->wqh_recv.sleepers > 0);
-	BUG_ON(!list_empty(&tcb->task_list));
+	BUG_ON(!list_empty(&tcb->task_list) &&
+	       !(tcb->flags & TASK_EXITING));
 	BUG_ON(!list_empty(&tcb->rq_list) && tcb != current);
 	BUG_ON(tcb->rq && tcb != current);
 	BUG_ON(tcb->nlocks);
