@@ -110,7 +110,7 @@ cap_all_others = \
 \t\t\t\t.type = CAP_TYPE_TCTRL | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_TCTRL_CREATE | CAP_TCTRL_DESTROY
 \t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RUN
-\t\t\t\t          | CAP_TCTRL_RECYCLE,
+\t\t\t\t          | CAP_TCTRL_RECYCLE | CAP_TCTRL_WAIT,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 \t\t\t[%d] = {

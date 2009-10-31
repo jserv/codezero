@@ -50,6 +50,7 @@
 #define CAP_TCTRL_RUN		(1 << 2)
 #define CAP_TCTRL_SUSPEND	(1 << 3)
 #define CAP_TCTRL_RECYCLE	(1 << 4)
+#define CAP_TCTRL_WAIT		(1 << 5)
 
 /* Exchange registers capability */
 #define CAP_EXREGS_RW_PAGER	(1 << 0)

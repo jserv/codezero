@@ -54,6 +54,12 @@ int thread_suspend(struct ktcb *task)
 	return thread_signal(task, TASK_SUSPENDING, TASK_INACTIVE);
 }
 
+int thread_exit(struct ktcb *task)
+{
+
+	return thread_signal(task, TASK_EXITING, TASK_DEAD);
+}
+
 static inline int TASK_IS_CHILD(struct ktcb *task)
 {
 	return (((task) != current) &&
@@ -62,7 +68,7 @@ static inline int TASK_IS_CHILD(struct ktcb *task)
 
 int thread_destroy_child(struct ktcb *task)
 {
-	thread_suspend(task);
+	thread_exit(task);
 
 	tcb_remove(task);
 
@@ -71,7 +77,7 @@ int thread_destroy_child(struct ktcb *task)
 	wake_up_all(&task->wqh_recv, WAKEUP_INTERRUPT);
 
 	BUG_ON(task->wqh_pager.sleepers > 0);
-	BUG_ON(task->state != TASK_INACTIVE);
+	BUG_ON(task->state != TASK_DEAD);
 
 	tcb_delete(task);
 	return 0;
@@ -100,7 +106,12 @@ void thread_destroy_self()
 {
 	thread_destroy_children();
 
-	sched_suspend_sync();
+	sched_exit_sync();
+}
+
+int thread_wait(struct ktcb *task)
+{
+	return 0;
 }
 
 int thread_destroy(struct ktcb *task)
@@ -176,6 +187,8 @@ int thread_start(struct ktcb *task)
 {
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
+
+	/* FIXME: Refuse to run dead tasks */
 
 	/* Notify scheduler of task resume */
 	sched_resume_async(task);
@@ -403,6 +416,9 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		break;
 	case THREAD_RECYCLE:
 		ret = thread_recycle(task);
+		break;
+	case THREAD_WAIT:
+		ret = thread_wait(task);
 		break;
 
 	default:

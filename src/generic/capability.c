@@ -437,6 +437,11 @@ struct capability *cap_match_thread(struct capability *cap,
 		if (!(cap->access & CAP_TCTRL_RECYCLE))
 			return 0;
 		break;
+	case THREAD_WAIT:
+		if (!(cap->access & CAP_TCTRL_WAIT))
+			return 0;
+		break;
+
 	default:
 		/* We refuse to accept anything else */
 		return 0;

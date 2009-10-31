@@ -225,6 +225,22 @@ void sched_resume_async(struct ktcb *task)
 			  RQ_ADD_FRONT);
 }
 
+
+/* Same as suspend, task state and flags are different */
+void sched_exit_sync(void)
+{
+	preempt_disable();
+	sched_rq_remove_task(current);
+	current->state = TASK_DEAD;
+	current->flags &= ~TASK_EXITING;
+	preempt_enable();
+
+	if (current->pagerid != current->tid)
+		wake_up(&current->wqh_pager, 0);
+
+	schedule();
+}
+
 /*
  * NOTE: Could do these as sched_prepare_suspend()
  * + schedule() or need_resched = 1

@@ -282,7 +282,11 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 	if (current->flags & TASK_SUSPENDING) {
 		BUG_ON(current->nlocks);
 		sched_suspend_sync();
+	} else if (current->flags & TASK_EXITING) {
+		BUG_ON(current->nlocks);
+		sched_exit_sync();
 	}
+
 	return;
 
 error:
@@ -311,7 +315,11 @@ void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 	if (current->flags & TASK_SUSPENDING) {
 		BUG_ON(current->nlocks);
 		sched_suspend_sync();
+	} else if (current->flags & TASK_EXITING) {
+		BUG_ON(current->nlocks);
+		sched_exit_sync();
 	}
+
 	return;
 
 error:
