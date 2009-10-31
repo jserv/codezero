@@ -15,7 +15,7 @@ sys.path.append(PROJRELROOT)
 from config.configuration import *
 from config.projpaths import *
 
-Import('env', 'arch', 'platform')
+Import('env', 'arch')
 
 variant = 'userspace'
 
@@ -28,7 +28,6 @@ source = \
         Glob('src/*.c') + \
         Glob('src/sys-' + variant + '/*.c') + \
         Glob('src/sys-' + variant + '/arch-' + arch + '/*.c') + \
-        Glob('src/sys-' + variant + '/arch-' + arch + '/plat-' + platform + '/*.c') + \
         Glob('src/arch-' + arch + '/*.c') + \
         Glob('src/arch-' + arch + '/*.S') + \
         Glob('crt/sys-' + variant + '/arch-' + arch + '/*.[cS]')

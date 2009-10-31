@@ -39,9 +39,11 @@ void init_platform_timer(void)
 {
 	add_boot_mapping(PBA8_TIMER01_BASE, PLATFORM_TIMER0_BASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
-	add_boot_mapping(PBA8_SYSCTRL_BASE, PB926_SYSCTRL0_VBASE, PAGE_SIZE,
+	add_boot_mapping(PBA8_SYSCTRL0_BASE, PBA8_SYSCTRL0_VBASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
 	/* TODO: May need mapping for SYSCTRL1 */
+	add_boot_mapping(PBA8_SYSCTRL1_BASE, PBA8_SYSCTRL1_VBASE, PAGE_SIZE,
+			 MAP_IO_DEFAULT_FLAGS);
 	timer_init();
 }
 

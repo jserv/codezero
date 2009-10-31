@@ -54,11 +54,10 @@ class configuration:
     def __init__(self):
         # Mapping between platform selected and gcc flags for it
         self.cpu_to_gcc_flag = (['PB926', 'arm926ej-s'],
-                                ['CORTEXA8', 'cortex-a8'],
-                                ['ARM11MPCORE', 'mpcore'],
-                                ['CORTEXA9', 'cortex-a9'],
-                                ['ARM1136', 'arm1136jf-s'],
-                                ['ARM1176', 'arm1176jz-s'],)
+                                ['PBA8', 'cortex-a8'],
+                                ['PB11MPCORE', 'mpcore'],
+                                ['PB1136', 'arm1136jf-s'],
+                                ['PB1176', 'arm1176jz-s'],)
 
         # Mapping between the processor architecture and toolchain
         self.toolchain_kernel = (['ARM', 'arm-none-eabi-'],)
@@ -111,9 +110,9 @@ class configuration:
         if name[:len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
             parts = name.split("_", 3)
             self.platform = parts[2].lower()
-            for i in self.cpu_to_gcc_flag:
-                if i[0] == parts[2]:
-                    self.gcc_cpu_flag = i[1]
+            for cputype, cpuflag in self.cpu_to_gcc_flag:
+                if parts[2] == cputype:
+                    self.gcc_cpu_flag = cpuflag
 
     # Extract cpu from a name value pair
     def get_cpu(self, name, val):

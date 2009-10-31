@@ -27,6 +27,7 @@
 		((setclr) ? setbit(bitvect, (base + reg))	\
 		: clrbit(bitvect, (base + reg)))
 
+#if 0
 /* Returns the irq number on this chip converting the irq bitvector */
 int pl190_read_irq(void)
 {
@@ -102,3 +103,4 @@ void pl190_sic_init(void)
 	write(0xFFFFFFFF, PL190_SIC_PICENCLR);
 }
 
+#endif

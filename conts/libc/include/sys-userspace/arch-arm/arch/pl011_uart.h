@@ -49,7 +49,7 @@
 #define PL011_OEIRQ		(1 << 10)
 
 /* FIXME: Need to define this somewhere else */
-struct pl011_uart;
+struct pl011_uart uart;
 
 int pl011_initialise(struct pl011_uart *uart);
 int pl011_tx_char(unsigned int base, char c);

@@ -45,7 +45,9 @@ class LinuxUpdateKernel:
         self.archid_list = (['PB926', '0x183'],
                             ['AB926', '0x25E'],
                             ['PB1176', '0x5E0'],
-                            ['REALVIEW_EB', '33B'],)
+                            ['PBA8', '0x769'],
+                            ['EB', '0x33B'],
+                            ['PB11MPCORE', '0x3D4'],)
 
     # Replace line(having input_pattern) in filename with new_data
     def replace_line(self, filename, input_pattern, new_data, prev_line):
@@ -119,13 +121,13 @@ class LinuxUpdateKernel:
 
         # TODO: This call needs to be made global
         config = configuration_retrieve()
-        for i in self.cpuid_list:
-            if i[0] == config.cpu.upper():
-                cpuid = i[1]
+        for cpu_type, cpu_id in self.cpuid_list:
+            if cpu_type == config.cpu.upper():
+                cpuid = cpu_id
                 break
-        for i in self.archid_list:
-            if i[0] == config.platform.upper():
-                archid = i[1]
+        for arch_type, arch_id in self.archid_list:
+            if arch_type == config.platform.upper():
+                archid = arch_id
                 break
 
         file = join(LINUX_KERNELDIR, 'arch/arm/kernel/head.S')
@@ -145,10 +147,10 @@ class LinuxUpdateKernel:
 
     def modify_kernel_config(self):
         file = join(LINUX_KERNELDIR, 'arch/arm/configs/versatile_defconfig')
-        for i in self.config_param_list:
-            param = 'CONFIG_' + i[0]
+        for param_name, param_value in self.config_param_list:
+            param = 'CONFIG_' + param_name
             prev_line = ''
-            if i[1] == 'SET':
+            if param_value == 'SET':
                 data_to_replace = ('# ' + param)
                 new_data = (param + '=y' + '\n')
             else:

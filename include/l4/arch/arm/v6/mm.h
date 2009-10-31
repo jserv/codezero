@@ -40,6 +40,9 @@
 #define PMD_ENTRY_TOTAL				256
 #define PMD_MAP_SIZE				SZ_1MB
 
+/* We need this as printascii.S is including this file */
+#ifndef __ASSEMBLY__
+
 /* Type-checkable page table elements */
 typedef u32 pgd_t;
 typedef u32 pmd_t;
@@ -157,4 +160,5 @@ void remove_section_mapping(unsigned long vaddr);
 void copy_pgds_by_vrange(pgd_table_t *to, pgd_table_t *from,
 			 unsigned long start, unsigned long end);
 
+#endif /* __ASSEMBLY__*/
 #endif /* __V5_MM_H__ */

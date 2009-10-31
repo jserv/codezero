@@ -8,10 +8,6 @@
 
 #define UART_DATA_OFFSET		0x0
 
-/*
- * FIXME: We need to divide into bytes as writing to register doesnot look
- * possible directly, it gives some errors in compilation
- */
 #define UART0_PHYS_BASE                 PB11MPCORE_UART0_BASE
 #define UART0_PHYS_BYTE1                (UART0_PHYS_BASE & 0xFF000000)
 #define UART0_PHYS_BYTE2                (UART0_PHYS_BASE & 0x00FF0000)

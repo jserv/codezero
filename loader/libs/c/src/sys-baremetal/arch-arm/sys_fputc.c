@@ -105,7 +105,7 @@ extern struct pl011_uart uart;
 int pl011_tx_char(unsigned int base, char c)
 {
 	unsigned int val = 0;
-	
+
 	read(val, (base + PL011_UARTFR));
 	if(val & PL011_TXFF) {		/* TX FIFO Full */
 		return -PL011_EAGAIN;
@@ -118,27 +118,27 @@ int pl011_rx_char(unsigned int base, char * c)
 {
 	unsigned int data;
 	unsigned int val = 0;
-	
+
 	read(val, (base + PL011_UARTFR));
 	if(val & PL011_RXFE) {		/* RX FIFO Empty */
 		return -PL011_EAGAIN;
 	}
-	
+
 	read(data, (base + PL011_UARTDR));
 	*c = (char) data;
-	
+
 	if((data >> 8) & 0xF) {		/* There were errors */
 		return -1;		/* Signal error in xfer */
 	}
 	return 0;			/* No error return */
 }
 
-/* 
- * Sets the baud rate in kbps. It is recommended to use 
- * standard rates such as: 1200, 2400, 3600, 4800, 7200, 
+/*
+ * Sets the baud rate in kbps. It is recommended to use
+ * standard rates such as: 1200, 2400, 3600, 4800, 7200,
  * 9600, 14400, 19200, 28800, 38400, 57600 76800, 115200.
  */
-void pl011_set_baudrate(unsigned int base, unsigned int baud, 
+void pl011_set_baudrate(unsigned int base, unsigned int baud,
 			unsigned int clkrate)
 {
 	const unsigned int uartclk = 24000000;	/* 24Mhz clock fixed on pb926 */
@@ -174,12 +174,12 @@ void pl011_set_baudrate(unsigned int base, unsigned int baud,
 void pl011_set_irq_mask(unsigned int base, unsigned int flags)
 {
 	unsigned int val = 0;
-	
+
 	if(flags > 0x3FF) {
 		/* Invalid irqmask bitvector */
 		return;
 	}
-	
+
 	read(val, (base + PL011_UARTIMSC));
 	val |= flags;
 	write(val, (base + PL011_UARTIMSC));
@@ -190,12 +190,12 @@ void pl011_set_irq_mask(unsigned int base, unsigned int flags)
 void pl011_clr_irq_mask(unsigned int base, unsigned int flags)
 {
 	unsigned int val = 0;
-	
+
 	if(flags > 0x3FF) {
 		/* Invalid irqmask bitvector */
 		return;
 	}
-	
+
 	read(val, (base + PL011_UARTIMSC));
 	val &= ~flags;
 	write(val, (base + PL011_UARTIMSC));

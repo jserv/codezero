@@ -1,5 +1,5 @@
-#ifndef __PLATFORM_PB11MPCORE_PLATFORM_H__
-#define __PLATFORM_PB11MPCORE_PLATFORM_H__
+#ifndef __PB11MPCORE_PLATFORM_H__
+#define __PB11MPCORE_PLATFORM_H__
 /*
  * Platform specific ties between drivers and generic APIs used by the kernel.
  * E.g. system timer and console.
@@ -22,13 +22,13 @@
 #define PLATFORM_TIMER1	1
 #define PLATFORM_TIMER2	2
 #define PLATFORM_TIMER3	3
-#define PLATFORM_TIMER3	4
-#define PLATFORM_TIMER3	5
-#define PLATFORM_TIMER3	6
-#define PLATFORM_TIMER3	7
+#define PLATFORM_TIMER4	4
+#define PLATFORM_TIMER5	5
+#define PLATFORM_TIMER6	6
+#define PLATFORM_TIMER7	7
 
 void platform_irq_enable(int irq);
 void platform_irq_disable(int irq);
 void timer_start(void);
 
-#endif /* __PLATFORM_PB11MPCORE_PLATFORM_H__ */
+#endif /* __PB11MPCORE_PLATFORM_H__ */

@@ -39,7 +39,7 @@ void init_platform_timer(void)
 {
 	add_boot_mapping(EB_TIMER01_BASE, PLATFORM_TIMER0_BASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
-	add_boot_mapping(EB_SYSCTRL_BASE, PB926_SYSCTRL_VBASE, PAGE_SIZE,
+	add_boot_mapping(EB_SYSCTRL_BASE, EB_SYSCTRL_VBASE, PAGE_SIZE,
 		    MAP_IO_DEFAULT_FLAGS);
 	timer_init();
 }

@@ -11,7 +11,6 @@ variant = "baremetal"
 config = configuration_retrieve()
 arch = config.arch
 subarch = config.subarch
-platform = config.platform
 gcc_cpu_flag = config.gcc_cpu_flag
 
 env = Environment(CC = config.kernel_toolchain + 'gcc',
@@ -34,7 +33,6 @@ source = \
         Glob('src/*.c') + \
         Glob('src/sys-' + variant + '/*.c') + \
         Glob('src/sys-' + variant + '/arch-' + arch + '/*.c') + \
-        Glob('src/sys-' + variant + '/arch-' + arch + '/plat-' + platform + '/*.c') + \
         Glob('src/arch-' + arch + '/*.c') + \
         Glob('src/arch-' + arch + '/*.S') + \
         Glob('crt/sys-' + variant + '/arch-' + arch + '/*.[cS]')

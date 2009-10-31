@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-int __fputc(int c, FILE *stream);
+extern int __fputc(int c, FILE *stream);
 
-static int
-ser_out(int c)
+static int ser_out(int c)
 {
 	__fputc(c, 0);
 	if (c == '\n')
