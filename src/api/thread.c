@@ -54,6 +54,54 @@ int thread_suspend(struct ktcb *task)
 	return thread_signal(task, TASK_SUSPENDING, TASK_INACTIVE);
 }
 
+static inline int TASK_IS_CHILD(struct ktcb *task)
+{
+	return (((task) != current) &&
+		((task)->pagerid == current->tid));
+}
+
+int thread_delete_children(void)
+{
+	struct ktcb *task, *n;
+
+	spin_lock(&curcont->ktcb_list.list_lock);
+	list_foreach_removable_struct(task, n,
+				      &curcont->ktcb_list.list,
+				      task_list) {
+		if (TASK_IS_CHILD(task)) {
+			spin_unlock(&curcont->ktcb_list.list_lock);
+			tcb_remove(task);
+			wake_up_all(&current->wqh_send, 0);
+			wake_up_all(&current->wqh_recv, 0);
+			BUG_ON(task->wqh_pager.sleepers > 0);
+			BUG_ON(task->state != TASK_INACTIVE);
+			tcb_delete(task);
+			spin_lock(&curcont->ktcb_list.list_lock);
+		}
+	}
+	spin_unlock(&curcont->ktcb_list.list_lock);
+	return 0;
+}
+
+int thread_suspend_children(void)
+{
+	struct ktcb *task, *n;
+
+	spin_lock(&curcont->ktcb_list.list_lock);
+	list_foreach_removable_struct(task, n,
+				      &curcont->ktcb_list.list,
+				      task_list) {
+		if (TASK_IS_CHILD(task)) {
+			spin_unlock(&curcont->ktcb_list.list_lock);
+			thread_suspend(task);
+			spin_lock(&curcont->ktcb_list.list_lock);
+		}
+	}
+	spin_unlock(&curcont->ktcb_list.list_lock);
+	return 0;
+
+}
+
 /*
  * Put them in TASK_DEAD so that a suspended exiting thread
  * does not run again if issued THREAD_RUN
@@ -61,20 +109,23 @@ int thread_suspend(struct ktcb *task)
 int thread_destroy(struct ktcb *task)
 {
 	if (task == current) {
-		if (current->tid == current->pagerid)
+		if (current->tid == current->pagerid) {
+			/* Suspend children */
+			thread_suspend_children();
+			thread_delete_children();
 			sched_exit_pager();
-		else
+		} else {
 			sched_suspend_sync();
+		}
 		return 0;
 	}
-
 	thread_suspend(task);
 
 	tcb_remove(task);
 
 	/* Wake up waiters */
-	wake_up_all(&current->wqh_send, 0);
-	wake_up_all(&current->wqh_recv, 0);
+	wake_up_all(&task->wqh_send, 0);
+	wake_up_all(&task->wqh_recv, 0);
 
 	BUG_ON(task->wqh_pager.sleepers > 0);
 	BUG_ON(task->state != TASK_INACTIVE);

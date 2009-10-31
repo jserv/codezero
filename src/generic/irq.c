@@ -74,11 +74,9 @@ void do_irq(void)
 		printk("Spurious or broken irq\n"); BUG();
 	}
 	irq_enable(irq_index);
-
 #if 0
 	/* Process any pending flags for currently runnable task */
 	if (!in_nested_irq_context()) {
-		/* This is buggy, races on prio_total */
 		if (in_user()) {
 			if (current->flags & TASK_SUSPENDING)
 				sched_suspend_async();

@@ -36,6 +36,7 @@ int exit_test(void)
 
 	// l4_thread_switch(0);
 
+#if 0
 	/* Kill it */
 	printf("Killing Thread (%d).\n", ids.tid);
 	if ((ret = l4_thread_control(THREAD_DESTROY, &ids)) < 0)
@@ -43,7 +44,7 @@ int exit_test(void)
 	else
 		printf("Success: Killed Thread (%d)\n", ids.tid);
 
-	return 0;
+#endif
 
 #if 0
 	/* Wait on it */
@@ -53,9 +54,9 @@ int exit_test(void)
 	else
 		printf("Error. Wait on (%d) failed. err = %d\n",
 		       ids.tid, ret);
-	return 0;
 #endif
 
+	return 0;
 out_err:
 	BUG();
 }
@@ -70,7 +71,7 @@ int main(void)
 	exit_test();
 
 	/* Now quit to demo self-paging quit */
-	//l4_exit(0);
+	l4_exit(0);
 
 	/* Now quit by null pointer */
 	//	*((int *)0) = 5;
