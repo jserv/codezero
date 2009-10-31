@@ -60,77 +60,55 @@ static inline int TASK_IS_CHILD(struct ktcb *task)
 		((task)->pagerid == current->tid));
 }
 
-int thread_delete_children(void)
+int thread_destroy_child(struct ktcb *task)
 {
-	struct ktcb *task, *n;
-
-	spin_lock(&curcont->ktcb_list.list_lock);
-	list_foreach_removable_struct(task, n,
-				      &curcont->ktcb_list.list,
-				      task_list) {
-		if (TASK_IS_CHILD(task)) {
-			spin_unlock(&curcont->ktcb_list.list_lock);
-			tcb_remove(task);
-			wake_up_all(&current->wqh_send, 0);
-			wake_up_all(&current->wqh_recv, 0);
-			BUG_ON(task->wqh_pager.sleepers > 0);
-			BUG_ON(task->state != TASK_INACTIVE);
-			tcb_delete(task);
-			spin_lock(&curcont->ktcb_list.list_lock);
-		}
-	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
-	return 0;
-}
-
-int thread_suspend_children(void)
-{
-	struct ktcb *task, *n;
-
-	spin_lock(&curcont->ktcb_list.list_lock);
-	list_foreach_removable_struct(task, n,
-				      &curcont->ktcb_list.list,
-				      task_list) {
-		if (TASK_IS_CHILD(task)) {
-			spin_unlock(&curcont->ktcb_list.list_lock);
-			thread_suspend(task);
-			spin_lock(&curcont->ktcb_list.list_lock);
-		}
-	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
-	return 0;
-
-}
-
-/*
- * Put them in TASK_DEAD so that a suspended exiting thread
- * does not run again if issued THREAD_RUN
- */
-int thread_destroy(struct ktcb *task)
-{
-	if (task == current) {
-		if (current->tid == current->pagerid) {
-			/* Suspend children */
-			thread_suspend_children();
-			thread_delete_children();
-			sched_exit_pager();
-		} else {
-			sched_suspend_sync();
-		}
-		return 0;
-	}
 	thread_suspend(task);
 
 	tcb_remove(task);
 
 	/* Wake up waiters */
-	wake_up_all(&task->wqh_send, 0);
-	wake_up_all(&task->wqh_recv, 0);
+	wake_up_all(&task->wqh_send, WAKEUP_INTERRUPT);
+	wake_up_all(&task->wqh_recv, WAKEUP_INTERRUPT);
 
 	BUG_ON(task->wqh_pager.sleepers > 0);
 	BUG_ON(task->state != TASK_INACTIVE);
 
 	tcb_delete(task);
+	return 0;
+}
+
+int thread_destroy_children(void)
+{
+	struct ktcb *task, *n;
+
+	spin_lock(&curcont->ktcb_list.list_lock);
+	list_foreach_removable_struct(task, n,
+				      &curcont->ktcb_list.list,
+				      task_list) {
+		if (TASK_IS_CHILD(task)) {
+			spin_unlock(&curcont->ktcb_list.list_lock);
+			thread_destroy_child(task);
+			spin_lock(&curcont->ktcb_list.list_lock);
+		}
+	}
+	spin_unlock(&curcont->ktcb_list.list_lock);
+	return 0;
+
+}
+
+void thread_destroy_self()
+{
+	thread_destroy_children();
+
+	sched_suspend_sync();
+}
+
+int thread_destroy(struct ktcb *task)
+{
+	if (TASK_IS_CHILD(task))
+		return thread_destroy_child(task);
+	else if (task == current)
+		thread_destroy_self();
 	return 0;
 }
 

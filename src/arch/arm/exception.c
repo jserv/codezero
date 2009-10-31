@@ -62,7 +62,7 @@ void ipc_restore_state(struct ipc_state *state)
 }
 
 /* Send data fault ipc to the faulty task's pager */
-void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
+int fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 {
 	int err;
 
@@ -119,15 +119,24 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 	/* Send ipc to the task's pager */
 	if ((err = ipc_sendrecv(current->pagerid,
 				current->pagerid, 0)) < 0) {
-		printk("Thread (%d) faulted in kernel and its pager "
-		       "returned error (%d). Suspend and exiting thread.\n",
-		       current->tid, err);
-		BUG_ON(current->nlocks);
+			BUG_ON(current->nlocks);
 
-		/* Exit as if signalled */
-		current->flags |= TASK_EXITING;
-		sched_exit_sync();
+		/* Return on interrupt */
+		if (err == -EINTR) {
+			printk("Thread (%d) page-faulted "
+			       "and got interrupted by its pager.\n",
+			       current->tid);
+			return err;
+		} else { /* Suspend on any other error */
+			printk("Thread (%d) faulted in kernel "
+			       "and an error occured during "
+			       "page-fault ipc. err=%d. Suspending task.\n",
+			       current->tid, err);
+			current->flags |= TASK_SUSPENDING;
+			sched_suspend_sync();
+		}
 	}
+	return 0;
 }
 
 /*
@@ -141,6 +150,7 @@ void fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
 int pager_pagein_request(unsigned long addr, unsigned long size,
 			 unsigned int flags)
 {
+	int err;
 	u32 abort = 0;
 	unsigned long npages = __pfn(align_up(size, PAGE_SIZE));
 	struct ipc_state ipc_state;
@@ -154,7 +164,9 @@ int pager_pagein_request(unsigned long addr, unsigned long size,
 
 	/* For every page to be used by the kernel send a page-in request */
 	for (int i = 0; i < npages; i++)
-		fault_ipc_to_pager(0, abort, addr + (i * PAGE_SIZE));
+		if ((err = fault_ipc_to_pager(0, abort,
+					      addr + (i * PAGE_SIZE))) < 0)
+			return err;
 
 	/* Restore ipc state */
 	ipc_restore_state(&ipc_state);
@@ -266,6 +278,11 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 
 	/* This notifies the pager */
 	fault_ipc_to_pager(faulted_pc, fsr, far);
+
+	if (current->flags & TASK_SUSPENDING) {
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	}
 	return;
 
 error:
@@ -290,6 +307,11 @@ void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 	if (KERN_ADDR(lr))
 		goto error;
 	fault_ipc_to_pager(faulted_pc, fsr, far);
+
+	if (current->flags & TASK_SUSPENDING) {
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	}
 	return;
 
 error:

@@ -226,68 +226,6 @@ void sched_resume_async(struct ktcb *task)
 }
 
 /*
- * A self-paging thread deletes itself,
- * schedules and disappears from the system.
- */
-void sched_exit_pager(void)
-{
-	// printk("Pager (%d) Exiting...\n", current->tid);
-	/* Remove from its list, callers get -ESRCH */
-	tcb_remove(current);
-
-	/*
-	 * If there are any sleepers on any of the task's
-	 * waitqueues, we need to wake those tasks up.
-	 */
-	wake_up_all(&current->wqh_send, 0);
-	wake_up_all(&current->wqh_recv, 0);
-
-	/*
-	 * We're a self-paging thread. We're gonna
-	 * delete ourself and disappear from the
-	 * system as soon as we schedule
-	 */
-	preempt_disable();
-
-	/*
-	 * FIXME: TOO LONG!
-	 */
-	tcb_delete(current);
-
-	sched_rq_remove_task(current);
-	current->state = TASK_INACTIVE;
-	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total < 0);
-
-	/* As soon as we schedule, we're gone */
-	preempt_enable();
-	schedule();
-	BUG();
-}
-
-void sched_exit_sync(void)
-{
-	struct ktcb *pager = tcb_find(current->pagerid);
-
-	/* Go to exit list */
-	ktcb_list_add(current, &pager->child_exit_list);
-
-	preempt_disable();
-
-	/* Hint pager we're ready */
-	wake_up(&current->wqh_pager, 0);
-
-	sched_rq_remove_task(current);
-	current->state = TASK_DEAD;
-	current->flags &= ~TASK_EXITING;
-	preempt_enable();
-
-	/* Quit */
-	schedule();
-	BUG();
-}
-
-/*
  * NOTE: Could do these as sched_prepare_suspend()
  * + schedule() or need_resched = 1
  */
