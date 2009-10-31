@@ -203,12 +203,14 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 	BUG_ON(!task->utcb_address);
 
 	/*
-	 * There you go:
-	 *
-	 * if task == current && not mapped, page-in, if not return -EFAULT
-	 * if task != current && not mapped, return -EFAULT since can't page-in on behalf of it.
-	 * if task != current && task mapped, but mapped != current mapped, map it, return 0
-	 * if task != current && task mapped, but mapped == current mapped, return 0
+	 * If task == current && not mapped,
+	 * 	page-in, if not return -EFAULT
+	 * If task != current && not mapped,
+	 * 	return -EFAULT since can't page-in on behalf of it.
+	 * If task != current && task mapped,
+	 * 	but mapped != current mapped, map it, return 0
+	 * If task != current && task mapped,
+	 * 	but mapped == current mapped, return 0
 	 */
 
 	if (current == task) {
@@ -248,38 +250,6 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 			BUG_ON(!phys);
 		}
 	}
-#if 0
-	/*
-	 * FIXME:
-	 *
-	 * A task may have the utcb mapping of a destroyed thread
-	 * at the given virtual address. This would silently be accepted
-	 * as *mapped*. We need to ensure utcbs of destroyed tasks
-	 * are cleared from all other task's page tables.
-	 */
-	if ((ret = check_access(task->utcb_address, UTCB_SIZE,
-				MAP_SVC_RW_FLAGS, 0)) < 0) {
-		/* Current task simply hasn't mapped its utcb */
-		if (task == current) {
-			return -EFAULT;
-		} else {
-			if (!(phys = virt_to_phys_by_pgd(task->utcb_address,
-							 TASK_PGD(task)))) {
-				/* Task hasn't mapped its utcb */
-				return -EFAULT;
-			} else {
-				/*
-				 * Task has utcb but it hasn't yet been mapped
-				 * to current task with kernel access. Do it.
-				 */
-				add_mapping_pgd(phys, task->utcb_address,
-						page_align_up(UTCB_SIZE),
-						MAP_SVC_RW_FLAGS,
-						TASK_PGD(current));
-			}
-		}
-	}
-#endif
 	return 0;
 }
 
