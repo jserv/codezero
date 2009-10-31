@@ -229,7 +229,7 @@ void sched_resume_async(struct ktcb *task)
  * A self-paging thread deletes itself,
  * schedules and disappears from the system.
  */
-void sched_pager_exit(void)
+void sched_exit_pager(void)
 {
 	// printk("Pager (%d) Exiting...\n", current->tid);
 	/* Remove from its list, callers get -ESRCH */
@@ -269,13 +269,6 @@ void sched_exit_sync(void)
 {
 	struct ktcb *pager = tcb_find(current->pagerid);
 
-	/* Quit global list */
-	tcb_remove(current);
-
-	/* Wake up waiters */
-	wake_up_all(&current->wqh_send, 0);
-	wake_up_all(&current->wqh_recv, 0);
-
 	/* Go to exit list */
 	ktcb_list_add(current, &pager->child_exit_list);
 
@@ -285,24 +278,14 @@ void sched_exit_sync(void)
 	wake_up(&current->wqh_pager, 0);
 
 	sched_rq_remove_task(current);
-	current->state = TASK_INACTIVE;
-	current->flags &= ~TASK_SUSPENDING;
+	current->state = TASK_DEAD;
+	current->flags &= ~TASK_EXITING;
 	preempt_enable();
 
 	/* Quit */
 	schedule();
 	BUG();
 }
-
-/*
- * TODO:
- * Instead of sched_suspend_sync()
- * call sched_die_sync() on killer suspends:
- * (e.g. if also kill flag set, call sched_die_sync instead)
- * and handle dying on its own and dying over a pager
- * in there. (e.g. put yourself in a task_dead queue, take
- * care of pager calling destroy on you, calling wait on you etc.)
- */
 
 /*
  * NOTE: Could do these as sched_prepare_suspend()
@@ -328,12 +311,10 @@ void sched_suspend_async(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-
-	/* This will make sure we yield soon */
 	preempt_enable();
 
 	if (current->pagerid != current->tid)
-		wake_up_task(tcb_find(current->pagerid), 0);
+		wake_up(&current->wqh_pager, 0);
 
 	need_resched = 1;
 }

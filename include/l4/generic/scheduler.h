@@ -61,7 +61,7 @@ extern struct scheduler scheduler;
 void sched_init_runqueue(struct runqueue *rq);
 void sched_init_task(struct ktcb *task, int priority);
 void sched_prepare_sleep(void);
-void sched_pager_exit(void);
+void sched_exit_pager(void);
 void sched_exit_sync(void);
 void sched_suspend_sync(void);
 void sched_suspend_async(void);

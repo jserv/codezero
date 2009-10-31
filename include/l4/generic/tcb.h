@@ -36,6 +36,7 @@ enum task_state {
 	TASK_INACTIVE	= 0,
 	TASK_SLEEPING	= 1,
 	TASK_RUNNABLE	= 2,
+	TASK_DEAD	= 3,
 };
 
 #define TASK_ID_INVALID			-1

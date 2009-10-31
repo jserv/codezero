@@ -15,6 +15,7 @@
 
 int exit_test_thread(void *arg)
 {
+	l4_thread_switch(0);
 	l4_exit(0);
 	return 0;
 }
@@ -38,11 +39,11 @@ int exit_test(void)
 	/* Kill it */
 	printf("Killing Thread (%d).\n", ids.tid);
 	if ((ret = l4_thread_control(THREAD_DESTROY, &ids)) < 0)
-		printf("Error: Killing Thread (%d)\n", ids.tid);
+		printf("Error: Killing Thread (%d), err = %d\n", ids.tid, ret);
 	else
 		printf("Success: Killed Thread (%d)\n", ids.tid);
 
-
+	return 0;
 
 #if 0
 	/* Wait on it */

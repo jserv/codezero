@@ -28,8 +28,8 @@ int sys_thread_switch(void)
  * doing, and take action on the signal provided. Currently this
  * may be a suspension or an exit signal.
  */
-int thread_signal_sync(struct ktcb *task, unsigned int flags,
-		       unsigned int task_state)
+int thread_signal(struct ktcb *task, unsigned int flags,
+		  unsigned int task_state)
 {
 	int ret = 0;
 
@@ -42,7 +42,7 @@ int thread_signal_sync(struct ktcb *task, unsigned int flags,
 	/* Wake it up if it's sleeping */
 	wake_up_task(task, WAKEUP_INTERRUPT | WAKEUP_SYNC);
 
-	/* Wait until task suspends itself */
+	/* Wait until task switches to desired state */
 	WAIT_EVENT(&task->wqh_pager,
 		   task->state == task_state, ret);
 
@@ -51,7 +51,36 @@ int thread_signal_sync(struct ktcb *task, unsigned int flags,
 
 int thread_suspend(struct ktcb *task)
 {
-	return thread_signal_sync(task, TASK_SUSPENDING, TASK_INACTIVE);
+	return thread_signal(task, TASK_SUSPENDING, TASK_INACTIVE);
+}
+
+/*
+ * Put them in TASK_DEAD so that a suspended exiting thread
+ * does not run again if issued THREAD_RUN
+ */
+int thread_destroy(struct ktcb *task)
+{
+	if (task == current) {
+		if (current->tid == current->pagerid)
+			sched_exit_pager();
+		else
+			sched_suspend_sync();
+		return 0;
+	}
+
+	thread_suspend(task);
+
+	tcb_remove(task);
+
+	/* Wake up waiters */
+	wake_up_all(&current->wqh_send, 0);
+	wake_up_all(&current->wqh_recv, 0);
+
+	BUG_ON(task->wqh_pager.sleepers > 0);
+	BUG_ON(task->state != TASK_INACTIVE);
+
+	tcb_delete(task);
+	return 0;
 }
 
 int arch_clear_thread(struct ktcb *tcb)
@@ -109,57 +138,6 @@ int thread_recycle(struct ktcb *task)
 
 	/* Clear the task's tcb */
 	arch_clear_thread(task);
-
-	return 0;
-}
-
-int thread_destroy(struct ktcb *task)
-{
-	int ret;
-
-	/* If we're a self-destructing pager */
-	if (task == current &&
-	    current->tid == current->pagerid) {
-		struct ktcb *child, *n;
-
-		/* Make all children exit synchronously */
-		spin_lock(&curcont->ktcb_list.list_lock);
-		list_foreach_removable_struct(child, n,
-					      &curcont->ktcb_list.list,
-					      task_list) {
-			if (child->pagerid == current->tid &&
-			    child != current) {
-				spin_unlock(&curcont->ktcb_list.list_lock);
-
-				/* Its a bug since nobody can interrupt us */
-				BUG_ON(thread_signal_sync(child, TASK_EXITING,
-						   	  TASK_INACTIVE) < 0);
-				spin_lock(&curcont->ktcb_list.list_lock);
-			}
-		}
-		spin_unlock(&curcont->ktcb_list.list_lock);
-
-		/* Delete all exited children */
-		spin_lock(&current->child_exit_list.list_lock);
-		printk("(%d) To delete %d children\n", current->tid, current->child_exit_list.count);
-		list_foreach_removable_struct(child, n,
-					      &current->child_exit_list.list,
-					      task_list) {
-			list_remove(&child->task_list);
-			tcb_delete(child);
-		}
-		spin_unlock(&current->child_exit_list.list_lock);
-
-		/* Destroy yourself */
-		sched_pager_exit();
-		BUG();
-	}
-
-	if ((ret = thread_signal_sync(task, TASK_EXITING, TASK_INACTIVE)) < 0)
-		return ret;
-
-	ktcb_list_remove(task, &current->child_exit_list);
-	tcb_delete(task);
 
 	return 0;
 }
