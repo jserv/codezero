@@ -15,8 +15,8 @@
 
 int exit_test_thread(void *arg)
 {
-	l4_thread_switch(0);
-	l4_exit(0);
+	//l4_thread_switch(0);
+	l4_exit(5);
 	return 0;
 }
 
@@ -46,7 +46,6 @@ int exit_test(void)
 
 #endif
 
-#if 0
 	/* Wait on it */
 	printf("Waiting on Thread (%d) to exit.\n", ids.tid);
 	if ((ret = l4_thread_control(THREAD_WAIT, &ids)) >= 0)
@@ -54,7 +53,6 @@ int exit_test(void)
 	else
 		printf("Error. Wait on (%d) failed. err = %d\n",
 		       ids.tid, ret);
-#endif
 
 	return 0;
 out_err:

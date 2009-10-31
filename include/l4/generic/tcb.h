@@ -98,6 +98,9 @@ struct ktcb {
 	/* Number of locks the task currently has acquired */
 	int nlocks;
 
+	/* Task exit code */
+	unsigned int exit_code;
+
 	/* Page table information */
 	struct address_space *space;
 

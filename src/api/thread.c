@@ -102,24 +102,34 @@ int thread_destroy_children(void)
 
 }
 
-void thread_destroy_self()
+void thread_destroy_self(unsigned int exit_code)
 {
 	thread_destroy_children();
-
+	current->exit_code = exit_code;
 	sched_exit_sync();
 }
 
 int thread_wait(struct ktcb *task)
 {
-	return 0;
+	int ret;
+
+	/* Wait until task switches to desired state */
+	WAIT_EVENT(&task->wqh_pager,
+		   task->state == TASK_DEAD, ret);
+	if (ret < 0)
+		return ret;
+	else
+		return (int)task->exit_code;
 }
 
-int thread_destroy(struct ktcb *task)
+int thread_destroy(struct ktcb *task, unsigned int exit_code)
 {
+	exit_code &= THREAD_EXIT_MASK;
+
 	if (TASK_IS_CHILD(task))
 		return thread_destroy_child(task);
 	else if (task == current)
-		thread_destroy_self();
+		thread_destroy_self(exit_code);
 	return 0;
 }
 
@@ -412,7 +422,7 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		ret = thread_suspend(task);
 		break;
 	case THREAD_DESTROY:
-		ret = thread_destroy(task);
+		ret = thread_destroy(task, flags);
 		break;
 	case THREAD_RECYCLE:
 		ret = thread_recycle(task);
