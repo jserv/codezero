@@ -128,7 +128,6 @@ static void sched_rq_swap_runqueues(void)
 	struct runqueue *temp;
 
 	BUG_ON(list_empty(&scheduler.rq_expired->task_list));
-	BUG_ON(scheduler.rq_expired->total == 0);
 
 	/* Queues are swapped and expired list becomes runnable */
 	temp = scheduler.rq_runnable;
@@ -288,8 +287,6 @@ void sched_exit_sync(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total < 0);
 	preempt_enable();
 
 	/* Quit */
@@ -317,8 +314,6 @@ void sched_suspend_sync(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total < 0);
 	preempt_enable();
 
 	if (current->pagerid != current->tid)
@@ -333,8 +328,6 @@ void sched_suspend_async(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	scheduler.prio_total -= current->priority;
-	BUG_ON(scheduler.prio_total < 0);
 
 	/* This will make sure we yield soon */
 	preempt_enable();
