@@ -11,7 +11,7 @@
 #include <l4lib/arch/syslib.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4/api/space.h>
-#
+
 
 int exit_test_thread(void *arg)
 {
