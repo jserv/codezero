@@ -8,6 +8,7 @@
 
 #include INC_ARCH(asm.h)
 
+
 static inline void enable_irqs()
 {
 	__asm__ __volatile__(
@@ -38,30 +39,29 @@ static inline void disable_irqs()
 	);
 }
 
-#if 0 /* These will be useful for nested irq disable/enable calls */
 /* Disable the irqs unconditionally, but also keep the previous state such that
  * if it was already disabled before the call, the restore call would retain
  * this state. */
-static inline void irq_local_disable_save(unsigned long *flags)
+static inline void irq_local_disable_save(unsigned long *state)
 {
 	unsigned long temp;
 	__asm__ __volatile__ (
 		"mrs	%0, cpsr_fc\n"
 		"orr	%1, %0, #0x80\n"
 		"msr	cpsr_fc, %1\n"
-		: "=r"(*flags), "=r" (temp)
+		:: "r" (*state), "r" (temp)
 	);
 }
 /* Simply change it back to original state supplied in @flags. This might enable
  * or retain disabled state of the irqs for example. Useful for nested calls. */
-static inline void irq_local_restore(unsigned long flags)
+static inline void irq_local_restore(unsigned long state)
 {
 	__asm__ __volatile__ (
 		"msr	cpsr_fc, %0\n"
-		: "r" (flags)
+		:: "r" (state)
 	);
 }
-#endif
+
 static inline void irq_local_enable()
 {
 	enable_irqs();

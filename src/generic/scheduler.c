@@ -33,6 +33,7 @@ extern unsigned int current_irq_nest_count;
 /* This ensures no scheduling occurs after voluntary preempt_disable() */
 static int voluntary_preempt = 0;
 
+
 void sched_lock_runqueues(void)
 {
 	spin_lock(&scheduler.sched_rq[0].lock);
@@ -88,7 +89,6 @@ int in_task_context(void)
 {
 	return !in_irq_context();
 }
-
 
 /*
  * In current implementation, if all task are asleep it is considered
@@ -241,6 +241,20 @@ void sched_exit_sync(void)
 	schedule();
 }
 
+void sched_exit_async(void)
+{
+	preempt_disable();
+	sched_rq_remove_task(current);
+	current->state = TASK_DEAD;
+	current->flags &= ~TASK_EXITING;
+	preempt_enable();
+
+	if (current->pagerid != current->tid)
+		wake_up(&current->wqh_pager, 0);
+
+	need_resched = 1;
+}
+
 /*
  * NOTE: Could do these as sched_prepare_suspend()
  * + schedule() or need_resched = 1
@@ -368,12 +382,28 @@ void schedule()
 	}
 
 	/*
+	 * FIXME: Are these smp-safe?
+	 *
 	 * If task is about to sleep and
 	 * it has pending events, wake it up.
 	 */
 	if ((current->flags & TASK_PENDING_SIGNAL) &&
 	    current->state == TASK_SLEEPING)
 		wake_up_task(current, WAKEUP_INTERRUPT);
+
+	/*
+	 * If task has pending events, and is in userspace
+	 * (guaranteed to have no unfinished jobs in kernel)
+	 * handle those events
+	 */
+	if ((current->flags & TASK_PENDING_SIGNAL) &&
+	    current->state == TASK_RUNNABLE &&
+	    TASK_IN_USER(current)) {
+		if (current->flags & TASK_SUSPENDING)
+			sched_suspend_async();
+		else if (current->flags & TASK_EXITING)
+			sched_exit_async();
+	}
 
 	/* Determine the next task to be run */
 	if (scheduler.rq_runnable->total > 0) {
