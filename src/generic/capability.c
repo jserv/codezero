@@ -437,23 +437,16 @@ struct capability *cap_match_thread(struct capability *cap,
 		if (!(cap->access & CAP_TCTRL_RECYCLE))
 			return 0;
 		break;
-	case THREAD_WAIT:
-		if (!(cap->access & CAP_TCTRL_WAIT))
-			return 0;
-		break;
 	default:
 		/* We refuse to accept anything else */
 		return 0;
 	}
 
 	/* If no target and create, or vice versa, it really is a bug */
-	BUG_ON(!target && (action_flags != THREAD_CREATE &&
-			   action_flags != THREAD_WAIT));
-	BUG_ON(target && (action_flags == THREAD_CREATE ||
-			  action_flags == THREAD_WAIT));
+	BUG_ON(!target && action_flags != THREAD_CREATE);
+	BUG_ON(target && action_flags == THREAD_CREATE);
 
-	if (action_flags == THREAD_CREATE ||
-	    action_flags == THREAD_WAIT) {
+	if (action_flags == THREAD_CREATE) {
 		/*
 		 * FIXME: Add cid to task_ids arg.
 		 *

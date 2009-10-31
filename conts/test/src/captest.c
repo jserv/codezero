@@ -58,7 +58,7 @@ int wait_check_test(struct task_ids *ids)
 	int result;
 
 	/* Wait for thread to finish */
-	result = l4_thread_control(THREAD_WAIT, ids);
+	//result = l4_thread_control(THREAD_WAIT, ids);
 	if (result < 0) {
 		printf("Waiting on (%d)'s exit failed.\n", ids->tid);
 		return -1;

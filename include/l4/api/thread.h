@@ -7,7 +7,6 @@
 #define THREAD_SUSPEND		0x0002
 #define THREAD_DESTROY		0x0003
 #define THREAD_RECYCLE		0x0004
-#define THREAD_WAIT		0x0005
 
 #define THREAD_CREATE_MASK	0x0FF0
 #define TC_SHARE_CAPS		0x0010	/* Share all thread capabilities */
