@@ -286,6 +286,7 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 	else if (flags & TC_COPY_SPACE) {
 		mutex_lock(&curcont->space_list.lock);
 		if (!(space = address_space_find(ids->spid))) {
+			mutex_unlock(&curcont->space_list.lock);
 			ret = -ESRCH;
 			goto out;
 		}
