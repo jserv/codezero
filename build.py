@@ -22,13 +22,6 @@ def main():
     configure_system(opts, args)
 
     #
-    # Build the kernel
-    #
-    print "\nBuilding the kernel..."
-    os.chdir(PROJROOT)
-    os.system("scons")
-
-    #
     # Build userspace libraries
     #
     print "\nBuilding userspace libraries..."
@@ -39,6 +32,13 @@ def main():
     #
     print "\nBuilding containers..."
     containers.build_all_containers()
+
+    #
+    # Build the kernel
+    #
+    print "\nBuilding the kernel..."
+    os.chdir(PROJROOT)
+    os.system("scons")
 
     #
     # Build libs and loader

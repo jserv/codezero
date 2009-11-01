@@ -33,7 +33,6 @@ CONT%(cn)d_VIRT5_END	'Container %(cn)d Virtual Region 5 End Address'
 
 CONT%(cn)d_PAGER_LMA	'Container %(cn)d Pager LMA'
 CONT%(cn)d_PAGER_VMA	'Container %(cn)d Pager VMA'
-CONT%(cn)d_PAGER_MAPSIZE	'Container %(cn)d Pager Initial Map Size (Optional)'
 CONT%(cn)d_PAGER_SHM_START	'Container %(cn)d Shared Mappings Region Start'
 CONT%(cn)d_PAGER_SHM_END	'Container %(cn)d Shared Mappings Region End'
 CONT%(cn)d_PAGER_TASK_START	'Container %(cn)d Task Address Space Region Start'
@@ -44,11 +43,9 @@ CONT%(cn)d_LINUX_ZRELADDR         'Container %(cn)d Linux ZRELADDR parameter'
 CONT%(cn)d_LINUX_PAGE_OFFSET	'Container %(cn)d Linux PAGE_OFFSET Parameter'
 CONT%(cn)d_LINUX_PHYS_OFFSET	'Container %(cn)d Linux PHYS_OFFSET Parameter'
 CONT%(cn)d_LINUX_ROOTFS_ADDRESS	'Container %(cn)d Linux ROOTFS Address'
-CONT%(cn)d_LINUX_MAPSIZE	'Container %(cn)d Linux Initial Kernel Map Size Parameter'
 
 default CONT%(cn)d_PAGER_LMA	 from 0x0
 default CONT%(cn)d_PAGER_VMA	 from 0x0
-default CONT%(cn)d_PAGER_MAPSIZE	 from 0x0
 default CONT%(cn)d_PAGER_SHM_START	 from 0x0
 default CONT%(cn)d_PAGER_SHM_END	 from 0x0
 default CONT%(cn)d_PAGER_TASK_START	 from 0x0
@@ -59,7 +56,6 @@ default CONT%(cn)d_LINUX_ZRELADDR  from 0x0
 default CONT%(cn)d_LINUX_PAGE_OFFSET from 0x0
 default CONT%(cn)d_LINUX_PHYS_OFFSET from 0x0
 default CONT%(cn)d_LINUX_ROOTFS_ADDRESS	 from 0x0
-default CONT%(cn)d_LINUX_MAPSIZE	 from 0x0
 
 default CONT%(cn)d_VIRTMEM_REGIONS from 1
 default CONT%(cn)d_PHYSMEM_REGIONS from 1
@@ -138,7 +134,6 @@ cont%(cn)d_posix_pager_params	'Container %(cn)d POSIX Pager Parameters'
 menu cont%(cn)d_bare_pager_params
 	CONT%(cn)d_PAGER_LMA@
 	CONT%(cn)d_PAGER_VMA@
-	CONT%(cn)d_PAGER_MAPSIZE@
 
 menu cont%(cn)d_posix_pager_params
 	CONT%(cn)d_PAGER_SHM_START@
@@ -154,7 +149,6 @@ menu cont%(cn)d_linux_pager_params
 	CONT%(cn)d_LINUX_PAGE_OFFSET@
 	CONT%(cn)d_LINUX_PHYS_OFFSET@
 	CONT%(cn)d_LINUX_ROOTFS_ADDRESS@
-	CONT%(cn)d_LINUX_MAPSIZE@
 
 menu cont%(cn)d_virtmem_list
 	CONT%(cn)d_VIRTMEM_REGIONS%

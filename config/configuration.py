@@ -12,7 +12,6 @@ class Container:
         self.id = id
         self.pager_lma = 0
         self.pager_vma = 0
-        self.pager_size = 0
         self.pager_task_region_start = 0
         self.pager_task_region_end = 0
         self.pager_shm_region_start = 0
@@ -23,7 +22,6 @@ class Container:
         self.linux_page_offset = 0
         self.linux_phys_offset = 0
         self.linux_rootfs_address = 0
-        self.linux_mapsize = 0
         self.physmem = {}
         self.physmem["START"] = {}
         self.physmem["END"] = {}
@@ -45,7 +43,6 @@ class Container:
         print 'Container Pager task region end: %s' % conv_hex(self.pager_task_region_end)
         print 'Container Pager utcb region start: %s' % conv_hex(self.pager_utcb_region_start)
         print 'Container Pager utcb region end: %s' % conv_hex(self.pager_utcb_region_end)
-        print 'Container Pager size: %s' % conv_hex(self.pager_size)
         print 'Container Virtual regions: %s' % self.virt_regions
         print 'Container Physical regions: %s' % self.phys_regions
 
@@ -143,10 +140,6 @@ class configuration:
             self.containers[id].pager_task_region_start = int(val, 0)
         elif param[:len("PAGER_TASK_END")] == "PAGER_TASK_END":
             self.containers[id].pager_task_region_end = int(val, 0)
-        elif param[:len("PAGER_MAPSIZE")] == "PAGER_MAPSIZE":
-            self.containers[id].pager_size = int(val, 0)
-        elif param[:len("LINUX_MAPSIZE")] == "LINUX_MAPSIZE":
-            self.containers[id].linux_mapsize = int(val, 0)
         elif param[:len("LINUX_PAGE_OFFSET")] == "LINUX_PAGE_OFFSET":
             self.containers[id].linux_page_offset = int(val, 0)
             self.containers[id].pager_vma += int(val, 0)

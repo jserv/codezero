@@ -57,7 +57,6 @@ class BareContGenerator:
         name_header = '\n[Container Name]\n'
         pager_lma_header = '\n[Container Pager LMA]\n'
         pager_vma_header = '\n[Container Pager VMA]\n'
-        pager_size_header = '\n[Container Pager Size]\n'
         pager_virtmem_header = '\n[Container Virtmem Region %s]\n'
         pager_physmem_header = '\n[Container Physmem Region %s]\n'
 
@@ -70,8 +69,6 @@ class BareContGenerator:
             fout.write('\t' + cont.name + '\n')
             fout.write(pager_lma_header)
             fout.write('\t' + conv_hex(cont.pager_lma) + '\n')
-            fout.write(pager_size_header)
-            fout.write('\t' + conv_hex(cont.pager_size) + '\n')
             fout.write(pager_vma_header)
             fout.write('\t' + conv_hex(cont.pager_vma) + '\n')
             for ireg in range(cont.virt_regions):

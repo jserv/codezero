@@ -60,11 +60,11 @@ cinfo_end = \
 pager_start = \
 '''
 \t\t[0] = {
-\t\t\t.start_address = (CONFIG_CONT%d_START_PC_ADDR),
-\t\t\t.pager_lma = __pfn(CONFIG_CONT%d_PAGER_LMA),
-\t\t\t.pager_vma = __pfn(CONFIG_CONT%d_PAGER_VMA),
-\t\t\t.pager_size = __pfn(CONFIG_CONT%d_PAGER_MAPSIZE),
-\t\t\t.ncaps = %d,
+\t\t\t.start_address = (CONFIG_CONT%(cn)d_START_PC_ADDR),
+\t\t\t.pager_lma = __pfn(CONFIG_CONT%(cn)d_PAGER_LMA),
+\t\t\t.pager_vma = __pfn(CONFIG_CONT%(cn)d_PAGER_VMA),
+\t\t\t.pager_size = __pfn(page_align_up(CONFIG_CONT%(cn)d_PAGER_MAPSIZE)),
+\t\t\t.ncaps = %(caps)d,
 \t\t\t.caps = {
 '''
 pager_end = \
@@ -179,6 +179,13 @@ pager_ifdefs_todotext = \
  * complains that type deduction could not be done.
  */'''
 
+# This will be filled after the containers are compiled
+# and pager binaries are formed
+pager_mapsize = \
+'''
+#define CONFIG_CONT%s_PAGER_SIZE     %s
+'''
+
 pager_ifdefs = \
 '''
 #if defined(CONFIG_CONT%(cn)d_TYPE_LINUX)
@@ -187,9 +194,12 @@ pager_ifdefs = \
          CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_LMA  (CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
     #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
-    #define CONFIG_CONT%(cn)d_PAGER_MAPSIZE CONFIG_CONT%(cn)d_LINUX_MAPSIZE
+    #define CONFIG_CONT%(cn)d_PAGER_MAPSIZE \\
+                (CONFIG_CONT%(cn)d_PAGER_SIZE + CONFIG_CONT%(cn)d_LINUX_ZRELADDR - \\
+                 CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
 #else
     #define CONFIG_CONT%(cn)d_START_PC_ADDR (CONFIG_CONT%(cn)d_PAGER_VMA)
+    #define CONFIG_CONT%(cn)d_PAGER_MAPSIZE (CONFIG_CONT%(cn)d_PAGER_SIZE)
 #endif
 '''
 def generate_pager_memory_ifdefs(containers):
@@ -200,6 +210,13 @@ def generate_pager_memory_ifdefs(containers):
             if linux == 0:
                 pager_ifdef_string += pager_ifdefs_todotext
                 linux = 1
+        # Generate string for PAGERSIZE to be filled later by containers
+        id = pow(2, c.id)
+        str = ''
+        while id >= 1:
+            str = str + '%'
+            id = id - 1
+        pager_ifdef_string += pager_mapsize % ( str + 'd', str + 's')
         pager_ifdef_string += pager_ifdefs % { 'cn' : c.id }
     return pager_ifdef_string
 
@@ -219,7 +236,7 @@ def generate_kernel_cinfo(config, cinfo_path):
             # Currently only these are considered as capabilities
             total_caps = c.virt_regions + c.phys_regions + total_other_caps
             fbody += cinfo_start % (c.id, c.name)
-            fbody += pager_start % (c.id, c.id, c.id, c.id, total_caps)
+            fbody += pager_start % { 'cn' : c.id, 'caps' : total_caps}
             cap_index = 0
             for mem_index in range(c.virt_regions):
                 fbody += cap_virtmem % { 'capidx' : cap_index, 'cn' : c.id, 'vn' : mem_index }

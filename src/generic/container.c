@@ -142,8 +142,8 @@ int init_pager(struct pager *pager,
 			cap->resid = CAP_RESID_NONE;
 	}
 
-	printk("%s: Mapping %lu pages from 0x%lx to 0x%lx for %s\n",
-	       __KERNELNAME__,
+	printk("%s: Mapping %lx bytes (%lx pages) from 0x%lx to 0x%lx for %s\n",
+	       __KERNELNAME__, pager->memsize,
 	       __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
 
