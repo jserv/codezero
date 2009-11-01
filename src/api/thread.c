@@ -271,30 +271,38 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 	struct address_space *space, *new;
 	int ret = 0;
 
-	address_space_reference_lock();
-
 	if (flags & TC_SHARE_SPACE) {
+		mutex_lock(&curcont->space_list.lock);
 		if (!(space = address_space_find(ids->spid))) {
+			mutex_unlock(&curcont->space_list.lock);
 			ret = -ESRCH;
 			goto out;
 		}
+		mutex_lock(&space->lock);
+		mutex_unlock(&curcont->space_list.lock);
 		address_space_attach(tcb, space);
+		mutex_unlock(&space->lock);
 	}
-	if (flags & TC_COPY_SPACE) {
+	else if (flags & TC_COPY_SPACE) {
+		mutex_lock(&curcont->space_list.lock);
 		if (!(space = address_space_find(ids->spid))) {
 			ret = -ESRCH;
 			goto out;
 		}
+		mutex_lock(&space->lock);
 		if (IS_ERR(new = address_space_create(space))) {
+			mutex_unlock(&curcont->space_list.lock);
+			mutex_unlock(&space->lock);
 			ret = (int)new;
 			goto out;
 		}
-		/* New space id to be returned back to caller */
-		ids->spid = new->spid;
+		mutex_unlock(&space->lock);
+		ids->spid = new->spid; 	/* Return newid to caller */
 		address_space_attach(tcb, new);
 		address_space_add(new);
+		mutex_unlock(&curcont->space_list.lock);
 	}
-	if (flags & TC_NEW_SPACE) {
+	else if (flags & TC_NEW_SPACE) {
 		if (IS_ERR(new = address_space_create(0))) {
 			ret = (int)new;
 			goto out;
@@ -302,11 +310,12 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 		/* New space id to be returned back to caller */
 		ids->spid = new->spid;
 		address_space_attach(tcb, new);
+		mutex_lock(&curcont->space_list.lock);
 		address_space_add(new);
+		mutex_unlock(&curcont->space_list.lock);
 	}
 
 out:
-	address_space_reference_unlock();
 	return ret;
 }
 

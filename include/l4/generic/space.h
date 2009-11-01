@@ -41,12 +41,7 @@ struct address_space {
 
 struct address_space_list {
 	struct link list;
-
-	/* Lock for list add/removal */
-	struct spinlock list_lock;
-
-	/* Used when delete/creating spaces */
-	struct mutex ref_lock;
+	struct mutex lock;
 	int count;
 };
 
@@ -56,8 +51,6 @@ void address_space_attach(struct ktcb *tcb, struct address_space *space);
 struct address_space *address_space_find(l4id_t spid);
 void address_space_add(struct address_space *space);
 void address_space_remove(struct address_space *space);
-void address_space_reference_lock();
-void address_space_reference_unlock();
 void init_address_space_list(struct address_space_list *space_list);
 int check_access(unsigned long vaddr, unsigned long size,
 		 unsigned int flags, int page_in);

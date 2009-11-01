@@ -20,19 +20,8 @@ void init_address_space_list(struct address_space_list *space_list)
 {
 	memset(space_list, 0, sizeof(*space_list));
 
-	mutex_init(&space_list->ref_lock);
-	spin_lock_init(&space_list->list_lock);
 	link_init(&space_list->list);
-}
-
-void address_space_reference_lock()
-{
-	mutex_lock(&curcont->space_list.ref_lock);
-}
-
-void address_space_reference_unlock()
-{
-	mutex_unlock(&curcont->space_list.ref_lock);
+	mutex_init(&space_list->lock);
 }
 
 void address_space_attach(struct ktcb *tcb, struct address_space *space)
@@ -45,38 +34,24 @@ struct address_space *address_space_find(l4id_t spid)
 {
 	struct address_space *space;
 
-	spin_lock(&curcont->space_list.list_lock);
-	list_foreach_struct(space, &curcont->space_list.list, list) {
-		if (space->spid == spid) {
-			spin_unlock(&curcont->space_list.list_lock);
+	list_foreach_struct(space, &curcont->space_list.list, list)
+		if (space->spid == spid)
 			return space;
-		}
-	}
-	spin_unlock(&curcont->space_list.list_lock);
 	return 0;
 }
 
 void address_space_add(struct address_space *space)
 {
-	spin_lock(&curcont->space_list.list_lock);
 	BUG_ON(!list_empty(&space->list));
 	list_insert(&space->list, &curcont->space_list.list);
 	BUG_ON(!++curcont->space_list.count);
-	spin_unlock(&curcont->space_list.list_lock);
 }
 
 void address_space_remove(struct address_space *space)
 {
-	spin_lock(&curcont->space_list.list_lock);
-
-	/*
-	 * If current is quitting as the last task of this space,
-	 * its tcb may already be removed, and this is fine
-	 */
-	BUG_ON(list_empty(&space->list) && space != current->space);
+	BUG_ON(list_empty(&space->list));
 	BUG_ON(--curcont->space_list.count < 0);
 	list_remove_init(&space->list);
-	spin_unlock(&curcont->space_list.list_lock);
 }
 
 /* Assumes address space reflock is already held */

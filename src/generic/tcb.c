@@ -77,20 +77,20 @@ void tcb_delete(struct ktcb *tcb)
 	BUG_ON(tcb->waiting_on);
 	BUG_ON(tcb->wq);
 
-	/*
-	 * Take this lock as we may delete
-	 * the address space as well
-	 */
-	address_space_reference_lock();
+	mutex_lock(&curcont->space_list.lock);
+	mutex_lock(&tcb->space->lock);
 	BUG_ON(--tcb->space->ktcb_refs < 0);
 
 	/* No refs left for the space, delete it */
 	if (tcb->space->ktcb_refs == 0) {
 		address_space_remove(tcb->space);
+		mutex_unlock(&tcb->space->lock);
 		address_space_delete(tcb->space);
+		mutex_unlock(&curcont->space_list.lock);
+	} else {
+		mutex_unlock(&tcb->space->lock);
+		mutex_unlock(&curcont->space_list.lock);
 	}
-
-	address_space_reference_unlock();
 
 	/* Deallocate tcb ids */
 	id_del(&kernel_resources.ktcb_ids, tcb->tid);
