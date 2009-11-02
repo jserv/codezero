@@ -1,15 +1,9 @@
 #include <arch/pl011_uart.h>
 
 /* TODO: May need to remove this */
-struct pl011_uart uart;
-
-void platform_init(void);
-
-void platform_init(void)
-{
-	uart.base = PL011_USR_BASE;
-	pl011_initialise(&uart);
-}
+struct pl011_uart uart = {
+		.base = PL011_USR_BASE,
+		};
 
 /*
  * Initialises the uart class data structures, and the device.
@@ -49,5 +43,11 @@ int pl011_initialise(struct pl011_uart * uart)
 	pl011_uart_enable(uart->base);
 
 	return 0;
+}
+
+void platform_init(void)
+{
+	uart.base = PL011_USR_BASE;
+	pl011_initialise(&uart);
 }
 

@@ -16,7 +16,6 @@
 
 /* FIXME: Take this value in agreement from kernel, or from kernel only */
 #define PL011_USR_BASE		0x500000
-#define PL011_BASE		PL011_USR_BASE
 
 /* Architecture specific memory access macros */
 #define read(val, address)	val = *((volatile unsigned int *) address)
@@ -48,10 +47,15 @@
 #define PL011_BEIRQ		(1 << 9)
 #define PL011_OEIRQ		(1 << 10)
 
-/* FIXME: Need to define this somewhere else */
-struct pl011_uart uart;
+struct pl011_uart {
+	unsigned int base;
+	unsigned int frame_errors;
+	unsigned int parity_errors;
+	unsigned int break_errors;
+	unsigned int overrun_errors;
+	unsigned int rx_timeout_errors;
+};
 
-int pl011_initialise(struct pl011_uart *uart);
 int pl011_tx_char(unsigned int base, char c);
 int pl011_rx_char(unsigned int base, char *c);
 
@@ -89,15 +93,6 @@ static inline void pl011_set_stopbits(unsigned int base, int stopbits);
 static inline void pl011_set_parity_odd(unsigned int base);
 static inline void pl011_enable_fifos(unsigned int base);
 static inline void pl011_parity_disable(unsigned int base);
-
-struct pl011_uart {
-	unsigned int base;
-	unsigned int frame_errors;
-	unsigned int parity_errors;
-	unsigned int break_errors;
-	unsigned int overrun_errors;
-	unsigned int rx_timeout_errors;
-};
 
 #define PL011_UARTEN	(1 << 0)
 static inline void pl011_uart_enable(unsigned int base)
