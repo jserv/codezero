@@ -183,7 +183,7 @@ pager_ifdefs_todotext = \
 # and pager binaries are formed
 pager_mapsize = \
 '''
-#define CONFIG_CONT%s_PAGER_SIZE     %s
+#define CONFIG_CONT%d_PAGER_SIZE     %s
 '''
 
 pager_ifdefs = \
@@ -202,7 +202,7 @@ pager_ifdefs = \
     #define CONFIG_CONT%(cn)d_PAGER_MAPSIZE (CONFIG_CONT%(cn)d_PAGER_SIZE)
 #endif
 '''
-def generate_pager_memory_ifdefs(containers):
+def generate_pager_memory_ifdefs(config, containers):
     pager_ifdef_string = ""
     linux = 0
     for c in containers:
@@ -210,13 +210,8 @@ def generate_pager_memory_ifdefs(containers):
             if linux == 0:
                 pager_ifdef_string += pager_ifdefs_todotext
                 linux = 1
-        # Generate string for PAGERSIZE to be filled later by containers
-        id = pow(2, c.id)
-        str = ''
-        while id >= 1:
-            str = str + '%'
-            id = id - 1
-        pager_ifdef_string += pager_mapsize % ( str + 'd', str + 's')
+        pager_ifdef_string += \
+            pager_mapsize % (c.id, config.containers[c.id].pager_size)
         pager_ifdef_string += pager_ifdefs % { 'cn' : c.id }
     return pager_ifdef_string
 
@@ -227,7 +222,7 @@ def generate_kernel_cinfo(config, cinfo_path):
     print "Generating kernel cinfo..."
     #config.config_print()
 
-    pager_ifdefs = generate_pager_memory_ifdefs(containers)
+    pager_ifdefs = generate_pager_memory_ifdefs(config, containers)
 
     with open(cinfo_path, 'w+') as cinfo_file:
         fbody = cinfo_file_start % pager_ifdefs

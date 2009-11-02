@@ -12,6 +12,7 @@ class Container:
         self.id = id
         self.pager_lma = 0
         self.pager_vma = 0
+        self.pager_size = 0
         self.pager_task_region_start = 0
         self.pager_task_region_end = 0
         self.pager_shm_region_start = 0

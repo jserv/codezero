@@ -19,8 +19,11 @@ SECTIONS
 
 	. = ALIGN(4K);
 	.data : AT (ADDR(.data) - offset) { *(.data) }
-	.bss : AT (ADDR(.bss) - offset) { *(.bss) }
-	. += 0x1000;
-	. = ALIGN(8);
-	__stack = .;
+	.bss : AT (ADDR(.bss) - offset)
+	{
+		*(.bss)
+		. += 0x1000;
+		. = ALIGN(8);
+		__stack = .;
+	}
 }

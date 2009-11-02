@@ -183,14 +183,16 @@ def configure_system(options, args):
     bare_cont_gen = BareContGenerator()
     bare_cont_gen.bare_container_generate(config)
 
-    # Generate kernel cinfo structure for container definitions
-    generate_kernel_cinfo(config, KERNEL_CINFO_PATH)
-
     # Print out the configuration if asked
     if options.print_config:
         config.config_print()
 
     return config
+
+# Generate kernel cinfo structure for container definitions
+def generate_cinfo():
+    config = configuration_retrieve()
+    generate_kernel_cinfo(config, KERNEL_CINFO_PATH)
 
 if __name__ == "__main__":
     opts, args = build_parse_options()

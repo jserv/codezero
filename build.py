@@ -34,6 +34,11 @@ def main():
     containers.build_all_containers()
 
     #
+    # Generate cinfo
+    #
+    generate_cinfo()
+
+    #
     # Build the kernel
     #
     print "\nBuilding the kernel..."

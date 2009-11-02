@@ -7,7 +7,7 @@
 #
 import os, sys, shelve, glob
 from os.path import join
-from tools.pyelf import elf
+from tools.pyelf.elfsize import *
 
 PROJRELROOT = '../../'
 
@@ -22,33 +22,7 @@ from scripts.linux.build_atags import *
 from pack import *
 from packall import *
 
-def update_cinfo_pagersize(cid, pager_path):
-    pager_size = conv_hex(elf_binary_size(pager_path))
-    with open(KERNEL_CINFO_PATH, 'r+') as f:
-        temp = f.read()
-        f.seek(0)
-        f.truncate(0)
-        f.write(temp % (cid, pager_size))
-
-def elf_binary_size(img):
-    elffile = elf.ElfFile.from_file(img)
-    paddr_first = 0
-    paddr_start = 0
-    paddr_end = 0
-    for pheader in elffile.pheaders:
-        x = pheader.ai
-        if str(x.p_type) != "LOAD":
-            continue
-        if paddr_first == 0:
-            paddr_first = 1
-            paddr_start = x.p_paddr.value
-        if paddr_start > x.p_paddr.value:
-            paddr_start = x.p_paddr.value
-        if paddr_end < x.p_paddr + x.p_memsz:
-            paddr_end = x.p_paddr + x.p_memsz
-    return paddr_end - paddr_start
-
-def build_linux_container(projpaths, container):
+def build_linux_container(config, projpaths, container):
     linux_builder = LinuxBuilder(projpaths, container)
     linux_builder.build_linux()
 
@@ -57,11 +31,11 @@ def build_linux_container(projpaths, container):
     atags_builder = AtagsBuilder(projpaths, container)
     atags_builder.build_atags()
 
-    # Update the size of pager in cinfo.c
+    # Calculate and store size of pager
     pager_binary = \
         "cont" + str(container.id) + "/linux/linux-2.6.28.10/linux.elf"
-    pager_path = join(BUILDDIR, pager_binary)
-    update_cinfo_pagersize(container.id, pager_path)
+    config.containers[container.id].pager_size = \
+            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 
     linux_container_packer = \
         LinuxContainerPacker(container, linux_builder, \
@@ -84,7 +58,7 @@ def source_to_builddir(srcdir, id):
 # This is very similar to default container builder:
 # In fact this notion may become a standard convention for
 # calling specific bare containers
-def build_posix_container(projpaths, container):
+def build_posix_container(config, projpaths, container):
     images = []
     cwd = os.getcwd()
     os.chdir(POSIXDIR)
@@ -95,17 +69,17 @@ def build_posix_container(projpaths, container):
     builddir = source_to_builddir(POSIXDIR, container.id)
     os.path.walk(builddir, glob_by_walk, ['*.elf', images])
 
-    # Update the size of pager in cinfo.c
+    # Calculate and store size of pager
     pager_binary = "cont" + str(container.id) + "/posix/mm0/mm0.elf"
-    pager_path = join(BUILDDIR, pager_binary)
-    update_cinfo_pagersize(container.id, pager_path)
+    config.containers[container.id].pager_size = \
+            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container()
 
 # We simply use SCons to figure all this out from container.id
 # Builds the test container.
-def build_test_container(projpaths, container):
+def build_test_container(config, projpaths, container):
     images = []
     cwd = os.getcwd()
     os.chdir(TESTDIR)
@@ -116,7 +90,7 @@ def build_test_container(projpaths, container):
     builddir = source_to_builddir(TESTDIR, container.id)
     os.path.walk(builddir, glob_by_walk, ['*.elf', images])
 
-    # TODO: Need to calculate pager size and update in cinfo.c
+    # TODO: Need to Calculate and store size of pager
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container()
@@ -124,7 +98,7 @@ def build_test_container(projpaths, container):
 # This simply calls SCons on a given container, and collects
 # all images with .elf extension, instead of using whole classes
 # for building and packing.
-def build_default_container(projpaths, container):
+def build_default_container(config, projpaths, container):
     images = []
     cwd = os.getcwd()
     projdir = join(join(PROJROOT, 'conts'), container.name)
@@ -132,33 +106,32 @@ def build_default_container(projpaths, container):
     os.system("scons")
     os.path.walk(projdir, glob_by_walk, ['*.elf', images])
 
-    # Update the size of pager in cinfo.c
+    # Calculate and store size of pager
     pager_binary = "conts/bare" + str(container.id) + "/main.elf"
-    pager_path = join(PROJROOT, pager_binary)
-    update_cinfo_pagersize(container.id, pager_path)
+    config.containers[container.id].pager_size = \
+            conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container()
 
 def build_all_containers():
     config = configuration_retrieve()
-
     cont_images = []
     for container in config.containers:
         if container.type == 'linux':
             pass
-            cont_images.append(build_linux_container(projpaths, container))
+            cont_images.append(build_linux_container(config, projpaths, container))
         elif container.type == 'bare':
-            cont_images.append(build_default_container(projpaths, container))
+            cont_images.append(build_default_container(config, projpaths, container))
         elif container.type == 'posix':
-            cont_images.append(build_posix_container(projpaths, container))
+            cont_images.append(build_posix_container(config, projpaths, container))
         elif container.type == 'test':
-            cont_images.append(build_test_container(projpaths, container))
+            cont_images.append(build_test_container(config, projpaths, container))
         else:
             print "Error: Don't know how to build " + \
                   "container of type: %s" % (container.type)
             exit(1)
-
+    configuration_save(config)
     all_cont_packer = AllContainerPacker(cont_images, config.containers)
 
     return all_cont_packer.pack_all()
