@@ -56,11 +56,6 @@ class configuration:
                                 ['PB11MPCORE', 'mpcore'],
                                 ['PB1136', 'arm1136jf-s'],
                                 ['PB1176', 'arm1176jz-s'],)
-
-        # Mapping between the processor architecture and toolchain
-        self.toolchain_kernel = (['ARM', 'arm-none-eabi-'],)
-        self.toolchain_user = (['ARM', 'arm-none-linux-gnueabi-'],)
-
         self.arch = None
         self.subarch = None
         self.platform = None
@@ -85,17 +80,10 @@ class configuration:
         return None
 
     # Extract architecture from a name value pair
-    # And based on this define the toolchains to be used
     def get_arch(self, name, val):
         if name[:len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
             parts = name.split("_", 3)
             self.arch = parts[2].lower()
-            for i in self.toolchain_kernel:
-                if i[0] == parts[2]:
-                    self.kernel_toolchain = i[1]
-            for i in self.toolchain_user:
-                if i[0] == parts[2]:
-                    self.user_toolchain = i[1]
 
     # Extract subarch from a name value pair
     def get_subarch(self, name, val):
@@ -117,6 +105,18 @@ class configuration:
         if name[:len("CONFIG_CPU_")] == "CONFIG_CPU_":
             parts = name.split("_", 3)
             self.cpu = parts[2].lower()
+
+    # Extract kernel space toolchain from a name value pair
+    def get_toolchain_kernel(self, name, val):
+        if name[:len("CONFIG_TOOLCHAIN_KERNEL")] == "CONFIG_TOOLCHAIN_KERNEL":
+            parts = val.split("\"", 3)
+            self.kernel_toolchain = parts[1]
+
+    # Extract user space toolchain from a name value pair
+    def get_toolchain_user(self, name, val):
+        if name[:len("CONFIG_TOOLCHAIN_USER")] == "CONFIG_TOOLCHAIN_USER":
+            parts = val.split("\"", 3)
+            self.user_toolchain = parts[1]
 
     # Extract number of containers
     def get_ncontainers(self, name, val):

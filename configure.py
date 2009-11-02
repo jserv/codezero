@@ -42,7 +42,8 @@ def cml2_header_to_symbols(cml2_header, config):
                 config.get_cpu(name, value)
                 config.get_ncontainers(name, value)
                 config.get_container_parameters(name, value)
-
+                config.get_toolchain_kernel(name, value)
+                config.get_toolchain_user(name, value)
 
 def cml2_update_config_h(config_h_path, config):
     with open(config_h_path, "a") as config_h:
