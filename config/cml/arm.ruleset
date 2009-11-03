@@ -29,12 +29,12 @@ main_menu		'Codezero Microkernel Configurator'
 arm_menu		'ARM Architecture Configuration'
 arm_cpu_menu		'ARM CPU type'
 arm_platform_menu	'ARM Platform Type'
-tools			'Tools to be used'
-toolchains		'Toolchains to be used for compilation'
-TOOLCHAIN_KERNEL	'Toolchain for kernel space compilation'
-TOOLCHAIN_USER		'Toolchain for user space compilation'
+toolchain_menu		'Toolchain Prefix'
 containers_menu		'Container Setup'
 arch_type		'Main architecture'
+
+TOOLCHAIN_KERNEL	'Toolchain prefix for kernel'
+TOOLCHAIN_USER		'Toolchain prefix for userspace'
 
 CONTAINERS		'Number of containers'
 CAPABILITIES		'Enable capability checking'
@@ -83,19 +83,16 @@ menu arm_menu
 	arm_cpu_menu
 	arm_platform_menu
 
-menu tools
-	toolchains
-
-menu toolchains
+menu toolchain_menu
 	TOOLCHAIN_KERNEL$
 	TOOLCHAIN_USER$
 
 menu main_menu
 	arch_type
 	arm_menu
+	toolchain_menu
 	CONTAINERS%
 	containers_menu
-	tools
 
 #############`
 #   RULES   #
