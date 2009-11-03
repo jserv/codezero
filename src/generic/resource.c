@@ -483,53 +483,6 @@ int copy_container_info(struct container *c, struct container_info *cinfo)
 }
 
 /*
- * Create real containers from compile-time created cinfo structures
- */
-void setup_containers(struct boot_resources *bootres,
-		      struct kernel_resources *kres)
-{
-	struct container *container;
-	pgd_table_t *current_pgd;
-
-	/*
-	 * Move to real page tables, accounted by
-	 * pgds and pmds provided from the caches
-	 *
-	 * We do not want to delay this too much,
-	 * since we want to avoid allocating an uncertain
-	 * amount of memory from the boot allocators.
-	 */
-	current_pgd = realloc_page_tables();
-
-	/* Move it back
-	 *
-	 * FIXME: Merge until this part of code with
-	 * kres_setup_capabilities and init_system_resources
-	 * it doesn't look good.
-	 */
-	cap_list_move(&kres->non_memory_caps, &current->cap_list);
-
-	/* Create all containers but leave pagers */
-	for (int i = 0; i < bootres->nconts; i++) {
-		/* Allocate & init container */
-		container = container_create();
-
-		/* Fill in its information */
-		copy_container_info(container, &cinfo[i]);
-
-		/* Add it to kernel resources list */
-		kres_insert_container(container, kres);
-	}
-
-	/* Initialize pagers */
-	container_init_pagers(kres, current_pgd);
-
-	/* Assign next unused container id for kernel resources */
-	kres->cid = id_new(&kres->container_ids);
-
-}
-
-/*
  * Copy boot-time allocated kernel capabilities to ones that
  * are allocated from the capability memcache
  */
@@ -565,10 +518,18 @@ void copy_boot_capabilities(struct cap_list *caplist)
  * Creates capabilities allocated with a real id, and from the
  * capability cache, in place of ones allocated at boot-time.
  */
-void kernel_setup_capabilities(struct boot_resources *bootres,
-			       struct kernel_resources *kres)
+void setup_kernel_resources(struct boot_resources *bootres,
+			    struct kernel_resources *kres)
 {
 	struct capability *cap;
+	struct container *container;
+	pgd_table_t *current_pgd;
+
+	/*
+	 * See how many containers we have. Assign next
+	 * unused container id for kernel resources
+	 */
+	kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
 
 	/* First initialize the list of non-memory capabilities */
 	cap = boot_capability_create();
@@ -599,6 +560,38 @@ void kernel_setup_capabilities(struct boot_resources *bootres,
 	copy_boot_capabilities(&kres->virtmem_free);
 	copy_boot_capabilities(&kres->devmem_used);
 	copy_boot_capabilities(&kres->devmem_free);
+
+	/*
+	 * Move to real page tables, accounted by
+	 * pgds and pmds provided from the caches
+	 *
+	 * We do not want to delay this too much,
+	 * since we want to avoid allocating an uncertain
+	 * amount of memory from the boot allocators.
+	 */
+	current_pgd = realloc_page_tables();
+
+	/* Move it back */
+	cap_list_move(&kres->non_memory_caps, &current->cap_list);
+
+	/*
+	 * Create real containers from compile-time created
+	 * cinfo structures
+	 */
+	for (int i = 0; i < bootres->nconts; i++) {
+		/* Allocate & init container */
+		container = container_create();
+
+		/* Fill in its information */
+		copy_container_info(container, &cinfo[i]);
+
+		/* Add it to kernel resources list */
+		kres_insert_container(container, kres);
+	}
+
+	/* Initialize pagers */
+	container_init_pagers(kres, current_pgd);
+
 }
 
 /*
@@ -867,9 +860,7 @@ int init_system_resources(struct kernel_resources *kres)
 
 	init_resource_allocators(&bootres, kres);
 
-	kernel_setup_capabilities(&bootres, kres);
-
-	setup_containers(&bootres, kres);
+	setup_kernel_resources(&bootres, kres);
 
 	return 0;
 }

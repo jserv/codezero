@@ -279,7 +279,7 @@ void init_finalize(struct kernel_resources *kres)
 	free_boot_memory(&kernel_resources);
 
 	/*
-	 * Set up KIP UTCB ref
+	 * Set up initial KIP UTCB ref
 	 */
 	kip.utcb = (u32)current->utcb_address;
 
