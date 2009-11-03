@@ -51,11 +51,11 @@ class configuration:
 
     def __init__(self):
         # Mapping between platform selected and gcc flags for it
-        self.cpu_to_gcc_flag = (['PB926', 'arm926ej-s'],
-                                ['PBA8', 'cortex-a8'],
-                                ['PB11MPCORE', 'mpcore'],
-                                ['PB1136', 'arm1136jf-s'],
-                                ['PB1176', 'arm1176jz-s'],)
+        self.cpu_to_gcc_flag = (['ARM926', 'arm926ej-s'],
+                                ['CORTEXA8', 'cortex-a8'],
+                                ['ARM11MPCORE', 'mpcore'],
+                                ['ARM1136', 'arm1136jf-s'],
+                                ['ARM1176', 'arm1176jz-s'],)
         self.arch = None
         self.subarch = None
         self.platform = None
@@ -96,15 +96,15 @@ class configuration:
         if name[:len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
             parts = name.split("_", 3)
             self.platform = parts[2].lower()
-            for cputype, cpuflag in self.cpu_to_gcc_flag:
-                if parts[2] == cputype:
-                    self.gcc_cpu_flag = cpuflag
 
-    # Extract cpu from a name value pair
+    # Extract cpu and its gcc flag from a name value pair
     def get_cpu(self, name, val):
         if name[:len("CONFIG_CPU_")] == "CONFIG_CPU_":
             parts = name.split("_", 3)
             self.cpu = parts[2].lower()
+            for cputype, cpuflag in self.cpu_to_gcc_flag:
+                if parts[2] == cputype:
+                    self.gcc_cpu_flag = cpuflag
 
     # Extract kernel space toolchain from a name value pair
     def get_toolchain_kernel(self, name, val):
