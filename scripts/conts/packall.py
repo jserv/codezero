@@ -76,11 +76,7 @@ class AllContainerPacker:
             file_body += containers_lds_end
             f.write(file_body)
 
-    def pack_all(self):
-        # TODO: Need to sort this, we cannot call it in global space
-        # as configuration file is not presnt in beginning
-        config = configuration_retrieve()
-
+    def pack_all(self, config):
         self.generate_container_lds(self.containers_lds_out)
         self.generate_container_S(self.containers_S_out)
         os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \

@@ -24,12 +24,12 @@ from packall import *
 
 def build_linux_container(config, projpaths, container):
     linux_builder = LinuxBuilder(projpaths, container)
-    linux_builder.build_linux()
+    linux_builder.build_linux(config)
 
     rootfs_builder = RootfsBuilder(projpaths, container)
-    rootfs_builder.build_rootfs()
+    rootfs_builder.build_rootfs(config)
     atags_builder = AtagsBuilder(projpaths, container)
-    atags_builder.build_atags()
+    atags_builder.build_atags(config)
 
     # Calculate and store size of pager
     pager_binary = \
@@ -40,7 +40,7 @@ def build_linux_container(config, projpaths, container):
     linux_container_packer = \
         LinuxContainerPacker(container, linux_builder, \
                              rootfs_builder, atags_builder)
-    return linux_container_packer.pack_container()
+    return linux_container_packer.pack_container(config)
 
 def glob_by_walk(arg, dirname, names):
     ext, imglist = arg
@@ -75,7 +75,7 @@ def build_posix_container(config, projpaths, container):
             conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
-    return container_packer.pack_container()
+    return container_packer.pack_container(config)
 
 # We simply use SCons to figure all this out from container.id
 # Builds the test container.
@@ -93,7 +93,7 @@ def build_test_container(config, projpaths, container):
     # TODO: Need to Calculate and store size of pager
 
     container_packer = DefaultContainerPacker(container, images)
-    return container_packer.pack_container()
+    return container_packer.pack_container(config)
 
 # This simply calls SCons on a given container, and collects
 # all images with .elf extension, instead of using whole classes
@@ -112,7 +112,7 @@ def build_default_container(config, projpaths, container):
             conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
-    return container_packer.pack_container()
+    return container_packer.pack_container(config)
 
 def build_all_containers():
     config = configuration_retrieve()
@@ -134,7 +134,7 @@ def build_all_containers():
     configuration_save(config)
     all_cont_packer = AllContainerPacker(cont_images, config.containers)
 
-    return all_cont_packer.pack_all()
+    return all_cont_packer.pack_all(config)
 
 if __name__ == "__main__":
     build_all_containers()

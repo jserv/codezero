@@ -117,10 +117,7 @@ class LinuxUpdateKernel:
         self.replace_line(file, data_to_replace, new_data, prev_line)
 
     # Update ARCHID, CPUID and ATAGS ADDRESS
-    def modify_register_values(self, container):
-
-        # TODO: This call needs to be made global
-        config = configuration_retrieve()
+    def modify_register_values(self, config, container):
         for cpu_type, cpu_id in self.cpuid_list:
             if cpu_type == config.cpu.upper():
                 cpuid = cpu_id
@@ -185,19 +182,15 @@ class LinuxBuilder:
         self.kernel_image = None
         self.kernel_updater = LinuxUpdateKernel(self.container)
 
-    def build_linux(self):
+    def build_linux(self, config):
         print '\nBuilding the linux kernel...'
-        # TODO: Need to sort this, we cannot call it in global space
-        # as configuration file is not presnt in beginning
-        config = configuration_retrieve()
-
         os.chdir(self.LINUX_KERNELDIR)
         if not os.path.exists(self.LINUX_KERNEL_BUILDDIR):
             os.makedirs(self.LINUX_KERNEL_BUILDDIR)
 
         self.kernel_updater.modify_kernel_config()
         self.kernel_updater.update_kernel_params(self.container)
-        self.kernel_updater.modify_register_values(self.container)
+        self.kernel_updater.modify_register_values(config, self.container)
 
         os.system("make defconfig ARCH=arm O=" + self.LINUX_KERNEL_BUILDDIR)
         os.system("make ARCH=arm " + \

@@ -49,12 +49,8 @@ class AtagsBuilder:
         self.elf_relpath = os.path.relpath(self.atags_elf_out, \
                                            self.LINUX_ATAGSDIR)
 
-    def build_atags(self):
+    def build_atags(self, config):
         print 'Building Atags for linux kenel...'
-        # TODO: Need to sort this, we cannot call it in global space
-        # as configuration file is not presnt in beginning
-        config = configuration_retrieve()
-
         # IO files from this build
         os.chdir(LINUX_ATAGSDIR)
         if not os.path.exists(self.LINUX_ATAGS_BUILDDIR):

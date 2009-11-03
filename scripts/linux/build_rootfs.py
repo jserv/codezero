@@ -40,12 +40,8 @@ class RootfsBuilder:
         self.rootfs_elf_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.elf")
         self.cont_id = container.id
 
-    def build_rootfs(self):
+    def build_rootfs(self, config):
         print 'Building the root filesystem...'
-        # TODO: Need to sort this, we cannot call it in global space
-        # as configuration file is not presnt in beginning
-        config = configuration_retrieve()
-
         # IO files from this build
         os.chdir(LINUX_ROOTFSDIR)
         if not os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
