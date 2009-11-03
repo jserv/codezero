@@ -163,6 +163,11 @@ def configure_system(options, args):
         os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + \
                   CML2_CONFIG_FILE + ' ' + CML2_COMPILED_RULES)
 
+    # After configure, if user might have chosen to quit without saving
+    if not os.path.exists(CML2_CONFIG_FILE):
+        print "Exiting without saving configuration."
+        sys.exit()
+
     # Create header file
     os.system(TOOLSDIR + '/cml2header.py -o ' + \
               CML2_CONFIG_H + ' -i ' + CML2_CONFIG_FILE)
