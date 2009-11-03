@@ -99,9 +99,7 @@ struct capability *cap_list_find_by_rtype(struct cap_list *cap_list,
  * to free it to.
  *
  * In conclusion freeing of pool-type capabilities need to be done
- * in order of privacy. -> It may get confusing as a space, thread
- * group id or paged-thread group is not necessarily in a different
- * privacy ring.
+ * in order of privacy.
  */
 struct capability *capability_find_by_rtype(struct ktcb *task,
 					    unsigned int rtype)
@@ -453,7 +451,7 @@ struct capability *cap_match_thread(struct capability *cap,
 
 	if (action_flags == THREAD_CREATE) {
 		/*
-		 * FIXME: Add cid to task_ids arg.
+		 * TODO: Add cid to task_ids arg.
 		 *
 		 * Its a thread create and we have no knowledge of
 		 * thread id, space id, or any other id.
@@ -618,8 +616,8 @@ int cap_map_check(struct ktcb *target, unsigned long phys, unsigned long virt,
 
 /*
  * Limitation: We currently only check from sender's
- * perspective. Sender always targets a real thread.
- * Does sender have the right to do this ipc?
+ * perspective. This is because sender always targets a
+ * real thread. Does sender have the right to do this ipc?
  */
 int cap_ipc_check(l4id_t to, l4id_t from,
 		  unsigned int flags, unsigned int ipc_type)
@@ -716,7 +714,7 @@ int cap_thread_check(struct ktcb *task,
 {
 	return 0;
 }
-#endif
+#endif /* End of !CONFIG_CAPABILITIES */
 
 /*
  * FIXME:
