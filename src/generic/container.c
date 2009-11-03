@@ -7,6 +7,7 @@
 #include <l4/generic/resource.h>
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
+#include <l4/generic/bootmem.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
 #include INC_SUBARCH(mm.h)
@@ -25,6 +26,8 @@ int container_init(struct container *c)
 	cap_list_init(&c->cap_list);
 
 	/* Init pager structs */
+	c->pager = alloc_bootmem(sizeof(c->pager[0]) *
+				 CONFIG_MAX_PAGERS_USED, 0);
 	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++)
 		cap_list_init(&c->pager[i].cap_list);
 

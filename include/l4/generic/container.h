@@ -48,8 +48,8 @@ struct container {
 	struct id_pool *space_id_pool;
 
 	struct mutex_queue_head mutex_queue_head; /* Userspace mutex list */
-	struct cap_list cap_list; 		  /* Capabilities shared by whole container */
-	struct pager pager[CONFIG_MAX_PAGERS_USED];
+	struct cap_list cap_list; 		/* Capabilities shared by whole container */
+	struct pager *pager;			/* Boot-time array of pagers */
 };
 
 /* Compact, raw capability structure */

@@ -319,6 +319,7 @@ int memcap_map(struct cap_list *cap_list,
 /* Delete all boot memory and add it to physical memory pool. */
 int free_boot_memory(struct kernel_resources *kres)
 {
+	struct container *c;
 	unsigned long pfn_start =
 		__pfn(virt_to_phys(_start_init));
 	unsigned long pfn_end =
@@ -333,6 +334,10 @@ int free_boot_memory(struct kernel_resources *kres)
 	/* Remove the init memory from the page tables */
 	for (unsigned long i = pfn_start; i < pfn_end; i++)
 		remove_mapping(phys_to_virt(__pfn_to_addr(i)));
+
+	/* Reset pointers that will remain in system as precaution */
+	list_foreach_struct(c, &kres->containers.list, list)
+		c->pager = 0;
 
 	printk("%s: Freed %lu KB init memory.\n",
 	       __KERNELNAME__,
