@@ -90,7 +90,10 @@ def build_test_container(config, projpaths, container):
     builddir = source_to_builddir(TESTDIR, container.id)
     os.path.walk(builddir, glob_by_walk, ['*.elf', images])
 
-    # TODO: Need to Calculate and store size of pager
+    # Calculate and store size of pager
+    pager_binary = "cont" + str(container.id) + "/test/main.elf"
+    config.containers[container.id].pager_size = \
+            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container(config)
