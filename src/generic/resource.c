@@ -363,9 +363,6 @@ void init_kernel_resources(struct kernel_resources *kres)
 	/* Initialize container head */
 	container_head_init(&kres->containers);
 
-	/* Get first container id for itself */
-	kres->cid = id_new(&kres->container_ids);
-
 	/* Initialize kernel capability lists */
 	cap_list_init(&kres->physmem_used);
 	cap_list_init(&kres->physmem_free);
@@ -521,6 +518,10 @@ void setup_containers(struct boot_resources *bootres,
 
 	/* Initialize pagers */
 	container_init_pagers(kres, current_pgd);
+
+	/* Assign next unused container id for kernel resources */
+	kres->cid = id_new(&kres->container_ids);
+
 }
 
 /*
@@ -559,8 +560,8 @@ void copy_boot_capabilities(struct cap_list *caplist)
  * Creates capabilities allocated with a real id, and from the
  * capability cache, in place of ones allocated at boot-time.
  */
-void kres_setup_capabilities(struct boot_resources *bootres,
-			      struct kernel_resources *kres)
+void kernel_setup_capabilities(struct boot_resources *bootres,
+			       struct kernel_resources *kres)
 {
 	struct capability *cap;
 
@@ -861,7 +862,7 @@ int init_system_resources(struct kernel_resources *kres)
 
 	init_resource_allocators(&bootres, kres);
 
-	kres_setup_capabilities(&bootres, kres);
+	kernel_setup_capabilities(&bootres, kres);
 
 	setup_containers(&bootres, kres);
 

@@ -132,7 +132,7 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 	 * be the pagers making the call on themselves.
 	 */
 	if (task->state != TASK_INACTIVE && exregs->valid_vect &&
-	    current != task && task->pager->tcb != current) {
+	    current != task && task->pagerid != current->tid) {
 		err = -EACTIVE;
 		goto out;
 	}

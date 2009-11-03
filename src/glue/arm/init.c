@@ -257,11 +257,11 @@ void init_finalize(struct kernel_resources *kres)
 
 	/* Get the first container */
 	c = link_to_struct(kres->containers.list.next,
-			   struct container,
-			   list);
+			   struct container, list);
 
-	/* Get the first pager ktcb */
-	first_task = c->pager[0].tcb;
+	/* Get the first pager in container */
+	first_task = link_to_struct(c->ktcb_list.list.next,
+				    struct ktcb, task_list);
 
 	/* Calculate first stack address */
 	newstack = align((unsigned long)first_task + PAGE_SIZE - 1,

@@ -556,7 +556,7 @@ struct capability *cap_match_mem(struct capability *cap,
 	 *
 	 * It seems it would be reasonable for a pager to have memory
 	 * capabilities with a resid of its own id, and rtype of
-	 * CAP_RTYPE_PGGROUP, effectively allowing it to do map
+	 * CAP_RTYPE_CONTAINER, effectively allowing it to do map
 	 * operations on itself and its group of paged children.
 	 */
 }

@@ -28,7 +28,7 @@ int read_task_capabilities(void *userbuf)
 	 * Currently only pagers can
 	 * read their own capabilities
 	 */
-	if (current != current->pager->tcb)
+	if (current->tid != current->pagerid)
 		return -EPERM;
 
 	/* Determine size of pager capabilities (FIXME: partial!) */
@@ -126,7 +126,7 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 	switch(req) {
 	/* Return number of capabilities the thread has */
 	case CAP_CONTROL_NCAPS:
-		if (current != current->pager->tcb)
+		if (current->tid != current->pagerid)
 			return -EPERM;
 
 		if ((err = check_access((unsigned long)userbuf,
