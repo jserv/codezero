@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	/* Compare two pid strings. We use strings because we dont have atoi() */
 	if (!strcmp(pidbuf, parent_of_all)) {
 		printf("EXECVE TEST         -- PASSED --\n");
-		printf("\nThread (%x): Continues to sync with the pager...\n\n", getpid());
+		printf("\nThread (%x): Continues to sync with the pager...\n\n", __raw_tid(getpid()));
 		while (1)
 			wait_pager(pagerid);
 	}

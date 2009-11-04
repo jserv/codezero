@@ -144,12 +144,31 @@ static inline void l4_restore_ipcregs(void)
 	l4_set_sender(l4_get_utcb()->saved_sender);
 }
 
+#define TASK_CID_MASK			0xFF000000
+#define TASK_ID_MASK			0x00FFFFFF
+#define TASK_CID_SHIFT			24
+
+static inline l4id_t __raw_tid(l4id_t tid)
+{
+	return tid & TASK_ID_MASK;
+}
+
+static inline l4id_t __cid(l4id_t tid)
+{
+	return (tid & TASK_CID_MASK) >> TASK_CID_SHIFT;
+}
+
 static inline l4id_t self_tid(void)
 {
 	struct task_ids ids;
 
 	l4_getid(&ids);
 	return ids.tid;
+}
+
+static inline l4id_t __raw_self_tid(void)
+{
+	return __raw_tid(self_tid());
 }
 
 static inline int l4_send_full(l4id_t to, unsigned int tag)

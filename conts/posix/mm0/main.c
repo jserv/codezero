@@ -195,7 +195,7 @@ void handle_requests(void)
 void main(void)
 {
 
-	printf("\n%s: Started with thread id %x\n", __TASKNAME__, self_tid());
+	printf("\n%s: Started with thread id %x\n", __TASKNAME__, __raw_self_tid());
 
 	init();
 

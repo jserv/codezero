@@ -19,5 +19,7 @@ SECTIONS
 	.rodata1 : { *(.rodata1) }
 	. = ALIGN(4K);
 	.data :	{ *(.data) }
+	.got : { *(.got) }
+	.got.plt : { *(.got.plt) }
 	.bss : { *(.bss) }
 }
