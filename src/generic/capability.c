@@ -499,7 +499,6 @@ struct sys_map_args {
 	unsigned long virt;
 	unsigned long npages;
 	unsigned int flags;
-	unsigned int rtype;
 };
 
 /*
@@ -509,11 +508,12 @@ struct capability *cap_match_mem(struct capability *cap,
 				 void *args_ptr)
 {
 	struct sys_map_args *args = args_ptr;
+	struct ktcb *target = args->task;
 	unsigned long pfn;
 	unsigned int perms;
 
 	/* Set base according to what type of mem type we're matching */
-	if (args->rtype == CAP_RTYPE_PHYSMEM)
+	if (cap_type(cap) == CAP_TYPE_MAP_PHYSMEM)
 		pfn = __pfn(args->phys);
 	else
 		pfn = __pfn(args->virt);
@@ -544,21 +544,28 @@ struct capability *cap_match_mem(struct capability *cap,
 		return 0;
 	}
 
-	return cap;
-
 	/*
-	 * FIXME:
-	 *
-	 * Does it make sense to have a meaningful resid field
-	 * in a memory resource? E.g. Which resources may I map it to?
-	 * It might, as I can map an arbitrary mapping to an arbitrary
-	 * thread in my container and break it's memory integrity.
-	 *
-	 * It seems it would be reasonable for a pager to have memory
-	 * capabilities with a resid of its own id, and rtype of
-	 * CAP_RTYPE_CONTAINER, effectively allowing it to do map
-	 * operations on itself and its group of paged children.
+	 * We have a target thread, check if capability match
+	 * any resource fields in target
 	 */
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
+	}
+
+	return cap;
 }
 
 #if defined(CONFIG_CAPABILITIES)
@@ -603,14 +610,12 @@ int cap_map_check(struct ktcb *target, unsigned long phys, unsigned long virt,
 		.flags = flags,
 	};
 
-	args.rtype = CAP_RTYPE_PHYSMEM;
 	if (!(physmem =	cap_find(current, cap_match_mem,
-				 &args, CAP_TYPE_MAP)))
+				 &args, CAP_TYPE_MAP_PHYSMEM)))
 		return -ENOCAP;
 
-	args.rtype = CAP_RTYPE_VIRTMEM;
 	if (!(virtmem = cap_find(current, cap_match_mem,
-				 &args, CAP_TYPE_MAP)))
+				 &args, CAP_TYPE_MAP_VIRTMEM)))
 		return -ENOCAP;
 
 	return 0;
