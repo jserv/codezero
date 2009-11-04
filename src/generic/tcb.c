@@ -43,7 +43,7 @@ void tcb_init(struct ktcb *new)
 	waitqueue_head_init(&new->wqh_pager);
 }
 
-struct ktcb *tcb_alloc_init(void)
+struct ktcb *tcb_alloc_init(l4id_t cid)
 {
 	struct ktcb *tcb;
 	struct task_ids ids;
@@ -52,6 +52,7 @@ struct ktcb *tcb_alloc_init(void)
 		return 0;
 
 	ids.tid = id_new(&kernel_resources.ktcb_ids);
+	ids.tid |= TASK_CID_MASK & (cid << TASK_CID_SHIFT);
 	ids.tgid = L4_NILTHREAD;
 	ids.spid = L4_NILTHREAD;
 
@@ -92,6 +93,9 @@ void tcb_delete(struct ktcb *tcb)
 		mutex_unlock(&curcont->space_list.lock);
 	}
 
+	/* Clear container id part */
+	tcb->tid &= ~TASK_CID_MASK;
+
 	/* Deallocate tcb ids */
 	id_del(&kernel_resources.ktcb_ids, tcb->tid);
 
@@ -114,22 +118,44 @@ struct ktcb *tcb_find_by_space(l4id_t spid)
 	return 0;
 }
 
-struct ktcb *tcb_find(l4id_t tid)
+struct ktcb *container_find_tcb(struct container *c, l4id_t tid)
 {
 	struct ktcb *task;
+
+	spin_lock(&c->ktcb_list.list_lock);
+	list_foreach_struct(task, &c->ktcb_list.list, task_list) {
+		if (task->tid == tid) {
+			spin_unlock(&c->ktcb_list.list_lock);
+			return task;
+		}
+	}
+	spin_unlock(&c->ktcb_list.list_lock);
+	return 0;
+}
+
+/*
+ * Threads are the only resource where inter-container searches are
+ * allowed. This is because on other containers, only threads can be
+ * targeted for operations. E.g. ipc, sharing memory. Currently you
+ * can't reach a space, a mutex, or any other resouce on another
+ * container.
+ */
+struct ktcb *tcb_find(l4id_t tid)
+{
+	struct container *c;
 
 	if (current->tid == tid)
 		return current;
 
-	spin_lock(&curcont->ktcb_list.list_lock);
-	list_foreach_struct(task, &curcont->ktcb_list.list, task_list) {
-		if (task->tid == tid) {
-			spin_unlock(&curcont->ktcb_list.list_lock);
-			return task;
-		}
+	if (tid_to_cid(tid) == curcont->cid) {
+		return container_find_tcb(curcont, tid);
+	} else {
+	       	if (!(c = container_find(&kernel_resources,
+					 tid_to_cid(tid))))
+			return 0;
+		else
+			return container_find_tcb(c, tid);
 	}
-	spin_unlock(&curcont->ktcb_list.list_lock);
-	return 0;
 }
 
 void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list)

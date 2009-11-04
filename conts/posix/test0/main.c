@@ -31,7 +31,7 @@ l4id_t pagerid;
 int main(int argc, char *argv[])
 {
 
-	printf("\n%s: Started with thread id %d\n", __TASKNAME__, getpid());
+	printf("\n%s: Started with thread id %x\n", __TASKNAME__, getpid());
 
 	parent_of_all = getpid();
 

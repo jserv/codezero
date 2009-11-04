@@ -451,10 +451,11 @@ struct capability *cap_match_thread(struct capability *cap,
 
 	if (action_flags == THREAD_CREATE) {
 		/*
-		 * TODO: Add cid to task_ids arg.
+		 * NOTE: Currently we only allow creation in
+		 * current container.
 		 *
-		 * Its a thread create and we have no knowledge of
-		 * thread id, space id, or any other id.
+		 * TODO: Add capability checking for space,
+		 * as well.
 		 *
 		 * We _assume_ target is the largest group,
 		 * e.g. same container as current. We check
@@ -462,7 +463,7 @@ struct capability *cap_match_thread(struct capability *cap,
 		 */
 		if (cap_rtype(cap) != CAP_RTYPE_CONTAINER)
 			return 0;
-		if (cap->resid != current->container->cid)
+		if (cap->resid != curcont->cid)
 			return 0;
 		/* Resource type and id match, success */
 		return cap;

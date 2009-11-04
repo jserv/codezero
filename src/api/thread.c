@@ -346,7 +346,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		}
 	}
 
-	if (!(new = tcb_alloc_init()))
+	if (!(new = tcb_alloc_init(curcont->cid)))
 		return -ENOMEM;
 
 	/* Set up new thread space by using space id and flags */

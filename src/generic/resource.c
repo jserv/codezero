@@ -402,8 +402,6 @@ void init_kernel_resources(struct kernel_resources *kres)
 	memcap_unmap(&kres->physmem_free, kernel_area->start,
 		     kernel_area->end);
 
-	/* Initialize zombie pager list */
-	init_ktcb_list(&kres->zombie_list);
 
 	/* TODO:
 	 * Add all virtual memory areas used by the kernel
@@ -529,7 +527,8 @@ void setup_kernel_resources(struct boot_resources *bootres,
 	 * See how many containers we have. Assign next
 	 * unused container id for kernel resources
 	 */
-	kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
+	//kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
+	kres->cid = id_get(&kres->container_ids, 0);
 
 	/* First initialize the list of non-memory capabilities */
 	cap = boot_capability_create();

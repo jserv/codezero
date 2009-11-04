@@ -32,6 +32,7 @@ struct boot_resources {
 struct container_head {
 	int ncont;
 	struct link list;
+	struct spinlock lock;
 };
 
 static inline void
@@ -39,6 +40,7 @@ container_head_init(struct container_head *chead)
 {
 	chead->ncont = 0;
 	link_init(&chead->list);
+	spin_lock_init(&chead->lock);
 }
 
 /* Hash table for all existing tasks */

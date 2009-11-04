@@ -107,6 +107,7 @@ int container_init_pagers(struct kernel_resources *kres,
 			  pgd_table_t *current_pgd);
 
 int init_containers(struct kernel_resources *kres);
+struct container *container_find(struct kernel_resources *kres, l4id_t cid);
 
 #endif /* __CONTAINER_H__ */
 

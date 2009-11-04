@@ -47,8 +47,25 @@ struct container *container_create(void)
 void kres_insert_container(struct container *c,
 			    struct kernel_resources *kres)
 {
+	spin_lock(&kres->containers.lock);
 	list_insert(&c->list, &kres->containers.list);
 	kres->containers.ncont++;
+	spin_unlock(&kres->containers.lock);
+}
+
+struct container *container_find(struct kernel_resources *kres, l4id_t cid)
+{
+	struct container *c;
+
+	spin_lock(&kres->containers.lock);
+	list_foreach_struct(c, &kres->containers.list, list) {
+		if (c->cid == cid) {
+			spin_unlock(&kres->containers.lock);
+			return c;
+		}
+	}
+	spin_unlock(&kres->containers.lock);
+	return 0;
 }
 
 /*
@@ -86,8 +103,11 @@ int init_pager(struct pager *pager,
 	 */
 	cap_list_move(&current->cap_list, &pager->cap_list);
 
+	/* Setup dummy container pointer so that curcont works */
+	current->container = cont;
+
 	/* New ktcb allocation is needed */
-	task = tcb_alloc_init();
+	task = tcb_alloc_init(cont->cid);
 
 	/* If first, manually allocate/initalize space */
 	if (first) {
@@ -117,11 +137,7 @@ int init_pager(struct pager *pager,
 	task->tgid = task->tid;
 	task->container = cont;
 
-	/*
-	 * Setup dummy container pointer so that curcont works,
-	 * and add the address space to container space list
-	 */
-	current->container = cont;
+	/* Add the address space to container space list */
 	address_space_add(task->space);
 
 	/* Initialize uninitialized capability fields while on dummy */

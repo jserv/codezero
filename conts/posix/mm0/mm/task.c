@@ -446,7 +446,7 @@ int task_copy_args_to_user(char *user_stack,
 {
 	char **argv_start, **envp_start;
 
-	BUG_ON((unsigned long)user_stack & 7);
+	BUG_ON(!is_aligned(user_stack, 8));
 
 	/* Copy argc */
 	*((int *)user_stack) = args->argc;
@@ -508,12 +508,18 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 		   struct tcb *task, struct args_struct *args,
 		   struct args_struct *env)
 {
-	/* First set up task's stack markers */
-	unsigned long stack_used = align_up(args->size + env->size + 8, 8);
+	unsigned long stack_used;
 	unsigned long arg_pages = __pfn(page_align_up(stack_used));
 	char *args_on_stack;
 	void *mapped;
 
+	/*
+	 * Stack contains: args, environment, argc integer,
+	 * 2 Null integers as terminators.
+	 *
+	 * It needs to be 8-byte aligned also.
+	 */
+	stack_used = align_up(args->size + env->size + sizeof(int) * 3 + 8, 8);
 	task->stack_end = __pfn_to_addr(cont_mem_regions.task->end);
 	task->stack_start = __pfn_to_addr(cont_mem_regions.task->end) - DEFAULT_STACK_SIZE;
 	task->args_end = task->stack_end;

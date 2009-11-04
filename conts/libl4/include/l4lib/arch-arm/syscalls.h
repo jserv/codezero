@@ -19,7 +19,6 @@ struct task_ids {
 	l4id_t tid;
 	l4id_t spid;
 	l4id_t tgid;
-	l4id_t cid;
 };
 
 static inline void *

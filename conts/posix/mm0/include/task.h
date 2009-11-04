@@ -96,9 +96,9 @@ struct tcb {
 	char name[16];
 
 	/* Task ids */
-	int tid;
-	int spid;
-	int tgid;
+	l4id_t tid;
+	l4id_t spid;
+	l4id_t tgid;
 
 	/* Related task ids */
 	unsigned int pagerid;		/* Task's pager */

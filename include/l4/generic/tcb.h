@@ -41,6 +41,12 @@ enum task_state {
 
 #define TASK_CID_MASK			0xFF000000
 #define TASK_ID_MASK			0x00FFFFFF
+#define TASK_CID_SHIFT			24
+
+static inline l4id_t tid_to_cid(l4id_t tid)
+{
+	return (tid & TASK_CID_MASK) >> TASK_CID_SHIFT;
+}
 
 static inline int task_id_special(l4id_t id)
 {
@@ -53,7 +59,6 @@ struct task_ids {
 	l4id_t tid;
 	l4id_t spid;
 	l4id_t tgid;
-	l4id_t cid;
 };
 
 struct container;
@@ -166,7 +171,7 @@ void tcb_add(struct ktcb *tcb);
 void tcb_remove(struct ktcb *tcb);
 
 void tcb_init(struct ktcb *tcb);
-struct ktcb *tcb_alloc_init(void);
+struct ktcb *tcb_alloc_init(l4id_t cid);
 void tcb_delete(struct ktcb *tcb);
 
 
