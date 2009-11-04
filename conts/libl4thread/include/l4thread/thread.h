@@ -6,6 +6,8 @@
 #ifndef __LIB_THREAD_H__
 #define __LIB_THREAD_H__
 
+#include "utcb.h"
+
 #define STACK_TOP_ADDR(stack)	((unsigned long)(stack))
 #define STACK_BOTTOM_ADDR(stack) \
 			((unsigned long)((stack) + (sizeof(stack))))

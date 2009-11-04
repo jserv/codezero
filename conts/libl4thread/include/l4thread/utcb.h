@@ -3,23 +3,39 @@
  *
  * Copyright (C) 2009 B Labs Ltd.
  */
-#ifndef __UTCB_H__
-#define __UTCB_H__
+#ifndef __LIB_UTCB_H__
+#define __LIB_UTCB_H__
 
-#include <l4/lib/list.h>
+#include "utcb-common.h"
 
-struct utcb_desc {
-	struct link list;
-	unsigned long utcb_base;
-	struct id_pool *slots;
+#define UTCB_START_ADDR(utcb)	((unsigned long)(utcb))
+#define UTCB_END_ADDR(utcb) \
+			((unsigned long)((utcb) + (sizeof(utcb))))
+
+int set_utcb_params(unsigned long utcb_start_addr,
+			unsigned long utcb_end_addr);
+
+//#define MAPPING_ENABLE
+
+#if defined(MAPPING_ENABLE)
+
+#define IS_UTCB_SETUP()		(utcb_table_ptr)
+
+struct utcb_entry *utcb_table_ptr;
+
+struct utcb_entry {
+	struct utcb_desc *udesc;
+	unsigned long utcb_phys_base;
 };
 
-int utcb_pool_init(unsigned long utcb_start, unsigned long utcb_end);
+unsigned long get_utcb_addr(struct task_ids *parent_id, struct task_ids *child_id);
+#else /* !MAPPING_ENABLE */
 
-unsigned long utcb_new_slot(struct utcb_desc *desc);
-int utcb_delete_slot(struct utcb_desc *desc, unsigned long address);
+#define IS_UTCB_SETUP()		(udesc_ptr)
 
-struct utcb_desc *utcb_new_desc(void);
-int utcb_delete_desc(struct utcb_desc *desc);
+struct utcb_desc *udesc_ptr;
 
-#endif /* __UTCB_H__ */
+unsigned long get_utcb_addr(void);
+#endif /* MAPPING_ENABLE */
+
+#endif /* __LIB_UTCB_H__ */

@@ -22,9 +22,11 @@ int address_pool_init_with_idpool(struct address_pool *pool,
 	return 0;
 }
 
-int address_pool_init(struct address_pool *pool, unsigned long start, unsigned long end)
+int address_pool_init(struct address_pool *pool,
+			unsigned long start, unsigned long end,
+			int size)
 {
-	if ((pool->idpool = id_pool_new_init(__pfn(end - start))) < 0)
+	if ((pool->idpool = id_pool_new_init((end - start) / size)) < 0)
 		return (int)pool->idpool;
 	pool->start = start;
 	pool->end = end;
