@@ -89,9 +89,13 @@ void cap_print(struct capability *cap)
 	case CAP_TYPE_EXREGS:
 		printf("Capability type:\t\t%s\n", "Exchange Registers");
 		break;
-	case CAP_TYPE_MAP:
-		printf("Capability type:\t\t%s\n", "Map");
+	case CAP_TYPE_MAP_PHYSMEM:
+		printf("Capability type:\t\t%s\n", "Map/Physmem");
 		break;
+	case CAP_TYPE_MAP_VIRTMEM:
+		printf("Capability type:\t\t%s\n", "Map/Virtmem");
+		break;
+
 	case CAP_TYPE_IPC:
 		printf("Capability type:\t\t%s\n", "Ipc");
 		break;
@@ -118,12 +122,6 @@ void cap_print(struct capability *cap)
 		break;
 	case CAP_RTYPE_CONTAINER:
 		printf("Capability resource type:\t%s\n", "Container");
-		break;
-	case CAP_RTYPE_VIRTMEM:
-		printf("Capability resource type:\t%s\n", "Virtual Memory");
-		break;
-	case CAP_RTYPE_PHYSMEM:
-		printf("Capability resource type:\t%s\n", "Physical Memory");
 		break;
 	case CAP_RTYPE_THREADPOOL:
 		printf("Capability resource type:\t%s\n", "Thread Pool");

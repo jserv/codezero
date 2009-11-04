@@ -12,7 +12,7 @@ typedef signed short s16;
 typedef signed char s8;
 
 /* Thread/Space id type */
-typedef int l4id_t;
+typedef unsigned int l4id_t;
 
 #endif /* !__ASSEMBLY__ */
 #endif /* !__ARCH_TYPES_H__ */

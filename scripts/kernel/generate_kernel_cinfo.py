@@ -76,7 +76,7 @@ pager_end = \
 cap_virtmem = \
 '''
 \t\t\t[%(capidx)d] = {
-\t\t\t\t.type = CAP_TYPE_MAP | CAP_RTYPE_VIRTMEM,
+\t\t\t\t.type = CAP_TYPE_MAP_VIRTMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC
 \t\t\t\t\t| CAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
 \t\t\t\t.start = __pfn(CONFIG_CONT%(cn)d_VIRT%(vn)d_START),
@@ -88,7 +88,7 @@ cap_virtmem = \
 cap_physmem = \
 '''
 \t\t\t[%(capidx)d] = {
-\t\t\t\t.type = CAP_TYPE_MAP | CAP_RTYPE_PHYSMEM,
+\t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
 \t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
 \t\t\t\t.start = __pfn(CONFIG_CONT%(cn)d_PHYS%(pn)d_START),

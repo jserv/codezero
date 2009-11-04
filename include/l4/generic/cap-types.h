@@ -12,12 +12,13 @@
 #define CAP_TYPE_MASK		0x0000FFFF
 #define CAP_TYPE_TCTRL		(1 << 0)
 #define CAP_TYPE_EXREGS		(1 << 1)
-#define CAP_TYPE_MAP		(1 << 2)
-#define CAP_TYPE_IPC		(1 << 3)
-#define CAP_TYPE_SCHED		(1 << 4)
-#define CAP_TYPE_UMUTEX		(1 << 5)
-#define CAP_TYPE_QUANTITY	(1 << 6)
-#define CAP_TYPE_CAP		(1 << 7)
+#define CAP_TYPE_MAP_PHYSMEM	(1 << 2)
+#define CAP_TYPE_MAP_VIRTMEM	(1 << 3)
+#define CAP_TYPE_IPC		(1 << 4)
+#define CAP_TYPE_SCHED		(1 << 5)
+#define CAP_TYPE_UMUTEX		(1 << 6)
+#define CAP_TYPE_QUANTITY	(1 << 7)
+#define CAP_TYPE_CAP		(1 << 8)
 #define cap_type(c)	((c)->type & CAP_TYPE_MASK)
 
 /*
@@ -29,14 +30,12 @@
 #define CAP_RTYPE_SPACE		(1 << 18)
 #define CAP_RTYPE_CONTAINER	(1 << 19)
 #define CAP_RTYPE_PGGROUP	(1 << 20) /* Group of paged threads */
-#define CAP_RTYPE_VIRTMEM	(1 << 21)
-#define CAP_RTYPE_PHYSMEM	(1 << 22)
-#define CAP_RTYPE_CPUPOOL	(1 << 23)
-#define CAP_RTYPE_THREADPOOL	(1 << 24)
-#define CAP_RTYPE_SPACEPOOL	(1 << 25)
-#define CAP_RTYPE_MUTEXPOOL	(1 << 26)
-#define CAP_RTYPE_MAPPOOL	(1 << 27) /* For pmd spending */
-#define CAP_RTYPE_CAPPOOL	(1 << 28) /* For new cap generation */
+#define CAP_RTYPE_CPUPOOL	(1 << 21)
+#define CAP_RTYPE_THREADPOOL	(1 << 22)
+#define CAP_RTYPE_SPACEPOOL	(1 << 23)
+#define CAP_RTYPE_MUTEXPOOL	(1 << 24)
+#define CAP_RTYPE_MAPPOOL	(1 << 25) /* For pmd spending */
+#define CAP_RTYPE_CAPPOOL	(1 << 26) /* For new cap generation */
 
 #define cap_rtype(c)	((c)->type & CAP_RTYPE_MASK)
 

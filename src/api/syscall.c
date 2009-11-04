@@ -48,6 +48,7 @@ int sys_getid(struct task_ids *ids)
 	ids->tid = this->tid;
 	ids->spid = this->space->spid;
 	ids->tgid = this->tgid;
+	ids->cid = this->container->cid;
 
 	return 0;
 }

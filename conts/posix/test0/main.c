@@ -26,7 +26,7 @@ void wait_pager(l4id_t partner)
 }
 
 pid_t parent_of_all;
-pid_t pagerid;
+l4id_t pagerid;
 
 int main(int argc, char *argv[])
 {

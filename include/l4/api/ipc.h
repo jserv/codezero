@@ -2,8 +2,8 @@
 #define __IPC_H__
 
 
-#define L4_NILTHREAD		-1
-#define L4_ANYTHREAD		-2
+#define L4_NILTHREAD		0xFFFFFFFF
+#define L4_ANYTHREAD		0xFFFFFFFE
 
 #define L4_IPC_TAG_MR_OFFSET		0
 

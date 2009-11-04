@@ -226,13 +226,11 @@ int read_pager_capabilities()
 	/* Set up pointers to important capabilities */
 	list_foreach_struct(cap, &capability_list.caps, list) {
 		/* Physical memory bank */
-		if ((cap->type & CAP_RTYPE_MASK)
-		    == CAP_RTYPE_PHYSMEM)
+		if (cap_type(cap) == CAP_TYPE_MAP_PHYSMEM)
 			cont_mem_regions.physmem = cap;
 
 		/* Virtual regions */
-		if ((cap->type & CAP_RTYPE_MASK)
-		    == CAP_RTYPE_VIRTMEM) {
+		if (cap_type(cap) == CAP_TYPE_MAP_VIRTMEM) {
 
 			/* Pager address region (get from linker-defined) */
 			if (__pfn_to_addr(cap->start)

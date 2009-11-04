@@ -746,7 +746,7 @@ int process_cap_info(struct cap_info *cap,
 {
 	int ret = 0;
 
-	switch (cap->type & CAP_RTYPE_MASK) {
+	switch (cap_rtype(cap)) {
 	case CAP_RTYPE_THREADPOOL:
 		bootres->nthreads += cap->size;
 		break;
@@ -768,8 +768,10 @@ int process_cap_info(struct cap_info *cap,
 		/* Specifies how many new caps can be created */
 		bootres->ncaps += cap->size;
 		break;
+	}
 
-	case CAP_RTYPE_VIRTMEM:
+	switch (cap_type(cap)) {
+	case CAP_TYPE_MAP_VIRTMEM:
 		if ((ret = memcap_unmap(&kres->virtmem_free,
 			     		cap->start, cap->end))) {
 			if (ret < 0)
@@ -787,7 +789,7 @@ int process_cap_info(struct cap_info *cap,
 		}
 		break;
 
-	case CAP_RTYPE_PHYSMEM:
+	case CAP_TYPE_MAP_PHYSMEM:
 		if ((ret = memcap_unmap(&kres->physmem_free,
 					cap->start, cap->end))) {
 			if (ret < 0)
@@ -804,8 +806,8 @@ int process_cap_info(struct cap_info *cap,
 			BUG();
 		}
 		break;
-	}
 
+	}
 	return ret;
 }
 

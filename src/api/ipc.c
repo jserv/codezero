@@ -539,11 +539,14 @@ int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 	int ret = 0;
 
 	/* Check arguments */
-	if (from < L4_ANYTHREAD) {
+	if (task_id_special(from) &&
+	    from != L4_ANYTHREAD && from != L4_NILTHREAD) {
 		ret = -EINVAL;
 		goto error;
 	}
-	if (to < L4_ANYTHREAD) {
+
+	if (task_id_special(to) &&
+	    to != L4_ANYTHREAD && to != L4_NILTHREAD) {
 		ret = -EINVAL;
 		goto error;
 	}
