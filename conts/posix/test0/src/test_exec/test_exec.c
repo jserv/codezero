@@ -24,7 +24,7 @@ void wait_pager(l4id_t partner)
 	// printf("Pager synced with us.\n");
 }
 
-pid_t pagerid;
+l4id_t pagerid;
 
 int main(int argc, char *argv[])
 {

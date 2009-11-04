@@ -16,9 +16,10 @@
 #include <l4/api/thread.h>
 
 struct task_ids {
-	int tid;
-	int spid;
-	int tgid;
+	l4id_t tid;
+	l4id_t spid;
+	l4id_t tgid;
+	l4id_t cid;
 };
 
 static inline void *

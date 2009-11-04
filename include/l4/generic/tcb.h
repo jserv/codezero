@@ -39,11 +39,21 @@ enum task_state {
 	TASK_DEAD	= 3,
 };
 
-#define TASK_ID_INVALID			-1
+#define TASK_CID_MASK			0xFF000000
+#define TASK_ID_MASK			0x00FFFFFF
+
+static inline int task_id_special(l4id_t id)
+{
+	/* Special ids have top 2 nibbles all set */
+	return (id & TASK_CID_MASK) == TASK_CID_MASK;
+}
+
+#define TASK_ID_INVALID			0xFFFFFFFF
 struct task_ids {
 	l4id_t tid;
 	l4id_t spid;
 	l4id_t tgid;
+	l4id_t cid;
 };
 
 struct container;

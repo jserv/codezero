@@ -66,12 +66,12 @@ int main(void)
 	printf("%s: Container %s started\n",
 	       __CONTAINER__, __CONTAINER_NAME__);
 
-	//capability_test();
+	capability_test();
 
-	exit_test();
+	//exit_test();
 
 	/* Now quit to demo self-paging quit */
-	l4_exit(0);
+	//l4_exit(0);
 
 	/* Now quit by null pointer */
 	//	*((int *)0) = 5;
