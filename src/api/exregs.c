@@ -13,7 +13,7 @@
 #include <l4/api/exregs.h>
 
 /* Copy each register to task's context if its valid bit is set */
-void do_exchange_registers(struct ktcb *task, struct exregs_data *exregs)
+void exregs_write_registers(struct ktcb *task, struct exregs_data *exregs)
 {
 	task_context_t *context = &task->context;
 
@@ -76,6 +76,57 @@ flags:
 		if (task == current)
 			task_update_utcb(task);
 	}
+}
+
+void exregs_read_registers(struct ktcb *task, struct exregs_data *exregs)
+{
+	task_context_t *context = &task->context;
+
+	if (!exregs->valid_vect)
+		goto flags;
+
+	/* Check register valid bit and copy registers */
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r0))
+		exregs->context.r0 = context->r0;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r1))
+		exregs->context.r1 = context->r1;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r2))
+		exregs->context.r2 = context->r2;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r3))
+		exregs->context.r3 = context->r3;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r4))
+		exregs->context.r4 = context->r4;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r5))
+		exregs->context.r5 = context->r5;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r6))
+		exregs->context.r6 = context->r6;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r7))
+		exregs->context.r7 = context->r7;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r8))
+		exregs->context.r8 = context->r8;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r9))
+		exregs->context.r9 = context->r9;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r10))
+		exregs->context.r10 = context->r10;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r11))
+		exregs->context.r11 = context->r11;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, r12))
+		exregs->context.r12 = context->r12;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, sp))
+		exregs->context.sp = context->sp;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, lr))
+		exregs->context.lr = context->lr;
+	if (exregs->valid_vect & FIELD_TO_BIT(exregs_context_t, pc))
+		exregs->context.pc = context->pc;
+
+flags:
+	/* Read thread's pager if pager flag supplied */
+	if (exregs->flags & EXREGS_SET_PAGER)
+		exregs->pagerid = task->pagerid;
+
+	/* Read thread's utcb if utcb flag supplied */
+	if (exregs->flags & EXREGS_SET_UTCB)
+		exregs->utcb_address = task->utcb_address;
 }
 
 /*
@@ -141,7 +192,10 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 		return -ENOCAP;
 
 	/* Copy registers */
-	do_exchange_registers(task, exregs);
+	if (exregs->flags & EXREGS_READ)
+		exregs_read_registers(task, exregs);
+	else
+		exregs_write_registers(task, exregs);
 
 out:
 	/* Unlock and return */

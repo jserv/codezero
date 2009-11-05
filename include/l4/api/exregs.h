@@ -13,6 +13,8 @@
 
 #define EXREGS_SET_PAGER		1
 #define	EXREGS_SET_UTCB			2
+#define EXREGS_READ			4
+
 #define EXREGS_VALID_REGULAR_REGS 			\
 	(FIELD_TO_BIT(exregs_context_t, r0) |		\
 	 FIELD_TO_BIT(exregs_context_t, r1) |		\
