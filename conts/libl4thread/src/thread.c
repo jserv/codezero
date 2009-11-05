@@ -8,6 +8,7 @@
 #include <l4lib/exregs.h>
 #include <l4/api/thread.h>
 #include <l4/api/errno.h>
+#include <utcb.h>
 
 /* Symbolic constants and macros */
 #define STACK_PTR(addr)		align((addr - 1), 8)
@@ -26,11 +27,18 @@ int set_stack_params(unsigned long stack_top_addr,
 			unsigned long stack_bottom_addr,
 			unsigned long stack_size)
 {
+	/* Ensure that arguments are valid. */
 	if (IS_STACK_SETUP()) {
 		printf("libl4thread: You have already called: %s. Simply, "
 			"this will have no effect!\n", __FUNCTION__);
 		return -EPERM;
 	}
+	if (!stack_top_addr || !stack_bottom_addr) {
+		printf("libl4thread: stack address range cannot contain "
+			"0x00000000 as a start and/or end address(es)!\n");
+		return -EINVAL;
+	}
+	// FIXME: Aligning should be taken into account.
         /*
 	 * Stack grows downward so the top of the stack will have
 	 * the lowest numbered address.
@@ -44,12 +52,15 @@ int set_stack_params(unsigned long stack_top_addr,
 		printf("libl4thread: Stack size cannot be zero!\n");
 		return -EINVAL;
 	}
-	/* stack_size at least must be equal to the difference */
+	/* stack_size at least must be equal to the difference. */
 	if ((stack_bottom_addr - stack_top_addr) < stack_size) {
 		printf("libl4thread: the given range size is lesser than "
-			"the stack size!\n");
+			"the stack size(0x%x)!\n", stack_size);
 		return -EINVAL;
 	}
+	/* Arguments passed the validity tests. */
+
+	/* Initialize internal variables */
 	lib_stack_bot_addr = stack_bottom_addr;
 	lib_stack_top_addr = stack_top_addr;
 	lib_stack_size = stack_size;
@@ -61,13 +72,15 @@ int thread_create(struct task_ids *ids, unsigned int flags,
 			int (*func)(void *), void *arg)
 {
 	struct exregs_data exregs;
+	unsigned long utcb_addr;
 	int err;
 
 	/* A few controls before granting access to thread creation */
-	if (!IS_STACK_SETUP()) {
-		printf("libl4thread: Stack has not been set up. Before "
-			"calling thread_create, set_stack_params "
-			"has to be called!\n");
+	if (!IS_STACK_SETUP() || !IS_UTCB_SETUP()) {
+		printf("libl4thread: Stack and/or utcb have not been set up. "
+			"Before calling thread_create, set_stack_params "
+			"and/or set_utcb_params have to be called with valid "
+			"arguments!\n");
 		return -EPERM;
 	}
 
@@ -85,6 +98,12 @@ int thread_create(struct task_ids *ids, unsigned int flags,
 		return -EINVAL;
 	}
 
+	/* Get a utcb addr for this thread */
+	if (!(utcb_addr = get_utcb_addr())) {
+		printf("libl4thread: No utcb address left!\n");
+		return -ENOMEM;
+	}
+
 	/* Get parent's ids */
 	l4_getid(ids);
 
@@ -99,6 +118,7 @@ int thread_create(struct task_ids *ids, unsigned int flags,
 	memset(&exregs, 0, sizeof(exregs));
 	exregs_set_stack(&exregs, STACK_PTR(lib_stack_bot_addr));
 	exregs_set_pc(&exregs, (unsigned long)setup_new_thread);
+	exregs_set_utcb(&exregs, (unsigned long)utcb_addr);
 
 	if ((err = l4_exchange_registers(&exregs, ids->tid)) < 0) {
 		printf("libl4thread: l4_exchange_registers failed with "
