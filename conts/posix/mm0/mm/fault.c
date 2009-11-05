@@ -850,19 +850,19 @@ int do_page_fault(struct fault_data *fault)
 	if (vma_flags & VM_NONE) {
 		printf("Illegal access, tid: %d, address: 0x%x, PC @ 0x%x,\n",
 		       fault->task->tid, fault->address, fault->kdata->faulty_pc);
-		BUG();
+		fault_handle_error(fault);
 	}
 
 	/* The access reason is not included in the vma's listed flags */
 	if (!(reason & vma_flags)) {
 		printf("Illegal access, tid: %d, address: 0x%x, PC @ 0x%x\n",
 		       fault->task->tid, fault->address, fault->kdata->faulty_pc);
-		BUG();
+		fault_handle_error(fault);
 	}
 
 	if ((reason & VM_EXEC) && (vma_flags & VM_EXEC)) {
 		printf("Exec faults unsupported yet.\n");
-		BUG();	/* Can't handle this yet. */
+		fault_handle_error(fault);
 	}
 
 	/* Handle legitimate faults */

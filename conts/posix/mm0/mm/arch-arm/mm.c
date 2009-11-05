@@ -4,6 +4,7 @@
 #include <arch/mm.h>
 #include <task.h>
 #include <vm_area.h>
+#include <l4lib/exregs.h>
 
 /* Extracts generic protection flags from architecture-specific pte */
 unsigned int vm_prot_flags(pte_t pte)
@@ -37,6 +38,17 @@ void arch_print_fault_params(struct fault_data *fault)
 void arch_print_fault_params(struct fault_data *fault) { }
 #endif
 
+
+void fault_handle_error(struct fault_data *fault)
+{
+	struct task_ids ids;
+
+	/* Suspend the task */
+	ids.tid = fault->task->tid;
+	BUG_ON(l4_thread_control(THREAD_SUSPEND, &ids) < 0);
+
+	BUG();
+}
 
 /*
  * PTE STATES:

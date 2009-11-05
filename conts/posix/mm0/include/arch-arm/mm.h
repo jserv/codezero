@@ -9,5 +9,6 @@
 struct fault_data;
 unsigned int vm_prot_flags(pte_t pte);
 void set_generic_fault_params(struct fault_data *fault);
+void fault_handle_error(struct fault_data *fault);
 
 #endif /* __INITTASK_ARCH_MM_H__ */
