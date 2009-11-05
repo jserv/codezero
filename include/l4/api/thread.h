@@ -8,6 +8,7 @@
 #define THREAD_DESTROY		0x30000000
 #define THREAD_RECYCLE		0x40000000
 #define THREAD_WAIT		0x50000000
+#define THREAD_RESUME		THREAD_RUN
 
 #define THREAD_CREATE_MASK	0x0FF00000
 #define TC_SHARE_CAPS		0x00100000 /* Share all thread capabilities */

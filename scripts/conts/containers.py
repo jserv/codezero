@@ -55,7 +55,7 @@ def source_to_builddir(srcdir, id):
     return join(BUILDDIR, cont_builddir)
 
 # We simply use SCons to figure all this out from container.id
-# This is very similar to default container builder:
+# This is very similar to examples container builder:
 # In fact this notion may become a standard convention for
 # calling specific bare containers
 def build_posix_container(config, projpaths, container):
@@ -110,7 +110,7 @@ def build_default_container(config, projpaths, container):
     os.path.walk(projdir, glob_by_walk, ['*.elf', images])
 
     # Calculate and store size of pager
-    pager_binary = "conts/bare" + str(container.id) + "/main.elf"
+    pager_binary = "conts/" + container.name + "/main.elf"
     config.containers[container.id].pager_size = \
             conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
 
@@ -124,7 +124,7 @@ def build_all_containers():
         if container.type == 'linux':
             pass
             cont_images.append(build_linux_container(config, projpaths, container))
-        elif container.type == 'bare':
+        elif container.type == 'examples':
             cont_images.append(build_default_container(config, projpaths, container))
         elif container.type == 'posix':
             cont_images.append(build_posix_container(config, projpaths, container))
