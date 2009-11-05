@@ -614,7 +614,7 @@ int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task
 	 * map those as anonymous zero pages
 	 */
 	if (task->bss_end > bss_mmap_start) {
-		if (IS_ERR(mapped = do_mmap(0, 0, task, task->bss_start,
+		if (IS_ERR(mapped = do_mmap(0, 0, task, bss_mmap_start,
 					    VM_READ | VM_WRITE |
 					    VMA_PRIVATE | VMA_ANONYMOUS,
 					    __pfn(page_align_up(task->bss_end) -
