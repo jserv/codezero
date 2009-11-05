@@ -17,6 +17,7 @@ int vma_split(struct vm_area *vma, struct tcb *task,
 {
 	struct vm_area *new;
 	unsigned long unmap_start = pfn_start, unmap_end = pfn_end;
+	int err;
 
 	/* Allocate an uninitialised vma first */
 	if (!(new = vma_new(0, 0, 0, 0)))
@@ -46,8 +47,8 @@ int vma_split(struct vm_area *vma, struct tcb *task,
 	list_insert_tail(&new->list, &vma->list);
 
 	/* Unmap the removed portion */
-	BUG_ON(l4_unmap((void *)__pfn_to_addr(unmap_start),
-	       unmap_end - unmap_start, task->tid) < 0);
+	BUG_ON((err = l4_unmap((void *)__pfn_to_addr(unmap_start),
+	       unmap_end - unmap_start, task->tid)) < 0);
 
 	return 0;
 }
