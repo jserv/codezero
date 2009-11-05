@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	char *parent_of_all;
 	char pidbuf[10];
 
-	printf("New task started: %d\n", __raw_tid(getpid()));
+	//	printf("New task started: %d\n", __raw_tid(getpid()));
 
 	/* Convert current pid to string */
 	sprintf(pidbuf, "%d", getpid());
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	printf("New task continues: %d\n", __raw_tid(getpid()));
+	// printf("New task continues: %d\n", __raw_tid(getpid()));
 
 	/* Get parent of all pid as a string from environment */
 	parent_of_all = getenv("parent_of_all");

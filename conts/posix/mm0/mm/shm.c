@@ -383,7 +383,7 @@ int shpage_map_to_task(struct tcb *owner, struct tcb *mapper, unsigned int flags
 	/* Prefault the owner's shared page to mapper's address space */
 	if (flags & SHPAGE_PREFAULT)
 		for (int i = 0; i < __pfn(DEFAULT_SHPAGE_SIZE); i++)
-			prefault_page(mapper, (unsigned long)owner->shared_page +
+			task_prefault_page(mapper, (unsigned long)owner->shared_page +
 				      __pfn_to_addr(i), VM_READ | VM_WRITE);
 	return 0;
 }

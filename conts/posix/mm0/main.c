@@ -78,10 +78,16 @@ void handle_requests(void)
 		/* This has no receive phase */
 		return;
 
-	case L4_IPC_TAG_PFAULT:
+	case L4_IPC_TAG_PFAULT: {
+		struct page *p;
+
 		/* Handle page fault. */
-		ret = page_fault_handler(sender, (fault_kdata_t *)&mr[0]);
+		if (IS_ERR(p = page_fault_handler(sender, (fault_kdata_t *)&mr[0])))
+			ret = (int)p;
+		else
+			ret = 0;
 		break;
+	}
 
 	case L4_IPC_TAG_SHMGET: {
 		ret = sys_shmget((key_t)mr[0], (int)mr[1], (int)mr[2]);

@@ -504,14 +504,14 @@ int task_copy_args_to_user(char *user_stack,
 	return 0;
 }
 
-int prefault_range(struct tcb *task, unsigned long start,
-		   unsigned long size, unsigned int vm_flags)
+int task_prefault_range(struct tcb *task, unsigned long start,
+			unsigned long size, unsigned int vm_flags)
 {
-	int err;
+	struct page *p;
 
 	for (unsigned long i = start;  i < start + size; i += PAGE_SIZE)
-		if ((err = prefault_page(task, i, vm_flags)) < 0)
-			return err;
+		if (IS_ERR(p = task_prefault_page(task, i, vm_flags)))
+			return (int)p;
 	return 0;
 }
 
@@ -553,9 +553,8 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 		return (int)mapped;
 	}
 
-	/* Prefault the stack for writing. */
-	BUG_ON(prefault_range(task, task->args_start,
-			      stack_used, VM_READ | VM_WRITE) < 0);
+	/* FIXME: Probably not necessary anymore. Prefault the stack for writing. */
+	//BUG_ON(task_prefault_range(task, task->args_start, stack_used, VM_READ | VM_WRITE) < 0);
 
 	/* Map the stack's part that will contain args and environment */
 	if (IS_ERR(args_on_stack =
@@ -597,12 +596,9 @@ int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task
 		struct page *last_data_page;
 		void *pagebuf, *bss;
 
-		/* Prefault the last data page */
-		BUG_ON(prefault_page(task, task->data_end,
-				     VM_READ | VM_WRITE) < 0);
 		/* Get the page */
-		last_data_page = task_virt_to_page(task, task->data_end,
-						   VM_READ | VM_WRITE);
+		last_data_page = task_prefault_page(task, task->data_end,
+						    VM_READ | VM_WRITE);
 
 		/* Map the page. FIXME: PAGE COLOR!!! */
 		pagebuf = l4_map_helper((void *)page_to_phys(last_data_page), 1);
@@ -759,26 +755,3 @@ int task_start(struct tcb *task)
 
 	return 0;
 }
-
-/*
- * Prefaults all mapped regions of a task. The reason we have this is
- * some servers are in the page fault handling path (e.g. fs0), and we
- * don't want them to fault and cause deadlocks and circular deps.
- *
- * Normally fs0 faults dont cause dependencies because its faults
- * are handled by the boot pager, which is part of mm0. BUT: It may
- * cause deadlocks because fs0 may fault while serving a request
- * from mm0.(Which is expected to also handle the fault).
- */
-int task_prefault_regions(struct tcb *task, struct vm_file *f)
-{
-	struct vm_area *vma;
-
-	list_foreach_struct(vma, &task->vm_area_head->list, list) {
-		for (int pfn = vma->pfn_start; pfn < vma->pfn_end; pfn++)
-			BUG_ON(prefault_page(task, __pfn_to_addr(pfn),
-					     VM_READ | VM_WRITE) < 0);
-	}
-	return 0;
-}
-

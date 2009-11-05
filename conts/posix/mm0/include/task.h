@@ -149,7 +149,6 @@ struct tcb_head {
 struct tcb *find_task(int tid);
 void global_add_task(struct tcb *task);
 void global_remove_task(struct tcb *task);
-void task_map_prefault_utcb(struct tcb *mapper, struct tcb *owner);
 int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd,
 			struct args_struct *args, struct args_struct *env);
 int task_setup_registers(struct tcb *task, unsigned int pc,
@@ -159,13 +158,11 @@ int tcb_destroy(struct tcb *task);
 int task_start(struct tcb *task);
 int copy_tcb(struct tcb *to, struct tcb *from, unsigned int flags);
 int task_release_vmas(struct task_vma_head *vma_head);
-int task_prefault_regions(struct tcb *task, struct vm_file *f);
 struct tcb *task_create(struct tcb *orig,
 			struct task_ids *ids,
 			unsigned int ctrl_flags,
 			unsigned int alloc_flags);
-
-int prefault_range(struct tcb *task, unsigned long start,
-		   unsigned long end, unsigned int vm_flags);
+int task_prefault_range(struct tcb *task, unsigned long start,
+			unsigned long end, unsigned int vm_flags);
 
 #endif /* __TASK_H__ */

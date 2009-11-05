@@ -227,18 +227,12 @@ void vm_print_objects(struct link *vmo_list);
 void vm_print_files(struct link *file_list);
 
 /* Used for pre-faulting a page from mm0 */
-int prefault_page(struct tcb *task, unsigned long address,
-		  unsigned int vmflags);
+struct page *task_prefault_page(struct tcb *task, unsigned long address,
+				unsigned int vmflags);
 struct page *page_init(struct page *page);
 struct page *find_page(struct vm_object *vmo, unsigned long page_offset);
 void *pager_map_page(struct vm_file *f, unsigned long page_offset);
 void pager_unmap_page(void *vaddr);
-
-/* To get currently mapped page of a virtual address on a task */
-struct page *task_virt_to_page(struct tcb *t, unsigned long virtual,
-			       unsigned int vm_flags);
-int validate_task_range(struct tcb *t, unsigned long start,
-			unsigned long end, unsigned int vmflags);
 
 /* Changes all shadows and their ptes to read-only */
 int vm_freeze_shadows(struct tcb *task);
@@ -247,7 +241,7 @@ int vm_compare_prot_flags(unsigned int current, unsigned int needed);
 int task_insert_vma(struct vm_area *vma, struct link *vma_list);
 
 /* Main page fault entry point */
-int page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);
+struct page *page_fault_handler(struct tcb *faulty_task, fault_kdata_t *fkdata);
 
 int vma_copy_links(struct vm_area *new_vma, struct vm_area *vma);
 int vma_drop_merge_delete(struct vm_area *vma, struct vm_obj_link *link);

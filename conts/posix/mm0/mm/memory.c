@@ -179,7 +179,7 @@ void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 
 	/* Map every page contiguously in the allocated virtual address range */
 	for (unsigned long addr = start; addr < end; addr += PAGE_SIZE) {
-		struct page *p = task_virt_to_page(user, addr, vm_flags);
+		struct page *p = task_prefault_page(user, addr, vm_flags);
 
 		if (IS_ERR(p)) {
 			/* Unmap pages mapped so far */
@@ -191,7 +191,7 @@ void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 			return p;
 		}
 
-		l4_map((void *)page_to_phys(task_virt_to_page(user, addr, vm_flags)),
+		l4_map((void *)page_to_phys(p),
 		       virt, 1, MAP_USR_RW_FLAGS, self_tid());
 		virt += PAGE_SIZE;
 	}

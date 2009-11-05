@@ -150,8 +150,7 @@ int pager_setup_task(void)
 	}
 
 	/* Pager must prefault its utcb */
-	prefault_page(task, task->utcb_address,
-		      VM_READ | VM_WRITE);
+	task_prefault_page(task, task->utcb_address, VM_READ | VM_WRITE);
 
 	/* Add the task to the global task list */
 	global_add_task(task);
@@ -557,9 +556,9 @@ void copy_init_process(void)
 	}
 
 	 /* Prefault it */
-	if ((err = prefault_range(self, (unsigned long)mapped,
-				  img_size,
-				  VM_READ | VM_WRITE)) < 0) {
+	if ((err = task_prefault_range(self, (unsigned long)mapped,
+				       img_size, VM_READ | VM_WRITE))
+				       < 0) {
 		printf("FATAL: Prefaulting init image failed.\n");
 		BUG();
 	}
