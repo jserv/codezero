@@ -645,7 +645,7 @@ int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_
 	text_size = __pfn(page_align_up(task->text_end) -
 		    	  page_align(task->text_start));
 	data_size = __pfn(page_align_up(task->data_end) -
-			  page_align(task->text_start));
+			  page_align(task->data_start));
 
 	/* mmap task's text to task's address space. */
 	if (IS_ERR(mapped = do_mmap(file, efd->text_offset, task,
