@@ -11,7 +11,6 @@
 #include <utcb.h>
 
 /* Symbolic constants and macros */
-#define STACK_PTR(addr)		align((addr - 1), 8)
 #define IS_STACK_SETUP()	(lib_stack_size)
 
 /* Extern declarations */
@@ -23,19 +22,19 @@ static unsigned long lib_stack_bot_addr;
 static unsigned long lib_stack_size;
 
 /* Function definitions */
-int set_stack_params(unsigned long stack_top_addr,
-			unsigned long stack_bottom_addr,
+int set_stack_params(unsigned long stack_top,
+			unsigned long stack_bottom,
 			unsigned long stack_size)
 {
 	/* Ensure that arguments are valid. */
 	if (IS_STACK_SETUP()) {
-		printf("libl4thread: You have already called: %s. Simply, "
-			"this will have no effect!\n", __FUNCTION__);
+		printf("libl4thread: You have already called: %s.\n",
+				__FUNCTION__);
 		return -EPERM;
 	}
-	if (!stack_top_addr || !stack_bottom_addr) {
-		printf("libl4thread: stack address range cannot contain "
-			"0x00000000 as a start and/or end address(es)!\n");
+	if (!stack_top || !stack_bottom) {
+		printf("libl4thread: Stack address range cannot contain "
+			"0x0 as a start and/or end address(es).\n");
 		return -EINVAL;
 	}
 	// FIXME: Aligning should be taken into account.
@@ -43,32 +42,32 @@ int set_stack_params(unsigned long stack_top_addr,
 	 * Stack grows downward so the top of the stack will have
 	 * the lowest numbered address.
          */
-	if (stack_top_addr >= stack_bottom_addr) {
+	if (stack_top >= stack_bottom) {
 		printf("libl4thread: Stack bottom address must be bigger "
-			"than stack top address!\n");
+			"than stack top address.\n");
 		return -EINVAL;
 	}
 	if (!stack_size) {
-		printf("libl4thread: Stack size cannot be zero!\n");
+		printf("libl4thread: Stack size cannot be zero.\n");
 		return -EINVAL;
 	}
 	/* stack_size at least must be equal to the difference. */
-	if ((stack_bottom_addr - stack_top_addr) < stack_size) {
-		printf("libl4thread: the given range size is lesser than "
-			"the stack size(0x%x)!\n", stack_size);
+	if ((stack_bottom - stack_top) < stack_size) {
+		printf("libl4thread: The given range size is lesser than "
+			"the stack size(0x%x).\n", stack_size);
 		return -EINVAL;
 	}
 	/* Arguments passed the validity tests. */
 
 	/* Initialize internal variables */
-	lib_stack_bot_addr = stack_bottom_addr;
-	lib_stack_top_addr = stack_top_addr;
+	lib_stack_bot_addr = stack_bottom;
+	lib_stack_top_addr = stack_top;
 	lib_stack_size = stack_size;
 
 	return 0;
 }
 
-int thread_create(struct task_ids *ids, unsigned int flags,
+int l4thread_create(struct task_ids *ids, unsigned int flags,
 			int (*func)(void *), void *arg)
 {
 	struct exregs_data exregs;
@@ -77,30 +76,27 @@ int thread_create(struct task_ids *ids, unsigned int flags,
 
 	/* A few controls before granting access to thread creation */
 	if (!IS_STACK_SETUP() || !IS_UTCB_SETUP()) {
-		printf("libl4thread: Stack and/or utcb have not been set up. "
-			"Before calling thread_create, set_stack_params "
-			"and/or set_utcb_params have to be called with valid "
-			"arguments!\n");
+		printf("libl4thread: Stack and/or utcb have not been "
+				"set up.\n");
 		return -EPERM;
 	}
 
 	/* Is there enough stack space for the new thread? */
 	if (lib_stack_top_addr >= lib_stack_bot_addr) {
-		printf("libl4thread: no stack space left!\n");
+		printf("libl4thread: No stack space left.\n");
 		return -ENOMEM;
 	}
 
 	if (!(TC_SHARE_SPACE & flags)) {
-		printf("libl4thread: SAME address space is supported, which "
-			"means the only way to create a thread is with "
-			"TC_SHARE_SPACE flag. Other means of creating a "
-			"thread have not been supported yet!\n");
+		printf("libl4thread: Only allows shared space thread "
+				"creation.\n");
+
 		return -EINVAL;
 	}
 
 	/* Get a utcb addr for this thread */
 	if (!(utcb_addr = get_utcb_addr())) {
-		printf("libl4thread: No utcb address left!\n");
+		printf("libl4thread: No utcb address left.\n");
 		return -ENOMEM;
 	}
 
@@ -110,27 +106,27 @@ int thread_create(struct task_ids *ids, unsigned int flags,
 	/* Create thread */
 	if ((err = l4_thread_control(THREAD_CREATE | flags, ids)) < 0) {
 		printf("libl4thread: l4_thread_control(THREAD_CREATE) "
-				"failed with (%d)!\n", err);
+				"failed with (%d).\n", err);
 		return err;
 	}
 
 	/* Setup new thread pc, sp, utcb */
 	memset(&exregs, 0, sizeof(exregs));
-	exregs_set_stack(&exregs, STACK_PTR(lib_stack_bot_addr));
+	exregs_set_stack(&exregs, align((lib_stack_bot_addr - 1), 8));
 	exregs_set_pc(&exregs, (unsigned long)setup_new_thread);
 	exregs_set_utcb(&exregs, (unsigned long)utcb_addr);
 
 	if ((err = l4_exchange_registers(&exregs, ids->tid)) < 0) {
 		printf("libl4thread: l4_exchange_registers failed with "
-				"(%d)!\n", err);
+				"(%d).\n", err);
 		return err;
 	}
 
 	/* First word of new stack is arg */
-	((unsigned long *)STACK_PTR(lib_stack_bot_addr))[0] =
+	((unsigned long *)align((lib_stack_bot_addr - 1), 8))[0] =
 					(unsigned long)arg;
 	/* Second word of new stack is function address */
-	((unsigned long *)STACK_PTR(lib_stack_bot_addr))[-1] =
+	((unsigned long *)align((lib_stack_bot_addr - 1), 8))[-1] =
 					(unsigned long)func;
 	/* Update the stack address */
 	lib_stack_bot_addr -= lib_stack_size;
@@ -138,7 +134,7 @@ int thread_create(struct task_ids *ids, unsigned int flags,
 	/* Start the new thread */
 	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
 		printf("libl4thread: l4_thread_control(THREAD_RUN) "
-				"failed with (%d)!\n", err);
+				"failed with (%d).\n", err);
 		return err;
 	}
 
