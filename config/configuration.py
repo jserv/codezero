@@ -10,7 +10,6 @@ class Container:
         self.name = None
         self.type = None
         self.id = id
-	self.example_id = 0
         self.pager_lma = 0
         self.pager_vma = 0
         self.pager_size = 0
@@ -168,9 +167,6 @@ class configuration:
             dirname = val[1:-1].lower()
             self.containers[id].dirname = dirname
             self.containers[id].name = dirname
-        elif param[:len("EXAMPLE_APP")] == "EXAMPLE_APP":
-            param1 = param.split("_", 1)
-            self.containers[id].example_id = param1[1][-1:]
         else:
             param1, param2 = param.split("_", 1)
             if param1 == "TYPE":
@@ -178,10 +174,11 @@ class configuration:
                     self.containers[id].type = "linux"
                 elif param2 == "POSIX":
                     self.containers[id].type = "posix"
-                elif param2 == "EXAMPLES":
-                    self.containers[id].type = "examples"
+                elif param2 == "BARE":
+                    self.containers[id].type = "bare"
                 elif param2 == "TEST":
                     self.containers[id].type = "test"
+
     # Extract parameters for containers
     def get_container_parameters(self, name, val):
         matchobj = re.match(r"(CONFIG_CONT){1}([0-9]){1}(\w+)", name)
