@@ -552,14 +552,16 @@ int copy_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
 
 			if (read)
-				page_copy(task_virt_to_page(task, task_offset),
+				page_copy(task_virt_to_page(task, task_offset,
+							    VM_READ | VM_WRITE),
 					  file_page,
 					  page_offset(task_offset),
 					  page_offset(file_offset),
 					  copysize);
 			else
 				page_copy(file_page,
-					  task_virt_to_page(task, task_offset),
+					  task_virt_to_page(task, task_offset,
+						  	    VM_READ),
 					  page_offset(file_offset),
 					  page_offset(task_offset),
 					  copysize);

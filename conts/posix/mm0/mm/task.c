@@ -504,6 +504,18 @@ int task_copy_args_to_user(char *user_stack,
 	return 0;
 }
 
+int prefault_range(struct tcb *task, unsigned long start,
+		   unsigned long size, unsigned int vm_flags)
+{
+	int err;
+
+	for (unsigned long i = start;  i < start + size; i += PAGE_SIZE)
+		if ((err = prefault_page(task, i, vm_flags)) < 0)
+			return err;
+	return 0;
+}
+
+
 int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 		   struct tcb *task, struct args_struct *args,
 		   struct args_struct *env)
@@ -540,6 +552,10 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 		       (int)mapped);
 		return (int)mapped;
 	}
+
+	/* Prefault the stack for writing. */
+	BUG_ON(prefault_range(task, task->args_start,
+			      stack_used, VM_READ | VM_WRITE) < 0);
 
 	/* Map the stack's part that will contain args and environment */
 	if (IS_ERR(args_on_stack =
@@ -585,7 +601,8 @@ int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task
 		BUG_ON(prefault_page(task, task->data_end,
 				     VM_READ | VM_WRITE) < 0);
 		/* Get the page */
-		last_data_page = task_virt_to_page(task, task->data_end);
+		last_data_page = task_virt_to_page(task, task->data_end,
+						   VM_READ | VM_WRITE);
 
 		/* Map the page. FIXME: PAGE COLOR!!! */
 		pagebuf = l4_map_helper((void *)page_to_phys(last_data_page), 1);
@@ -627,6 +644,7 @@ int task_map_bss(struct vm_file *f, struct exec_file_desc *efd, struct tcb *task
 
 	return 0;
 }
+
 
 int task_mmap_segments(struct tcb *task, struct vm_file *file, struct exec_file_desc *efd,
 		       struct args_struct *args, struct args_struct *env)
@@ -763,14 +781,4 @@ int task_prefault_regions(struct tcb *task, struct vm_file *f)
 	}
 	return 0;
 }
-
-int prefault_range(struct tcb *task, unsigned long start,
-		   unsigned long end, unsigned int vm_flags)
-{
-	for (unsigned long i = start;  i < start + end; i += PAGE_SIZE)
-		prefault_page(task, i, vm_flags);
-
-	return 0;
-}
-
 

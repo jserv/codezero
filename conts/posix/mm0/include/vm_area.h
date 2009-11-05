@@ -25,8 +25,8 @@
 /* Protection flags */
 #define VM_NONE				(1 << 0)
 #define VM_READ				(1 << 1)
-#define VM_WRITE			(1 << 2)
-#define VM_EXEC				(1 << 3)
+#define VM_EXEC				(1 << 2)
+#define VM_WRITE			(1 << 3)
 #define VM_PROT_MASK			(VM_READ | VM_WRITE | VM_EXEC)
 
 /* Shared copy of a file */
@@ -235,13 +235,15 @@ void *pager_map_page(struct vm_file *f, unsigned long page_offset);
 void pager_unmap_page(void *vaddr);
 
 /* To get currently mapped page of a virtual address on a task */
-struct page *task_virt_to_page(struct tcb *t, unsigned long virtual);
+struct page *task_virt_to_page(struct tcb *t, unsigned long virtual,
+			       unsigned int vm_flags);
 int validate_task_range(struct tcb *t, unsigned long start,
 			unsigned long end, unsigned int vmflags);
 
 /* Changes all shadows and their ptes to read-only */
 int vm_freeze_shadows(struct tcb *task);
 
+int vm_compare_prot_flags(unsigned int current, unsigned int needed);
 int task_insert_vma(struct vm_area *vma, struct link *vma_list);
 
 /* Main page fault entry point */

@@ -24,8 +24,8 @@ struct page *page_init(struct page *page)
 	link_init(&page->list);
 
 	return page;
-
 }
+
 struct page *find_page(struct vm_object *obj, unsigned long pfn)
 {
 	struct page *p;

@@ -6,6 +6,7 @@
  */
 #include <l4/macros.h>
 #include <l4lib/exregs.h>
+#include <l4lib/arch/syslib.h>
 #include INC_GLUE(message.h)
 
 void exregs_print_registers(void)

@@ -898,13 +898,29 @@ int page_fault_handler(struct tcb *sender, fault_kdata_t *fkdata)
 	return err;
 }
 
+int vm_compare_prot_flags(unsigned int current, unsigned int needed)
+{
+	current &= VM_PROT_MASK;
+	needed &= VM_PROT_MASK;
+
+	if (needed & VM_READ)
+		if (current & (VM_READ | VM_WRITE))
+			return 1;
+
+	if (needed & VM_WRITE &&
+	    (current & VM_WRITE))
+		return 1;
+
+	return 0;
+}
+
 /*
  * Makes the virtual to page translation for a given user task.
  * It traverses the vm_objects and returns the first encountered
  * instance of the page. If page is not mapped in the task's address
  * space, (not faulted at all), returns error.
  */
-struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
+struct page *task_virt_to_page(struct tcb *t, unsigned long virtual, unsigned int vm_flags)
 {
 	unsigned long vma_offset;
 	unsigned long file_offset;
@@ -947,7 +963,10 @@ struct page *task_virt_to_page(struct tcb *t, unsigned long virtual)
 		}
 	}
 
-	/* Found it */
+	/* Found one, but does it have the right permissions */
+	if (!vm_compare_prot_flags(vmo_link->obj->flags, vm_flags))
+		return PTR_ERR(-EFAULT);
+
 	// printf("%s: %s: Found page with file_offset: 0x%x\n",
 	//       __TASKNAME__,  __FUNCTION__, page->offset);
 	// vm_object_print(vmo_link->obj);

@@ -58,14 +58,16 @@ void *pager_validate_map_user_range(struct tcb *user, void *userptr,
 		return 0;
 
 	/* Map first page and calculate the mapped address of pointer */
-	mapped = l4_map_helper((void *)page_to_phys(task_virt_to_page(user, start)), 1);
+	mapped = l4_map_helper((void *)page_to_phys(task_virt_to_page(user, start,
+								      vm_flags)), 1);
 	mapped = (void *)(((unsigned long)mapped) |
 			  ((unsigned long)(PAGE_MASK & (unsigned long)userptr)));
 
 	/* Map the rest of the pages, if any */
 	for (unsigned long i = start + PAGE_SIZE; i < end; i += PAGE_SIZE)
 		l4_map_helper((void *)page_to_phys(task_virt_to_page(user,
-							     start + i)), 1);
+								     start + i,
+								     vm_flags)), 1);
 
 	return mapped;
 }
