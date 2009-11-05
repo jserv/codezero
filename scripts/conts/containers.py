@@ -110,7 +110,7 @@ def build_default_container(config, projpaths, container):
     os.path.walk(projdir, glob_by_walk, ['*.elf', images])
 
     # Calculate and store size of pager
-    pager_binary = "conts/example" + str(container.id) + "/main.elf"
+    pager_binary = "conts/" + container.name + "/main.elf"
     config.containers[container.id].pager_size = \
             conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
 
