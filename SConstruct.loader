@@ -15,11 +15,17 @@ arch = config.arch
 platform = config.platform
 gcc_cpu_flag = config.gcc_cpu_flag
 
+variant = 'baremetal'
+
 # Locally important paths are here
 LIBC_PATH = 'loader/libs/c'
 LIBC_LIBPATH = LIBC_PATH
 LIBC_INCPATH = ['#' + join(LIBC_PATH, 'include'), \
                 '#' + join(LIBC_PATH, 'include/arch/' + arch)]
+
+LIBDEV_PATH = 'conts/libdev'
+LIBDEV_LIBPATH = join(LIBDEV_PATH, 'uart')
+LIBDEV_INCPATH = ['#' + join(LIBDEV_PATH, 'uart/include'),]
 
 LIBELF_PATH = 'loader/libs/elf'
 LIBELF_LIBPATH = LIBELF_PATH
@@ -34,12 +40,15 @@ env = Environment(CC = config.kernel_toolchain + 'gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',
 		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = ['gcc', 'elf', 'c-baremetal', 'gcc'],
-          LIBPATH = [join('build', LIBELF_PATH), join('build', LIBC_PATH)],
-          CPPPATH = ['#include', LIBC_INCPATH, LIBELF_INCPATH])
+		  LIBS = ['gcc', 'elf', 'libdev-baremetal', 'c-baremetal', 'gcc'],
+          LIBPATH = [join('build', LIBELF_PATH), join('build', LIBDEV_PATH), join('build', LIBC_PATH)],
+          CPPPATH = ['#include', LIBDEV_INCPATH, LIBC_INCPATH, LIBELF_INCPATH])
 
+libdev = SConscript('conts/libdev/SConscript', \
+                    exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : variant}, \
+                    duplicate = 0, variant_dir = 'build/conts/libdev')
 libc = SConscript('loader/libs/c/SConscript', \
-                  exports = { 'env' : env, 'arch' : arch, 'platform' : platform }, \
+                  exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : variant}, \
                   duplicate = 0, variant_dir = 'build/loader/libs/c')
 libelf = SConscript('loader/libs/elf/SConscript', exports = { 'env' : env }, \
                     duplicate = 0, variant_dir = 'build/loader/libs/elf')

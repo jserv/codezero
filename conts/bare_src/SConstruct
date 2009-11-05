@@ -33,6 +33,11 @@ LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
 LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
                 join(LIBC_DIR, 'include/arch' + '/' + arch)]
 
+LIBDEV_RELDIR = 'conts/libdev'
+LIBDEV_DIR = join(PROJROOT, LIBDEV_RELDIR)
+LIBDEV_LIBPATH = join(BUILDDIR, LIBDEV_RELDIR)
+LIBDEV_INCLUDE = [join(LIBDEV_DIR, 'uart/include')]
+
 LIBMEM_RELDIR = 'conts/libmem'
 LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
@@ -47,10 +52,12 @@ env = Environment(CC = config.user_toolchain + 'gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'], \
           PROGSUFFIX = '.elf', # The suffix to use for final executable
           ENV = {'PATH' : os.environ['PATH']}, # Inherit shell path
-          LIBS = ['gcc', 'libl4', 'c-userspace', 'libmm', 'libmc', 'libmalloc', \
-                  'gcc', 'c-userspace'], # libgcc.a - This is required for division routines.
-          CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBC_INCLUDE, LIBMEM_INCLUDE],
-          LIBPATH = [LIBL4_LIBPATH, LIBC_LIBPATH, LIBMEM_LIBPATH],
+          LIBS = ['gcc', 'libl4', 'c-userspace', 'libdev-userspace', \
+                  'libmm', 'libmc', 'libmalloc', 'gcc', 'c-userspace'],
+                  # libgcc.a - This is required for division routines.
+          CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBDEV_INCLUDE, \
+                     LIBC_INCLUDE, LIBMEM_INCLUDE],
+          LIBPATH = [LIBL4_LIBPATH, LIBDEV_LIBPATH, LIBC_LIBPATH, LIBMEM_LIBPATH],
           CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
 src = Glob('*.[cS]')

@@ -13,6 +13,7 @@
 	.global _start;
 	.align;
 _start:
+	bl	platform_init
 	mov 	fp, #0		@ Clear frame pointer
 	mov 	lr, #0		@ Clear link register
 	ldmfd 	sp!, {r0}	@ Argc value in r0

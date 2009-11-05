@@ -222,7 +222,7 @@ def generate_pager_memory_ifdefs(config, containers):
                 pager_ifdef_string += pager_ifdefs_todotext
                 linux = 1
         pager_ifdef_string += \
-            pager_mapsize % (c.id, config.containers[c.id].pager_size)
+            pager_mapsize % (c.id, c.pager_size)
         pager_ifdef_string += pager_ifdefs % { 'cn' : c.id }
     return pager_ifdef_string
 

@@ -28,14 +28,19 @@ env = Environment(CC = config.user_toolchain + 'gcc',
                   CPPPATH = "#include",
                   CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
-
-
 libl4 = SConscript('conts/libl4/SConscript', \
                    exports = { 'arch' : arch }, duplicate = 0, \
                    variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4', PROJROOT)))
 
+e = env.Clone()
+e.Replace(CPPFLAGS = '')
+libdev = SConscript('conts/libdev/SConscript', \
+                    exports = { 'env' : e, 'arch' : arch, 'platform' : platform, 'type' : 'userspace' }, \
+                    duplicate = 0, variant_dir = \
+                    join(BUILDDIR, os.path.relpath('conts/libdev', PROJROOT)))
+
 libc = SConscript('conts/libc/SConscript', \
-                  exports = { 'env' : env, 'arch' : arch, 'platform' : platform }, \
+                  exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : 'userspace' }, \
                   duplicate = 0, variant_dir = \
                   join(BUILDDIR, os.path.relpath('conts/libc', PROJROOT)))
 
@@ -46,6 +51,7 @@ libmm, libmc, libmalloc = SConscript('conts/libmem/SConscript', \
 
 
 Alias('libl4', libl4)
+Alias('libdev', libdev)
 Alias('libc', libc)
 Alias('libmm', libmm)
 Alias('libmc', libmc)

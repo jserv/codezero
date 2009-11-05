@@ -15,12 +15,12 @@ sys.path.append(PROJRELROOT)
 from config.configuration import *
 from config.projpaths import *
 
-Import('env', 'arch', 'platform')
-variant = 'baremetal'
+Import('env', 'arch', 'platform', 'type')
+variant = type
 
 e = env.Clone()
-e.Append(CPPPATH = ['include/sys-' + variant + '/arch-' + arch])
-e.Append(CCFLAGS = ['-nostdinc', ('-D' + platform)])
+e.Append(CPPPATH = ['include/sys-' + variant + '/arch-' + arch],
+         CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper()])
 
 source = \
         Glob('src/*.c') + \

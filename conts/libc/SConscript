@@ -15,14 +15,17 @@ sys.path.append(PROJRELROOT)
 from config.configuration import *
 from config.projpaths import *
 
-Import('env', 'arch')
+Import('env', 'arch', 'type')
+variant = type
 
-variant = 'userspace'
+# Needed by fputc(), for declaration of pl011_uart_tx()
+LIBDEV_PATH = join(PROJROOT, 'conts/libdev')
+LIBDEV_INCPATH = [LIBDEV_PATH + '/uart/include']
 
 e = env.Clone()
-
-e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + arch])
-e.Append(CCFLAGS = '-nostdinc')
+e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + arch,
+                    LIBDEV_INCPATH],
+         CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper()])
 
 source = \
         Glob('src/*.c') + \

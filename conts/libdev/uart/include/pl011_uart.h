@@ -14,8 +14,22 @@
  * such a driver so far, hopefully it will turn out to be useful.
  */
 
+#if defined(VARIANT_USERSPACE)
 /* FIXME: Take this value in agreement from kernel, or from kernel only */
-#define PL011_USR_BASE		0x500000
+#define PL011_BASE		0x500000
+#endif
+
+#if defined(VARIANT_BAREMETAL)
+#if defined(PLATFORM_PB926)
+#define PL011_BASE		0x101F1000
+#elif defined(PLATFORM_EB)
+#define PL011_BASE		0x10009000
+#elif defined(PLATFORM_PB11MPCORE)
+#define PL011_BASE		0x10009000
+#elif defined(PLATFORM_PBA8)
+#define PL011_BASE		0x10009000
+#endif
+#endif
 
 /* Architecture specific memory access macros */
 #define read(val, address)	val = *((volatile unsigned int *) address)
@@ -59,7 +73,7 @@ struct pl011_uart {
 int pl011_tx_char(unsigned int base, char c);
 int pl011_rx_char(unsigned int base, char *c);
 
-void pl011_set_baudrate(unsigned int base, unsigned int baud, 
+void pl011_set_baudrate(unsigned int base, unsigned int baud,
 			unsigned int clkrate);
 void pl011_set_irq_mask(unsigned int base, unsigned int flags);
 void pl011_clr_irq_mask(unsigned int base, unsigned int flags);

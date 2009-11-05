@@ -52,7 +52,7 @@ def generate_vma_lma_lds(target, source, env):
 lma_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_vma_lma_lds)
 
 container_h = Command('include/container.h', 'include/container.h.in', generate_container_h)
-src = [Glob('*.c') + Glob('mm/*.c') + Glob('lib/*.c') + Glob('fs/*.c') + Glob('fs/memfs/*.c') + Glob('lib/elf/*.c') + Glob('mm/arch/*.c')]
+src = [Glob('*.c') + Glob('mm/*.c') + Glob('lib/*.c') + Glob('fs/*.c') + Glob('fs/memfs/*.c') + Glob('lib/elf/*.c') + Glob('mm/arch/*.[Sc]')]
 
 e = env.Clone()
 

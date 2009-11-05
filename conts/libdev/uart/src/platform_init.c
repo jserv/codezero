@@ -1,9 +1,16 @@
-#include <arch/pl011_uart.h>
+/*
+ * User space uart driver.
+ *
+ * Copyright (C) 2009, B Labs Ltd.
+ */
 
-/* TODO: May need to remove this */
-struct pl011_uart uart = {
-		.base = PL011_USR_BASE,
-		};
+#include <pl011_uart.h>
+
+/*
+ * Every task who wants to use this uart needs
+ * to initialize an instance of this
+ */
+struct pl011_uart uart;
 
 /*
  * Initialises the uart class data structures, and the device.
@@ -47,7 +54,7 @@ int pl011_initialise(struct pl011_uart * uart)
 
 void platform_init(void)
 {
-	uart.base = PL011_USR_BASE;
+	uart.base = PL011_BASE;
 	pl011_initialise(&uart);
 }
 

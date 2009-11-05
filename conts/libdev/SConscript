@@ -1,0 +1,34 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+
+import os, sys, shelve
+from os.path import join
+
+# Get global paths
+PROJRELROOT = '../../../'
+
+sys.path.append(PROJRELROOT)
+
+from config.configuration import *
+from config.projpaths import *
+
+Import('env', 'arch', 'platform', 'type')
+variant = type
+
+# Path for uart files
+LIBDEV_UART_PATH = join(PROJROOT, 'conts/libdev/uart')
+
+e = env.Clone()
+e.Append(CPPPATH = [LIBDEV_UART_PATH + '/include'],
+         CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper(),
+                    '-DPLATFORM_' + platform.upper()])
+
+source = Glob('uart/src' + '/*.c')
+
+objects = e.StaticObject(source)
+library = e.StaticLibrary('libdev-' + variant, objects)
+
+Return('library')
