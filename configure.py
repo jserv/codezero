@@ -23,7 +23,7 @@ def autogen_rules_file(options, args):
 
     # Prepare default if number of containers not supplied
     if not options.ncont:
-        options.ncont = 4
+        options.ncont = 1
         print "Max container count not supplied (-n), using %d as default." % options.ncont
 
     return generate_container_cml(options.arch, options.ncont)
