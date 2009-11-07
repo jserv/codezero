@@ -11,6 +11,7 @@ import os, sys, shelve, shutil
 from os.path import join
 from config.projpaths import *
 from config.configuration import *
+from config.config_check import *
 from scripts.conts import containers
 from configure import *
 
@@ -20,6 +21,11 @@ def main():
     # Configure
     #
     configure_system(opts, args)
+
+    #
+    # Check for sanity of containers
+    #
+    sanity_check_conts()
 
     #
     # Build userspace libraries
