@@ -126,7 +126,9 @@ cap_all_others = \
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_CAP | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_CAP_MODIFY | CAP_CAP_GRANT
+\t\t\t\t.access = CAP_CAP_GRANT | CAP_CAP_READ
+\t\t\t\t          | CAP_CAP_SHARE | CAP_CAP_REPLICATE
+\t\t\t\t          | CAP_CAP_MODIFY
 \t\t\t\t| CAP_CAP_READ | CAP_CAP_SHARE,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},

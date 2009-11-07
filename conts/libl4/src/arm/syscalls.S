@@ -38,20 +38,6 @@ BEGIN_PROC(l4_getid)
 END_PROC(l4_getid)
 
 /*
- * Reads/manipulates capabilities of a thread, particularly a pager.
- * @r0 = request type, @r1 = request flags, @r2 = io buffer ptr
- */
-BEGIN_PROC(l4_capability_control)
-	ldr	r12, =__l4_capability_control
-	ldr	pc, [r12]		@ Jump into the SWI
-		/*
-		 * The LR_USR points at the return address of this function. The system
-		 * call return path directly jumps to LR_USR so we don't even need a
-		 * return instruction here.
-		 */
-END_PROC(l4_capability_control)
-
-/*
  * For clone() we need special assembler handling
  * Same signature as ipc(): @r0 = to, @r1 = from @r2 = flags
  *
@@ -123,6 +109,20 @@ BEGIN_PROC(l4_map)
 	ldr	pc, [r12]
 	ldmfd	sp!, {r4, pc}
 END_PROC(l4_map)
+
+/*
+ * Reads/manipulates capabilities of a thread, particularly a pager.
+ * @r0 = request type, @r1 = request flags,
+ * @r2 = capid, @r3 = target thread id, @r4 = io buffer ptr
+ */
+BEGIN_PROC(l4_capability_control)
+	stmfd	sp!, {r4, lr}
+	ldr	r4, [sp, #8]		@ FIXME: Is this right?
+	ldr	r12, =__l4_capability_control
+	mov	lr, pc			@ We must return here to restore r4.
+	ldr	pc, [r12]
+	ldmfd	sp!, {r4, pc}
+END_PROC(l4_capability_control)
 
 /*
  * System call that unmaps an area of memory into the given address space.

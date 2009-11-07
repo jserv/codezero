@@ -199,13 +199,13 @@ int cap_grant(unsigned int flags, l4id_t capid, l4id_t tid)
  *
  * orig = deduced;
  */
-int cap_deduce(l4id_t capid, struct capability *new)
+int cap_deduce(struct capability *new)
 {
 	struct capability *orig;
 	struct address_space *sp;
 
 	/* Find original capability */
-	if (!(orig = cap_find_byid(capid)))
+	if (!(orig = cap_find_byid(new->capid)))
 		return -EEXIST;
 
 	/* Check that caller is owner */
@@ -218,7 +218,7 @@ int cap_deduce(l4id_t capid, struct capability *new)
 
 	/* Check target resource deduction */
 	if (cap_rtype(new) != cap_rtype(orig)) {
-		/* An rtype deduction is always a space */
+		/* An rtype deduction is always into a space */
 		if (cap_rtype(new) != CAP_RTYPE_SPACE)
 			return -ENOCAP;
 
@@ -250,9 +250,10 @@ int cap_deduce(l4id_t capid, struct capability *new)
 
 		/* Deduce bits of orig */
 		orig->access &= new->access;
-	}
+	} else if (new->access)
+		return -EINVAL;
 
-	if (new->size) {
+	if (orig->size) {
 		/* New can't have more, or make original redundant */
 		if (new->size >= orig->size)
 			return -EINVAL;
@@ -264,12 +265,27 @@ int cap_deduce(l4id_t capid, struct capability *new)
 		if (new->size < orig->used)
 			return -EPERM;
 		orig->size = new->size;
-	}
+	} else if (new->size)
+		return -EINVAL;
 
 	/* Range-like permissions can't be deduced */
-	if (orig->start != new->start ||
-	    orig->end != new->end)
-		return -EPERM;
+	if (orig->start || orig->end) {
+		if (orig->start != new->start ||
+		    orig->end != new->end)
+			return -EPERM;
+	} else if (new->start || new->end)
+		return -EINVAL;
+
+	/* Ensure orig and new are the same */
+	BUG_ON(orig->capid != new->capid);
+	BUG_ON(orig->resid != new->resid);
+	BUG_ON(orig->owner != new->owner);
+	BUG_ON(orig->type != new->type);
+	BUG_ON(orig->access != new->access);
+	BUG_ON(orig->start != new->start);
+	BUG_ON(orig->end != new->end);
+	BUG_ON(orig->size != new->size);
+	BUG_ON(orig->used != new->used);
 
 	return 0;
 }
@@ -335,7 +351,8 @@ int cap_split(l4id_t capid, struct capability *diff)
 
 		/* Assign given perms to new capability */
 		new->access = diff->access;
-	}
+	} else if (new->access)
+		return -EINVAL;
 
 	/* Check size usage and split */
 	if (orig->size) {
@@ -357,7 +374,9 @@ int cap_split(l4id_t capid, struct capability *diff)
 		orig->size -= diff->size;
 		new->size = diff->size;
 		new->used = 0;
-	}
+	} else if (new->size)
+		return -EINVAL;
+
 
 	/* Check range usage but don't split if requested */
 	if (orig->start || orig->end) {
@@ -367,7 +386,10 @@ int cap_split(l4id_t capid, struct capability *diff)
 			free_capability(new);
 			return -EPERM;
 		}
-	}
+	} else if (new->start || new->end)
+		return -EINVAL;
+
+
 
 	/* Copy other fields */
 	new->type = orig->type;
@@ -376,6 +398,17 @@ int cap_split(l4id_t capid, struct capability *diff)
 
 	/* Add the new capability to the most private list */
 	cap_list_insert(new, TASK_CAP_LIST(current));
+
+	/* Copy the new one to diff for userspace */
+	BUG_ON(new->resid != diff->resid);
+	BUG_ON(new->owner != diff->owner);
+	BUG_ON(new->type != diff->type);
+	BUG_ON(new->access != diff->access);
+	BUG_ON(new->start != diff->start);
+	BUG_ON(new->end != diff->end);
+	BUG_ON(new->size != diff->size);
+	BUG_ON(new->used != diff->used);
+	diff->capid = new->capid;
 
 	return 0;
 }
@@ -464,7 +497,6 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 		/* Copy ncaps value. FIXME: This is only a partial list */
 		*((int *)userbuf) = TASK_CAP_LIST(current)->ncaps;
 		break;
-
 	case CAP_CONTROL_READ: {
 		/* Return all capabilities as an array of capabilities */
 		err = cap_read_all((struct capability *)userbuf);
@@ -493,7 +525,7 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
 
-		err = cap_deduce(capid, (struct capability *)userbuf);
+		err = cap_deduce((struct capability *)userbuf);
 		break;
 
 	default:

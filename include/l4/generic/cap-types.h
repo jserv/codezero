@@ -98,12 +98,12 @@
 #define CAP_UMUTEX_UNLOCK	(1 << 1)
 
 /* Capability control capability */
-#define CAP_CAP_MODIFY		(1 << 0)
-#define CAP_CAP_GRANT		(1 << 1)
-#define CAP_CAP_READ		(1 << 2)
-#define CAP_CAP_SHARE		(1 << 3)
-#define CAP_CAP_REPLICATE	(1 << 4)
-#define CAP_CAP_SPLIT		(1 << 5)
-#define CAP_CAP_DEDUCE		(1 << 6)
+#define CAP_CAP_GRANT		(1 << 0)
+#define CAP_CAP_READ		(1 << 1)
+#define CAP_CAP_SHARE		(1 << 2)
+#define CAP_CAP_REPLICATE	(1 << 3)
+#define CAP_CAP_SPLIT		(1 << 4)
+#define CAP_CAP_DEDUCE		(1 << 5)
+#define CAP_CAP_MODIFY		(CAP_CAP_SPLIT | CAP_CAP_DEDUCE)
 
 #endif /* __CAP_TYPES_H__ */

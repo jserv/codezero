@@ -179,6 +179,7 @@ void copy_boot_capabilities(int ncaps)
 	capability_list.ncaps = ncaps;
 }
 
+#if 0
 /*
  * Our paged userspace shall have only the capability to do
  * ipc to us, and use no other system call. (Other than
@@ -230,8 +231,170 @@ int setup_children_caps(void)
 	}
 	return 0;
 }
+#endif
 
-int read_pager_caps()
+void cap_print(struct capability *cap)
+{
+	printf("Capability id:\t\t\t%d\n", cap->capid);
+	printf("Capability resource id:\t\t%d\n", cap->resid);
+	printf("Capability owner id:\t\t%d\n",cap->owner);
+
+	switch (cap_type(cap)) {
+	case CAP_TYPE_TCTRL:
+		printf("Capability type:\t\t%s\n", "Thread Control");
+		break;
+	case CAP_TYPE_EXREGS:
+		printf("Capability type:\t\t%s\n", "Exchange Registers");
+		break;
+	case CAP_TYPE_MAP_PHYSMEM:
+		printf("Capability type:\t\t%s\n", "Map/Physmem");
+		break;
+	case CAP_TYPE_MAP_VIRTMEM:
+		printf("Capability type:\t\t%s\n", "Map/Virtmem");
+		break;
+
+	case CAP_TYPE_IPC:
+		printf("Capability type:\t\t%s\n", "Ipc");
+		break;
+	case CAP_TYPE_UMUTEX:
+		printf("Capability type:\t\t%s\n", "Mutex");
+		break;
+	case CAP_TYPE_QUANTITY:
+		printf("Capability type:\t\t%s\n", "Quantitative");
+		break;
+	default:
+		printf("Capability type:\t\t%s\n", "Unknown");
+		break;
+	}
+
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		printf("Capability resource type:\t%s\n", "Thread");
+		break;
+	case CAP_RTYPE_SPACE:
+		printf("Capability resource type:\t%s\n", "Space");
+		break;
+	case CAP_RTYPE_CONTAINER:
+		printf("Capability resource type:\t%s\n", "Container");
+		break;
+	case CAP_RTYPE_THREADPOOL:
+		printf("Capability resource type:\t%s\n", "Thread Pool");
+		break;
+	case CAP_RTYPE_SPACEPOOL:
+		printf("Capability resource type:\t%s\n", "Space Pool");
+		break;
+	case CAP_RTYPE_MUTEXPOOL:
+		printf("Capability resource type:\t%s\n", "Mutex Pool");
+		break;
+	case CAP_RTYPE_MAPPOOL:
+		printf("Capability resource type:\t%s\n", "Map Pool (PMDS)");
+		break;
+	case CAP_RTYPE_CPUPOOL:
+		printf("Capability resource type:\t%s\n", "Cpu Pool");
+		break;
+	case CAP_RTYPE_CAPPOOL:
+		printf("Capability resource type:\t%s\n", "Capability Pool");
+		break;
+	default:
+		printf("Capability resource type:\t%s\n", "Unknown");
+		break;
+	}
+	printf("\n");
+}
+
+void cap_list_print(struct cap_list *cap_list)
+{
+	struct capability *cap;
+	list_foreach_struct(cap, &cap_list->caps, list)
+		cap_print(cap);
+}
+/*
+ * Replicate, deduce and grant to children the capability to
+ * talk to us only.
+ *
+ * We are effectively creating an ipc capability from what we already
+ * own, and the new one has a reduced privilege in terms of the
+ * targetable resource.
+ *
+ * We are replicating our capability to talk to our complete container
+ * into a capability to only talk to our current space. Our space is a
+ * reduced target, since it is a subset contained in our container.
+ */
+int setup_children_caps(int total_caps, struct cap_list *capability_list)
+{
+	struct capability ipc_cap, *cap;
+	struct task_ids ids;
+	int err;
+
+	l4_getid(&ids);
+
+	cap_list_print(capability_list);
+
+	/* Find out our own ipc capability on our own container */
+	list_foreach_struct(cap, &capability_list->caps, list) {
+		if (cap_type(cap) == CAP_TYPE_IPC &&
+		    cap_rtype(cap) == CAP_RTYPE_CONTAINER &&
+		    cap->resid == __cid(ids.tid))
+			goto found;
+	}
+	printf("cont%d: %s: FATAL: Could not find ipc "
+	       "capability to own container.\n",
+	       __cid(ids.tid), __FUNCTION__);
+	BUG();
+
+found:
+	/* Copy it over to new ipc cap buffer */
+	memcpy(&ipc_cap, cap, sizeof (*cap));
+
+	/* Replicate the ipc capability, giving original as reference */
+	if ((err = l4_capability_control(CAP_CONTROL_REPLICATE,
+					 0, 0, 0, &ipc_cap)) < 0) {
+		printf("l4_capability_control() replication of "
+		       "ipc capability failed.\n Could not "
+		       "complete CAP_CONTROL_REPLICATE request on cap (%d), "
+		       "err = %d.\n", ipc_cap.capid, err);
+		BUG();
+	}
+
+	cap_list_print(capability_list);
+
+	/*
+	 * The returned capability is a replica.
+	 *
+	 * Now deduce it such that it applies to talking only to us,
+	 * instead of to the whole container as original.
+	 */
+	cap_set_rtype(&ipc_cap, CAP_RTYPE_SPACE);
+	ipc_cap.resid = __cid(ids.spid); /* This space is target resource */
+	if ((err = l4_capability_control(CAP_CONTROL_DEDUCE,
+					 0, 0, 0, &ipc_cap)) < 0) {
+		printf("l4_capability_control() deduction of "
+		       "ipc capability failed.\n Could not "
+		       "complete CAP_CONTROL_DEDUCE request on cap (%d), "
+		       "err = %d.\n", ipc_cap.capid, err);
+		BUG();
+	}
+
+	cap_list_print(capability_list);
+
+	/*
+	 * Share it with our container.
+	 *
+	 * This effectively enables all threads/spaces in this container
+	 * to communicate to us only, and be able to do nothing else.
+	 */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
+					 ipc_cap.capid, 0, 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request.\n");
+		BUG();
+	}
+	cap_list_print(capability_list);
+	return 0;
+}
+
+int pager_read_caps()
 {
 	int ncaps;
 	int err;
@@ -239,7 +402,7 @@ int read_pager_caps()
 
 	/* Read number of capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
-					 0, &ncaps)) < 0) {
+					 0, 0, 0, &ncaps)) < 0) {
 		printf("l4_capability_control() reading # of"
 		       " capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_NCAPS request.\n");
@@ -252,7 +415,7 @@ int read_pager_caps()
 
 	/* Read all capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_READ,
-					 0, caparray)) < 0) {
+					 0, 0, 0, caparray)) < 0) {
 		printf("l4_capability_control() reading of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
@@ -342,6 +505,12 @@ int read_pager_caps()
 	}
 
 	return 0;
+}
+
+void setup_caps()
+{
+	pager_read_caps();
+	setup_children_caps(total_caps, &capability_list);
 }
 
 /*
@@ -473,7 +642,7 @@ void init_physmem_secondary(struct membank *membank)
 	membank[0].free += pg_npages * PAGE_SIZE;
 
 	/* Update page bitmap for the pages used for the page array */
-+	set_page_map(pmap, pg_spfn, pg_epfn - pg_spfn, 1);
+	set_page_map(pmap, pg_spfn, pg_epfn - pg_spfn, 1);
 
 	/* Initialise the page array */
 	for (int i = 0; i < npages; i++) {
@@ -632,7 +801,7 @@ void start_init_process(void)
 
 void init(void)
 {
-	read_pager_capabilities();
+	setup_caps();
 
 	pager_address_pool_init();
 
