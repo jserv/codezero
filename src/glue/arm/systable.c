@@ -90,14 +90,16 @@ int arch_sys_map(syscall_context_t *regs)
 {
 	return sys_map((unsigned long)regs->r0, (unsigned long)regs->r1,
 		       (unsigned long)regs->r2, (unsigned long)regs->r3,
-		       (unsigned int)regs->r4);
+		       (l4id_t)regs->r4);
 }
 
 int arch_sys_capability_control(syscall_context_t *regs)
 {
 	return sys_capability_control((unsigned int)regs->r0,
 				      (unsigned int)regs->r1,
-				      (void *)regs->r2);
+				      (l4id_t)regs->r2,
+				      (l4id_t)regs->r3,
+				      (void *)regs->r4);
 }
 
 int arch_sys_container_control(syscall_context_t *regs)

@@ -66,7 +66,7 @@ struct capability {
 	/* Capability limits/permissions */
 	u32 access;		/* Permitted operations */
 
-	/* Limits on the resource */
+	/* Limits on the resource (NOTE: must never have signed type) */
 	unsigned long start;	/* Resource start value */
 	unsigned long end;	/* Resource end value */
 	unsigned long size;	/* Resource size */
@@ -139,6 +139,7 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 
 struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 					  unsigned int rtype);
+struct capability *cap_find_byid(l4id_t capid);
 
 /* Capability checking on system calls */
 int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,

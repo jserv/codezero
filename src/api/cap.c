@@ -1,14 +1,14 @@
 /*
  * Capability manipulation syscall.
  *
- * The heart of Codezero security
- * mechanisms lay here.
+ * The entry to Codezero security
+ * mechanisms.
  *
  * Copyright (C) 2009 Bahadir Balban
  */
-
 #include <l4/api/capability.h>
 #include <l4/generic/capability.h>
+#include <l4/generic/cap-types.h>
 #include <l4/generic/container.h>
 #include <l4/generic/tcb.h>
 #include <l4/api/errno.h>
@@ -16,13 +16,24 @@
 
 /*
  * FIXME: This is reading only a single list
- * there may be more than one
+ * there may be more than one.
  */
-int read_task_capabilities(void *userbuf)
+int cap_read_all(struct capability *caparray)
 {
-	int copy_size, copy_offset = 0;
 	struct capability *cap;
+	int total_size, capidx = 0;
 	int err;
+
+	/*
+	 * Determine size of pager capabilities
+	 * (FIXME: partial!)
+	 */
+	total_size = TASK_CAP_LIST(current)->ncaps
+		   * sizeof(*cap);
+	if ((err = check_access((unsigned long)caparray,
+				total_size,
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
 
 	/*
 	 * Currently only pagers can
@@ -31,88 +42,404 @@ int read_task_capabilities(void *userbuf)
 	if (current->tid != current->pagerid)
 		return -EPERM;
 
-	/* Determine size of pager capabilities (FIXME: partial!) */
-	copy_size = TASK_CAP_LIST(current)->ncaps * sizeof(*cap);
-
-	/* Validate user buffer for this copy size */
-	if ((err = check_access((unsigned long)userbuf,
-				copy_size,
-				MAP_USR_RW_FLAGS, 1)) < 0)
-		return err;
-
 	/* Copy capabilities from list to buffer */
-	list_foreach_struct(cap, &TASK_CAP_LIST(current)->caps,
+	list_foreach_struct(cap,
+			    &TASK_CAP_LIST(current)->caps,
 			    list) {
-		memcpy(userbuf + copy_offset,
-		       cap, sizeof(*cap));
-		copy_offset += sizeof(*cap);
+		memcpy(&caparray[capidx], cap, sizeof(*cap));
+		capidx++;
 	}
 
 	return 0;
 }
 
 /*
- * Currently shares _all_ capabilities of a task with a
- * collection of threads
- *
- * FIXME: Check ownership for sharing.
- *
- * Currently we don't need to check since we _only_ share
- * the ones from our own private list. If we shared from
- * a collection's list, we would need to check ownership.
+ * Shares single cap. If you are sharing, there is
+ * only one target that makes sense, that is your
+ * own container.
  */
-int capability_share(unsigned int share_flags)
+int cap_share_single(l4id_t capid)
 {
-	switch (share_flags) {
-	case CAP_SHARE_SPACE:
-		cap_list_move(&current->space->cap_list,
-			      TASK_CAP_LIST(current));
-		break;
-	case CAP_SHARE_CONTAINER:
-		cap_list_move(&curcont->cap_list,
-			      TASK_CAP_LIST(current));
-		break;
-#if 0
-	case CAP_SHARE_CHILD:
-		/*
-		 * Move own capabilities to paged-children
-		 * cap list so that all children can benefit
-		 * from our own capabilities.
-		 */
-		cap_list_move(&current->pager_cap_list,
-			      &current->cap_list);
-		break;
-	case CAP_SHARE_SIBLING: {
-		/* Find our pager */
-		struct ktcb *pager = tcb_find(current->pagerid);
+	struct capability *cap;
 
-		/*
-		 * Add own capabilities to its
-		 * paged-children cap_list
-		 */
-		cap_list_move(&pager->pager_cap_list,
-			      &current->cap_list);
-		break;
-	}
-	case CAP_SHARE_GROUP: {
-		struct ktcb *tgroup_leader;
+	if (!(cap = cap_find_byid(capid)))
+		return -EEXIST;
 
-	       	BUG_ON(!(tgroup_leader = tcb_find(current->tgid)));
-		cap_list_move(&tgroup_leader->tgroup_cap_list,
-			      &current->cap_list);
-		break;
-	}
-#endif
-	default:
+	if (cap->owner != current->tid)
+		return -EPERM;
+
+	/* First remove it from its list */
+	list_remove(&cap->list);
+
+	/* Place it where it is shared */
+	cap_list_insert(cap, &curcont->cap_list);
+
+	return 0;
+}
+
+/* Shares the whole list */
+int cap_share_all(void)
+{
+	cap_list_move(&curcont->cap_list,
+		      TASK_CAP_LIST(current));
+	return 0;
+}
+
+int cap_share(l4id_t capid, unsigned int flags)
+{
+	if (flags & CAP_SHARE_SINGLE)
+		cap_share_single(capid);
+	else if (flags & CAP_SHARE_ALL)
+		cap_share_all();
+	else
 		return -EINVAL;
+	return 0;
+}
+
+/* Grants all caps */
+int cap_grant_all(l4id_t tid)
+{
+	struct ktcb *target;
+	struct capability *cap_head, *cap;
+	int err;
+
+	if (!(target = tcb_find(tid)))
+		return -ESRCH;
+
+	/* Detach all caps */
+	cap_head = cap_list_detach(TASK_CAP_LIST(current));
+
+	list_foreach_struct(cap, &cap_head->list, list) {
+		/* Change ownership */
+		cap->owner = target->tid;
+
+		/*
+		 * Sanity check: granted cap cannot have used
+		 * quantity. Otherwise how else the original
+		 * users of the cap free them?
+		 */
+		if (cap->used) {
+			err = -EPERM;
+			goto out_err;
+		}
 	}
+
+	/* Attach all to target */
+	cap_list_attach(cap_head, TASK_CAP_LIST(target));
+	return 0;
+
+out_err:
+	/* Attach it back to original */
+	cap_list_attach(cap_head, TASK_CAP_LIST(current));
+	return err;
+}
+
+int cap_grant_single(l4id_t capid, l4id_t tid)
+{
+	struct capability *cap;
+	struct ktcb *target;
+
+	if (!(cap = cap_find_byid(capid)))
+		return -EEXIST;
+
+	if (!(target = tcb_find(tid)))
+		return -ESRCH;
+
+	if (cap->owner != current->tid)
+		return -EPERM;
+
+	/* Granted cap cannot have used quantity */
+	if (cap->used)
+		return -EPERM;
+
+	/* First remove it from its list */
+	list_remove(&cap->list);
+
+	/* Change ownership */
+	cap->owner = target->tid;
+
+	/* Place it where it is granted */
+	cap_list_insert(cap, TASK_CAP_LIST(target));
+
+	return 0;
+}
+
+int cap_grant(unsigned int flags, l4id_t capid, l4id_t tid)
+{
+	if (flags & CAP_GRANT_SINGLE)
+		cap_grant_single(capid, tid);
+	else if (flags & CAP_GRANT_ALL)
+		cap_grant_all(tid);
+	else
+		return -EINVAL;
+	return 0;
+}
+
+/*
+ * Deduction can be by access permissions, start, end, size
+ * fields, or the target resource type. Inter-container
+ * deduction is not allowed.
+ *
+ * Target resource deduction denotes reducing the applicable
+ * space of the target, e.g. from a container to a space in
+ * that container.
+ *
+ * NOTE: If there is no target deduction, you cannot change
+ * resid, as this is forbidden.
+ *
+ * Imagine a space cap, it cannot be deduced to become applicable
+ * to another space, i.e a space is in same privilege level.
+ * But a container-wide cap can be reduced to be applied on
+ * a space in that container (thus changing the resid to that
+ * space's id)
+ *
+ * capid: Id of original capability
+ * new: Userspace pointer to new state of capability
+ * that is desired.
+ *
+ * orig = deduced;
+ */
+int cap_deduce(l4id_t capid, struct capability *new)
+{
+	struct capability *orig;
+	struct address_space *sp;
+
+	/* Find original capability */
+	if (!(orig = cap_find_byid(capid)))
+		return -EEXIST;
+
+	/* Check that caller is owner */
+	if (orig->owner != current->tid)
+		return -ENOCAP;
+
+	/* Check that it is deducable */
+	if (!(orig->access & CAP_CHANGEABLE))
+		return -ENOCAP;
+
+	/* Check target resource deduction */
+	if (cap_rtype(new) != cap_rtype(orig)) {
+		/* An rtype deduction is always a space */
+		if (cap_rtype(new) != CAP_RTYPE_SPACE)
+			return -ENOCAP;
+
+		/* Assign new type to original cap */
+		cap_set_rtype(orig, cap_rtype(new));
+
+		/*
+		 * Find out if this space exists.
+		 *
+		 * Note address space search is
+		 * local only. Only thread searches
+		 * are global.
+		 */
+		if (!(sp = address_space_find(new->resid)))
+			return -ENOCAP;
+
+		/* Success. Assign the space id to orig cap */
+		orig->resid = sp->spid;
+	}
+
+	/* Check permissions for deduction */
+	if (orig->access) {
+		/* New cannot have more bits than original */
+		if ((orig->access & new->access) != new->access)
+			return -EINVAL;
+		/* New cannot make original redundant */
+		if (new->access == 0)
+			return -EINVAL;
+
+		/* Deduce bits of orig */
+		orig->access &= new->access;
+	}
+
+	if (new->size) {
+		/* New can't have more, or make original redundant */
+		if (new->size >= orig->size)
+			return -EINVAL;
+
+		/*
+		 * Can't make reduction on used ones, so there
+		 * must be enough available ones
+		 */
+		if (new->size < orig->used)
+			return -EPERM;
+		orig->size = new->size;
+	}
+
+	/* Range-like permissions can't be deduced */
+	if (orig->start != new->start ||
+	    orig->end != new->end)
+		return -EPERM;
+
+	return 0;
+}
+
+/*
+ * Splits a capability
+ *
+ * Pools of typed memory objects can't be replicated, and
+ * deduced that way, as replication would temporarily double
+ * their size. So they are split in place.
+ *
+ * Splitting occurs by diff'ing resources possessed between
+ * capabilities.
+ *
+ * capid: Original capability that is valid.
+ * diff: New capability that we want to split out.
+ *
+ * orig = orig - diff;
+ * new = diff;
+ */
+int cap_split(l4id_t capid, struct capability *diff)
+{
+	struct capability *orig, *new;
+
+	/* Find original capability */
+	if (!(orig = cap_find_byid(capid)))
+		return -ENOCAP;
+
+	/* Check target type/resid/owner is the same */
+	if (orig->type != diff->type ||
+	    orig->resid != diff->resid ||
+	    orig->owner != diff->owner)
+		return -EINVAL;
+
+	/* Check that caller is owner */
+	if (orig->owner != current->tid)
+		return -ENOCAP;
+
+	/* Check that it is splitable */
+	if (!(orig->access & CAP_CHANGEABLE))
+		return -ENOCAP;
+
+	/* Create new */
+	if (!(new = capability_create()))
+		return -ENOCAP;
+
+	/* Check access bits usage and split */
+	if (orig->access) {
+		/* Split one can't have more bits than original */
+		if ((orig->access & diff->access) != diff->access) {
+			free_capability(new);
+			return -EINVAL;
+		}
+
+		/* Split one cannot make original redundant */
+		if ((orig->access & ~diff->access) == 0) {
+			free_capability(new);
+			return -EINVAL;
+		}
+
+		/* Subtract given access permissions */
+		orig->access &= ~diff->access;
+
+		/* Assign given perms to new capability */
+		new->access = diff->access;
+	}
+
+	/* Check size usage and split */
+	if (orig->size) {
+		/*
+		 * Split one can't have more,
+		 * or make original redundant
+		 */
+		if (diff->size >= orig->size) {
+			free_capability(new);
+			return -EINVAL;
+		}
+
+		/* Split one must be clean i.e. all unused */
+		if (orig->size - orig->used < diff->size) {
+			free_capability(new);
+			return -EPERM;
+		}
+
+		orig->size -= diff->size;
+		new->size = diff->size;
+		new->used = 0;
+	}
+
+	/* Check range usage but don't split if requested */
+	if (orig->start || orig->end) {
+		/* Range-like permissions can't be deduced */
+		if (orig->start != new->start ||
+		    orig->end != new->end) {
+			free_capability(new);
+			return -EPERM;
+		}
+	}
+
+	/* Copy other fields */
+	new->type = orig->type;
+	new->resid = orig->resid;
+	new->owner = orig->owner;
+
+	/* Add the new capability to the most private list */
+	cap_list_insert(new, TASK_CAP_LIST(current));
+
+	return 0;
+}
+
+/*
+ * Replicates an existing capability. This is for expanding
+ * capabilities to managed children.
+ *
+ * After replication, a duplicate capability exists in the
+ * system, but as it is not a quantity, this does not increase
+ * the capabilities of the caller in any way.
+ */
+int cap_replicate(l4id_t capid, struct capability *dupl)
+{
+	struct capability *new, *orig;
+
+	/* Find original capability */
+	orig = cap_find_byid(capid);
+
+	/* Check that caller is owner */
+	if (orig->owner != current->tid)
+		return -ENOCAP;
+
+	/* Check that it is replicable */
+	if (!(orig->access & CAP_REPLICABLE))
+		return -ENOCAP;
+
+	 /* Quantitative types must not be replicable */
+	if (cap_type(orig) == CAP_TYPE_QUANTITY) {
+		printk("Cont %d: FATAL: Capability (%d) "
+		       "is quantitative but also replicable\n",
+		       curcont->cid, orig->capid);
+		/* FIXME: Should rule this out as a CML2 requirement */
+		BUG();
+	}
+
+	/* Replicate it */
+	if (!(new = capability_create()))
+		return -ENOCAP;
+
+	/* Copy all except capid & listptrs */
+	new->resid = orig->resid;
+	new->owner = orig->owner;
+	new->type = orig->type;
+	new->access = orig->access;
+	new->start = orig->start;
+	new->end = orig->end;
+	new->size = orig->size;
+	new->used = orig->used;
+
+	/* Add it to most private list */
+	cap_list_insert(new, TASK_CAP_LIST(current));
+
+	/* Return new capability to user */
+	memcpy(dupl, new, sizeof(*new));
+
 	return 0;
 }
 
 /*
  * Read, manipulate capabilities. Currently only capability read support.
  */
-int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
+int sys_capability_control(unsigned int req, unsigned int flags,
+			   l4id_t capid, l4id_t target, void *userbuf)
 {
 	int err;
 
@@ -124,8 +451,8 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 		return err;
 
 	switch(req) {
-	/* Return number of capabilities the thread has */
 	case CAP_CONTROL_NCAPS:
+		/* Return number of caps */
 		if (current->tid != current->pagerid)
 			return -EPERM;
 
@@ -138,68 +465,42 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 		*((int *)userbuf) = TASK_CAP_LIST(current)->ncaps;
 		break;
 
-	/* Return all capabilities as an array of capabilities */
-	case CAP_CONTROL_READ:
-		err = read_task_capabilities(userbuf);
+	case CAP_CONTROL_READ: {
+		/* Return all capabilities as an array of capabilities */
+		err = cap_read_all((struct capability *)userbuf);
 		break;
+	}
 	case CAP_CONTROL_SHARE:
-		err = capability_share(flags);
+		err = cap_share(capid, flags);
 		break;
+	case CAP_CONTROL_GRANT:
+		err = cap_grant(flags, capid, target);
+		break;
+	case CAP_CONTROL_SPLIT:
+		err = cap_split(capid, (struct capability *)userbuf);
+		break;
+	case CAP_CONTROL_REPLICATE:
+		if ((err = check_access((unsigned long)userbuf,
+					sizeof(int),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
+
+		err = cap_replicate(capid, (struct capability *)userbuf);
+		break;
+	case CAP_CONTROL_DEDUCE:
+		if ((err = check_access((unsigned long)userbuf,
+					sizeof(int),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
+
+		err = cap_deduce(capid, (struct capability *)userbuf);
+		break;
+
 	default:
 		/* Invalid request id */
 		return -EINVAL;
 	}
+
 	return 0;
 }
 
-
-#if 0
-
-int capability_grant(struct ktcb *recv, struct ktcb *send, struct capability *cap)
-{
-	list_del(&cap->list);
-	list_add(&cap->list, &recv->cap_list);
-}
-
-struct cap_split_desc {
-	unsigned int valid;
-	unsigned int access;
-	unsigned long size;
-	unsigned long start;
-	unsigned long end;
-};
-
-struct capability *capability_diff(struct capability *cap, struct cap_split_desc *split)
-{
-
-}
-
-int capability_split(struct ktcb *recv, struct ktcb *send, struct capability *cap, struct cap_split_desc *split)
-{
-	capability_diff(orig, new, split);
-}
-
-int capability_split(struct capability *orig, struct capability *diff, unsigned int valid)
-{
-	struct capability *new;
-
-	if (!(new = alloc_capability()))
-		return -ENOMEM;
-
-	if (valid & FIELD_TO_BIT(struct capability, access)) {
-		new->access = orig->access & diff->access;
-		orig->access &= ~diff->access;
-	}
-	if (valid & FIELD_TO_BIT(struct capability, size)) {
-		new->size = orig->size - diff->size;
-		orig->size -= diff->size;
-	}
-	if (valid & FIELD_TO_BIT(struct capability, start)) {
-		/* This gets complicated, may return -ENOSYS for now */
-		memcap_unmap(cap, diff->start, diff->end);
-		new->size = orig->size - split->size;
-		orig->size -= split->size;
-	}
-}
-
-#endif

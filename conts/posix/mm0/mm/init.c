@@ -179,7 +179,59 @@ void copy_boot_capabilities(int ncaps)
 	capability_list.ncaps = ncaps;
 }
 
-int read_pager_capabilities()
+/*
+ * Our paged userspace shall have only the capability to do
+ * ipc to us, and use no other system call. (Other than
+ * the trivial ones like thread_switch() and l4_getid)
+ */
+int setup_children_caps(void)
+{
+	struct capability ipc_cap;
+	struct task_ids ids;
+
+	l4_getids(&ids);
+
+	/* Create a brand new capability */
+	ipc_cap.owner = ids.tid;	/* Owned by us */
+	ipc_cap.resid = __cid(ids.tid);	/* This container is target resource */
+
+	/*
+	 * IPC capability, with container set as
+	 * target resource type.
+	 *
+	 * This literally means the capability can target
+	 * all of the container, e.g. a capability to ipc
+	 * to any member of this container.
+	 */
+	ipc_cap.type = CAP_TYPE_IPC | CAP_RTYPE_CONTAINER;
+	ipc_cap.access = CAP_IPC_SEND | CAP_IPC_RECV | CAP_IPC_SHORT |
+			 CAP_IPC_FULL | CAP_IPC_EXTENDED | CAP_IPC_ASYNC;
+
+	/* Create the capability for self */
+	if ((err = l4_capability_control(CAP_CONTROL_CREATE, 0, 0, 0, &ipc_cap)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request.\n");
+		BUG();
+	}
+
+	/*
+	 * Share it with our container.
+	 *
+	 * This effectively enables all threads in this container
+	 * to communicate
+	 */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE | CAP_SHARE_SINGLE,
+					 CAP_SHARE_CONTAINER, 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request.\n");
+		BUG();
+	}
+	return 0;
+}
+
+int read_pager_caps()
 {
 	int ncaps;
 	int err;
@@ -204,16 +256,6 @@ int read_pager_capabilities()
 		printf("l4_capability_control() reading of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
-		BUG();
-	}
-
-	/* Share all of them with paged children */
-	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
-					 CAP_SHARE_CONTAINER,
-					 0)) < 0) {
-		printf("l4_capability_control() sharing of "
-		       "capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_SHARE request.\n");
 		BUG();
 	}
 

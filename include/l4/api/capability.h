@@ -7,18 +7,21 @@
 #define __API_CAPABILITY_H__
 
 /* Capability syscall request types */
-#define CAP_CONTROL_NCAPS		0x00
-#define CAP_CONTROL_READ		0x01
-#define CAP_CONTROL_SHARE		0x02
-#define CAP_CONTROL_GRANT		0x03
-#define CAP_CONTROL_MODIFY		0x05
+#define CAP_CONTROL_NCAPS		0x00000000
+#define CAP_CONTROL_READ		0x00000001
+#define CAP_CONTROL_SHARE		0x00000002
+#define CAP_CONTROL_GRANT		0x00000003
+#define CAP_CONTROL_REPLICATE		0x00000005
+#define CAP_CONTROL_SPLIT		0x00000006
+#define CAP_CONTROL_DEDUCE		0x00000007
 
-#define CAP_SHARE_MASK			0x1F
-#define CAP_SHARE_SPACE			0x01
-#define CAP_SHARE_CONTAINER		0x02
-#define CAP_SHARE_GROUP			0x04
-#define CAP_SHARE_CHILD			0x08	/* All that we are pager of */
-#define CAP_SHARE_SIBLING		0x10	/* All that have a common pager */
+#define CAP_SHARE_MASK			0x00000003
+#define CAP_SHARE_SINGLE		0x00000001
+#define CAP_SHARE_ALL			0x00000002
+
+#define CAP_GRANT_MASK			0x00000003
+#define CAP_GRANT_SINGLE		0x00000001
+#define CAP_GRANT_ALL			0x00000002
 
 /* Task's primary capability list */
 #define TASK_CAP_LIST(task)	\

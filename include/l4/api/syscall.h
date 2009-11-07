@@ -42,7 +42,8 @@ int sys_ipc_control(void);
 int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
 	    unsigned int flags, l4id_t tid);
 int sys_getid(struct task_ids *ids);
-int sys_capability_control(unsigned int req, unsigned int flags, void *addr);
+int sys_capability_control(unsigned int req, unsigned int flags,
+			   l4id_t capid, l4id_t target, void *addr);
 int sys_container_control(unsigned int req, unsigned int flags, void *addr);
 int sys_time(struct timeval *tv, int set);
 int sys_mutex_control(unsigned long mutex_address, int mutex_op);

@@ -26,22 +26,28 @@
  */
 #define CAP_RTYPE_MASK		0xFFFF0000
 #define CAP_RTYPE_THREAD	(1 << 16)
-#define CAP_RTYPE_TGROUP	(1 << 17)
-#define CAP_RTYPE_SPACE		(1 << 18)
-#define CAP_RTYPE_CONTAINER	(1 << 19)
-#define CAP_RTYPE_PGGROUP	(1 << 20) /* Group of paged threads */
-#define CAP_RTYPE_CPUPOOL	(1 << 21)
-#define CAP_RTYPE_THREADPOOL	(1 << 22)
-#define CAP_RTYPE_SPACEPOOL	(1 << 23)
-#define CAP_RTYPE_MUTEXPOOL	(1 << 24)
-#define CAP_RTYPE_MAPPOOL	(1 << 25) /* For pmd spending */
-#define CAP_RTYPE_CAPPOOL	(1 << 26) /* For new cap generation */
+#define CAP_RTYPE_SPACE		(1 << 17)
+#define CAP_RTYPE_CONTAINER	(1 << 18)
+#define CAP_RTYPE_CPUPOOL	(1 << 19)
+#define CAP_RTYPE_THREADPOOL	(1 << 20)
+#define CAP_RTYPE_SPACEPOOL	(1 << 21)
+#define CAP_RTYPE_MUTEXPOOL	(1 << 22)
+#define CAP_RTYPE_MAPPOOL	(1 << 23) /* For pmd spending */
+#define CAP_RTYPE_CAPPOOL	(1 << 24) /* For new cap generation */
 
 #define cap_rtype(c)	((c)->type & CAP_RTYPE_MASK)
+#define cap_set_rtype(c, rtype)			\
+	{(c)->type &= CAP_RTYPE_MASK;		\
+	 (c)->type |= CAP_RTYPE_MASK & rtype;}
 
 /*
  * Access permissions
  */
+
+/* Generic permissions */
+#define CAP_CHANGEABLE		(1 << 28)	/* Can modify contents */
+#define CAP_TRANSFERABLE	(1 << 29)	/* Can grant or share it */
+#define CAP_REPLICABLE		(1 << 30)	/* Can create copies */
 
 /* Thread control capability */
 #define CAP_TCTRL_CREATE	(1 << 0)
@@ -96,5 +102,8 @@
 #define CAP_CAP_GRANT		(1 << 1)
 #define CAP_CAP_READ		(1 << 2)
 #define CAP_CAP_SHARE		(1 << 3)
+#define CAP_CAP_REPLICATE	(1 << 4)
+#define CAP_CAP_SPLIT		(1 << 5)
+#define CAP_CAP_DEDUCE		(1 << 6)
 
 #endif /* __CAP_TYPES_H__ */

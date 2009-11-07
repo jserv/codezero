@@ -38,7 +38,10 @@ struct capability *boot_capability_create(void)
 
 struct capability *capability_create(void)
 {
-	struct capability *cap = alloc_capability();
+	struct capability *cap;
+
+	if (!(cap = alloc_capability()))
+		return 0;
 
 	capability_init(cap);
 
@@ -124,9 +127,40 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 	return 0;
 }
 
+/*
+ * FIXME: Make these functions pass a match function to cap_find()
+ * and remove all duplication. Same goes for find_rtype.
+ */
+struct capability *cap_find_byid(l4id_t capid)
+{
+	struct capability *cap;
+	struct ktcb *task = current;
+
+	/* Search task's own list */
+	list_foreach_struct(cap, &task->cap_list.caps, list)
+		if (cap->capid == capid)
+			return cap;
+
+	/* Search space list */
+	list_foreach_struct(cap, &task->space->cap_list.caps, list)
+		if (cap->capid == capid)
+			return cap;
+
+	/* Search container list */
+	list_foreach_struct(cap, &task->container->cap_list.caps, list)
+		if (cap->capid == capid)
+			return cap;
+
+	return 0;
+}
+
 typedef struct capability *(*cap_match_func_t) \
 		(struct capability *cap, void *match_args);
 
+/*
+ * This is used by every system call to match each
+ * operation with a capability in a syscall-specific way.
+ */
 struct capability *cap_find(struct ktcb *task, cap_match_func_t cap_match_func,
 			     void *match_args, unsigned int cap_type)
 {
@@ -230,8 +264,14 @@ cap_match_capctrl(struct capability *cap, void *args_ptr)
 	if (req == CAP_CONTROL_GRANT)
 		if (!(cap->access & CAP_CAP_GRANT))
 			return 0;
-	if (req == CAP_CONTROL_MODIFY)
-		if (!(cap->access & CAP_CAP_MODIFY))
+	if (req == CAP_CONTROL_REPLICATE)
+		if (!(cap->access & CAP_CAP_REPLICATE))
+			return 0;
+	if (req == CAP_CONTROL_SPLIT)
+		if (!(cap->access & CAP_CAP_SPLIT))
+			return 0;
+	if (req == CAP_CONTROL_DEDUCE)
+		if (!(cap->access & CAP_CAP_DEDUCE))
 			return 0;
 
 	/* Now check the usual restype/resid pair */
@@ -759,7 +799,6 @@ int capability_set_resource_id(struct capability *cap)
 	/* Identifiable resources */
 	switch(cap_rtype(cap)) {
 	case CAP_RTYPE_THREAD:
-	case CAP_RTYPE_TGROUP:
 	case CAP_RTYPE_SPACE:
 	case CAP_RTYPE_CONTAINER:
 		break;
