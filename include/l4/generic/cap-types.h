@@ -37,7 +37,7 @@
 
 #define cap_rtype(c)	((c)->type & CAP_RTYPE_MASK)
 #define cap_set_rtype(c, rtype)			\
-	{(c)->type &= CAP_RTYPE_MASK;		\
+	{(c)->type &= ~CAP_RTYPE_MASK;		\
 	 (c)->type |= CAP_RTYPE_MASK & rtype;}
 
 /*

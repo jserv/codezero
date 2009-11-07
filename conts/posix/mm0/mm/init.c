@@ -163,7 +163,9 @@ void copy_boot_capabilities(int ncaps)
 {
 	struct capability *cap;
 
+	capability_list.ncaps = 0;
 	link_init(&capability_list.caps);
+
 	for (int i = 0; i < total_caps; i++) {
 		cap = kzalloc(sizeof(struct capability));
 
@@ -174,9 +176,8 @@ void copy_boot_capabilities(int ncaps)
 		link_init(&cap->list);
 
 		/* Add capability to global cap list */
-		list_insert(&cap->list, &capability_list.caps);
+		cap_list_insert(cap, &capability_list);
 	}
-	capability_list.ncaps = ncaps;
 }
 
 #if 0
@@ -305,8 +306,13 @@ void cap_print(struct capability *cap)
 void cap_list_print(struct cap_list *cap_list)
 {
 	struct capability *cap;
+	printf("Capabilities\n"
+	       "~~~~~~~~~~~~\n");
+
 	list_foreach_struct(cap, &cap_list->caps, list)
 		cap_print(cap);
+
+	printf("\n");
 }
 /*
  * Replicate, deduce and grant to children the capability to
@@ -320,18 +326,18 @@ void cap_list_print(struct cap_list *cap_list)
  * into a capability to only talk to our current space. Our space is a
  * reduced target, since it is a subset contained in our container.
  */
-int setup_children_caps(int total_caps, struct cap_list *capability_list)
+int setup_children_caps(int total_caps, struct cap_list *cap_list)
 {
-	struct capability ipc_cap, *cap;
+	struct capability *ipc_cap, *cap;
 	struct task_ids ids;
 	int err;
 
 	l4_getid(&ids);
 
-	cap_list_print(capability_list);
+	cap_list_print(cap_list);
 
 	/* Find out our own ipc capability on our own container */
-	list_foreach_struct(cap, &capability_list->caps, list) {
+	list_foreach_struct(cap, &cap_list->caps, list) {
 		if (cap_type(cap) == CAP_TYPE_IPC &&
 		    cap_rtype(cap) == CAP_RTYPE_CONTAINER &&
 		    cap->resid == __cid(ids.tid))
@@ -343,20 +349,25 @@ int setup_children_caps(int total_caps, struct cap_list *capability_list)
 	BUG();
 
 found:
+	/* Create a new capability */
+	BUG_ON(!(ipc_cap = kzalloc(sizeof(*ipc_cap))));
+
 	/* Copy it over to new ipc cap buffer */
-	memcpy(&ipc_cap, cap, sizeof (*cap));
+	memcpy(ipc_cap, cap, sizeof (*cap));
 
 	/* Replicate the ipc capability, giving original as reference */
 	if ((err = l4_capability_control(CAP_CONTROL_REPLICATE,
-					 0, 0, 0, &ipc_cap)) < 0) {
+					 0, 0, 0, ipc_cap)) < 0) {
 		printf("l4_capability_control() replication of "
 		       "ipc capability failed.\n Could not "
 		       "complete CAP_CONTROL_REPLICATE request on cap (%d), "
-		       "err = %d.\n", ipc_cap.capid, err);
+		       "err = %d.\n", ipc_cap->capid, err);
 		BUG();
 	}
 
-	cap_list_print(capability_list);
+	/* Add it to list */
+	cap_list_insert(ipc_cap, cap_list);
+	cap_list_print(cap_list);
 
 	/*
 	 * The returned capability is a replica.
@@ -364,18 +375,18 @@ found:
 	 * Now deduce it such that it applies to talking only to us,
 	 * instead of to the whole container as original.
 	 */
-	cap_set_rtype(&ipc_cap, CAP_RTYPE_SPACE);
-	ipc_cap.resid = __cid(ids.spid); /* This space is target resource */
+	cap_set_rtype(ipc_cap, CAP_RTYPE_SPACE);
+	ipc_cap->resid = ids.spid; /* This space is target resource */
 	if ((err = l4_capability_control(CAP_CONTROL_DEDUCE,
-					 0, 0, 0, &ipc_cap)) < 0) {
+					 0, 0, 0, ipc_cap)) < 0) {
 		printf("l4_capability_control() deduction of "
 		       "ipc capability failed.\n Could not "
 		       "complete CAP_CONTROL_DEDUCE request on cap (%d), "
-		       "err = %d.\n", ipc_cap.capid, err);
+		       "err = %d.\n", ipc_cap->capid, err);
 		BUG();
 	}
 
-	cap_list_print(capability_list);
+	cap_list_print(cap_list);
 
 	/*
 	 * Share it with our container.
@@ -384,13 +395,14 @@ found:
 	 * to communicate to us only, and be able to do nothing else.
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 ipc_cap.capid, 0, 0)) < 0) {
+					 ipc_cap->capid, 0, 0)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");
 		BUG();
 	}
-	cap_list_print(capability_list);
+	cap_list_print(cap_list);
+
 	return 0;
 }
 

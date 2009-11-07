@@ -306,13 +306,13 @@ int cap_deduce(struct capability *new)
  * orig = orig - diff;
  * new = diff;
  */
-int cap_split(l4id_t capid, struct capability *diff)
+int cap_split(struct capability *diff)
 {
 	struct capability *orig, *new;
 
 	/* Find original capability */
-	if (!(orig = cap_find_byid(capid)))
-		return -ENOCAP;
+	if (!(orig = cap_find_byid(diff->capid)))
+		return -EEXIST;
 
 	/* Check target type/resid/owner is the same */
 	if (orig->type != diff->type ||
@@ -421,12 +421,13 @@ int cap_split(l4id_t capid, struct capability *diff)
  * system, but as it is not a quantity, this does not increase
  * the capabilities of the caller in any way.
  */
-int cap_replicate(l4id_t capid, struct capability *dupl)
+int cap_replicate(struct capability *dupl)
 {
 	struct capability *new, *orig;
 
 	/* Find original capability */
-	orig = cap_find_byid(capid);
+	if (!(orig = cap_find_byid(dupl->capid)))
+		return -EEXIST;
 
 	/* Check that caller is owner */
 	if (orig->owner != current->tid)
@@ -450,20 +451,20 @@ int cap_replicate(l4id_t capid, struct capability *dupl)
 		return -ENOCAP;
 
 	/* Copy all except capid & listptrs */
-	new->resid = orig->resid;
-	new->owner = orig->owner;
-	new->type = orig->type;
-	new->access = orig->access;
-	new->start = orig->start;
-	new->end = orig->end;
-	new->size = orig->size;
-	new->used = orig->used;
+	dupl->resid = new->resid = orig->resid;
+	dupl->owner = new->owner = orig->owner;
+	dupl->type = new->type = orig->type;
+	dupl->access = new->access = orig->access;
+	dupl->start = new->start = orig->start;
+	dupl->end = new->end = orig->end;
+	dupl->size = new->size = orig->size;
+	dupl->used = new->used = orig->used;
+
+	/* Copy new fields */
+	dupl->capid = new->capid;
 
 	/* Add it to most private list */
 	cap_list_insert(new, TASK_CAP_LIST(current));
-
-	/* Return new capability to user */
-	memcpy(dupl, new, sizeof(*new));
 
 	return 0;
 }
@@ -474,7 +475,7 @@ int cap_replicate(l4id_t capid, struct capability *dupl)
 int sys_capability_control(unsigned int req, unsigned int flags,
 			   l4id_t capid, l4id_t target, void *userbuf)
 {
-	int err;
+	int err = 0;
 
 	/*
 	 * Check capability to do a capability operation.
@@ -509,7 +510,7 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 		err = cap_grant(flags, capid, target);
 		break;
 	case CAP_CONTROL_SPLIT:
-		err = cap_split(capid, (struct capability *)userbuf);
+		err = cap_split((struct capability *)userbuf);
 		break;
 	case CAP_CONTROL_REPLICATE:
 		if ((err = check_access((unsigned long)userbuf,
@@ -517,7 +518,7 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
 
-		err = cap_replicate(capid, (struct capability *)userbuf);
+		err = cap_replicate((struct capability *)userbuf);
 		break;
 	case CAP_CONTROL_DEDUCE:
 		if ((err = check_access((unsigned long)userbuf,
@@ -527,12 +528,11 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 
 		err = cap_deduce((struct capability *)userbuf);
 		break;
-
 	default:
 		/* Invalid request id */
 		return -EINVAL;
 	}
 
-	return 0;
+	return err;
 }
 

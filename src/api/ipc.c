@@ -537,6 +537,7 @@ int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 {
 	unsigned int ipc_type = 0;
 	int ret = 0;
+	struct ktcb *t = current; if (!t);
 
 	/* Check arguments */
 	if (task_id_special(from) &&
