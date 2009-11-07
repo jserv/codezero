@@ -103,21 +103,25 @@ cap_all_others = \
 \t\t\t\t.type = CAP_TYPE_IPC | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_IPC_SEND | CAP_IPC_RECV
 \t\t\t\t          | CAP_IPC_FULL | CAP_IPC_SHORT
-\t\t\t\t          | CAP_IPC_EXTENDED,
+\t\t\t\t          | CAP_IPC_EXTENDED | CAP_CHANGEABLE
+\t\t\t\t          | CAP_REPLICABLE | CAP_TRANSFERABLE,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_TCTRL | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_TCTRL_CREATE | CAP_TCTRL_DESTROY
 \t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RUN
-\t\t\t\t          | CAP_TCTRL_RECYCLE | CAP_TCTRL_WAIT,
+\t\t\t\t          | CAP_TCTRL_RECYCLE | CAP_TCTRL_WAIT
+\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE
+\t\t\t\t          | CAP_TRANSFERABLE,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_EXREGS | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_EXREGS_RW_PAGER
 \t\t\t\t          | CAP_EXREGS_RW_UTCB | CAP_EXREGS_RW_SP
-\t\t\t\t          | CAP_EXREGS_RW_PC | CAP_EXREGS_RW_REGS,
+\t\t\t\t          | CAP_EXREGS_RW_PC | CAP_EXREGS_RW_REGS
+\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE | CAP_TRANSFERABLE,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 \t\t\t[%d] = {
@@ -134,12 +138,14 @@ cap_all_others = \
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_QUANTITY
 \t\t\t\t	  | CAP_RTYPE_THREADPOOL,
-\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0,
 \t\t\t\t.size = 64,
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_SPACEPOOL,
-\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0,
 \t\t\t\t.size = 64,
 \t\t\t},
 \t\t\t[%d] = {
@@ -149,20 +155,23 @@ cap_all_others = \
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MUTEXPOOL,
-\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0,
 \t\t\t\t.size = 100,
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t/* For pmd accounting */
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MAPPOOL,
-\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0,
 \t\t\t\t/* Function of mem regions, nthreads etc. */
 \t\t\t\t.size = (64 * 30 + 100),
 \t\t\t},
 \t\t\t[%d] = {
 \t\t\t\t/* For cap spliting, creating, etc. */
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL,
-\t\t\t\t.access = 0, .start = 0, .end = 0,
+\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0,
 \t\t\t\t/* This may be existing caps X 2 etc. */
 \t\t\t\t.size = 30,
 \t\t\t},

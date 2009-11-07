@@ -207,7 +207,7 @@ int setup_children_caps(void)
 	ipc_cap.access = CAP_IPC_SEND | CAP_IPC_RECV | CAP_IPC_SHORT |
 			 CAP_IPC_FULL | CAP_IPC_EXTENDED | CAP_IPC_ASYNC;
 
-	/* Create the capability for self */
+	/* Replicate capability for self */
 	if ((err = l4_capability_control(CAP_CONTROL_CREATE, 0, 0, 0, &ipc_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
