@@ -154,6 +154,43 @@ struct capability *cap_find_byid(l4id_t capid)
 	return 0;
 }
 
+/*
+ * TODO: Instead of destroying, use cap_find_byid match function's
+ * match_args to pass a pointer to the capability list, so the
+ * caller may destroy it
+ */
+int cap_find_destroy(l4id_t capid)
+{
+	struct capability *cap;
+	struct ktcb *task = current;
+
+	/* Search task's own list */
+	list_foreach_struct(cap, &task->cap_list.caps, list)
+		if (cap->capid == capid) {
+			cap_list_remove(cap, &task->cap_list);
+			free_capability(cap);
+			return 0;
+		}
+
+	/* Search space list */
+	list_foreach_struct(cap, &task->space->cap_list.caps, list)
+		if (cap->capid == capid) {
+			cap_list_remove(cap, &task->space->cap_list);
+			free_capability(cap);
+			return 0;
+		}
+
+	/* Search container list */
+	list_foreach_struct(cap, &task->container->cap_list.caps, list)
+		if (cap->capid == capid) {
+			cap_list_remove(cap, &task->container->cap_list);
+			free_capability(cap);
+			return 0;
+		}
+
+	return -EEXIST;
+}
+
 typedef struct capability *(*cap_match_func_t) \
 		(struct capability *cap, void *match_args);
 
@@ -272,6 +309,9 @@ cap_match_capctrl(struct capability *cap, void *args_ptr)
 			return 0;
 	if (req == CAP_CONTROL_DEDUCE)
 		if (!(cap->access & CAP_CAP_DEDUCE))
+			return 0;
+	if (req == CAP_CONTROL_DESTROY)
+		if (!(cap->access & CAP_CAP_DESTROY))
 			return 0;
 
 	/* Now check the usual restype/resid pair */

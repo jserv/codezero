@@ -108,6 +108,7 @@
 #define CAP_CAP_REPLICATE	(1 << 3)
 #define CAP_CAP_SPLIT		(1 << 4)
 #define CAP_CAP_DEDUCE		(1 << 5)
-#define CAP_CAP_MODIFY		(CAP_CAP_SPLIT | CAP_CAP_DEDUCE)
-
+#define CAP_CAP_DESTROY		(1 << 6)
+#define CAP_CAP_MODIFY		(CAP_CAP_DEDUCE | CAP_CAP_SPLIT \
+				 | CAP_CAP_DESTROY)
 #endif /* __CAP_TYPES_H__ */

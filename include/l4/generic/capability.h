@@ -99,6 +99,13 @@ static inline void cap_list_insert(struct capability *cap,
 	clist->ncaps++;
 }
 
+static inline void cap_list_remove(struct capability *cap,
+				   struct cap_list *clist)
+{
+	list_remove(&cap->list);
+	clist->ncaps--;
+}
+
 /* Detach a whole list of capabilities from list head */
 static inline struct capability *
 cap_list_detach(struct cap_list *clist)
@@ -140,6 +147,8 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 					  unsigned int rtype);
 struct capability *cap_find_byid(l4id_t capid);
+
+int cap_find_destroy(l4id_t capid);
 
 /* Capability checking on system calls */
 int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,

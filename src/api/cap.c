@@ -97,13 +97,14 @@ int cap_share(l4id_t capid, unsigned int flags)
 }
 
 /* Grants all caps */
-int cap_grant_all(l4id_t tid, unsigned int flags)
+int cap_grant_all(struct capability *req, unsigned int flags)
 {
 	struct ktcb *target;
 	struct capability *cap_head, *cap;
 	int err;
 
-	if (!(target = tcb_find(tid)))
+	/* Owners are always threads, for simplicity */
+	if (!(target = tcb_find(req->owner)))
 		return -ESRCH;
 
 	/* Detach all caps */
@@ -112,6 +113,7 @@ int cap_grant_all(l4id_t tid, unsigned int flags)
 	list_foreach_struct(cap, &cap_head->list, list) {
 		/* Change ownership */
 		cap->owner = target->tid;
+		BUG_ON(target->tid != req->owner);
 
 		/* Make immutable if GRANT_IMMUTABLE given */
 		if (flags & CAP_GRANT_IMMUTABLE) {
@@ -140,15 +142,15 @@ out_err:
 	return err;
 }
 
-int cap_grant_single(l4id_t capid, l4id_t tid, unsigned int flags)
+int cap_grant_single(struct capability *req, unsigned int flags)
 {
 	struct capability *cap;
 	struct ktcb *target;
 
-	if (!(cap = cap_find_byid(capid)))
+	if (!(cap = cap_find_byid(req->capid)))
 		return -EEXIST;
 
-	if (!(target = tcb_find(tid)))
+	if (!(target = tcb_find(req->owner)))
 		return -ESRCH;
 
 	if (cap->owner != current->tid)
@@ -163,6 +165,7 @@ int cap_grant_single(l4id_t capid, l4id_t tid, unsigned int flags)
 
 	/* Change ownership */
 	cap->owner = target->tid;
+	BUG_ON(cap->owner != req->owner);
 
 	/* Make immutable if GRANT_IMMUTABLE given */
 	if (flags & CAP_GRANT_IMMUTABLE) {
@@ -176,12 +179,12 @@ int cap_grant_single(l4id_t capid, l4id_t tid, unsigned int flags)
 	return 0;
 }
 
-int cap_grant(l4id_t capid, l4id_t tid, unsigned int flags)
+int cap_grant(struct capability *cap, unsigned int flags)
 {
 	if (flags & CAP_GRANT_SINGLE)
-		cap_grant_single(capid, tid, flags);
+		cap_grant_single(cap, flags);
 	else if (flags & CAP_GRANT_ALL)
-		cap_grant_all(tid, flags);
+		cap_grant_all(cap, flags);
 	else
 		return -EINVAL;
 	return 0;
@@ -288,6 +291,10 @@ int cap_deduce(struct capability *new)
 		if ((ret = cap_deduce_rtype(orig, new)) < 0)
 			return ret;
 
+	/* Check owners are same for request validity */
+	if (orig->owner != new->owner)
+		return -EINVAL;
+
 	/* Check permissions for deduction */
 	if (orig->access) {
 		/* New cannot have more bits than original */
@@ -341,6 +348,29 @@ int cap_deduce(struct capability *new)
 }
 
 /*
+ * Destroys a capability
+ */
+int cap_destroy(struct capability *cap)
+{
+	struct capability *orig;
+
+	/* Find original capability */
+	if (!(orig = cap_find_byid(cap->capid)))
+		return -EEXIST;
+
+	/* Check that caller is owner */
+	if (orig->owner != current->tid)
+		return -ENOCAP;
+
+	/* Check that it is destroyable */
+	if (!(cap_generic_perms(orig) & CAP_CHANGEABLE))
+		return -ENOCAP;
+
+	cap_find_destroy(cap->capid);
+	return 0;
+}
+
+/*
  * Splits a capability
  *
  * Pools of typed memory objects can't be replicated, and
@@ -373,6 +403,10 @@ int cap_split(struct capability *diff)
 	/* Check that caller is owner */
 	if (orig->owner != current->tid)
 		return -ENOCAP;
+
+	/* Check owners are same for request validity */
+	if (orig->owner != diff->owner)
+		return -EINVAL;
 
 	/* Check that it is splitable */
 	if (!(orig->access & CAP_CHANGEABLE))
@@ -427,6 +461,9 @@ int cap_split(struct capability *diff)
 	} else if (new->size)
 		return -EINVAL;
 
+	/* No used diff allowed for request validity */
+	if (diff->used)
+		return -EINVAL;
 
 	/* Check range usage but don't split if requested */
 	if (orig->start || orig->end) {
@@ -438,8 +475,6 @@ int cap_split(struct capability *diff)
 		}
 	} else if (new->start || new->end)
 		return -EINVAL;
-
-
 
 	/* Copy other fields */
 	new->type = orig->type;
@@ -557,14 +592,24 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 		err = cap_share(capid, flags);
 		break;
 	case CAP_CONTROL_GRANT:
-		err = cap_grant(flags, capid, target);
+		if ((err = check_access((unsigned long)userbuf,
+					sizeof(struct capability),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
+
+		err = cap_grant((struct capability *)userbuf, flags);
 		break;
 	case CAP_CONTROL_SPLIT:
+		if ((err = check_access((unsigned long)userbuf,
+					sizeof(struct capability),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
+
 		err = cap_split((struct capability *)userbuf);
 		break;
 	case CAP_CONTROL_REPLICATE:
 		if ((err = check_access((unsigned long)userbuf,
-					sizeof(int),
+					sizeof(struct capability),
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
 
@@ -572,12 +617,21 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 		break;
 	case CAP_CONTROL_DEDUCE:
 		if ((err = check_access((unsigned long)userbuf,
-					sizeof(int),
+					sizeof(struct capability),
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
 
 		err = cap_deduce((struct capability *)userbuf);
 		break;
+	case CAP_CONTROL_DESTROY:
+		if ((err = check_access((unsigned long)userbuf,
+					sizeof(struct capability),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
+
+		err = cap_destroy((struct capability *)userbuf);
+		break;
+
 	default:
 		/* Invalid request id */
 		return -EINVAL;

@@ -347,73 +347,86 @@ int cap_find_replicate_reduce_grant(struct capability *cap)
 	struct capability new_cap;
 	int err;
 
-	/*
-	 * Check for type
-	 */
+	/* Merely match type, kernel does actual check on suitability */
 	list_foreach_struct(possessed, &capability_list.caps, list) {
-		if (cap_type(possessed) == cap_type(cap))
-			goto found;
+		/* Different type, pass */
+		if (cap_type(possessed) != cap_type(cap))
+			continue;
+
+		/* Copy possessed one to new one's buffer */
+		memcpy(&new_cap, possessed, sizeof(*possessed));
+
+		/* Replicate capability, giving original as reference */
+		if ((err = l4_capability_control(CAP_CONTROL_REPLICATE,
+						 0, 0, 0, &new_cap)) < 0) {
+			printf("l4_capability_control() replication of "
+			       "capability failed.\n Could not complete "
+			       "CAP_CONTROL_REPLICATE request on cap (%d), "
+			       "err = %d.\n", new_cap.capid, err);
+			return err;
+		}
+
+		/*
+		 * The returned capability is a replica.
+		 *
+		 * We don't add the newly created one to our own internal
+		 * list because we will grant it shortly and lose its
+		 * possession
+		 *
+		 * Now deduce it such that it looks like the one requested.
+		 * Note, we assume the request had been validated before.
+		 * Also note, the owner shall be still us.
+		 */
+		new_cap.resid = cap->resid;
+		new_cap.type = cap->type;
+		new_cap.access = cap->access;
+		new_cap.start = cap->start;
+		new_cap.end = cap->end;
+		new_cap.size = cap->size;
+		new_cap.used = cap->used;
+
+		/*
+		 * Make sure it is transferable,
+		 * since we will need to grant it soon
+		 */
+		new_cap.access |= CAP_TRANSFERABLE;
+
+
+		if ((err = l4_capability_control(CAP_CONTROL_DEDUCE,
+						 0, 0, 0, &new_cap)) < 0) {
+			/* Couldn't deduce this one, destroy the replica */
+			if ((err =
+			     l4_capability_control(CAP_CONTROL_DESTROY,
+						   0, 0, 0, &new_cap)) < 0) {
+				printf("l4_capability_control() replication of "
+				       "capability failed.\n Could not "
+				       "complete CAP_CONTROL_DESTROY request "
+				       " on cap (%d), err = %d.\n",
+				       new_cap.capid, err);
+				BUG();
+			}
+		} else /* Success */
+			goto success;
 	}
+
 	return -ENOCAP;
 
-found:
-	/* Copy possessed one to new one's buffer */
-	memcpy(&new_cap, possessed, sizeof(*possessed));
-
-	/* Replicate the possessed capability, giving original as reference */
-	if ((err = l4_capability_control(CAP_CONTROL_REPLICATE,
-					 0, 0, 0, &new_cap)) < 0) {
-		printf("l4_capability_control() replication of "
-		       "capability failed.\n Could not "
-		       "complete CAP_CONTROL_REPLICATE request on cap (%d), "
-		       "err = %d.\n", new_cap.capid, err);
-		return err;
-	}
-
+success:
 	/*
-	 * The returned capability is a replica.
+	 * Found suitable one to replicate/deduce.
+	 * Grant it to requested owner.
 	 *
-	 * We don't add the newly created one to our own internal
-	 * list because we will grant it shortly and lose its
-	 * possession
-	 *
-	 * Now deduce it such that it looks like the one requested.
-	 * Note, we assume the request had been validated before.
+	 * This effectively enables the owner to have all
+	 * operations defined in the capability. However,
+	 * we use a flag to make the capability immutable
+	 * as we grant it. (We wouldn't be able to grant
+	 * it if it had no grant permission originally. We
+	 * remove it _as_ we grant it)
 	 */
-	new_cap.owner = cap->owner;
-	new_cap.resid = cap->resid;
-	new_cap.type = cap->type;
-	new_cap.access = cap->access;
-	new_cap.start = cap->start;
-	new_cap.end = cap->end;
-	new_cap.size = cap->size;
-	new_cap.used = cap->used;
-
-	/*
-	 * Make sure it is transferable,
-	 * since we will need to grant it soon
-	 */
-	new_cap.access |= CAP_TRANSFERABLE;
-
-	if ((err = l4_capability_control(CAP_CONTROL_DEDUCE,
-					 0, 0, 0, &new_cap)) < 0) {
-		printf("l4_capability_control() deduction of "
-		       "ipc capability failed.\n Could not "
-		       "complete CAP_CONTROL_DEDUCE request on cap (%d), "
-		       "err = %d.\n", new_cap.capid, err);
-		return err;
-	}
-
-	/*
-	 * Grant it to given owner.
-	 *
-	 * This effectively enables the owner to have all operations defined
-	 * in the capability. However, we use a flag to make the capability
-	 * immutable as we grant it. (We wouldn't be able to grant it if it
-	 * had no grant permission originally. We remove it as we grant it)
-	 */
+	new_cap.owner = cap->owner; /* Indicate new owner */
 	if ((err = l4_capability_control(CAP_CONTROL_GRANT,
-					 CAP_GRANT_SINGLE | CAP_GRANT_IMMUTABLE,
+					 CAP_GRANT_SINGLE |
+					 CAP_GRANT_IMMUTABLE,
 					 0, 0, &new_cap)) < 0) {
 		printf("l4_capability_control() granting of "
 		       "capability (%d) failed.\n Could not "
@@ -493,8 +506,7 @@ int sys_request_cap(struct tcb *task, struct capability *__cap_userptr)
 	}
 
 out:
-	pager_unmap_user_range(__cap_userptr,
-			       sizeof(*__cap_userptr));
+	pager_unmap_user_range(cap, sizeof(*cap));
 	return ret;
 }
 

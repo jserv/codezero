@@ -105,11 +105,11 @@ void ipc_extended_test(void)
 		cap.owner = parent;
 		cap.resid = child;
 	} else {
-		cap.owner = child;
+		cap.owner = getpid();
 		cap.resid = parent;
 	}
 	cap.type = CAP_TYPE_IPC | CAP_RTYPE_THREAD;
-	cap.access = CAP_IPC_EXTENDED;
+	cap.access = CAP_IPC_EXTENDED | CAP_IPC_SEND | CAP_IPC_RECV;
 	if ((err = cap_request_pager(&cap)) < 0) {
 		printf("Ipc capability request failed. "
 		       "err = %d\n", err);
