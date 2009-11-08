@@ -23,6 +23,7 @@
 #include <mmap.h>
 #include <test.h>
 #include <capability.h>
+#include <globals.h>
 
 /* Receives all registers and origies back */
 int ipc_test_full_sync(l4id_t senderid)

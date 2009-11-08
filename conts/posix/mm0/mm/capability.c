@@ -14,6 +14,7 @@
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
 #include <l4lib/arch/syslib.h>
 #include <malloc/malloc.h>
+#include <user.h>
 
 /* Capability descriptor list */
 struct cap_list capability_list;
@@ -340,18 +341,16 @@ void setup_caps()
  * replicate, reduce and grant as described with given parameters.
  * Assumes parameters have already been validated and security-checked.
  */
-int cap_find_reduce_grant(struct capability *cap)
+int cap_find_replicate_reduce_grant(struct capability *cap)
 {
 	struct capability *possessed;
 	struct capability new_cap;
 	int err;
 
+	/*
+	 * Check for type
+	 */
 	list_foreach_struct(possessed, &capability_list.caps, list) {
-		/*
-		 * For now, we only match types, we don't check
-		 * whether possessed one is superior enough to
-		 * produce the requested cap.
-		 */
 		if (cap_type(possessed) == cap_type(cap))
 			goto found;
 	}
@@ -432,51 +431,70 @@ found:
  * capability if it is appropriate. This currently supports only
  * ipc.
  */
-int sys_request_cap(struct tcb *sender, struct capability *cap)
+int sys_request_cap(struct tcb *task, struct capability *__cap_userptr)
 {
 	struct tcb *target;
-	int err;
+	struct capability *cap;
+	int ret;
+
+	if (!(cap = pager_validate_map_user_range(task, __cap_userptr,
+						  sizeof(*__cap_userptr),
+						  VM_READ | VM_WRITE)))
+		return -EFAULT;
 
 	/* Only support IPC requests for now */
-	if (cap_type(cap) != CAP_TYPE_IPC)
-		return -EPERM;
+	if (cap_type(cap) != CAP_TYPE_IPC) {
+		ret = -EPERM;
+		goto out;
+	}
 
 	/* Validate rest of the fields */
-	if (cap->start || cap->end || cap->used || cap->size)
-		return -EINVAL;
+	if (cap->start || cap->end || cap->used || cap->size) {
+		ret = -EINVAL;
+		goto out;
+	}
 
-	if (cap_generic_perms(cap) != CAP_IMMUTABLE)
-		return -EPERM;
+	if (cap_generic_perms(cap) != CAP_IMMUTABLE) {
+		ret = -EPERM;
+		goto out;
+	}
 
 	/* Find out who the task wants to ipc */
 	switch (cap_rtype(cap)) {
 	/* Is it a thread? */
 	case CAP_RTYPE_THREAD:
 		/* Find the thread */
-		if (!(target = find_task(cap->resid)))
-			return -ESRCH;
+		if (!(target = find_task(cap->resid))) {
+			ret = -ESRCH;
+			goto out;
+		}
 
 		/* Requester must be the owner */
-		if (cap->owner != sender->tid)
-			return -EPERM;
+		if (cap->owner != task->tid) {
+			ret = -EPERM;
+			goto out;
+		}
 
 		/*
 		 * It is a thread that we are managing, nothing
 		 * special requested here, just grant it
 		 */
-		if ((err = cap_find_reduce_grant(cap)) < 0)
-			return err;
+		if ((ret = cap_find_replicate_reduce_grant(cap)) < 0)
+			goto out;
 		break;
 	case CAP_RTYPE_SPACE:
 		/* Space requests not allowed */
-		return -EPERM;
-		break;
+		ret = -EPERM;
+		goto out;
 	case CAP_RTYPE_CONTAINER:
 		/* Container requests not allowed */
-		return -EPERM;
-		break;
+		ret = -EPERM;
+		goto out;
 	}
 
-	return 0;
+out:
+	pager_unmap_user_range(__cap_userptr,
+			       sizeof(*__cap_userptr));
+	return ret;
 }
 

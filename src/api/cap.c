@@ -97,7 +97,7 @@ int cap_share(l4id_t capid, unsigned int flags)
 }
 
 /* Grants all caps */
-int cap_grant_all(l4id_t tid)
+int cap_grant_all(l4id_t tid, unsigned int flags)
 {
 	struct ktcb *target;
 	struct capability *cap_head, *cap;
@@ -112,6 +112,12 @@ int cap_grant_all(l4id_t tid)
 	list_foreach_struct(cap, &cap_head->list, list) {
 		/* Change ownership */
 		cap->owner = target->tid;
+
+		/* Make immutable if GRANT_IMMUTABLE given */
+		if (flags & CAP_GRANT_IMMUTABLE) {
+			cap->access &= ~CAP_GENERIC_MASK;
+			cap->access |= CAP_IMMUTABLE;
+		}
 
 		/*
 		 * Sanity check: granted cap cannot have used
@@ -134,7 +140,7 @@ out_err:
 	return err;
 }
 
-int cap_grant_single(l4id_t capid, l4id_t tid)
+int cap_grant_single(l4id_t capid, l4id_t tid, unsigned int flags)
 {
 	struct capability *cap;
 	struct ktcb *target;
@@ -158,20 +164,81 @@ int cap_grant_single(l4id_t capid, l4id_t tid)
 	/* Change ownership */
 	cap->owner = target->tid;
 
+	/* Make immutable if GRANT_IMMUTABLE given */
+	if (flags & CAP_GRANT_IMMUTABLE) {
+		cap->access &= ~CAP_GENERIC_MASK;
+		cap->access |= CAP_IMMUTABLE;
+	}
+
 	/* Place it where it is granted */
 	cap_list_insert(cap, TASK_CAP_LIST(target));
 
 	return 0;
 }
 
-int cap_grant(unsigned int flags, l4id_t capid, l4id_t tid)
+int cap_grant(l4id_t capid, l4id_t tid, unsigned int flags)
 {
 	if (flags & CAP_GRANT_SINGLE)
-		cap_grant_single(capid, tid);
+		cap_grant_single(capid, tid, flags);
 	else if (flags & CAP_GRANT_ALL)
-		cap_grant_all(tid);
+		cap_grant_all(tid, flags);
 	else
 		return -EINVAL;
+	return 0;
+}
+
+int cap_deduce_rtype(struct capability *orig, struct capability *new)
+{
+	struct ktcb *target;
+	struct address_space *sp;
+
+	/* An rtype deduction can only be to a space or thread */
+	switch (cap_rtype(new)) {
+	case CAP_RTYPE_SPACE:
+		/* Check containment right */
+		if (cap_rtype(orig) != CAP_RTYPE_CONTAINER)
+			return -ENOCAP;
+
+		/*
+		 * Find out if this space exists in this
+		 * container.
+		 *
+		 * Note address space search is local only.
+		 * Only thread searches are global.
+		 */
+		if (!(sp = address_space_find(new->resid)))
+			return -ENOCAP;
+
+		/* Success. Assign new type to original cap */
+		cap_set_rtype(orig, cap_rtype(new));
+
+		/* Assign the space id to orig cap */
+		orig->resid = sp->spid;
+		break;
+	case CAP_RTYPE_THREAD:
+		/* Find the thread */
+		if (!(target = tcb_find(new->resid)))
+			return -ENOCAP;
+
+		/* Check containment */
+		if (cap_rtype(orig) == CAP_RTYPE_SPACE) {
+			if (orig->resid != target->space->spid)
+				return -ENOCAP;
+		} else if (cap_rtype(orig) == CAP_RTYPE_CONTAINER) {
+			if(orig->resid != target->container->cid)
+				return -ENOCAP;
+		} else
+			return -ENOCAP;
+
+		/* Success. Assign new type to original cap */
+		cap_set_rtype(orig, cap_rtype(new));
+
+		/* Assign the space id to orig cap */
+		orig->resid = target->tid;
+		break;
+	default:
+		return -ENOCAP;
+	}
 	return 0;
 }
 
@@ -202,7 +269,7 @@ int cap_grant(unsigned int flags, l4id_t capid, l4id_t tid)
 int cap_deduce(struct capability *new)
 {
 	struct capability *orig;
-	struct address_space *sp;
+	int ret;
 
 	/* Find original capability */
 	if (!(orig = cap_find_byid(new->capid)))
@@ -217,27 +284,9 @@ int cap_deduce(struct capability *new)
 		return -ENOCAP;
 
 	/* Check target resource deduction */
-	if (cap_rtype(new) != cap_rtype(orig)) {
-		/* An rtype deduction is always into a space */
-		if (cap_rtype(new) != CAP_RTYPE_SPACE)
-			return -ENOCAP;
-
-		/* Assign new type to original cap */
-		cap_set_rtype(orig, cap_rtype(new));
-
-		/*
-		 * Find out if this space exists.
-		 *
-		 * Note address space search is
-		 * local only. Only thread searches
-		 * are global.
-		 */
-		if (!(sp = address_space_find(new->resid)))
-			return -ENOCAP;
-
-		/* Success. Assign the space id to orig cap */
-		orig->resid = sp->spid;
-	}
+	if (cap_rtype(new) != cap_rtype(orig))
+		if ((ret = cap_deduce_rtype(orig, new)) < 0)
+			return ret;
 
 	/* Check permissions for deduction */
 	if (orig->access) {
@@ -253,6 +302,7 @@ int cap_deduce(struct capability *new)
 	} else if (new->access)
 		return -EINVAL;
 
+	/* Check size for deduction */
 	if (orig->size) {
 		/* New can't have more, or make original redundant */
 		if (new->size >= orig->size)
