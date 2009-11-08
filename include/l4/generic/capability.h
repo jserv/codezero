@@ -59,8 +59,8 @@ struct capability {
 
 	/* Capability identifiers */
 	l4id_t capid;		/* Unique capability ID */
-	l4id_t resid;		/* Targeted resource ID */
 	l4id_t owner;		/* Capability owner ID */
+	l4id_t resid;		/* Targeted resource ID */
 	unsigned int type;	/* Capability and target resource type */
 
 	/* Capability limits/permissions */

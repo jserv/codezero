@@ -529,7 +529,7 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 	 * Stack contains: args, environment, argc integer,
 	 * 2 Null integers as terminators.
 	 *
-	 * It needs to be 8-byte aligned also.
+	 * It also needs to be 8-byte aligned.
 	 */
 	stack_used = align_up(args->size + env->size + sizeof(int) * 3 + 8, 8);
 	task->stack_end = __pfn_to_addr(cont_mem_regions.task->end);

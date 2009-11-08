@@ -22,7 +22,7 @@
 #include <shm.h>
 #include <mmap.h>
 #include <test.h>
-
+#include <capability.h>
 
 /* Receives all registers and origies back */
 int ipc_test_full_sync(l4id_t senderid)
@@ -88,7 +88,10 @@ void handle_requests(void)
 			ret = 0;
 		break;
 	}
-
+	case L4_REQUEST_CAPABILITY: {
+		ret = sys_request_cap(sender, (struct capability *)mr[0]);
+		break;
+	}
 	case L4_IPC_TAG_SHMGET: {
 		ret = sys_shmget((key_t)mr[0], (int)mr[1], (int)mr[2]);
 		break;

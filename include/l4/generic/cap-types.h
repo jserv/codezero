@@ -48,6 +48,10 @@
 #define CAP_CHANGEABLE		(1 << 28)	/* Can modify contents */
 #define CAP_TRANSFERABLE	(1 << 29)	/* Can grant or share it */
 #define CAP_REPLICABLE		(1 << 30)	/* Can create copies */
+#define CAP_GENERIC_MASK	0xF0000000
+#define CAP_IMMUTABLE			0
+#define cap_generic_perms(c)	\
+	((c)->access & CAP_GENERIC_MASK)
 
 /* Thread control capability */
 #define CAP_TCTRL_CREATE	(1 << 0)

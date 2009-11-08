@@ -10,6 +10,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <tests.h>
+#include <l4/api/capability.h>
+#include <l4/generic/cap-types.h>
+#include <l4lib/capability.h>
 
 /*
  * Full ipc test. Sends/receives full utcb, done with the pager.
@@ -45,15 +48,38 @@ void ipc_full_test(void)
 		printf("FULL IPC TEST:      -- FAILED --\n");
 }
 
+int cap_request_pager(struct capability *cap)
+{
+	int err;
+
+	write_mr(L4SYS_ARG0, (u32)cap);
+
+	if ((err = l4_sendrecv(pagerid, pagerid,
+			       L4_REQUEST_CAPABILITY)) < 0) {
+		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
+		return err;
+	}
+
+	/* Check if syscall itself was successful */
+	if ((err = l4_get_retval()) < 0) {
+		printf("%s: Error: %d\n", __FUNCTION__, err);
+		return err;
+	}
+	return err;
+}
+
 /*
  * This is an extended ipc test that is done between 2 tasks that fork.
  */
 void ipc_extended_test(void)
 {
 	pid_t child, parent;
+	struct capability cap;
 	void *base;
 	char *ipcbuf;
 	int err;
+
+	memset(&cap, 0, sizeof(cap));
 
 	/* Get parent pid */
 	parent = getpid();
@@ -70,6 +96,25 @@ void ipc_extended_test(void)
 
 	/* This test makes this assumption */
 	BUG_ON(L4_IPC_EXTENDED_MAX_SIZE > PAGE_SIZE);
+
+	/*
+	 * Request capability to ipc to each other from pager
+	 * (Actually only the sender needs it)
+	 */
+	if (child) {
+		cap.owner = parent;
+		cap.resid = child;
+	} else {
+		cap.owner = child;
+		cap.resid = parent;
+	}
+	cap.type = CAP_TYPE_IPC | CAP_RTYPE_THREAD;
+	cap.access = CAP_IPC_EXTENDED;
+	if ((err = cap_request_pager(&cap)) < 0) {
+		printf("Ipc capability request failed. "
+		       "err = %d\n", err);
+		goto out_err;
+	}
 
 	/*
 	 * Both child and parent gets 2 pages

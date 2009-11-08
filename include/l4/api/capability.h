@@ -19,9 +19,10 @@
 #define CAP_SHARE_SINGLE		0x00000001
 #define CAP_SHARE_ALL			0x00000002
 
-#define CAP_GRANT_MASK			0x00000003
+#define CAP_GRANT_MASK			0x0000000F
 #define CAP_GRANT_SINGLE		0x00000001
 #define CAP_GRANT_ALL			0x00000002
+#define CAP_GRANT_IMMUTABLE		0x00000004
 
 /* Task's primary capability list */
 #define TASK_CAP_LIST(task)	\

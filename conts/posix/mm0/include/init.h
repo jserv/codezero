@@ -29,6 +29,7 @@ extern struct initdata initdata;
 
 void init(void);
 
+void copy_boot_capabilities(int ncaps);
 /* TODO: Remove this stuff from here. */
 int init_devzero(void);
 struct vm_file *get_devzero(void);
