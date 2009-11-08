@@ -250,7 +250,7 @@ void setup_dummy_current()
 
 void init_finalize(struct kernel_resources *kres)
 {
-	volatile register unsigned int stack asm("sp");
+	volatile register unsigned int stack;
 	volatile register unsigned int newstack;
 	struct ktcb *first_task;
 	struct container *c;
@@ -269,6 +269,7 @@ void init_finalize(struct kernel_resources *kres)
 
 	/* Switch to new stack */
 	stack = newstack;
+	asm("mov sp, %0\n\t"::"r"(stack));
 
 	/* -- Point of no stack unwinding -- */
 

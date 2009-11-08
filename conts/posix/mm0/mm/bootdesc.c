@@ -23,7 +23,7 @@ struct svc_image *bootdesc_get_image_byname(char *name)
 
 void read_boot_params()
 {
-	int npages;
+	int npages = 0;
 	struct bootdesc *bootdesc;
 
 	/*
