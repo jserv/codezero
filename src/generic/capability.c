@@ -128,68 +128,33 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 	return 0;
 }
 
-/*
- * FIXME: Make these functions pass a match function to cap_find()
- * and remove all duplication. Same goes for find_rtype.
- */
-struct capability *cap_find_byid(l4id_t capid)
+struct capability *cap_find_by_capid(l4id_t capid, struct cap_list **cap_list)
 {
 	struct capability *cap;
 	struct ktcb *task = current;
 
 	/* Search task's own list */
 	list_foreach_struct(cap, &task->cap_list.caps, list)
-		if (cap->capid == capid)
+		if (cap->capid == capid) {
+			*cap_list = &task->cap_list;
 			return cap;
+		}
 
 	/* Search space list */
 	list_foreach_struct(cap, &task->space->cap_list.caps, list)
-		if (cap->capid == capid)
+		if (cap->capid == capid) {
+			*cap_list = &task->space->cap_list;
 			return cap;
+		}
 
 	/* Search container list */
 	list_foreach_struct(cap, &task->container->cap_list.caps, list)
-		if (cap->capid == capid)
+		if (cap->capid == capid) {
+			*cap_list = &task->container->cap_list;
 			return cap;
+		}
 
 	return 0;
-}
-
-/*
- * TODO: Instead of destroying, use cap_find_byid match function's
- * match_args to pass a pointer to the capability list, so the
- * caller may destroy it
- */
-int cap_find_destroy(l4id_t capid)
-{
-	struct capability *cap;
-	struct ktcb *task = current;
-
-	/* Search task's own list */
-	list_foreach_struct(cap, &task->cap_list.caps, list)
-		if (cap->capid == capid) {
-			cap_list_remove(cap, &task->cap_list);
-			free_capability(cap);
-			return 0;
-		}
-
-	/* Search space list */
-	list_foreach_struct(cap, &task->space->cap_list.caps, list)
-		if (cap->capid == capid) {
-			cap_list_remove(cap, &task->space->cap_list);
-			free_capability(cap);
-			return 0;
-		}
-
-	/* Search container list */
-	list_foreach_struct(cap, &task->container->cap_list.caps, list)
-		if (cap->capid == capid) {
-			cap_list_remove(cap, &task->container->cap_list);
-			free_capability(cap);
-			return 0;
-		}
-
-	return -EEXIST;
 }
 
 typedef struct capability *(*cap_match_func_t) \
@@ -543,7 +508,6 @@ struct capability *cap_match_thread(struct capability *cap,
 		if (!(cap->access & CAP_TCTRL_WAIT))
 			return 0;
 		break;
-
 	default:
 		/* We refuse to accept anything else */
 		return 0;

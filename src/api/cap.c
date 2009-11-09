@@ -61,15 +61,16 @@ int cap_read_all(struct capability *caparray)
 int cap_share_single(l4id_t capid)
 {
 	struct capability *cap;
+	struct cap_list *clist;
 
-	if (!(cap = cap_find_byid(capid)))
+	if (!(cap = cap_find_by_capid(capid, &clist)))
 		return -EEXIST;
 
 	if (cap->owner != current->tid)
 		return -EPERM;
 
 	/* First remove it from its list */
-	list_remove(&cap->list);
+	cap_list_remove(cap, clist);
 
 	/* Place it where it is shared */
 	cap_list_insert(cap, &curcont->cap_list);
@@ -145,9 +146,10 @@ out_err:
 int cap_grant_single(struct capability *req, unsigned int flags)
 {
 	struct capability *cap;
+	struct cap_list *clist;
 	struct ktcb *target;
 
-	if (!(cap = cap_find_byid(req->capid)))
+	if (!(cap = cap_find_by_capid(req->capid, &clist)))
 		return -EEXIST;
 
 	if (!(target = tcb_find(req->owner)))
@@ -161,7 +163,7 @@ int cap_grant_single(struct capability *req, unsigned int flags)
 		return -EPERM;
 
 	/* First remove it from its list */
-	list_remove(&cap->list);
+	cap_list_remove(cap, clist);
 
 	/* Change ownership */
 	cap->owner = target->tid;
@@ -272,10 +274,11 @@ int cap_deduce_rtype(struct capability *orig, struct capability *new)
 int cap_deduce(struct capability *new)
 {
 	struct capability *orig;
+	struct cap_list *clist;
 	int ret;
 
 	/* Find original capability */
-	if (!(orig = cap_find_byid(new->capid)))
+	if (!(orig = cap_find_by_capid(new->capid, &clist)))
 		return -EEXIST;
 
 	/* Check that caller is owner */
@@ -353,9 +356,10 @@ int cap_deduce(struct capability *new)
 int cap_destroy(struct capability *cap)
 {
 	struct capability *orig;
+	struct cap_list *clist;
 
 	/* Find original capability */
-	if (!(orig = cap_find_byid(cap->capid)))
+	if (!(orig = cap_find_by_capid(cap->capid, &clist)))
 		return -EEXIST;
 
 	/* Check that caller is owner */
@@ -366,7 +370,8 @@ int cap_destroy(struct capability *cap)
 	if (!(cap_generic_perms(orig) & CAP_CHANGEABLE))
 		return -ENOCAP;
 
-	cap_find_destroy(cap->capid);
+	cap_list_remove(orig, clist);
+	free_capability(orig);
 	return 0;
 }
 
@@ -399,10 +404,11 @@ static inline int cap_has_range(struct capability *c)
 int cap_split(struct capability *diff, unsigned int flags)
 {
 	struct capability *orig, *new;
+	struct cap_list *clist;
 	int ret;
 
 	/* Find original capability */
-	if (!(orig = cap_find_byid(diff->capid)))
+	if (!(orig = cap_find_by_capid(diff->capid, &clist)))
 		return -EEXIST;
 
 	/* Check target type/resid/owner is the same */
@@ -576,9 +582,10 @@ out_err:
 int cap_replicate(struct capability *dupl)
 {
 	struct capability *new, *orig;
+	struct cap_list *clist;
 
 	/* Find original capability */
-	if (!(orig = cap_find_byid(dupl->capid)))
+	if (!(orig = cap_find_by_capid(dupl->capid, &clist)))
 		return -EEXIST;
 
 	/* Check that caller is owner */

@@ -146,9 +146,7 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 
 struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 					  unsigned int rtype);
-struct capability *cap_find_byid(l4id_t capid);
-
-int cap_find_destroy(l4id_t capid);
+struct capability *cap_find_by_capid(l4id_t capid, struct cap_list **clist);
 
 /* Capability checking on system calls */
 int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
