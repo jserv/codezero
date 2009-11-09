@@ -292,28 +292,40 @@ cap_match_capctrl(struct capability *cap, void *args_ptr)
 	struct ktcb *target = args->task;
 
 	/* Check operation privileges */
-	if (req == CAP_CONTROL_NCAPS ||
-	    req == CAP_CONTROL_READ)
+	switch (req) {
+	case CAP_CONTROL_NCAPS:
+	case CAP_CONTROL_READ:
 		if (!(cap->access & CAP_CAP_READ))
 			return 0;
-	if (req == CAP_CONTROL_SHARE)
+		break;
+	case CAP_CONTROL_SHARE:
 		if (!(cap->access & CAP_CAP_SHARE))
 			return 0;
-	if (req == CAP_CONTROL_GRANT)
+		break;
+	case CAP_CONTROL_GRANT:
 		if (!(cap->access & CAP_CAP_GRANT))
 			return 0;
-	if (req == CAP_CONTROL_REPLICATE)
+		break;
+	case CAP_CONTROL_REPLICATE:
 		if (!(cap->access & CAP_CAP_REPLICATE))
 			return 0;
-	if (req == CAP_CONTROL_SPLIT)
+		break;
+	case CAP_CONTROL_SPLIT:
 		if (!(cap->access & CAP_CAP_SPLIT))
 			return 0;
-	if (req == CAP_CONTROL_DEDUCE)
+		break;
+	case CAP_CONTROL_DEDUCE:
 		if (!(cap->access & CAP_CAP_DEDUCE))
 			return 0;
-	if (req == CAP_CONTROL_DESTROY)
+		break;
+	case CAP_CONTROL_DESTROY:
 		if (!(cap->access & CAP_CAP_DESTROY))
 			return 0;
+		break;
+	default:
+		/* We refuse to accept anything else */
+		return 0;
+	}
 
 	/* Now check the usual restype/resid pair */
 	switch (cap_rtype(cap)) {
@@ -355,16 +367,23 @@ cap_match_ipc(struct capability *cap, void *args_ptr)
 	struct sys_ipc_args *args = args_ptr;
 	struct ktcb *target = args->task;
 
-	/* Check operation privileges */
-	if (args->xfer_type == IPC_FLAGS_SHORT)
+	/* Check ipc type privileges */
+	switch (args->xfer_type) {
+	case IPC_FLAGS_SHORT:
 		if (!(cap->access & CAP_IPC_SHORT))
 			return 0;
-	if (args->xfer_type == IPC_FLAGS_FULL)
+		break;
+	case IPC_FLAGS_FULL:
 		if (!(cap->access & CAP_IPC_FULL))
 			return 0;
-	if (args->xfer_type == IPC_FLAGS_EXTENDED)
+		break;
+	case IPC_FLAGS_EXTENDED:
 		if (!(cap->access & CAP_IPC_EXTENDED))
 			return 0;
+		break;
+	default:
+		return 0;
+	}
 
 	/* NOTE: We only check on send capability */
 	if (args->ipc_type & IPC_SEND)
