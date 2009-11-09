@@ -39,10 +39,10 @@
 #define IPC_EXTENDED_MAX_SIZE		L4_IPC_EXTENDED_MAX_SIZE
 
 /*
- * ipc syscall uses an ipc_type variable and send/recv
+ * ipc syscall uses an ipc_dir variable and send/recv
  * details are embedded in this variable.
  */
-enum IPC_TYPE {
+enum IPC_DIR {
 	IPC_INVALID = 0,
 	IPC_SEND = 1,
 	IPC_RECV = 2,

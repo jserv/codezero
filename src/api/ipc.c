@@ -471,12 +471,12 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 
 
 static inline int __sys_ipc(l4id_t to, l4id_t from,
-			    unsigned int ipc_type, unsigned int flags)
+			    unsigned int ipc_dir, unsigned int flags)
 {
 	int ret;
 
 	if (ipc_flags_get_type(flags) == IPC_FLAGS_EXTENDED) {
-		switch (ipc_type) {
+		switch (ipc_dir) {
 		case IPC_SEND:
 			ret = ipc_send_extended(to, flags);
 			break;
@@ -492,7 +492,7 @@ static inline int __sys_ipc(l4id_t to, l4id_t from,
 			ret = -ENOSYS;
 		}
 	} else {
-		switch (ipc_type) {
+		switch (ipc_dir) {
 		case IPC_SEND:
 			ret = ipc_send(to, flags);
 			break;
@@ -535,18 +535,18 @@ void printk_sysregs(syscall_context_t *regs)
  */
 int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 {
-	unsigned int ipc_type = 0;
+	unsigned int ipc_dir = 0;
 	int ret = 0;
 	struct ktcb *t = current; if (!t);
 
 	/* Check arguments */
-	if (task_id_special(from) &&
+	if (tid_special_value(from) &&
 	    from != L4_ANYTHREAD && from != L4_NILTHREAD) {
 		ret = -EINVAL;
 		goto error;
 	}
 
-	if (task_id_special(to) &&
+	if (tid_special_value(to) &&
 	    to != L4_ANYTHREAD && to != L4_NILTHREAD) {
 		ret = -EINVAL;
 		goto error;
@@ -559,24 +559,24 @@ int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 	}
 
 	/* [0] for Send */
-	ipc_type |= (to != L4_NILTHREAD);
+	ipc_dir |= (to != L4_NILTHREAD);
 
 	/* [1] for Receive, [1:0] for both */
-	ipc_type |= ((from != L4_NILTHREAD) << 1);
+	ipc_dir |= ((from != L4_NILTHREAD) << 1);
 
-	if (ipc_type == IPC_INVALID) {
+	if (ipc_dir == IPC_INVALID) {
 		ret = -EINVAL;
 		goto error;
 	}
 
 	/* Everything in place, now check capability */
-	if ((ret = cap_ipc_check(to, from, flags, ipc_type)) < 0)
+	if ((ret = cap_ipc_check(to, from, flags, ipc_dir)) < 0)
 		return ret;
 
 	/* Encode ipc type in task flags */
 	tcb_set_ipc_flags(current, flags);
 
-	if ((ret = __sys_ipc(to, from, ipc_type, flags)) < 0)
+	if ((ret = __sys_ipc(to, from, ipc_dir, flags)) < 0)
 		goto error;
 	return ret;
 
@@ -587,7 +587,7 @@ error:
 	 */
 	//printk("Erroneous ipc by: %d. from: %d, to: %d, Err: %d\n",
 	//	 current->tid, from, to, ret);
-	ipc_type = IPC_INVALID;
+	ipc_dir = IPC_INVALID;
 	return ret;
 }
 

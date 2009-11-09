@@ -48,7 +48,7 @@ static inline l4id_t tid_to_cid(l4id_t tid)
 	return (tid & TASK_CID_MASK) >> TASK_CID_SHIFT;
 }
 
-static inline int task_id_special(l4id_t id)
+static inline int tid_special_value(l4id_t id)
 {
 	/* Special ids have top 2 nibbles all set */
 	return (id & TASK_CID_MASK) == TASK_CID_MASK;

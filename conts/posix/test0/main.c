@@ -63,12 +63,11 @@ int main(int argc, char *argv[])
 		user_mutex_test();
 	}
 
-/*
 	exectest(parent_of_all);
 
 	while (1)
 		wait_pager(pagerid);
-*/
+
 	return 0;
 }
 
