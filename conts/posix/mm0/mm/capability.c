@@ -103,6 +103,118 @@ void cap_list_print(struct cap_list *cap_list)
 	printf("\n");
 }
 
+#define PAGER_TOTAL_MUTEX		5
+int setup_children_mutex(int total_caps, struct cap_list *cap_list)
+{
+	struct capability *diff_cap, *mutex_cap;
+
+	struct task_ids ids;
+	int err;
+
+	l4_getid(&ids);
+
+	cap_list_print(cap_list);
+
+	/* Find out own mutex capability on our own container */
+	list_foreach_struct(mutex_cap, &cap_list->caps, list) {
+		if (cap_type(mutex_cap) == CAP_TYPE_QUANTITY &&
+		    cap_rtype(mutex_cap) == CAP_RTYPE_MUTEXPOOL)
+			goto found;
+	}
+	printf("cont%d: %s: FATAL: Could not find ipc "
+	       "capability to own container.\n",
+	       __cid(ids.tid), __FUNCTION__);
+	BUG();
+
+found:
+	/* Create a new capability */
+	BUG_ON(!(diff_cap = kzalloc(sizeof(*mutex_cap))));
+
+	/* Copy it over to new mutex cap buffer */
+	memcpy(diff_cap, mutex_cap, sizeof (*mutex_cap));
+
+	/*
+	 * We would like to take some mutexes,
+	 * and leave the rest to children.
+	 *
+	 * We set up a capability that we want
+	 * to separate out from the original
+	 */
+	if (mutex_cap->size <= PAGER_TOTAL_MUTEX) {
+		printf("%s: FATAL: Can't reserve enough mutexes "
+		       "for children. capid = %d, mutexes = %lu, "
+		       "pager needs = %d\n", __FUNCTION__,
+		       mutex_cap->capid, mutex_cap->size,
+		       PAGER_TOTAL_MUTEX);
+		BUG();
+	}
+
+	/* Reserve out some mutexes to self */
+	diff_cap->size = PAGER_TOTAL_MUTEX;
+
+	/* Split the mutex capability, passing the difference */
+	if ((err = l4_capability_control(CAP_CONTROL_SPLIT,
+					 0, 0, 0, diff_cap)) < 0) {
+		printf("l4_capability_control() replication of "
+		       "ipc capability failed.\n Could not "
+		       "complete CAP_CONTROL_SPLIT request on cap (%d), "
+		       "err = %d.\n", diff_cap->capid, err);
+		BUG();
+	}
+
+	/*
+	 * The returned one is the given diff, but
+	 * created as a new capability, add it to list
+	 */
+	cap_list_insert(diff_cap, cap_list);
+	cap_list_print(cap_list);
+
+	/*
+	 * Share the remainder capability with our container.
+	 *
+	 * This effectively enables all threads/spaces in this container
+	 * to use this pool of mutexes.
+	 */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
+					 mutex_cap->capid, 0, 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request.\n");
+		BUG();
+	}
+	cap_list_print(cap_list);
+
+	/* Find mutex syscall operation capability on our own container */
+	list_foreach_struct(mutex_cap, &cap_list->caps, list) {
+		if (cap_type(mutex_cap) == CAP_TYPE_UMUTEX &&
+		    cap_rtype(mutex_cap) == CAP_RTYPE_CONTAINER)
+			goto found2;
+	}
+	printf("cont%d: %s: FATAL: Could not find UMUTEX "
+	       "capability to own container.\n",
+	       __cid(ids.tid), __FUNCTION__);
+	BUG();
+
+found2:
+
+	/*
+	 * Share it with our container.
+	 *
+	 * This effectively enables all threads/spaces in this container
+	 * to use this pool of mutexes.
+	 */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
+					 mutex_cap->capid, 0, 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request.\n");
+		BUG();
+	}
+
+	return 0;
+}
+
+
 /*
  * Replicate, deduce and grant to children the capability to
  * talk to us only.
@@ -115,7 +227,7 @@ void cap_list_print(struct cap_list *cap_list)
  * into a capability to only talk to our current space. Our space is a
  * reduced target, since it is a subset contained in our container.
  */
-int setup_children_caps(int total_caps, struct cap_list *cap_list)
+int setup_children_ipc(int total_caps, struct cap_list *cap_list)
 {
 	struct capability *ipc_cap, *cap;
 	struct task_ids ids;
@@ -192,6 +304,13 @@ found:
 	}
 	cap_list_print(cap_list);
 
+	return 0;
+}
+
+int setup_children_caps(int total_caps, struct cap_list *cap_list)
+{
+	setup_children_ipc(total_caps, cap_list);
+	setup_children_mutex(total_caps, cap_list);
 	return 0;
 }
 

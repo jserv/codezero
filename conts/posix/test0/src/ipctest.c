@@ -10,9 +10,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <tests.h>
-#include <l4/api/capability.h>
-#include <l4/generic/cap-types.h>
-#include <l4lib/capability.h>
+#include <capability.h>
 
 /*
  * Full ipc test. Sends/receives full utcb, done with the pager.
@@ -46,26 +44,6 @@ void ipc_full_test(void)
 		printf("FULL IPC TEST:      -- PASSED --\n");
 	else
 		printf("FULL IPC TEST:      -- FAILED --\n");
-}
-
-int cap_request_pager(struct capability *cap)
-{
-	int err;
-
-	write_mr(L4SYS_ARG0, (u32)cap);
-
-	if ((err = l4_sendrecv(pagerid, pagerid,
-			       L4_REQUEST_CAPABILITY)) < 0) {
-		printf("%s: L4 IPC Error: %d.\n", __FUNCTION__, err);
-		return err;
-	}
-
-	/* Check if syscall itself was successful */
-	if ((err = l4_get_retval()) < 0) {
-		printf("%s: Error: %d\n", __FUNCTION__, err);
-		return err;
-	}
-	return err;
 }
 
 /*

@@ -25,6 +25,11 @@
 #define CAP_GRANT_ALL			0x00000002
 #define CAP_GRANT_IMMUTABLE		0x00000004
 
+#define CAP_SPLIT_MASK			0x0000000F
+#define CAP_SPLIT_SIZE			0x00000001
+#define CAP_SPLIT_ACCESS		0x00000002
+#define CAP_SPLIT_RANGE			0x00000003 /* Returns -EPERM */
+
 /* Task's primary capability list */
 #define TASK_CAP_LIST(task)	\
 	(&((task)->space->cap_list))

@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <tests.h>
+#include <capability.h>
 
 /*
  * This structure is placed at the head of shared memory.
@@ -36,7 +37,9 @@ int user_mutex_test(void)
 {
 	pid_t child, parent;
 	int map_size = PAGE_SIZE;
+	struct capability cap;
 	void *base;
+	int err;
 
 	/* Get parent pid */
 	parent = getpid();
@@ -73,6 +76,27 @@ int user_mutex_test(void)
 	else
 		test_printf("Child %d running.\n", getpid());
 
+	/*
+	 * Request capability to ipc to each other from pager
+	 * (Actually only the sender needs it)
+	 */
+	memset(&cap, 0, sizeof(cap));
+	if (child) {
+		cap.owner = parent;
+		cap.resid = child;
+	} else {
+		cap.owner = getpid();
+		cap.resid = parent;
+	}
+
+	cap.type = CAP_TYPE_IPC | CAP_RTYPE_THREAD;
+	cap.access = CAP_IPC_EXTENDED | CAP_IPC_SEND | CAP_IPC_RECV;
+	if ((err = cap_request_pager(&cap)) < 0) {
+		printf("Ipc capability request failed. "
+		       "err = %d\n", err);
+		goto out_err;
+	}
+
 	/* Child locks and produces */
 	if (child == 0) {
 
@@ -107,7 +131,11 @@ int user_mutex_test(void)
 
 		}
 		/* Sync with the parent */
-		l4_send(parent, L4_IPC_TAG_SYNC);
+		if ((err = l4_send_full(parent, L4_IPC_TAG_SYNC)) < 0) {
+			printf("Error: l4_send() failed with %d\n", err);
+			goto out_err;
+		}
+
 
 	/* Parent locks and consumes */
 	} else {
@@ -141,7 +169,10 @@ int user_mutex_test(void)
 			l4_thread_switch(0);
 		}
 		/* Sync with the child */
-		l4_receive(child);
+		if ((err = l4_receive_full(child)) < 0) {
+			printf("Error: l4_receive() failed with %d\n", err);
+			goto out_err;
+		}
 
 	//	test_printf("Parent checking validity of value.\n");
 		if (shared_page->shared_var != 0)

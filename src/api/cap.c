@@ -370,6 +370,16 @@ int cap_destroy(struct capability *cap)
 	return 0;
 }
 
+static inline int cap_has_size(struct capability *c)
+{
+	return c->size;
+}
+
+static inline int cap_has_range(struct capability *c)
+{
+	return c->start && c->end;
+}
+
 /*
  * Splits a capability
  *
@@ -386,9 +396,10 @@ int cap_destroy(struct capability *cap)
  * orig = orig - diff;
  * new = diff;
  */
-int cap_split(struct capability *diff)
+int cap_split(struct capability *diff, unsigned int flags)
 {
 	struct capability *orig, *new;
+	int ret;
 
 	/* Find original capability */
 	if (!(orig = cap_find_byid(diff->capid)))
@@ -404,7 +415,7 @@ int cap_split(struct capability *diff)
 	if (orig->owner != current->tid)
 		return -ENOCAP;
 
-	/* Check owners are same for request validity */
+	/* Check owners are same */
 	if (orig->owner != diff->owner)
 		return -EINVAL;
 
@@ -417,17 +428,26 @@ int cap_split(struct capability *diff)
 		return -ENOCAP;
 
 	/* Check access bits usage and split */
-	if (orig->access) {
+	if (flags & CAP_SPLIT_ACCESS) {
+		/* Access bits must never be redundant */
+		BUG_ON(!orig->access);
+
 		/* Split one can't have more bits than original */
 		if ((orig->access & diff->access) != diff->access) {
-			free_capability(new);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out_err;
 		}
 
 		/* Split one cannot make original redundant */
 		if ((orig->access & ~diff->access) == 0) {
-			free_capability(new);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out_err;
+		}
+
+		/* Split one cannot be redundant itself */
+		if (!diff->access) {
+			ret = -EINVAL;
+			goto out_err;
 		}
 
 		/* Subtract given access permissions */
@@ -435,46 +455,88 @@ int cap_split(struct capability *diff)
 
 		/* Assign given perms to new capability */
 		new->access = diff->access;
-	} else if (new->access)
-		return -EINVAL;
+	} else {
+		/* Can't split only by access bits alone */
+		if (!cap_has_size(orig) &&
+		    !cap_has_range(orig)) {
+			ret = -EINVAL;
+			goto out_err;
+		}
+		/* If no split, then they are identical */
+		new->access = orig->access;
 
-	/* Check size usage and split */
-	if (orig->size) {
+		/* Diff must also reflect orig by convention */
+		if (diff->access != orig->access) {
+			ret = -EINVAL;
+			goto out_err;
+		}
+	}
+
+	/* If cap has size, split by size is compulsory */
+	if (cap_type(orig) == CAP_TYPE_QUANTITY) {
+		BUG_ON(!cap_has_size(orig));
+
 		/*
 		 * Split one can't have more,
 		 * or make original redundant
 		 */
 		if (diff->size >= orig->size) {
-			free_capability(new);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out_err;
+		}
+
+		/* Split one can't be redundant itself */
+		if (!diff->size) {
+			ret = -EINVAL;
+			goto out_err;
 		}
 
 		/* Split one must be clean i.e. all unused */
 		if (orig->size - orig->used < diff->size) {
-			free_capability(new);
-			return -EPERM;
+			ret = -EPERM;
+			goto out_err;
 		}
 
 		orig->size -= diff->size;
 		new->size = diff->size;
 		new->used = 0;
-	} else if (new->size)
-		return -EINVAL;
+	} else {
 
-	/* No used diff allowed for request validity */
-	if (diff->used)
-		return -EINVAL;
-
-	/* Check range usage but don't split if requested */
-	if (orig->start || orig->end) {
-		/* Range-like permissions can't be deduced */
-		if (orig->start != new->start ||
-		    orig->end != new->end) {
-			free_capability(new);
-			return -EPERM;
+		/* Diff must also reflect orig by convention */
+		if (diff->size != orig->size) {
+			ret = -EINVAL;
+			goto out_err;
 		}
-	} else if (new->start || new->end)
-		return -EINVAL;
+
+		/* If no split, then they are identical */
+		new->size = orig->size;
+		new->used = orig->used;
+
+	}
+
+	if (flags & CAP_SPLIT_RANGE) {
+		/* They must either be both one or both zero */
+		BUG_ON(!!orig->start ^ !!orig->end);
+
+		/* If orig doesn't have a range, return invalid */
+		if (!orig->start && !orig->end) {
+			ret = -EINVAL;
+			goto out_err;
+		} else {
+			/* Orig has a range but diff doesn't */
+			if (!diff->start || !diff->end) {
+				ret = -EINVAL;
+				goto out_err;
+			}
+			/* Both valid, but we don't permit range split */
+			ret = -EPERM;
+			goto out_err;
+		}
+	/* If no split, then they are identical */
+	} else {
+		new->start = orig->start;
+		new->end = orig->end;
+	}
 
 	/* Copy other fields */
 	new->type = orig->type;
@@ -484,7 +546,7 @@ int cap_split(struct capability *diff)
 	/* Add the new capability to the most private list */
 	cap_list_insert(new, TASK_CAP_LIST(current));
 
-	/* Copy the new one to diff for userspace */
+	/* Check fields that must be identical */
 	BUG_ON(new->resid != diff->resid);
 	BUG_ON(new->owner != diff->owner);
 	BUG_ON(new->type != diff->type);
@@ -492,10 +554,15 @@ int cap_split(struct capability *diff)
 	BUG_ON(new->start != diff->start);
 	BUG_ON(new->end != diff->end);
 	BUG_ON(new->size != diff->size);
-	BUG_ON(new->used != diff->used);
-	diff->capid = new->capid;
 
+	/* Copy capid, and used field that may not be the same */
+	diff->capid = new->capid;
+	diff->used = new->used;
 	return 0;
+
+out_err:
+	free_capability(new);
+	return ret;
 }
 
 /*
@@ -569,6 +636,11 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 	if ((err = cap_cap_check(current, req, flags)) < 0)
 		return err;
 
+	/*
+	 * FIXME: Create a case statement to collect check_access
+	 * calls to one place.
+	 */
+
 	switch(req) {
 	case CAP_CONTROL_NCAPS:
 		/* Return number of caps */
@@ -605,7 +677,7 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
 
-		err = cap_split((struct capability *)userbuf);
+		err = cap_split((struct capability *)userbuf, flags);
 		break;
 	case CAP_CONTROL_REPLICATE:
 		if ((err = check_access((unsigned long)userbuf,
