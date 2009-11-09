@@ -90,7 +90,7 @@ int user_mutex_test(void)
 	}
 
 	cap.type = CAP_TYPE_IPC | CAP_RTYPE_THREAD;
-	cap.access = CAP_IPC_EXTENDED | CAP_IPC_SEND | CAP_IPC_RECV;
+	cap.access = CAP_IPC_SHORT | CAP_IPC_SEND | CAP_IPC_RECV;
 	if ((err = cap_request_pager(&cap)) < 0) {
 		printf("Ipc capability request failed. "
 		       "err = %d\n", err);
@@ -131,7 +131,7 @@ int user_mutex_test(void)
 
 		}
 		/* Sync with the parent */
-		if ((err = l4_send_full(parent, L4_IPC_TAG_SYNC)) < 0) {
+		if ((err = l4_send(parent, L4_IPC_TAG_SYNC)) < 0) {
 			printf("Error: l4_send() failed with %d\n", err);
 			goto out_err;
 		}
@@ -169,7 +169,7 @@ int user_mutex_test(void)
 			l4_thread_switch(0);
 		}
 		/* Sync with the child */
-		if ((err = l4_receive_full(child)) < 0) {
+		if ((err = l4_receive(child)) < 0) {
 			printf("Error: l4_receive() failed with %d\n", err);
 			goto out_err;
 		}

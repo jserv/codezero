@@ -16,6 +16,7 @@
 #include <l4/api/exregs.h>
 #include <l4/api/ipc.h>
 #include INC_GLUE(message.h)
+#include INC_GLUE(ipc.h)
 
 void capability_init(struct capability *cap)
 {
@@ -338,11 +339,15 @@ cap_match_capctrl(struct capability *cap, void *args_ptr)
 struct sys_ipc_args {
 	struct ktcb *task;
 	unsigned int ipc_type;
-	unsigned int flags;
+	unsigned int xfer_type;
 };
 
 /*
- * In an ipc, we could look for access bits, resource type and target id
+ * Matches ipc direction, transfer type and target resource.
+ *
+ * Currently, receives are not checked as only sends have
+ * a solid target id. Receives can be from any thread with
+ * no particular target.
  */
 struct capability *
 cap_match_ipc(struct capability *cap, void *args_ptr)
@@ -351,20 +356,20 @@ cap_match_ipc(struct capability *cap, void *args_ptr)
 	struct ktcb *target = args->task;
 
 	/* Check operation privileges */
-	if (args->flags & IPC_FLAGS_SHORT)
+	if (args->xfer_type == IPC_FLAGS_SHORT)
 		if (!(cap->access & CAP_IPC_SHORT))
 			return 0;
-	if (args->flags & IPC_FLAGS_FULL)
+	if (args->xfer_type == IPC_FLAGS_FULL)
 		if (!(cap->access & CAP_IPC_FULL))
 			return 0;
-	if (args->flags & IPC_FLAGS_EXTENDED)
+	if (args->xfer_type == IPC_FLAGS_EXTENDED)
 		if (!(cap->access & CAP_IPC_EXTENDED))
 			return 0;
 
-	/* Assume we have both send and receive unconditionally */
-	if (!((cap->access & CAP_IPC_SEND) &&
-	      (cap->access & CAP_IPC_RECV)))
-		return 0;
+	/* NOTE: We only check on send capability */
+	if (args->ipc_type & IPC_SEND)
+		if (!(cap->access & CAP_IPC_SEND))
+			return 0;
 
 	/*
 	 * We have a target thread, check if capability match
@@ -711,7 +716,7 @@ int cap_ipc_check(l4id_t to, l4id_t from,
 	struct ktcb *target;
 	struct sys_ipc_args args;
 
-	/* Receivers can get away from us (for now) */
+	/* TODO: Receivers can get away from us (for now) */
 	if (ipc_type != IPC_SEND  && ipc_type != IPC_SENDRECV)
 		return 0;
 
@@ -723,7 +728,7 @@ int cap_ipc_check(l4id_t to, l4id_t from,
 		return -ESRCH;
 
 	/* Set up other args */
-	args.flags = flags;
+	args.xfer_type = ipc_flags_get_type(flags);
 	args.ipc_type = ipc_type;
 	args.task = target;
 
