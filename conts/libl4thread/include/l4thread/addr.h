@@ -21,7 +21,7 @@ int address_pool_init_with_idpool(struct address_pool *pool,
 int address_pool_init(struct address_pool *pool,
 			unsigned long start, unsigned long end,
 			int size);
-void *address_new(struct address_pool *pool, int npages);
-int address_del(struct address_pool *, void *addr, int npages);
+void *address_new(struct address_pool *pool, int nitems, int size);
+int address_del(struct address_pool *, void *addr, int nitems, int size);
 
 #endif /* __ADDR_H__ */

@@ -1,5 +1,5 @@
 /*
- * UTCB handling common helper routines
+ * UTCB handling common helper routines.
  *
  * Copyright (C) 2009 B Labs Ltd.
  */

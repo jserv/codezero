@@ -10,6 +10,7 @@
 #include <l4/api/errno.h>
 #include <malloc/malloc.h>
 #include <utcb.h>
+#include <stack.h>
 
 /* Symbolic constants and macros */
 #define IS_STACK_SETUP()	(lib_stack_size)
@@ -18,8 +19,6 @@
 extern void setup_new_thread(void);
 
 /* Static variable definitions */
-static unsigned long lib_stack_top_addr;
-static unsigned long lib_stack_bot_addr;
 static unsigned long lib_stack_size;
 
 /* Function definitions */
@@ -60,10 +59,11 @@ int set_stack_params(unsigned long stack_top,
 	}
 	/* Arguments passed the validity tests. */
 
-	/* Initialize internal variables */
-	lib_stack_bot_addr = stack_bottom;
-	lib_stack_top_addr = stack_top;
+	/* Initialize internal variables. */
 	lib_stack_size = stack_size;
+
+	/* Init stack virtual address pool. */
+	stack_pool_init(stack_top, stack_bottom, stack_size);
 
 	return 0;
 }
@@ -75,6 +75,7 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 	unsigned long utcb_addr;
 	struct l4t_tcb *parent, *child;
 	int err;
+	unsigned long stack_top_addr, stack_bot_addr;
 
 	/* A few controls before granting access to thread creation */
 	// FIXME: check if utcb region is setup
@@ -84,11 +85,7 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 		return -EPERM;
 	}
 
-	/* Is there enough stack space for the new thread? */
-	if (lib_stack_top_addr >= lib_stack_bot_addr) {
-		printf("libl4thread: No stack space left.\n");
-		return -ENOMEM;
-	}
+	// FIXME: Check if there is enough stack space
 
 	// FIXME: Check if there is enough utcb space
 
@@ -110,7 +107,7 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 		return -ENOMEM;
 	}
 
-	/* Get a utcb addr for this thread */
+	/* Get a utcb addr. */
 	if (!(utcb_addr = get_utcb_addr(child))) {
 		printf("libl4thread: No utcb address left.\n");
 		// FIXME: Check if there is any memory leak
@@ -128,9 +125,14 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 		return err;
 	}
 
+	/* Get a stack space and calculate the bottom addr of the stack. */
+	stack_top_addr = (unsigned long)stack_new_space(1, lib_stack_size);
+	stack_bot_addr = stack_top_addr + lib_stack_size;
+	child->stack_addr = stack_top_addr;
+
 	/* Setup new thread pc, sp, utcb */
 	memset(&exregs, 0, sizeof(exregs));
-	exregs_set_stack(&exregs, align((lib_stack_bot_addr - 1), 8));
+	exregs_set_stack(&exregs, align((stack_bot_addr - 1), 8));
 	exregs_set_pc(&exregs, (unsigned long)setup_new_thread);
 	exregs_set_utcb(&exregs, (unsigned long)utcb_addr);
 
@@ -142,13 +144,11 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 	}
 
 	/* First word of new stack is arg */
-	((unsigned long *)align((lib_stack_bot_addr - 1), 8))[0] =
-					(unsigned long)arg;
+	((unsigned long *)align((stack_bot_addr - 1), 8))[0] =
+						(unsigned long)arg;
 	/* Second word of new stack is function address */
-	((unsigned long *)align((lib_stack_bot_addr - 1), 8))[-1] =
-					(unsigned long)func;
-	/* Update the stack address */
-	lib_stack_bot_addr -= lib_stack_size;
+	((unsigned long *)align((stack_bot_addr - 1), 8))[-1] =
+						(unsigned long)func;
 
 	/* Add child to the global task list */
 	child->tid = ids->tid;
@@ -173,6 +173,9 @@ void l4thread_kill(struct task_ids *ids)
 
 	/* Delete the utcb address. */
 	delete_utcb_addr(task);
+
+	/* Delete the stack region. */
+	stack_delete_space((void *)task->stack_addr, 1, lib_stack_size);
 
 	/* Remove child from the global task list. */
 	l4t_global_remove_task(task);

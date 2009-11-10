@@ -1,7 +1,7 @@
 /*
- * UTCB management in Codezero
+ * UTCB management in libl4thread.
  *
- * Copyright © 2009 B Labs Ltd
+ * Copyright © 2009 B Labs Ltd.
  */
 #include <stdio.h>
 #include <addr.h>
@@ -26,14 +26,14 @@ int utcb_pool_init(unsigned long utcb_start, unsigned long utcb_end)
 	return 0;
 }
 
-static inline void *utcb_new_address(int npages)
+static inline void *utcb_new_address(int nitems)
 {
-	return address_new(&utcb_region_pool, npages);
+	return address_new(&utcb_region_pool, nitems, PAGE_SIZE);
 }
 
-static inline int utcb_delete_address(void *utcb_address, int npages)
+static inline int utcb_delete_address(void *utcb_address, int nitems)
 {
-	return address_del(&utcb_region_pool, utcb_address, npages);
+	return address_del(&utcb_region_pool, utcb_address, nitems, PAGE_SIZE);
 }
 
 /* Return an empty utcb slot in this descriptor */
