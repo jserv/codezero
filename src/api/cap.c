@@ -15,37 +15,28 @@
 #include INC_API(syscall.h)
 
 /*
- * FIXME: This is reading only a single list
- * there may be more than one.
+ * Read all capabilitites of the current process.
+ * This includes the private ones as well as
+ * ones shared by other tasks that the task has
+ * rights to but doesn't own.
  */
 int cap_read_all(struct capability *caparray)
 {
 	struct capability *cap;
-	int total_size, capidx = 0;
-	int err;
+	int capidx = 0;
 
-	/*
-	 * Determine size of pager capabilities
-	 * (FIXME: partial!)
-	 */
-	total_size = TASK_CAP_LIST(current)->ncaps
-		   * sizeof(*cap);
-	if ((err = check_access((unsigned long)caparray,
-				total_size,
-				MAP_USR_RW_FLAGS, 1)) < 0)
-		return err;
+	/* Copy all capabilities from lists to buffer */
+	list_foreach_struct(cap, &current->cap_list.caps, list) {
+		memcpy(&caparray[capidx], cap, sizeof(*cap));
+		capidx++;
+	}
 
-	/*
-	 * Currently only pagers can
-	 * read their own capabilities
-	 */
-	if (current->tid != current->pagerid)
-		return -EPERM;
+	list_foreach_struct(cap, &current->space->cap_list.caps, list) {
+		memcpy(&caparray[capidx], cap, sizeof(*cap));
+		capidx++;
+	}
 
-	/* Copy capabilities from list to buffer */
-	list_foreach_struct(cap,
-			    &TASK_CAP_LIST(current)->caps,
-			    list) {
+	list_foreach_struct(cap, &curcont->cap_list.caps, list) {
 		memcpy(&caparray[capidx], cap, sizeof(*cap));
 		capidx++;
 	}
@@ -58,12 +49,12 @@ int cap_read_all(struct capability *caparray)
  * only one target that makes sense, that is your
  * own container.
  */
-int cap_share_single(l4id_t capid)
+int cap_share_single(struct capability *user)
 {
 	struct capability *cap;
 	struct cap_list *clist;
 
-	if (!(cap = cap_find_by_capid(capid, &clist)))
+	if (!(cap = cap_find_by_capid(user->capid, &clist)))
 		return -EEXIST;
 
 	if (cap->owner != current->tid)
@@ -82,14 +73,14 @@ int cap_share_single(l4id_t capid)
 int cap_share_all(void)
 {
 	cap_list_move(&curcont->cap_list,
-		      TASK_CAP_LIST(current));
+		      &current->space->cap_list);
 	return 0;
 }
 
-int cap_share(l4id_t capid, unsigned int flags)
+int cap_share(struct capability *cap, unsigned int flags)
 {
 	if (flags & CAP_SHARE_SINGLE)
-		cap_share_single(capid);
+		cap_share_single(cap);
 	else if (flags & CAP_SHARE_ALL)
 		cap_share_all();
 	else
@@ -109,7 +100,7 @@ int cap_grant_all(struct capability *req, unsigned int flags)
 		return -ESRCH;
 
 	/* Detach all caps */
-	cap_head = cap_list_detach(TASK_CAP_LIST(current));
+	cap_head = cap_list_detach(&current->space->cap_list);
 
 	list_foreach_struct(cap, &cap_head->list, list) {
 		/* Change ownership */
@@ -134,12 +125,12 @@ int cap_grant_all(struct capability *req, unsigned int flags)
 	}
 
 	/* Attach all to target */
-	cap_list_attach(cap_head, TASK_CAP_LIST(target));
+	cap_list_attach(cap_head, &target->space->cap_list);
 	return 0;
 
 out_err:
 	/* Attach it back to original */
-	cap_list_attach(cap_head, TASK_CAP_LIST(current));
+	cap_list_attach(cap_head, &current->space->cap_list);
 	return err;
 }
 
@@ -176,7 +167,7 @@ int cap_grant_single(struct capability *req, unsigned int flags)
 	}
 
 	/* Place it where it is granted */
-	cap_list_insert(cap, TASK_CAP_LIST(target));
+	cap_list_insert(cap, &target->space->cap_list);
 
 	return 0;
 }
@@ -550,7 +541,7 @@ int cap_split(struct capability *diff, unsigned int flags)
 	new->owner = orig->owner;
 
 	/* Add the new capability to the most private list */
-	cap_list_insert(new, TASK_CAP_LIST(current));
+	cap_list_insert(new, &current->space->cap_list);
 
 	/* Check fields that must be identical */
 	BUG_ON(new->resid != diff->resid);
@@ -623,7 +614,7 @@ int cap_replicate(struct capability *dupl)
 	dupl->capid = new->capid;
 
 	/* Add it to most private list */
-	cap_list_insert(new, TASK_CAP_LIST(current));
+	cap_list_insert(new, &current->space->cap_list);
 
 	return 0;
 }
@@ -643,76 +634,63 @@ int sys_capability_control(unsigned int req, unsigned int flags,
 	if ((err = cap_cap_check(current, req, flags)) < 0)
 		return err;
 
-	/*
-	 * FIXME: Create a case statement to collect check_access
-	 * calls to one place.
-	 */
-
+	/* Check access for each request */
 	switch(req) {
 	case CAP_CONTROL_NCAPS:
-		/* Return number of caps */
-		if (current->tid != current->pagerid)
-			return -EPERM;
-
 		if ((err = check_access((unsigned long)userbuf,
 					sizeof(int),
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
-
-		/* Copy ncaps value. FIXME: This is only a partial list */
-		*((int *)userbuf) = TASK_CAP_LIST(current)->ncaps;
 		break;
-	case CAP_CONTROL_READ: {
-		/* Return all capabilities as an array of capabilities */
-		err = cap_read_all((struct capability *)userbuf);
+	case CAP_CONTROL_READ:
+		if ((err = check_access((unsigned long)userbuf,
+					cap_count(current) *
+					sizeof(struct capability),
+					MAP_USR_RW_FLAGS, 1)) < 0)
+			return err;
 		break;
-	}
 	case CAP_CONTROL_SHARE:
-		err = cap_share(capid, flags);
-		break;
 	case CAP_CONTROL_GRANT:
-		if ((err = check_access((unsigned long)userbuf,
-					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
-			return err;
-
-		err = cap_grant((struct capability *)userbuf, flags);
-		break;
 	case CAP_CONTROL_SPLIT:
-		if ((err = check_access((unsigned long)userbuf,
-					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
-			return err;
-
-		err = cap_split((struct capability *)userbuf, flags);
-		break;
 	case CAP_CONTROL_REPLICATE:
-		if ((err = check_access((unsigned long)userbuf,
-					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
-			return err;
-
-		err = cap_replicate((struct capability *)userbuf);
-		break;
 	case CAP_CONTROL_DEDUCE:
-		if ((err = check_access((unsigned long)userbuf,
-					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
-			return err;
-
-		err = cap_deduce((struct capability *)userbuf);
-		break;
 	case CAP_CONTROL_DESTROY:
 		if ((err = check_access((unsigned long)userbuf,
 					sizeof(struct capability),
 					MAP_USR_RW_FLAGS, 1)) < 0)
 			return err;
+		break;
+	default:
+		return -EINVAL;
+	}
 
+	/* Take action for each request */
+	switch(req) {
+	case CAP_CONTROL_NCAPS:
+		*((int *)userbuf) = cap_count(current);
+		break;
+	case CAP_CONTROL_READ:
+		err = cap_read_all((struct capability *)userbuf);
+		break;
+	case CAP_CONTROL_SHARE:
+		err = cap_share((struct capability *)userbuf, flags);
+		break;
+	case CAP_CONTROL_GRANT:
+		err = cap_grant((struct capability *)userbuf, flags);
+		break;
+	case CAP_CONTROL_SPLIT:
+		err = cap_split((struct capability *)userbuf, flags);
+		break;
+	case CAP_CONTROL_REPLICATE:
+		err = cap_replicate((struct capability *)userbuf);
+		break;
+	case CAP_CONTROL_DEDUCE:
+		err = cap_deduce((struct capability *)userbuf);
+		break;
+	case CAP_CONTROL_DESTROY:
 		err = cap_destroy((struct capability *)userbuf);
 		break;
-
 	default:
-		/* Invalid request id */
 		return -EINVAL;
 	}
 

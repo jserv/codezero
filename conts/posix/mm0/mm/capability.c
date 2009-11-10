@@ -176,7 +176,7 @@ found:
 	 * to use this pool of mutexes.
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 mutex_cap->capid, 0, 0)) < 0) {
+					 0, 0, mutex_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");
@@ -204,7 +204,7 @@ found2:
 	 * to use this pool of mutexes.
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 mutex_cap->capid, 0, 0)) < 0) {
+					 0, 0, mutex_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");
@@ -296,7 +296,7 @@ found:
 	 * to communicate to us only, and be able to do nothing else.
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 ipc_cap->capid, 0, 0)) < 0) {
+					 0, 0, ipc_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");

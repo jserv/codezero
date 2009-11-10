@@ -157,8 +157,15 @@ struct capability *cap_find_by_capid(l4id_t capid, struct cap_list **cap_list)
 	return 0;
 }
 
+int cap_count(struct ktcb *task)
+{
+	return task->cap_list.ncaps +
+	       task->space->cap_list.ncaps +
+	       task->container->cap_list.ncaps;
+}
+
 typedef struct capability *(*cap_match_func_t) \
-		(struct capability *cap, void *match_args);
+	(struct capability *cap, void *match_args);
 
 /*
  * This is used by every system call to match each

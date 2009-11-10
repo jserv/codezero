@@ -30,8 +30,4 @@
 #define CAP_SPLIT_ACCESS		0x00000002
 #define CAP_SPLIT_RANGE			0x00000003 /* Returns -EPERM */
 
-/* Task's primary capability list */
-#define TASK_CAP_LIST(task)	\
-	(&((task)->space->cap_list))
-
 #endif /* __API_CAPABILITY_H__ */

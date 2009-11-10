@@ -143,7 +143,7 @@ int capability_consume(struct capability *cap, int quantity);
 int capability_free(struct capability *cap, int quantity);
 struct capability *capability_find_by_rtype(struct ktcb *task,
 					    unsigned int rtype);
-
+int cap_count(struct ktcb *task);
 struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 					  unsigned int rtype);
 struct capability *cap_find_by_capid(l4id_t capid, struct cap_list **clist);
