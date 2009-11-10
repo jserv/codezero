@@ -6,10 +6,9 @@
 #ifndef __LIB_UTCB_H__
 #define __LIB_UTCB_H__
 
-#define IS_UTCB_SETUP()		(udesc_ptr)
+#include <tcb.h>
 
-struct utcb_desc *udesc_ptr;
-
-unsigned long get_utcb_addr(void);
+unsigned long get_utcb_addr(struct l4t_tcb *task);
+int delete_utcb_addr(struct l4t_tcb *task);
 
 #endif /* __LIB_UTCB_H__ */
