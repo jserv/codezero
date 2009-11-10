@@ -113,7 +113,7 @@ int setup_children_mutex(int total_caps, struct cap_list *cap_list)
 
 	l4_getid(&ids);
 
-	cap_list_print(cap_list);
+	//cap_list_print(cap_list);
 
 	/* Find out own mutex capability on our own container */
 	list_foreach_struct(mutex_cap, &cap_list->caps, list) {
@@ -167,7 +167,7 @@ found:
 	 * created as a new capability, add it to list
 	 */
 	cap_list_insert(diff_cap, cap_list);
-	cap_list_print(cap_list);
+	// cap_list_print(cap_list);
 
 	/*
 	 * Share the remainder capability with our container.
@@ -182,7 +182,7 @@ found:
 		       "complete CAP_CONTROL_SHARE request.\n");
 		BUG();
 	}
-	cap_list_print(cap_list);
+	// cap_list_print(cap_list);
 
 	/* Find mutex syscall operation capability on our own container */
 	list_foreach_struct(mutex_cap, &cap_list->caps, list) {
@@ -235,7 +235,7 @@ int setup_children_ipc(int total_caps, struct cap_list *cap_list)
 
 	l4_getid(&ids);
 
-	cap_list_print(cap_list);
+	// cap_list_print(cap_list);
 
 	/* Find out our own ipc capability on our own container */
 	list_foreach_struct(cap, &cap_list->caps, list) {
@@ -268,7 +268,7 @@ found:
 
 	/* Add it to list */
 	cap_list_insert(ipc_cap, cap_list);
-	cap_list_print(cap_list);
+	// cap_list_print(cap_list);
 
 	/*
 	 * The returned capability is a replica.
@@ -287,7 +287,7 @@ found:
 		BUG();
 	}
 
-	cap_list_print(cap_list);
+	// cap_list_print(cap_list);
 
 	/*
 	 * Share it with our container.
@@ -302,7 +302,7 @@ found:
 		       "complete CAP_CONTROL_SHARE request.\n");
 		BUG();
 	}
-	cap_list_print(cap_list);
+	// cap_list_print(cap_list);
 
 	return 0;
 }
