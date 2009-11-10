@@ -128,7 +128,7 @@ int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 	/*
 	 * This check guarantees two things:
 	 *	1. The range must be multiple of UTCB_SIZE, at least one item.
-	 *	2. utcb_end is aligned on UTCB_SIZE
+	 *	2. utcb_end is aligned on UTCB_SIZE.
 	 */
 	if ((utcb_end - utcb_start) % UTCB_SIZE) {
 		printf("libl4thread: The given range size must be multiple "
@@ -137,7 +137,7 @@ int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 	}
 	/* Arguments passed the validity tests. */
 
-	/* Init utcb virtual address pool */
+	/* Init utcb virtual address pool. */
 	utcb_pool_init(utcb_start, utcb_end);
 
 	/* The very first thread's utcb address is assigned. */

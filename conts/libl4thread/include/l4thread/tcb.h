@@ -19,6 +19,7 @@ struct l4t_tcb {
 	int tid;
 	struct utcb_head *utcb_head;
 	unsigned long utcb_addr;
+	unsigned long stack_addr;
 };
 
 /* This struct keeps track of all the threads handled by the thread lib. */

@@ -33,21 +33,21 @@ int address_pool_init(struct address_pool *pool,
 	return 0;
 }
 
-void *address_new(struct address_pool *pool, int npages)
+void *address_new(struct address_pool *pool, int nitems, int size)
 {
-	unsigned int pfn;
+	unsigned int idx;
 
-	if ((int)(pfn = ids_new_contiguous(pool->idpool, npages)) < 0)
+	if ((int)(idx = ids_new_contiguous(pool->idpool, nitems)) < 0)
 		return 0;
 
-	return (void *)__pfn_to_addr(pfn) + pool->start;
+	return (void *)(idx * size) + pool->start;
 }
 
-int address_del(struct address_pool *pool, void *addr, int npages)
+int address_del(struct address_pool *pool, void *addr, int nitems, int size)
 {
-	unsigned long pfn = __pfn(page_align(addr) - pool->start);
+	unsigned long idx = (addr - (void *)pool->start) / size;
 
-	if (ids_del_contiguous(pool->idpool, pfn, npages) < 0) {
+	if (ids_del_contiguous(pool->idpool, idx, nitems) < 0) {
 		printf("%s: Invalid address range returned to "
 		       "virtual address pool.\n", __FUNCTION__);
 		return -1;
