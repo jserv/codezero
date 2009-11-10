@@ -8,43 +8,86 @@
 #include <l4lib/exregs.h>
 #include <errno.h>
 #include <malloc/malloc.h>
+#include <idpool.h>
 #include <utcb-common.h>
 #include <utcb.h>
 
-/* Static variable definitions */
-static unsigned long lib_utcb_end_addr;
+/* Extern declarations */
+extern struct l4t_global_list l4t_global_tasks;
 
 /* Function definitions */
-unsigned long get_utcb_addr(void)
+unsigned long get_utcb_addr(struct l4t_tcb *task)
 {
-	unsigned long utcb_addr;
+	struct utcb_desc *udesc;
+	unsigned long slot;
 
-	if (!(utcb_addr = utcb_new_slot(udesc_ptr))) {
-		udesc_ptr = utcb_new_desc();
-		utcb_addr = utcb_new_slot(udesc_ptr);
+	/* Setting this up twice is a bug. */
+	BUG_ON(task->utcb_addr);
+
+	/* Search for an empty utcb slot already allocated to this space. */
+	list_foreach_struct(udesc, &task->utcb_head->list, list)
+		if ((slot = utcb_new_slot(udesc)))
+			goto found;
+
+	/* Allocate a new utcb memory region and return its base. */
+	udesc = utcb_new_desc();
+	slot = utcb_new_slot(udesc);
+	list_insert(&udesc->list, &task->utcb_head->list);
+found:
+	task->utcb_addr = slot;
+
+	return slot;
+}
+
+int delete_utcb_addr(struct l4t_tcb *task)
+{
+	struct utcb_desc *udesc;
+
+	list_foreach_struct(udesc, &task->utcb_head->list, list) {
+		/* FIXME: Use variable alignment than a page */
+		/* Detect matching slot */
+		if (page_align(task->utcb_addr) == udesc->utcb_base) {
+
+			/* Delete slot from the descriptor */
+			utcb_delete_slot(udesc, task->utcb_addr);
+
+			/* Is the desc completely empty now? */
+			if (id_is_empty(udesc->slots)) {
+				/* Unlink desc from its list */
+				list_remove_init(&udesc->list);
+				/* Delete the descriptor */
+				utcb_delete_desc(udesc);
+			}
+			return 0; /* Finished */
+		}
 	}
-
-	if (utcb_addr >= lib_utcb_end_addr)
-		return 0;
-
-	return utcb_addr;
+	BUG();
 }
 
 static int set_utcb_addr(void)
 {
 	struct exregs_data exregs;
-	unsigned long utcb_addr;
 	struct task_ids ids;
+	struct l4t_tcb *task;
+	struct utcb_desc *udesc;
 	int err;
 
-	l4_getid(&ids);
-	// FIXME: its tid must be 0.
-	udesc_ptr = utcb_new_desc();
-	utcb_addr = get_utcb_addr();
+	/* Create a task. */
+	if (IS_ERR(task = l4t_tcb_alloc_init(0, 0)))
+		return -ENOMEM;
+
+	/* Add child to the global task list. */
+	list_insert_tail(&task->list, &l4t_global_tasks.list);
+	l4t_global_tasks.total++;
+
+	udesc = utcb_new_desc();
+	task->utcb_addr = utcb_new_slot(udesc);
+	list_insert(&udesc->list, &task->utcb_head->list);
 
 	memset(&exregs, 0, sizeof(exregs));
-	exregs_set_utcb(&exregs, (unsigned long)utcb_addr);
+	exregs_set_utcb(&exregs, (unsigned long)task->utcb_addr);
 
+	l4_getid(&ids);
 	if ((err = l4_exchange_registers(&exregs, ids.tid)) < 0) {
 		printf("libl4thread: l4_exchange_registers failed with "
 				"(%d).\n", err);
@@ -59,11 +102,12 @@ int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 	int err;
 
 	/* Ensure that arguments are valid. */
-	if (IS_UTCB_SETUP()) {
-		printf("libl4thread: You have already called: %s.\n",
-				__FUNCTION__);
-		return -EPERM;
-	}
+	// FIXME: Check if set_utcb_params is called
+	/*if (IS_UTCB_SETUP()) {*/
+		/*printf("libl4thread: You have already called: %s.\n",*/
+				/*__FUNCTION__);*/
+		/*return -EPERM;*/
+	/*}*/
 	if (!utcb_start || !utcb_end) {
 		printf("libl4thread: Utcb address range cannot contain "
 			"0x0 as a start and/or end address(es).\n");
@@ -96,14 +140,9 @@ int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 	/* Init utcb virtual address pool */
 	utcb_pool_init(utcb_start, utcb_end);
 
-	lib_utcb_end_addr = utcb_end;
-
 	/* The very first thread's utcb address is assigned. */
 	if ((err = set_utcb_addr()) < 0)
 		return err;
 
 	return 0;
 }
-
-/*void destroy_utcb(void) {}*/
-

@@ -8,6 +8,7 @@
 #include <l4lib/exregs.h>
 #include <l4/api/thread.h>
 #include <l4/api/errno.h>
+#include <malloc/malloc.h>
 #include <utcb.h>
 
 /* Symbolic constants and macros */
@@ -72,10 +73,12 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 {
 	struct exregs_data exregs;
 	unsigned long utcb_addr;
+	struct l4t_tcb *parent, *child;
 	int err;
 
 	/* A few controls before granting access to thread creation */
-	if (!IS_STACK_SETUP() || !IS_UTCB_SETUP()) {
+	// FIXME: check if utcb region is setup
+	if (!IS_STACK_SETUP()) {
 		printf("libl4thread: Stack and/or utcb have not been "
 				"set up.\n");
 		return -EPERM;
@@ -87,6 +90,8 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 		return -ENOMEM;
 	}
 
+	// FIXME: Check if there is enough utcb space
+
 	if (!(TC_SHARE_SPACE & flags)) {
 		printf("libl4thread: Only allows shared space thread "
 				"creation.\n");
@@ -94,19 +99,32 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 		return -EINVAL;
 	}
 
-	/* Get a utcb addr for this thread */
-	if (!(utcb_addr = get_utcb_addr())) {
-		printf("libl4thread: No utcb address left.\n");
+	/* Get parent's ids and find the tcb belonging to it. */
+	l4_getid(ids);
+	if (!(parent = l4t_find_task(ids->tid)))
+		return-ESRCH;
+
+	/* Allocate tcb for the child. */
+	if (!(child = l4t_tcb_alloc_init(parent, flags))) {
+		printf("libl4thread: No heap space left.\n");
 		return -ENOMEM;
 	}
 
-	/* Get parent's ids */
-	l4_getid(ids);
+	/* Get a utcb addr for this thread */
+	if (!(utcb_addr = get_utcb_addr(child))) {
+		printf("libl4thread: No utcb address left.\n");
+		// FIXME: Check if there is any memory leak
+		kfree(child);
+		return -ENOMEM;
+	}
 
 	/* Create thread */
 	if ((err = l4_thread_control(THREAD_CREATE | flags, ids)) < 0) {
 		printf("libl4thread: l4_thread_control(THREAD_CREATE) "
 				"failed with (%d).\n", err);
+		// FIXME: Check if there is any memory leak
+		kfree(child);
+		delete_utcb_addr(child);
 		return err;
 	}
 
@@ -119,6 +137,7 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 	if ((err = l4_exchange_registers(&exregs, ids->tid)) < 0) {
 		printf("libl4thread: l4_exchange_registers failed with "
 				"(%d).\n", err);
+		// FIXME: Check if there is any memory leak
 		return err;
 	}
 
@@ -131,6 +150,10 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 	/* Update the stack address */
 	lib_stack_bot_addr -= lib_stack_size;
 
+	/* Add child to the global task list */
+	child->tid = ids->tid;
+	l4t_global_add_task(child);
+
 	/* Start the new thread */
 	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
 		printf("libl4thread: l4_thread_control(THREAD_RUN) "
@@ -139,4 +162,24 @@ int l4thread_create(struct task_ids *ids, unsigned int flags,
 	}
 
 	return 0;
+}
+
+void l4thread_kill(struct task_ids *ids)
+{
+	struct l4t_tcb *task;
+
+	/* Find the task to be killed. */
+	task = l4t_find_task(ids->tid);
+
+	/* Delete the utcb address. */
+	delete_utcb_addr(task);
+
+	/* Remove child from the global task list. */
+	l4t_global_remove_task(task);
+
+	// FIXME: We assume that main thread never leaves the scene
+	kfree(task);
+
+	/* Finally, destroy the thread. */
+	l4_thread_control(THREAD_DESTROY, ids);
 }
