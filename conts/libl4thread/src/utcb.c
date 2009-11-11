@@ -97,7 +97,7 @@ static int set_utcb_addr(void)
 	return 0;
 }
 
-int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
+int l4_set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 {
 	int err;
 
