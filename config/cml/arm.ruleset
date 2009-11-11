@@ -97,8 +97,9 @@ menu main_menu
 #############`
 #   RULES   #
 #############
-#Capability rules:
+#Capability/Container rules:
 default CAPABILITIES from y
+default CONTAINERS from 1
 
 #Platform rules:
 unless SUBARCH_V5 suppress PLATFORM_PB926

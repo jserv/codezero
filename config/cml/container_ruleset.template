@@ -104,13 +104,12 @@ require CONT%(cn)d_VIRT3_START < CONT%(cn)d_VIRT3_END
 require CONT%(cn)d_VIRT4_START < CONT%(cn)d_VIRT4_END
 require CONT%(cn)d_VIRT5_START < CONT%(cn)d_VIRT5_END
 
-# Physical Regions for containers should start after kernel,
-# assuming kernel to be using 0x0-0x40000 Physcial Memory region
-derive kernel_size from (0x0 + 0x40000)  # cannot set value directly
-require CONT%(cn)d_PHYS0_START >= kernel_size
-require CONT%(cn)d_PHYS1_START >= kernel_size
-require CONT%(cn)d_PHYS2_START >= kernel_size
-require CONT%(cn)d_PHYS3_START >= kernel_size
+# We assume kernel uses 0x0 - 0x40000 physical RAM.
+# Physical Regions for containers should start after kernel.
+require CONT%(cn)d_PHYS0_START >= 0x40000
+require CONT%(cn)d_PHYS1_START >= 0x40000
+require CONT%(cn)d_PHYS2_START >= 0x40000
+require CONT%(cn)d_PHYS3_START >= 0x40000
 
 # TODO: We can add check for end address of physical region to be
 # less than RAM SIZE, need to find out RAM SIZE?
@@ -118,15 +117,7 @@ require CONT%(cn)d_PHYS3_START >= kernel_size
 # Rules for Linux kernel parameters
 require CONT%(cn)d_LINUX_ZRELADDR > CONT%(cn)d_LINUX_PHYS_OFFSET + 0x8000
 
-# FIXME: Restriction for rootfs?
-
-# Rules for posix containers
-# UTCB area starts from 0xf8100000
-derive utcb_start from (0x0 + 0xf8100000) # cannot set value directly
-require CONT%(cn)d_PAGER_UTCB_START >= utcb_start
-
 # TODO: Do we want to check if PAGER_LMA/VMA lies in allocated memory regions
-
 default CONT%(cn)d_PHYS0_START	from 0x40000
 default CONT%(cn)d_PHYS0_END	from 0x1000000
 default CONT%(cn)d_PHYS1_START	from 0x1000000

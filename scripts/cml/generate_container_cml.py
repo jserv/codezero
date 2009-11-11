@@ -27,11 +27,6 @@ containers_constraint = \
 unless CONTAINERS > %d suppress cont%d_menu
 '''
 
-containers_default = \
-'''
-default CONTAINERS from %d
-'''
-
 def add_container_constraint(cid):
     cml_string = ""
     if cid == 0:
@@ -48,9 +43,6 @@ def generate_container_cml(arch, ncont):
     # Add container visibility constraint
     for cont in range(ncont):
         fbody += add_container_constraint(cont)
-
-    # Add number of default containers
-    fbody += containers_default % ncont
 
     # Generate the containers menu with as many entries as containers
     fbody += containers_menu
