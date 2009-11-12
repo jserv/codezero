@@ -35,14 +35,14 @@ int stack_pool_init(unsigned long stack_start,
 	return 0;
 }
 
-void *get_stack_space(int nitems, int size)
+void *get_stack_space(void)
 {
-	return address_new(&stack_region_pool, nitems, size);
+	return address_new(&stack_region_pool, 1, lib_stack_size);
 }
 
-int delete_stack_space(void *stack_address, int nitems, int size)
+int delete_stack_space(void *stack_address)
 {
-	return address_del(&stack_region_pool, stack_address, nitems, size);
+	return address_del(&stack_region_pool, stack_address, 1, lib_stack_size);
 }
 
 int l4_set_stack_params(unsigned long stack_top,
@@ -50,11 +50,9 @@ int l4_set_stack_params(unsigned long stack_top,
 			unsigned long stack_size)
 {
 	/* Ensure that arguments are valid. */
-	// FIXME: Check if lib_stack_size is convenient to use
-	// for ensuring stack space is setup.
 	if (IS_STACK_SETUP()) {
 		printf("libl4thread: You have already called: %s.\n",
-				__FUNCTION__);
+			__FUNCTION__);
 		return -EPERM;
 	}
 	if (!stack_top || !stack_bottom) {
@@ -87,12 +85,11 @@ int l4_set_stack_params(unsigned long stack_top,
 	/* Initialize internal variables. */
 	lib_stack_size = stack_size;
 
-	/* Init stack virtual address pool. */
-	stack_pool_init(stack_top, stack_bottom, stack_size);
+	/* Initialize stack virtual address pool. */
+	if (stack_pool_init(stack_top, stack_bottom, stack_size) < 0)
+		BUG();
 
-	/* Init the global mutex. */
-	//FIXME: Ensure that l4thread_create will not be called
-	// before the mutex is initialized.
+	/* Initialize the global mutex. */
 	l4_mutex_init(&lib_mutex);
 
 	return 0;

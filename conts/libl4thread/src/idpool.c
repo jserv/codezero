@@ -1,5 +1,6 @@
 /*
- * Used for thread and space ids, and also for utcbs.
+ * Used for thread and space ids, and also for
+ * utcb tracking in page-sized-chunks.
  *
  * Copyright (C) 2009 B Labs Ltd.
  */

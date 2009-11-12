@@ -18,7 +18,7 @@ int utcb_pool_init(unsigned long utcb_start, unsigned long utcb_end)
 	/* Initialise the global utcb virtual address pool */
 	if ((err = address_pool_init(&utcb_region_pool,
 					utcb_start, utcb_end,
-					UTCB_SIZE) < 0)) {
+					PAGE_SIZE) < 0)) {
 		printf("UTCB address pool initialisation failed.\n");
 		return err;
 	}
@@ -72,7 +72,11 @@ struct utcb_desc *utcb_new_desc(void)
 
 	/* Obtain a new and unique utcb base */
 	/* FIXME: Use variable size than a page */
-	d->utcb_base = (unsigned long)utcb_new_address(1);
+	if (!(d->utcb_base = (unsigned long)utcb_new_address(1))) {
+		kfree(d->slots);
+		kfree(d);
+		return 0;
+	}
 
 	return d;
 }

@@ -1,5 +1,5 @@
 /*
- * Address allocation pool
+ * Address allocation pool.
  *
  * Copyright (C) 2007 Bahadir Balban
  */
