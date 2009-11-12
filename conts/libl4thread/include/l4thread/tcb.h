@@ -14,23 +14,30 @@ struct utcb_head {
 };
 
 /* A simple thread control block for the thread library. */
-struct l4t_tcb {
+struct tcb {
+	/* Task list */
 	struct link list;
+
+	/* Task id */
 	int tid;
+
+	/* Chain of utcb descriptors */
 	struct utcb_head *utcb_head;
+
+	/* Stack and utcb address */
 	unsigned long utcb_addr;
 	unsigned long stack_addr;
 };
 
-/* This struct keeps track of all the threads handled by the thread lib. */
-struct l4t_global_list {
+/* All the threads handled by the thread lib are kept in this list. */
+struct global_list {
 	int total;
 	struct link list;
 };
 
-struct l4t_tcb *l4t_find_task(int tid);
-struct l4t_tcb *l4t_tcb_alloc_init(struct l4t_tcb *parent, unsigned int flags);
-void l4t_global_add_task(struct l4t_tcb *task);
-void l4t_global_remove_task(struct l4t_tcb *task);
+struct tcb *find_task(int tid);
+struct tcb *tcb_alloc_init(struct tcb *parent, unsigned int flags);
+void global_add_task(struct tcb *task);
+void global_remove_task(struct tcb *task);
 
 #endif /* __LIB_TCB_H__ */

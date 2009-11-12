@@ -17,37 +17,26 @@
 /* Extern declarations */
 extern void setup_new_thread(void);
 extern unsigned long lib_stack_size;
+extern unsigned long lib_utcb_range_size;
 
 /* Static variable definitions */
 struct l4_mutex lib_mutex;
 
 /* Function definitions */
 int l4_thread_create(struct task_ids *ids, unsigned int flags,
-			void *(*func)(void *), void *arg)
+			int (*func)(void *), void *arg)
 {
 	struct exregs_data exregs;
 	unsigned long utcb_addr;
-	struct l4t_tcb *parent, *child;
-	int err;
+	struct tcb *parent, *child;
 	unsigned long stack_top_addr, stack_bot_addr;
+	int err = 0;
 
 	/* A few controls before granting access to thread creation */
-	// FIXME: check if utcb region is setup
-	if (!IS_STACK_SETUP()) {
+	if (!IS_STACK_SETUP() || !IS_UTCB_SETUP()) {
 		printf("libl4thread: Stack and/or utcb have not been "
-				"set up.\n");
+			"set up.\n");
 		return -EPERM;
-	}
-
-	// FIXME: Check if there is enough stack space
-
-	// FIXME: Check if there is enough utcb space
-
-	if (!(TC_SHARE_SPACE & flags)) {
-		printf("libl4thread: Only allows shared space thread "
-				"creation.\n");
-
-		return -EINVAL;
 	}
 
 	/* Before doing any operation get the global mutex. */
@@ -55,37 +44,42 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 
 	/* Get parent's ids and find the tcb belonging to it. */
 	l4_getid(ids);
-	if (!(parent = l4t_find_task(ids->tid)))
-		return-ESRCH;
+	if (!(parent = find_task(ids->tid))) {
+		err = -ESRCH;
+		goto out_err1;
+	}
 
 	/* Allocate tcb for the child. */
-	if (!(child = l4t_tcb_alloc_init(parent, flags))) {
+	if (!(child = tcb_alloc_init(parent, flags))) {
+		// FIXME: What happens to utcb_head
 		printf("libl4thread: No heap space left.\n");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto out_err1;
 	}
 
 	/* Get a utcb addr. */
 	if (!(utcb_addr = get_utcb_addr(child))) {
-		printf("libl4thread: No utcb address left.\n");
-		// FIXME: Check if there is any memory leak
-		kfree(child);
-		return -ENOMEM;
+		printf("libl4thread: No utcb space left.\n");
+		err = -ENOMEM;
+		goto out_err2;
 	}
+
+	/* Get a stack space and calculate the bottom addr of the stack. */
+	stack_top_addr = (unsigned long)get_stack_space();
+	if (!stack_top_addr) {
+		printf("libl4thread: No stack space left.\n");
+		err = -ENOMEM;
+		goto out_err3;
+	}
+	stack_bot_addr = stack_top_addr + lib_stack_size;
+	child->stack_addr = stack_top_addr;
 
 	/* Create thread */
 	if ((err = l4_thread_control(THREAD_CREATE | flags, ids)) < 0) {
 		printf("libl4thread: l4_thread_control(THREAD_CREATE) "
-				"failed with (%d).\n", err);
-		// FIXME: Check if there is any memory leak
-		kfree(child);
-		delete_utcb_addr(child);
-		return err;
+			"failed with (%d).\n", err);
+		goto out_err4;
 	}
-
-	/* Get a stack space and calculate the bottom addr of the stack. */
-	stack_top_addr = (unsigned long)get_stack_space(1, lib_stack_size);
-	stack_bot_addr = stack_top_addr + lib_stack_size;
-	child->stack_addr = stack_top_addr;
 
 	/* Setup new thread pc, sp, utcb */
 	memset(&exregs, 0, sizeof(exregs));
@@ -95,9 +89,8 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 
 	if ((err = l4_exchange_registers(&exregs, ids->tid)) < 0) {
 		printf("libl4thread: l4_exchange_registers failed with "
-				"(%d).\n", err);
-		// FIXME: Check if there is any memory leak
-		return err;
+			"(%d).\n", err);
+		goto out_err5;
 	}
 
 	/* First word of new stack is arg */
@@ -109,25 +102,42 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 
 	/* Add child to the global task list */
 	child->tid = ids->tid;
-	l4t_global_add_task(child);
+	global_add_task(child);
 
 	/* Start the new thread */
 	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {
-		// FIXME: Check if there is any memory leak
 		printf("libl4thread: l4_thread_control(THREAD_RUN) "
-				"failed with (%d).\n", err);
-		return err;
+			"failed with (%d).\n", err);
+		goto out_err6;
 	}
 
 	/* Release the global mutex. */
 	l4_mutex_unlock(&lib_mutex);
 
 	return 0;
+
+	/* Error handling. */
+out_err6:
+	global_remove_task(child);
+out_err5:
+	l4_thread_control(THREAD_DESTROY, ids);
+out_err4:
+	delete_stack_space((void *)child->stack_addr);
+out_err3:
+	delete_utcb_addr(child);
+out_err2:
+	if ((flags & TC_COPY_SPACE) || (flags & TC_NEW_SPACE))
+		kfree(child->utcb_head);
+	kfree(child);
+out_err1:
+	l4_mutex_unlock(&lib_mutex);
+
+	return err;
 }
 
-void l4_thread_exit(void *retval)
+void l4_thread_exit(int retval)
 {
-	struct l4t_tcb *task;
+	struct tcb *task;
 	struct task_ids ids;
 
 	/* Before doing any operation get the global mutex. */
@@ -136,26 +146,28 @@ void l4_thread_exit(void *retval)
 	/* Find the task. */
 	l4_getid(&ids);
 	/* Cant find the thread means it wasnt added to the list. */
-	if (!(task = l4t_find_task(ids.tid)))
+	if (!(task = find_task(ids.tid)))
+		BUG();
+
+	/* Remove child from the global task list. */
+	global_remove_task(task);
+
+	/* Delete the stack space. */
+	if (delete_stack_space((void *)task->stack_addr) < 0)
 		BUG();
 
 	/* Delete the utcb address. */
 	delete_utcb_addr(task);
 
-	/* Delete the stack region. */
-	delete_stack_space((void *)task->stack_addr, 1, lib_stack_size);
-
-	/* Remove child from the global task list. */
-	l4t_global_remove_task(task);
-
 	// FIXME: We assume that main thread never leaves the scene
+	// FIXME: What happens to task->utcb_head?
 	kfree(task);
 
 	/* Release the global mutex. */
 	l4_mutex_unlock(&lib_mutex);
 
 	/* Relinquish the control. */
-	l4_exit(*(unsigned int *)retval);
+	l4_exit(retval);
 
 	/* Should never reach here. */
 	BUG();
@@ -163,27 +175,29 @@ void l4_thread_exit(void *retval)
 
 int l4_thread_kill(struct task_ids *ids)
 {
-	struct l4t_tcb *task;
+	struct tcb *task;
 
 	/* Before doing any operation get the global mutex. */
 	l4_mutex_lock(&lib_mutex);
 
 	/* Find the task to be killed. */
-	if (!(task = l4t_find_task(ids->tid))) {
+	if (!(task = find_task(ids->tid))) {
 		l4_mutex_unlock(&lib_mutex);
 		return -ESRCH;
 	}
 
+	/* Remove child from the global task list. */
+	global_remove_task(task);
+
+	/* Delete the stack space. */
+	if (delete_stack_space((void *)task->stack_addr) < 0)
+		BUG();
+
 	/* Delete the utcb address. */
 	delete_utcb_addr(task);
 
-	/* Delete the stack region. */
-	delete_stack_space((void *)task->stack_addr, 1, lib_stack_size);
-
-	/* Remove child from the global task list. */
-	l4t_global_remove_task(task);
-
 	// FIXME: We assume that main thread never leaves the scene
+	// FIXME: What happens to task->utcb_head?
 	kfree(task);
 
 	/* Release the global mutex. */

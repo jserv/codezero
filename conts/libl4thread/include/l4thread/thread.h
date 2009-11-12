@@ -12,7 +12,7 @@ int l4_set_stack_params(unsigned long stack_top,
 int l4_set_utcb_params(unsigned long utcb_start, unsigned long utcb_end);
 
 int l4_thread_create(struct task_ids *ids, unsigned int flags,
-			void *(*func)(void *), void *arg);
-void l4_thread_exit(void *retval);
+			int (*func)(void *), void *arg);
+void l4_thread_exit(int retval);
 
 #endif /* __LIB_THREAD_H__ */
