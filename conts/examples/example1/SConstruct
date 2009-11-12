@@ -34,7 +34,7 @@ LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
 
 LIBDEV_RELDIR = 'conts/libdev'
 LIBDEV_DIR = join(PROJROOT, LIBDEV_RELDIR)
-LIBDEV_LIBPATH = join(BUILDDIR, LIBDEV_RELDIR)
+LIBDEV_LIBPATH = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-userspace')
 LIBDEV_INCLUDE = [join(LIBDEV_DIR, 'uart/include')]
 
 LIBMEM_RELDIR = 'conts/libmem'
