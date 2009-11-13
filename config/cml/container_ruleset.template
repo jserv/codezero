@@ -3,7 +3,7 @@ CONT%(cn)d_TYPE_LINUX	'Linux Container'
 CONT%(cn)d_TYPE_BARE	'Bare Container'
 CONT%(cn)d_TYPE_POSIX	'POSIX Container'
 CONT%(cn)d_TYPE_TEST	'Test Container'
-CONT%(cn)d_OPT_NAME		'Container Name'
+CONT%(cn)d_OPT_NAME	'Container Name'
 
 CONT%(cn)d_PHYSMEM_REGIONS	'Container %(cn)d Number of Physical Regions'
 CONT%(cn)d_PHYS0_START	'Container %(cn)d Physical Region 0 Start Address'
@@ -16,7 +16,6 @@ CONT%(cn)d_PHYS3_START	'Container %(cn)d Physical Region 3 Start Address'
 CONT%(cn)d_PHYS3_END	'Container %(cn)d Physical Region 3 End Address'
 
 symbols
-
 CONT%(cn)d_VIRTMEM_REGIONS	'Container %(cn)d Number of Virtual Regions'
 CONT%(cn)d_VIRT0_START	'Container %(cn)d Virtual Region 0 Start Address'
 CONT%(cn)d_VIRT0_END	'Container %(cn)d Virtual Region 0 End Address'
@@ -170,7 +169,6 @@ menu cont%(cn)d_posix_pager_params
 	CONT%(cn)d_PAGER_UTCB_START@
 	CONT%(cn)d_PAGER_UTCB_END@
 
-
 menu cont%(cn)d_linux_pager_params
 	CONT%(cn)d_LINUX_PHYS_OFFSET@
 	CONT%(cn)d_LINUX_ZRELADDR@
@@ -203,13 +201,89 @@ menu cont%(cn)d_physmem_list
 	CONT%(cn)d_PHYS3_START@
 	CONT%(cn)d_PHYS3_END@
 
+symbols
+# Options for custom capabilities
+cont%(cn)d_cap0_rtype			'Capability Target Resource Type'
+cont%(cn)d_cap0_type			'Capability Operation Type'
+CONT%(cn)d_CAP0_TARGET			'Capability Target ID'
+
+CONT%(cn)d_CAP0_IPC_TYPE		'IPC Capability'
+CONT%(cn)d_CAP0_TCTRL_TYPE		'Thread Control Capability'
+
+CONT%(cn)d_CAP0_CONTAINER_RTYPE		'Targets a Container'
+CONT%(cn)d_CAP0_SPACE_RTYPE		'Targets a Space'
+CONT%(cn)d_CAP0_THREAD_RTYPE		'Targets a Thread'
+
+choices cont%(cn)d_cap0_type
+	CONT%(cn)d_CAP0_IPC_TYPE
+	CONT%(cn)d_CAP0_TCTRL_TYPE
+	default CONT%(cn)d_CAP0_IPC_TYPE
+
+menu cont%(cn)d_capability0
+	cont%(cn)d_cap0_type
+	cont%(cn)d_cap0_rtype
+	CONT%(cn)d_CAP0_TARGET%
+
+choices cont%(cn)d_cap0_rtype
+	CONT%(cn)d_CAP0_CONTAINER_RTYPE
+	CONT%(cn)d_CAP0_SPACE_RTYPE
+	CONT%(cn)d_CAP0_THREAD_RTYPE
+	default CONT%(cn)d_CAP0_CONTAINER_RTYPE
+
+symbols
+CONT%(cn)d_THREADPOOL_SIZE	'Number of Threads'
+CONT%(cn)d_SPACEPOOL_SIZE	'Number of Address Spaces'
+CONT%(cn)d_MAPPOOL_SIZE		'Number of PMD Mappings'
+CONT%(cn)d_MUTEXPOOL_SIZE	'Number of Mutexes'
+CONT%(cn)d_CAPPOOL_SIZE		'Number of Newly Allocatable Capabilities'
+
+cont%(cn)d_cap_threadpool	'Container %(cn)d Thread Pool Capability'
+cont%(cn)d_cap_spacepool	'Container %(cn)d Space Pool Capability'
+cont%(cn)d_cap_mutexpool	'Container %(cn)d Mutex Pool Capability'
+cont%(cn)d_cap_mappool		'Container %(cn)d Map Pool Capability'
+cont%(cn)d_cap_cappool		'Container %(cn)d Capability Pool Capability'
+cont%(cn)d_capability0 		'Container %(cn)d Capability 0 Parameters'
+
+cont%(cn)d_capability_list	'Container %(cn)d Capability List'
+
+default CONT%(cn)d_CAP0_TARGET		from 0
+default CONT%(cn)d_THREADPOOL_SIZE	from 64
+default CONT%(cn)d_SPACEPOOL_SIZE	from 64
+default CONT%(cn)d_MAPPOOL_SIZE		from 800
+default CONT%(cn)d_MUTEXPOOL_SIZE	from 100
+default CONT%(cn)d_CAPPOOL_SIZE		from 32
+
+menu cont%(cn)d_cap_threadpool
+	CONT%(cn)d_THREADPOOL_SIZE%
+
+menu cont%(cn)d_cap_spacepool
+	CONT%(cn)d_SPACEPOOL_SIZE%
+
+menu cont%(cn)d_cap_mappool
+	CONT%(cn)d_MAPPOOL_SIZE%
+
+menu cont%(cn)d_cap_mutexpool
+	CONT%(cn)d_MUTEXPOOL_SIZE%
+
+menu cont%(cn)d_cap_cappool
+	CONT%(cn)d_CAPPOOL_SIZE%
+
+menu cont%(cn)d_capability_list
+	cont%(cn)d_cap_threadpool
+	cont%(cn)d_cap_spacepool
+	cont%(cn)d_cap_mutexpool
+	cont%(cn)d_cap_mappool
+	cont%(cn)d_cap_cappool
+	cont%(cn)d_capability0
+
 menu container%(cn)d_options
 	CONT%(cn)d_OPT_NAME$
-	cont%(cn)d_physmem_list
-	cont%(cn)d_virtmem_list
 	cont%(cn)d_linux_pager_params
 	cont%(cn)d_bare_pager_params
 	cont%(cn)d_posix_pager_params
+	cont%(cn)d_physmem_list
+	cont%(cn)d_virtmem_list
+	cont%(cn)d_capability_list
 
 choices container%(cn)d_type
 	CONT%(cn)d_TYPE_BARE
