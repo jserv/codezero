@@ -201,18 +201,19 @@ menu cont%(cn)d_physmem_list
 	CONT%(cn)d_PHYS3_START@
 	CONT%(cn)d_PHYS3_END@
 
-symbols
 # Options for custom capabilities
+symbols
 cont%(cn)d_cap0_rtype			'Capability Target Resource Type'
 cont%(cn)d_cap0_type			'Capability Operation Type'
-CONT%(cn)d_CAP0_TARGET			'Capability Target ID'
 
 CONT%(cn)d_CAP0_IPC_TYPE		'IPC Capability'
 CONT%(cn)d_CAP0_TCTRL_TYPE		'Thread Control Capability'
 
-CONT%(cn)d_CAP0_CONTAINER_RTYPE		'Targets a Container'
-CONT%(cn)d_CAP0_SPACE_RTYPE		'Targets a Space'
-CONT%(cn)d_CAP0_THREAD_RTYPE		'Targets a Thread'
+CONT%(cn)d_CAP0_TARGET_CURRENT_CONT	'Targets Current Container'
+CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT	'Targets Another Container'
+CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE 'Targets Current Pager`s Space'
+CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER	'Targets Another Pager'
+CONT%(cn)d_CAP0_TARGET			'Enter Container ID'
 
 choices cont%(cn)d_cap0_type
 	CONT%(cn)d_CAP0_IPC_TYPE
@@ -225,17 +226,22 @@ menu cont%(cn)d_capability0
 	CONT%(cn)d_CAP0_TARGET%
 
 choices cont%(cn)d_cap0_rtype
-	CONT%(cn)d_CAP0_CONTAINER_RTYPE
-	CONT%(cn)d_CAP0_SPACE_RTYPE
-	CONT%(cn)d_CAP0_THREAD_RTYPE
-	default CONT%(cn)d_CAP0_CONTAINER_RTYPE
+	CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
+	default CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
+
+when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP0_TARGET
+when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP0_TARGET
+
 
 symbols
 CONT%(cn)d_THREADPOOL_SIZE	'Number of Threads'
 CONT%(cn)d_SPACEPOOL_SIZE	'Number of Address Spaces'
-CONT%(cn)d_MAPPOOL_SIZE		'Number of PMD Mappings'
-CONT%(cn)d_MUTEXPOOL_SIZE	'Number of Mutexes'
-CONT%(cn)d_CAPPOOL_SIZE		'Number of Newly Allocatable Capabilities'
+CONT%(cn)d_MAPPOOL_SIZE		'Number of PMD Mappings (E.g. Middle-level Page Tables)'
+CONT%(cn)d_MUTEXPOOL_SIZE	'Number of Userspace Mutexes'
+CONT%(cn)d_CAPPOOL_SIZE		'Number of Capabilities (Created via Split, Replicate)'
 
 cont%(cn)d_cap_threadpool	'Container %(cn)d Thread Pool Capability'
 cont%(cn)d_cap_spacepool	'Container %(cn)d Space Pool Capability'
