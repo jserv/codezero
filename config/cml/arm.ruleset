@@ -53,12 +53,6 @@ choices arm_subarch_type
 	SUBARCH_V7
 	default SUBARCH_V5
 
-choices arm_cpu_type
-	CPU_ARM926
-	CPU_ARM1136
-	CPU_ARM11MPCORE
-	CPU_CORTEXA8
-        default CPU_ARM926
 
 choices arm_platform_type
         PLATFORM_EB
@@ -67,6 +61,13 @@ choices arm_platform_type
 	PLATFORM_PB11MPCORE
 	PLATFORM_PBA8
         default PLATFORM_PB926
+
+choices arm_cpu_type
+	CPU_ARM926
+	CPU_ARM1136
+	CPU_ARM11MPCORE
+	CPU_CORTEXA8
+        default CPU_ARM926
 
 #############
 #   MENUS   #
