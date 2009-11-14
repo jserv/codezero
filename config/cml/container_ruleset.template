@@ -233,8 +233,9 @@ choices cont%(cn)d_cap0_rtype
 	default CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
 
 when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP0_TARGET
-when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP0_TARGET
+when CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE == y suppress CONT%(cn)d_CAP0_TARGET
 
+when cont%(cn)d_cap0_type != CONT%(cn)d_CAP0_IPC_TYPE suppress CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
 
 symbols
 CONT%(cn)d_THREADPOOL_SIZE	'Number of Threads'
