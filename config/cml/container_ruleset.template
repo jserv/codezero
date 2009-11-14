@@ -38,7 +38,7 @@ CONT%(cn)d_PAGER_TASK_START	'Container %(cn)d Task Address Space Region Start'
 CONT%(cn)d_PAGER_TASK_END	'Container %(cn)d Task Address Space Region End'
 CONT%(cn)d_PAGER_UTCB_START	'Container %(cn)d UTCB Mappings Region Start'
 CONT%(cn)d_PAGER_UTCB_END	'Container %(cn)d UTCB Mappings Region End'
-CONT%(cn)d_LINUX_ZRELADDR         'Container %(cn)d Linux ZRELADDR parameter'
+CONT%(cn)d_LINUX_ZRELADDR       'Container %(cn)d Linux ZRELADDR parameter'
 CONT%(cn)d_LINUX_PAGE_OFFSET	'Container %(cn)d Linux PAGE_OFFSET Parameter'
 CONT%(cn)d_LINUX_PHYS_OFFSET	'Container %(cn)d Linux PHYS_OFFSET Parameter'
 CONT%(cn)d_LINUX_ROOTFS_ADDRESS	'Container %(cn)d Linux ROOTFS Address'
@@ -235,9 +235,11 @@ choicegroup CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
 	    CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
 	    default CONT%(cn)d_CAP0_TARGET_CURRENT_CONT from y
 
-when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP0_TARGET
-when CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE == y suppress CONT%(cn)d_CAP0_TARGET
-when CONT%(cn)d_CAP0_IPC_TYPE == n suppress CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
+when CONT%(cn)d_CAP0_IPC_TYPE == n
+	suppress CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP0_TARGET
+
 default CONT%(cn)d_CAP0_TARGET		from 0
 
 symbols
