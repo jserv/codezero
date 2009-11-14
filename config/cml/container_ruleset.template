@@ -204,35 +204,79 @@ menu cont%(cn)d_physmem_list
 # Options for custom capabilities
 symbols
 cont%(cn)d_cap0_type			'Capability Operation Type'
-
 CONT%(cn)d_CAP0_IPC_TYPE		'IPC Capability'
 CONT%(cn)d_CAP0_TCTRL_TYPE		'Thread Control Capability'
-
+CONT%(cn)d_CAP0_EXREGS_TYPE		'Exchange Registers Capability'
+CONT%(cn)d_CAP0_CAP_TYPE		'Capability Control Capability'
 CONT%(cn)d_CAP0_TARGET_CURRENT_CONT	'Capability Targets Current Container'
-CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
 CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
 CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
 CONT%(cn)d_CAP0_TARGET			'Enter Container ID'
 
 choices cont%(cn)d_cap0_type
 	CONT%(cn)d_CAP0_IPC_TYPE
 	CONT%(cn)d_CAP0_TCTRL_TYPE
+	CONT%(cn)d_CAP0_EXREGS_TYPE
+	CONT%(cn)d_CAP0_CAP_TYPE
 	default CONT%(cn)d_CAP0_IPC_TYPE
 
 menu cont%(cn)d_capability0
 	cont%(cn)d_cap0_type
-	CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
 	CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
 	CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
 	CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
 	CONT%(cn)d_CAP0_TARGET%
 
-choicegroup CONT%(cn)d_CAP0_TARGET_CURRENT_CONT CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER default CONT%(cn)d_CAP0_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP0_TARGET_CURRENT_CONT from y
 
 when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP0_TARGET
 when CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE == y suppress CONT%(cn)d_CAP0_TARGET
-
 when CONT%(cn)d_CAP0_IPC_TYPE == n suppress CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
+default CONT%(cn)d_CAP0_TARGET		from 0
+
+symbols
+cont%(cn)d_cap1_type			'Capability Operation Type'
+CONT%(cn)d_CAP1_IPC_TYPE		'IPC Capability'
+CONT%(cn)d_CAP1_TCTRL_TYPE		'Thread Control Capability'
+CONT%(cn)d_CAP1_EXREGS_TYPE		'Exchange Registers Capability'
+CONT%(cn)d_CAP1_CAP_TYPE		'Capability Control Capability'
+CONT%(cn)d_CAP1_TARGET_CURRENT_CONT	'Capability Targets Current Container'
+CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
+CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP1_TARGET			'Enter Container ID'
+
+choices cont%(cn)d_cap1_type
+	CONT%(cn)d_CAP1_IPC_TYPE
+	CONT%(cn)d_CAP1_TCTRL_TYPE
+	CONT%(cn)d_CAP1_EXREGS_TYPE
+	CONT%(cn)d_CAP1_CAP_TYPE
+	default CONT%(cn)d_CAP1_IPC_TYPE
+
+menu cont%(cn)d_capability1
+	cont%(cn)d_cap1_type
+	CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_CAP1_TARGET%
+
+choicegroup CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP1_TARGET_CURRENT_CONT from y
+
+when CONT%(cn)d_CAP1_TARGET_CURRENT_CONT == y suppress CONT%(cn)d_CAP1_TARGET
+when CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE == y suppress CONT%(cn)d_CAP1_TARGET
+when CONT%(cn)d_CAP1_IPC_TYPE == n suppress CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
+default CONT%(cn)d_CAP1_TARGET		from 1
 
 symbols
 CONT%(cn)d_THREADPOOL_SIZE	'Number of Threads'
@@ -240,36 +284,114 @@ CONT%(cn)d_SPACEPOOL_SIZE	'Number of Address Spaces'
 CONT%(cn)d_MAPPOOL_SIZE		'Number of PMD Mappings (E.g. Middle-level Page Tables)'
 CONT%(cn)d_MUTEXPOOL_SIZE	'Number of Userspace Mutexes'
 CONT%(cn)d_CAPPOOL_SIZE		'Number of Capabilities (Created at run-time via Split, Replicate)'
+CONT%(cn)d_THREADPOOL_USE	'Create this Capability'
+CONT%(cn)d_SPACEPOOL_USE	'Create this Capability'
+CONT%(cn)d_MAPPOOL_USE		'Create this Capability'
+CONT%(cn)d_MUTEXPOOL_USE	'Create this Capability'
+CONT%(cn)d_CAPPOOL_USE		'Create this Capability'
 
 cont%(cn)d_cap_threadpool	'Container %(cn)d Thread Pool Capability'
 cont%(cn)d_cap_spacepool	'Container %(cn)d Space Pool Capability'
 cont%(cn)d_cap_mutexpool	'Container %(cn)d Mutex Pool Capability'
 cont%(cn)d_cap_mappool		'Container %(cn)d Map Pool Capability'
 cont%(cn)d_cap_cappool		'Container %(cn)d Capability Pool Capability'
-cont%(cn)d_capability0 		'Container %(cn)d Capability 0 Parameters'
+cont%(cn)d_cap_tctrl		'Container %(cn)d Thread Control Capability'
+cont%(cn)d_cap_exregs		'Container %(cn)d Exchange Registers Capability'
+cont%(cn)d_cap_ipc		'Container %(cn)d IPC Capability'
+cont%(cn)d_capability0 		'Container %(cn)d Custom Capability 0 Parameters'
+cont%(cn)d_capability1 		'Container %(cn)d Custom Capability 1 Parameters'
 
 cont%(cn)d_capability_list	'Container %(cn)d Capability List'
 
-default CONT%(cn)d_CAP0_TARGET		from 0
 default CONT%(cn)d_THREADPOOL_SIZE	from 64
 default CONT%(cn)d_SPACEPOOL_SIZE	from 64
 default CONT%(cn)d_MAPPOOL_SIZE		from 800
 default CONT%(cn)d_MUTEXPOOL_SIZE	from 100
 default CONT%(cn)d_CAPPOOL_SIZE		from 32
 
+default CONT%(cn)d_THREADPOOL_USE	from y
+default CONT%(cn)d_SPACEPOOL_USE	from y
+default CONT%(cn)d_MAPPOOL_USE		from y
+default CONT%(cn)d_MUTEXPOOL_USE	from y
+default CONT%(cn)d_CAPPOOL_USE		from y
+
+when CONT%(cn)d_THREADPOOL_USE == n suppress CONT%(cn)d_THREADPOOL_SIZE
+when CONT%(cn)d_SPACEPOOL_USE == n suppress CONT%(cn)d_SPACEPOOL_SIZE
+when CONT%(cn)d_MAPPOOL_USE == n suppress CONT%(cn)d_MAPPOOL_SIZE
+when CONT%(cn)d_MUTEXPOOL_USE == n suppress CONT%(cn)d_MUTEXPOOL_SIZE
+when CONT%(cn)d_CAPPOOL_USE == n suppress CONT%(cn)d_CAPPOOL_SIZE
+
+when CONT%(cn)d_IPC_USE == n
+	suppress CONT%(cn)d_IPC_TARGET_CURRENT_CONT
+		 CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_IPC_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER
+
+when CONT%(cn)d_EXREGS_USE == n
+	suppress CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT
+		 CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE
+
+when CONT%(cn)d_TCTRL_USE == n
+	suppress CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT
+		 CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE
+
+symbols
+CONT%(cn)d_TCTRL_USE				'Create this Capability'
+CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
+CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+
+CONT%(cn)d_EXREGS_USE				'Create this Capability'
+CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT		'Capability Targets Current Container'
+CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+
+CONT%(cn)d_IPC_USE				'Create this Capability'
+CONT%(cn)d_IPC_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
+CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+CONT%(cn)d_IPC_TARGET_ANOTHER_CONT		'Capability Targets Another Container'
+CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER		'Capability Targets Another Container`s Pager'
+CONT%(cn)d_IPC_TARGET				'Enter Container ID'
+
+default CONT%(cn)d_TCTRL_USE	from y
+default CONT%(cn)d_EXREGS_USE	from y
+default CONT%(cn)d_IPC_USE	from y
+default CONT%(cn)d_IPC_TARGET	from 0
+
+menu cont%(cn)d_cap_tctrl
+	CONT%(cn)d_TCTRL_USE
+	CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT
+	CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE
+
+menu cont%(cn)d_cap_exregs
+	CONT%(cn)d_EXREGS_USE
+	CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT
+	CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE
+
+menu cont%(cn)d_cap_ipc
+	CONT%(cn)d_IPC_USE
+	CONT%(cn)d_IPC_TARGET_CURRENT_CONT
+	CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_IPC_TARGET_ANOTHER_CONT
+	CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_IPC_TARGET%
+
 menu cont%(cn)d_cap_threadpool
+	CONT%(cn)d_THREADPOOL_USE
 	CONT%(cn)d_THREADPOOL_SIZE%
 
 menu cont%(cn)d_cap_spacepool
+	CONT%(cn)d_SPACEPOOL_USE
 	CONT%(cn)d_SPACEPOOL_SIZE%
 
 menu cont%(cn)d_cap_mappool
+	CONT%(cn)d_MAPPOOL_USE
 	CONT%(cn)d_MAPPOOL_SIZE%
 
 menu cont%(cn)d_cap_mutexpool
+	CONT%(cn)d_MUTEXPOOL_USE
 	CONT%(cn)d_MUTEXPOOL_SIZE%
 
 menu cont%(cn)d_cap_cappool
+	CONT%(cn)d_CAPPOOL_USE
 	CONT%(cn)d_CAPPOOL_SIZE%
 
 menu cont%(cn)d_capability_list
@@ -278,7 +400,11 @@ menu cont%(cn)d_capability_list
 	cont%(cn)d_cap_mutexpool
 	cont%(cn)d_cap_mappool
 	cont%(cn)d_cap_cappool
+	cont%(cn)d_cap_tctrl
+	cont%(cn)d_cap_exregs
+	cont%(cn)d_cap_ipc
 	cont%(cn)d_capability0
+	cont%(cn)d_capability1
 
 menu container%(cn)d_options
 	CONT%(cn)d_OPT_NAME$
