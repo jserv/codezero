@@ -204,259 +204,258 @@ menu cont%(cn)d_physmem_list
 #
 # Settings for Custom Capabilities
 #
-choices cont%(cn)d_cap0_type
-	CONT%(cn)d_CAP0_IPC_TYPE
-	CONT%(cn)d_CAP0_TCTRL_TYPE
-	CONT%(cn)d_CAP0_EXREGS_TYPE
-	CONT%(cn)d_CAP0_CAP_TYPE
-	default CONT%(cn)d_CAP0_IPC_TYPE
+choices cont%(cn)d_cap_custom0_type
+	CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE
+	CONT%(cn)d_CAP_CUSTOM0_TCTRL_TYPE
+	CONT%(cn)d_CAP_CUSTOM0_EXREGS_TYPE
+	CONT%(cn)d_CAP_CUSTOM0_CAP_TYPE
+	default CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE
 
-choices cont%(cn)d_cap1_type
-	CONT%(cn)d_CAP1_IPC_TYPE
-	CONT%(cn)d_CAP1_TCTRL_TYPE
-	CONT%(cn)d_CAP1_EXREGS_TYPE
-	CONT%(cn)d_CAP1_CAP_TYPE
-	default CONT%(cn)d_CAP1_IPC_TYPE
+choices cont%(cn)d_cap_custom1_type
+	CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE
+	CONT%(cn)d_CAP_CUSTOM1_TCTRL_TYPE
+	CONT%(cn)d_CAP_CUSTOM1_EXREGS_TYPE
+	CONT%(cn)d_CAP_CUSTOM1_CAP_TYPE
+	default CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE
 
-choices cont%(cn)d_cap2_type
-	CONT%(cn)d_CAP2_IPC_TYPE
-	CONT%(cn)d_CAP2_TCTRL_TYPE
-	CONT%(cn)d_CAP2_EXREGS_TYPE
-	CONT%(cn)d_CAP2_CAP_TYPE
-	default CONT%(cn)d_CAP2_IPC_TYPE
+choices cont%(cn)d_cap_custom2_type
+	CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE
+	CONT%(cn)d_CAP_CUSTOM2_TCTRL_TYPE
+	CONT%(cn)d_CAP_CUSTOM2_EXREGS_TYPE
+	CONT%(cn)d_CAP_CUSTOM2_CAP_TYPE
+	default CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE
 
-choices cont%(cn)d_cap3_type
-	CONT%(cn)d_CAP3_IPC_TYPE
-	CONT%(cn)d_CAP3_TCTRL_TYPE
-	CONT%(cn)d_CAP3_EXREGS_TYPE
-	CONT%(cn)d_CAP3_CAP_TYPE
-	default CONT%(cn)d_CAP3_IPC_TYPE
+choices cont%(cn)d_cap_custom3_type
+	CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE
+	CONT%(cn)d_CAP_CUSTOM3_TCTRL_TYPE
+	CONT%(cn)d_CAP_CUSTOM3_EXREGS_TYPE
+	CONT%(cn)d_CAP_CUSTOM3_CAP_TYPE
+	default CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE
 
-default CONT%(cn)d_CAP0_USE	from n
-default CONT%(cn)d_CAP1_USE	from n
-default CONT%(cn)d_CAP2_USE	from n
-default CONT%(cn)d_CAP3_USE	from n
+default CONT%(cn)d_CAP_CUSTOM0_USE	from n
+default CONT%(cn)d_CAP_CUSTOM1_USE	from n
+default CONT%(cn)d_CAP_CUSTOM2_USE	from n
+default CONT%(cn)d_CAP_CUSTOM3_USE	from n
 
-menu cont%(cn)d_capability0
-	CONT%(cn)d_CAP0_USE
-	cont%(cn)d_cap0_type
-	CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
-	CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
-	CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
-	CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
-	CONT%(cn)d_CAP0_TARGET%
+menu cont%(cn)d_cap_custom0
+	CONT%(cn)d_CAP_CUSTOM0_USE
+	cont%(cn)d_cap_custom0_type
+	CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_CAP_CUSTOM0_TARGET%
 
-menu cont%(cn)d_capability1
-	CONT%(cn)d_CAP1_USE
-	cont%(cn)d_cap1_type
-	CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
-	CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
-	CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
-	CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
-	CONT%(cn)d_CAP1_TARGET%
+menu cont%(cn)d_cap_custom1
+	CONT%(cn)d_CAP_CUSTOM1_USE
+	cont%(cn)d_cap_custom1_type
+	CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_CAP_CUSTOM1_TARGET%
 
-menu cont%(cn)d_capability2
-	CONT%(cn)d_CAP2_USE
-	cont%(cn)d_cap2_type
-	CONT%(cn)d_CAP2_TARGET_CURRENT_CONT
-	CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE
-	CONT%(cn)d_CAP2_TARGET_ANOTHER_CONT
-	CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER
-	CONT%(cn)d_CAP2_TARGET%
+menu cont%(cn)d_cap_custom2
+	CONT%(cn)d_CAP_CUSTOM2_USE
+	cont%(cn)d_cap_custom2_type
+	CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_CAP_CUSTOM2_TARGET%
 
-menu cont%(cn)d_capability3
-	CONT%(cn)d_CAP3_USE
-	cont%(cn)d_cap3_type
-	CONT%(cn)d_CAP3_TARGET_CURRENT_CONT
-	CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
-	CONT%(cn)d_CAP3_TARGET_ANOTHER_CONT
-	CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER
-	CONT%(cn)d_CAP3_TARGET%
+menu cont%(cn)d_cap_custom3
+	CONT%(cn)d_CAP_CUSTOM3_USE
+	cont%(cn)d_cap_custom3_type
+	CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_CAP_CUSTOM3_TARGET%
 
-choicegroup CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
-	    CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
-	    CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
-	    CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
-	    default CONT%(cn)d_CAP0_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT from y
 
-choicegroup CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
-	    CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
-	    CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
-	    CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
-	    default CONT%(cn)d_CAP1_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT from y
 
-choicegroup CONT%(cn)d_CAP2_TARGET_CURRENT_CONT
-	    CONT%(cn)d_CAP2_TARGET_ANOTHER_CONT
-	    CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE
-	    CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER
-	    default CONT%(cn)d_CAP2_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT from y
 
-choicegroup CONT%(cn)d_CAP3_TARGET_CURRENT_CONT
-	    CONT%(cn)d_CAP3_TARGET_ANOTHER_CONT
-	    CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
-	    CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER
-	    default CONT%(cn)d_CAP3_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT from y
 
-when CONT%(cn)d_CAP0_USE == n
-	suppress cont%(cn)d_cap0_type
-		 CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
-		 CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
-		 CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP0_TARGET
+when CONT%(cn)d_CAP_CUSTOM0_USE == n
+	suppress cont%(cn)d_cap_custom0_type
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET
 
-when CONT%(cn)d_CAP1_USE == n
-	suppress cont%(cn)d_cap1_type
-		 CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
-		 CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
-		 CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP1_TARGET
+when CONT%(cn)d_CAP_CUSTOM1_USE == n
+	suppress cont%(cn)d_cap_custom1_type
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET
 
-when CONT%(cn)d_CAP2_USE == n
-	suppress cont%(cn)d_cap2_type
-		 CONT%(cn)d_CAP2_TARGET_CURRENT_CONT
-		 CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE
-		 CONT%(cn)d_CAP2_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP2_TARGET
+when CONT%(cn)d_CAP_CUSTOM2_USE == n
+	suppress cont%(cn)d_cap_custom2_type
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET
 
-when CONT%(cn)d_CAP3_USE == n
-	suppress cont%(cn)d_cap3_type
-		 CONT%(cn)d_CAP3_TARGET_CURRENT_CONT
-		 CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
-		 CONT%(cn)d_CAP3_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP3_TARGET
+when CONT%(cn)d_CAP_CUSTOM3_USE == n
+	suppress cont%(cn)d_cap_custom3_type
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET
 
-when CONT%(cn)d_CAP0_IPC_TYPE == n
-	suppress CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP0_TARGET
+when CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE == n
+	suppress CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM0_TARGET
 
-when CONT%(cn)d_CAP0_TARGET_CURRENT_CONT or
-     CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
-     	suppress CONT%(cn)d_CAP0_TARGET
+when CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT or
+     CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_PAGER_SPACE
+     	suppress CONT%(cn)d_CAP_CUSTOM0_TARGET
 
-when CONT%(cn)d_CAP1_IPC_TYPE == n
-	suppress CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP1_TARGET
+when CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE == n
+	suppress CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM1_TARGET
 
-when CONT%(cn)d_CAP1_TARGET_CURRENT_CONT or
-     CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
-     	suppress CONT%(cn)d_CAP1_TARGET
+when CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT or
+     CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_PAGER_SPACE
+     	suppress CONT%(cn)d_CAP_CUSTOM1_TARGET
 
-when CONT%(cn)d_CAP2_IPC_TYPE == n
-	suppress CONT%(cn)d_CAP2_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP2_TARGET
+when CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE == n
+	suppress CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM2_TARGET
 
-when CONT%(cn)d_CAP2_TARGET_CURRENT_CONT or
-     CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE
-     	suppress CONT%(cn)d_CAP2_TARGET
+when CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT or
+     CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_PAGER_SPACE
+     	suppress CONT%(cn)d_CAP_CUSTOM2_TARGET
 
+when CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE == n
+	suppress CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP_CUSTOM3_TARGET
 
-when CONT%(cn)d_CAP3_IPC_TYPE == n
-	suppress CONT%(cn)d_CAP3_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER
-		 CONT%(cn)d_CAP3_TARGET
+when CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT or
+     CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_PAGER_SPACE
+     	suppress CONT%(cn)d_CAP_CUSTOM3_TARGET
 
-when CONT%(cn)d_CAP3_TARGET_CURRENT_CONT or
-     CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
-     	suppress CONT%(cn)d_CAP3_TARGET
-
-
-default CONT%(cn)d_CAP0_TARGET		from 0
-default CONT%(cn)d_CAP1_TARGET		from 0
-default CONT%(cn)d_CAP2_TARGET		from 0
-default CONT%(cn)d_CAP3_TARGET		from 0
+default CONT%(cn)d_CAP_CUSTOM0_TARGET		from 0
+default CONT%(cn)d_CAP_CUSTOM1_TARGET		from 0
+default CONT%(cn)d_CAP_CUSTOM2_TARGET		from 0
+default CONT%(cn)d_CAP_CUSTOM3_TARGET		from 0
 
 # Symbols for Custom Capabilities
 symbols
-CONT%(cn)d_CAP0_USE			'Enable this Capability'
-cont%(cn)d_cap0_type			'Capability Operation Type'
-CONT%(cn)d_CAP0_IPC_TYPE		'IPC Capability'
-CONT%(cn)d_CAP0_TCTRL_TYPE		'Thread Control Capability'
-CONT%(cn)d_CAP0_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP0_CAP_TYPE		'Capability Control Capability'
-CONT%(cn)d_CAP0_TARGET_CURRENT_CONT	'Capability Targets Current Container'
-CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
-CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
-CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
-CONT%(cn)d_CAP0_TARGET			'Enter Container ID'
+CONT%(cn)d_CAP_CUSTOM0_USE			'Enable this Capability'
+cont%(cn)d_cap_custom0_type			'Capability Operation Type'
+CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE			'IPC Capability'
+CONT%(cn)d_CAP_CUSTOM0_TCTRL_TYPE		'Thread Control Capability'
+CONT%(cn)d_CAP_CUSTOM0_EXREGS_TYPE		'Exchange Registers Capability'
+CONT%(cn)d_CAP_CUSTOM0_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT	'Capability Targets Current Container'
+CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
+CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP_CUSTOM0_TARGET			'Enter Container ID'
 
-CONT%(cn)d_CAP1_USE			'Enable this Capability'
-cont%(cn)d_cap1_type			'Capability Operation Type'
-CONT%(cn)d_CAP1_IPC_TYPE		'IPC Capability'
-CONT%(cn)d_CAP1_TCTRL_TYPE		'Thread Control Capability'
-CONT%(cn)d_CAP1_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP1_CAP_TYPE		'Capability Control Capability'
-CONT%(cn)d_CAP1_TARGET_CURRENT_CONT	'Capability Targets Current Container'
-CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
-CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
-CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
-CONT%(cn)d_CAP1_TARGET			'Enter Container ID'
+CONT%(cn)d_CAP_CUSTOM1_USE			'Enable this Capability'
+cont%(cn)d_cap_custom1_type			'Capability Operation Type'
+CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE			'IPC Capability'
+CONT%(cn)d_CAP_CUSTOM1_TCTRL_TYPE		'Thread Control Capability'
+CONT%(cn)d_CAP_CUSTOM1_EXREGS_TYPE		'Exchange Registers Capability'
+CONT%(cn)d_CAP_CUSTOM1_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT	'Capability Targets Current Container'
+CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
+CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP_CUSTOM1_TARGET			'Enter Container ID'
 
-CONT%(cn)d_CAP2_USE			'Enable this Capability'
-cont%(cn)d_cap2_type			'Capability Operation Type'
-CONT%(cn)d_CAP2_IPC_TYPE		'IPC Capability'
-CONT%(cn)d_CAP2_TCTRL_TYPE		'Thread Control Capability'
-CONT%(cn)d_CAP2_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP2_CAP_TYPE		'Capability Control Capability'
-CONT%(cn)d_CAP2_TARGET_CURRENT_CONT	'Capability Targets Current Container'
-CONT%(cn)d_CAP2_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
-CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
-CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
-CONT%(cn)d_CAP2_TARGET			'Enter Container ID'
+CONT%(cn)d_CAP_CUSTOM2_USE			'Enable this Capability'
+cont%(cn)d_cap_custom2_type			'Capability Operation Type'
+CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE			'IPC Capability'
+CONT%(cn)d_CAP_CUSTOM2_TCTRL_TYPE		'Thread Control Capability'
+CONT%(cn)d_CAP_CUSTOM2_EXREGS_TYPE		'Exchange Registers Capability'
+CONT%(cn)d_CAP_CUSTOM2_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT	'Capability Targets Current Container'
+CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
+CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP_CUSTOM2_TARGET			'Enter Container ID'
 
-CONT%(cn)d_CAP3_USE			'Enable this Capability'
-cont%(cn)d_cap3_type			'Capability Operation Type'
-CONT%(cn)d_CAP3_IPC_TYPE		'IPC Capability'
-CONT%(cn)d_CAP3_TCTRL_TYPE		'Thread Control Capability'
-CONT%(cn)d_CAP3_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP3_CAP_TYPE		'Capability Control Capability'
-CONT%(cn)d_CAP3_TARGET_CURRENT_CONT	'Capability Targets Current Container'
-CONT%(cn)d_CAP3_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
-CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
-CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
-CONT%(cn)d_CAP3_TARGET			'Enter Container ID'
+CONT%(cn)d_CAP_CUSTOM3_USE			'Enable this Capability'
+cont%(cn)d_cap_custom3_type			'Capability Operation Type'
+CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE			'IPC Capability'
+CONT%(cn)d_CAP_CUSTOM3_TCTRL_TYPE		'Thread Control Capability'
+CONT%(cn)d_CAP_CUSTOM3_EXREGS_TYPE		'Exchange Registers Capability'
+CONT%(cn)d_CAP_CUSTOM3_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT	'Capability Targets Current Container'
+CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
+CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP_CUSTOM3_TARGET			'Enter Container ID'
+
 
 
 # Symbols for Generic Capabilities
 symbols
-CONT%(cn)d_TCTRL_USE				'Enable this Capability'
-CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
-CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_TCTRL_USE				'Enable this Capability'
+CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
+CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 
-CONT%(cn)d_EXREGS_USE				'Enable this Capability'
-CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT		'Capability Targets Current Container'
-CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_EXREGS_USE				'Enable this Capability'
+CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_CONT		'Capability Targets Current Container'
+CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 
-CONT%(cn)d_IPC_USE				'Enable this Capability'
-CONT%(cn)d_IPC_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
-CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
-CONT%(cn)d_IPC_TARGET_ANOTHER_CONT		'Capability Targets Another Container'
-CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER		'Capability Targets Another Container`s Pager'
-CONT%(cn)d_IPC_TARGET				'Enter Container ID'
-
-symbols
-CONT%(cn)d_CAPCTRL_USE				'Enable this Capability'
-CONT%(cn)d_CAPCTRL_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
-CONT%(cn)d_CAPCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
-
+CONT%(cn)d_CAP_IPC_USE				'Enable this Capability'
+CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
+CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_CONT		'Capability Targets Another Container'
+CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_PAGER		'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP_IPC_TARGET				'Enter Container ID'
 
 symbols
-CONT%(cn)d_THREADPOOL_SIZE	'Number of Threads'
-CONT%(cn)d_SPACEPOOL_SIZE	'Number of Address Spaces'
-CONT%(cn)d_MAPPOOL_SIZE		'Number of PMD Mappings (E.g. Middle-level Page Tables)'
-CONT%(cn)d_MUTEXPOOL_SIZE	'Number of Userspace Mutexes'
-CONT%(cn)d_CAPPOOL_SIZE		'Number of Capabilities (Created at run-time via Split, Replicate)'
-CONT%(cn)d_THREADPOOL_USE	'Enable this Capability'
-CONT%(cn)d_SPACEPOOL_USE	'Enable this Capability'
-CONT%(cn)d_MAPPOOL_USE		'Enable this Capability'
-CONT%(cn)d_MUTEXPOOL_USE	'Enable this Capability'
-CONT%(cn)d_CAPPOOL_USE		'Enable this Capability'
+CONT%(cn)d_CAP_CAPCTRL_USE				'Enable this Capability'
+CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
+CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+
+
+symbols
+CONT%(cn)d_CAP_THREADPOOL_SIZE	'Number of Threads'
+CONT%(cn)d_CAP_SPACEPOOL_SIZE	'Number of Address Spaces'
+CONT%(cn)d_CAP_MAPPOOL_SIZE		'Number of PMD Mappings (E.g. Middle-level Page Tables)'
+CONT%(cn)d_CAP_MUTEXPOOL_SIZE	'Number of Userspace Mutexes'
+CONT%(cn)d_CAP_CAPPOOL_SIZE		'Number of Capabilities (Created at run-time via Split, Replicate)'
+CONT%(cn)d_CAP_THREADPOOL_USE	'Enable this Capability'
+CONT%(cn)d_CAP_SPACEPOOL_USE	'Enable this Capability'
+CONT%(cn)d_CAP_MAPPOOL_USE		'Enable this Capability'
+CONT%(cn)d_CAP_MUTEXPOOL_USE	'Enable this Capability'
+CONT%(cn)d_CAP_CAPPOOL_USE		'Enable this Capability'
 
 cont%(cn)d_cap_threadpool	'Container %(cn)d Thread Pool Capability'
 cont%(cn)d_cap_spacepool	'Container %(cn)d Space Pool Capability'
@@ -467,127 +466,127 @@ cont%(cn)d_cap_tctrl		'Container %(cn)d Thread Control Capability'
 cont%(cn)d_cap_exregs		'Container %(cn)d Exchange Registers Capability'
 cont%(cn)d_cap_ipc		'Container %(cn)d IPC Capability'
 cont%(cn)d_cap_capctrl		'Container %(cn)d Capability Control Capability'
-cont%(cn)d_capability0 		'Container %(cn)d Custom Capability 0 Parameters'
-cont%(cn)d_capability1 		'Container %(cn)d Custom Capability 1 Parameters'
-cont%(cn)d_capability2 		'Container %(cn)d Custom Capability 2 Parameters'
-cont%(cn)d_capability3		'Container %(cn)d Custom Capability 3 Parameters'
+cont%(cn)d_cap_custom0 		'Container %(cn)d Custom Capability 0 Parameters'
+cont%(cn)d_cap_custom1 		'Container %(cn)d Custom Capability 1 Parameters'
+cont%(cn)d_cap_custom2 		'Container %(cn)d Custom Capability 2 Parameters'
+cont%(cn)d_cap_custom3		'Container %(cn)d Custom Capability 3 Parameters'
 
 cont%(cn)d_capability_list	'Container %(cn)d Capability List'
 
-default CONT%(cn)d_THREADPOOL_SIZE	from 64
-default CONT%(cn)d_SPACEPOOL_SIZE	from 64
-default CONT%(cn)d_MAPPOOL_SIZE		from 800
-default CONT%(cn)d_MUTEXPOOL_SIZE	from 100
-default CONT%(cn)d_CAPPOOL_SIZE		from 32
+default CONT%(cn)d_CAP_THREADPOOL_SIZE	from 64
+default CONT%(cn)d_CAP_SPACEPOOL_SIZE	from 64
+default CONT%(cn)d_CAP_MAPPOOL_SIZE	from 800
+default CONT%(cn)d_CAP_MUTEXPOOL_SIZE	from 100
+default CONT%(cn)d_CAP_CAPPOOL_SIZE	from 32
 
-default CONT%(cn)d_THREADPOOL_USE	from y
-default CONT%(cn)d_SPACEPOOL_USE	from y
-default CONT%(cn)d_MAPPOOL_USE		from y
-default CONT%(cn)d_MUTEXPOOL_USE	from y
-default CONT%(cn)d_CAPPOOL_USE		from y
+default CONT%(cn)d_CAP_THREADPOOL_USE	from y
+default CONT%(cn)d_CAP_SPACEPOOL_USE	from y
+default CONT%(cn)d_CAP_MAPPOOL_USE	from y
+default CONT%(cn)d_CAP_MUTEXPOOL_USE	from y
+default CONT%(cn)d_CAP_CAPPOOL_USE	from y
 
 # Use Rules for Generic Capabilities
-when CONT%(cn)d_THREADPOOL_USE == n
-	suppress CONT%(cn)d_THREADPOOL_SIZE
-when CONT%(cn)d_SPACEPOOL_USE == n
-	suppress CONT%(cn)d_SPACEPOOL_SIZE
-when CONT%(cn)d_MAPPOOL_USE == n
-	suppress CONT%(cn)d_MAPPOOL_SIZE
-when CONT%(cn)d_MUTEXPOOL_USE == n
-	suppress CONT%(cn)d_MUTEXPOOL_SIZE
-when CONT%(cn)d_CAPPOOL_USE == n
-	suppress CONT%(cn)d_CAPPOOL_SIZE
+when CONT%(cn)d_CAP_THREADPOOL_USE == n
+	suppress CONT%(cn)d_CAP_THREADPOOL_SIZE
+when CONT%(cn)d_CAP_SPACEPOOL_USE == n
+	suppress CONT%(cn)d_CAP_SPACEPOOL_SIZE
+when CONT%(cn)d_CAP_MAPPOOL_USE == n
+	suppress CONT%(cn)d_CAP_MAPPOOL_SIZE
+when CONT%(cn)d_CAP_MUTEXPOOL_USE == n
+	suppress CONT%(cn)d_CAP_MUTEXPOOL_SIZE
+when CONT%(cn)d_CAP_CAPPOOL_USE == n
+	suppress CONT%(cn)d_CAP_CAPPOOL_SIZE
 
-when CONT%(cn)d_IPC_USE == n
-	suppress CONT%(cn)d_IPC_TARGET_CURRENT_CONT
-		 CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE
-		 CONT%(cn)d_IPC_TARGET_ANOTHER_CONT
-		 CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER
+when CONT%(cn)d_CAP_IPC_USE == n
+	suppress CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_PAGER
 
-when CONT%(cn)d_EXREGS_USE == n
-	suppress CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT
-		 CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE
+when CONT%(cn)d_CAP_EXREGS_USE == n
+	suppress CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_PAGER_SPACE
 
-when CONT%(cn)d_TCTRL_USE == n
-	suppress CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT
-		 CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE
+when CONT%(cn)d_CAP_TCTRL_USE == n
+	suppress CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_PAGER_SPACE
 
-when CONT%(cn)d_CAPCTRL_USE == n
-	suppress CONT%(cn)d_CAPCTRL_TARGET_CURRENT_CONT
-		 CONT%(cn)d_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
+when CONT%(cn)d_CAP_CAPCTRL_USE == n
+	suppress CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
 
-when CONT%(cn)d_IPC_TARGET_CURRENT_CONT or
-     CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE
-     	suppress CONT%(cn)d_IPC_TARGET
+when CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONT or
+     CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE
+     	suppress CONT%(cn)d_CAP_IPC_TARGET
 
-choicegroup CONT%(cn)d_IPC_TARGET_CURRENT_CONT
-	    CONT%(cn)d_IPC_TARGET_ANOTHER_CONT
-	    CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE
-	    CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER
-	    default CONT%(cn)d_IPC_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_CONT
+	    CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE
+	    CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_PAGER
+	    default CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONT from y
 
-choicegroup CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT
-	    CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE
-	    default CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_PAGER_SPACE
+	    default CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_CONT from y
 
-choicegroup CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT
-	    CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE
-	    default CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_PAGER_SPACE
+	    default CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_CONT from y
 
-choicegroup CONT%(cn)d_CAPCTRL_TARGET_CURRENT_CONT
-	    CONT%(cn)d_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
-	    default CONT%(cn)d_CAPCTRL_TARGET_CURRENT_CONT from y
+choicegroup CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONT
+	    CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
+	    default CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONT from y
 
-default CONT%(cn)d_TCTRL_USE	from y
-default CONT%(cn)d_EXREGS_USE	from y
-default CONT%(cn)d_IPC_USE	from y
-default CONT%(cn)d_CAPCTRL_USE	from y
+default CONT%(cn)d_CAP_TCTRL_USE	from y
+default CONT%(cn)d_CAP_EXREGS_USE	from y
+default CONT%(cn)d_CAP_IPC_USE	from y
+default CONT%(cn)d_CAP_CAPCTRL_USE	from y
 
-default CONT%(cn)d_IPC_TARGET	from 0
+default CONT%(cn)d_CAP_IPC_TARGET	from 0
 
 # Capability Menus
 menu cont%(cn)d_cap_tctrl
-	CONT%(cn)d_TCTRL_USE
-	CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT
-	CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_TCTRL_USE
+	CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_TCTRL_TARGET_CURRENT_PAGER_SPACE
 
 menu cont%(cn)d_cap_exregs
-	CONT%(cn)d_EXREGS_USE
-	CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT
-	CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_EXREGS_USE
+	CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_PAGER_SPACE
 
 menu cont%(cn)d_cap_capctrl
-	CONT%(cn)d_CAPCTRL_USE
-	CONT%(cn)d_CAPCTRL_TARGET_CURRENT_CONT
-	CONT%(cn)d_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_CAPCTRL_USE
+	CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
 
 menu cont%(cn)d_cap_ipc
-	CONT%(cn)d_IPC_USE
-	CONT%(cn)d_IPC_TARGET_CURRENT_CONT
-	CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE
-	CONT%(cn)d_IPC_TARGET_ANOTHER_CONT
-	CONT%(cn)d_IPC_TARGET_ANOTHER_PAGER
-	CONT%(cn)d_IPC_TARGET%
+	CONT%(cn)d_CAP_IPC_USE
+	CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONT
+	CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE
+	CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_CONT
+	CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_PAGER
+	CONT%(cn)d_CAP_IPC_TARGET%
 
 menu cont%(cn)d_cap_threadpool
-	CONT%(cn)d_THREADPOOL_USE
-	CONT%(cn)d_THREADPOOL_SIZE%
+	CONT%(cn)d_CAP_THREADPOOL_USE
+	CONT%(cn)d_CAP_THREADPOOL_SIZE%
 
 menu cont%(cn)d_cap_spacepool
-	CONT%(cn)d_SPACEPOOL_USE
-	CONT%(cn)d_SPACEPOOL_SIZE%
+	CONT%(cn)d_CAP_SPACEPOOL_USE
+	CONT%(cn)d_CAP_SPACEPOOL_SIZE%
 
 menu cont%(cn)d_cap_mappool
-	CONT%(cn)d_MAPPOOL_USE
-	CONT%(cn)d_MAPPOOL_SIZE%
+	CONT%(cn)d_CAP_MAPPOOL_USE
+	CONT%(cn)d_CAP_MAPPOOL_SIZE%
 
 menu cont%(cn)d_cap_mutexpool
-	CONT%(cn)d_MUTEXPOOL_USE
-	CONT%(cn)d_MUTEXPOOL_SIZE%
+	CONT%(cn)d_CAP_MUTEXPOOL_USE
+	CONT%(cn)d_CAP_MUTEXPOOL_SIZE%
 
 menu cont%(cn)d_cap_cappool
-	CONT%(cn)d_CAPPOOL_USE
-	CONT%(cn)d_CAPPOOL_SIZE%
+	CONT%(cn)d_CAP_CAPPOOL_USE
+	CONT%(cn)d_CAP_CAPPOOL_SIZE%
 
 menu cont%(cn)d_capability_list
 	cont%(cn)d_cap_threadpool
@@ -599,10 +598,10 @@ menu cont%(cn)d_capability_list
 	cont%(cn)d_cap_exregs
 	cont%(cn)d_cap_ipc
 	cont%(cn)d_cap_capctrl
-	cont%(cn)d_capability0
-	cont%(cn)d_capability1
-	cont%(cn)d_capability2
-	cont%(cn)d_capability3
+	cont%(cn)d_cap_custom0
+	cont%(cn)d_cap_custom1
+	cont%(cn)d_cap_custom2
+	cont%(cn)d_cap_custom3
 
 menu container%(cn)d_options
 	CONT%(cn)d_OPT_NAME$
