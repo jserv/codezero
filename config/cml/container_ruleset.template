@@ -148,8 +148,8 @@ when CONT%(cn)d_TYPE_POSIX==y suppress cont%(cn)d_linux_pager_params
 
 symbols
 cont%(cn)d_menu		'Container %(cn)d Parameters'
-cont%(cn)d_physmem_list	'Container %(cn)d Physical Memory Regions (Memory Capabilities)'
-cont%(cn)d_virtmem_list	'Container %(cn)d Virtual Memory Regions (Memory Capabilities)'
+cont%(cn)d_physmem_list	'Container %(cn)d Physical Memory Regions (Capabilities)'
+cont%(cn)d_virtmem_list	'Container %(cn)d Virtual Memory Regions (Capabilities)'
 container%(cn)d_type	'Container %(cn)d Type'
 container%(cn)d_options	'Container %(cn)d Options'
 
@@ -232,8 +232,13 @@ choices cont%(cn)d_cap3_type
 	CONT%(cn)d_CAP3_CAP_TYPE
 	default CONT%(cn)d_CAP3_IPC_TYPE
 
+default CONT%(cn)d_CAP0_USE	from n
+default CONT%(cn)d_CAP1_USE	from n
+default CONT%(cn)d_CAP2_USE	from n
+default CONT%(cn)d_CAP3_USE	from n
 
 menu cont%(cn)d_capability0
+	CONT%(cn)d_CAP0_USE
 	cont%(cn)d_cap0_type
 	CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
 	CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
@@ -242,6 +247,7 @@ menu cont%(cn)d_capability0
 	CONT%(cn)d_CAP0_TARGET%
 
 menu cont%(cn)d_capability1
+	CONT%(cn)d_CAP1_USE
 	cont%(cn)d_cap1_type
 	CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
 	CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
@@ -250,6 +256,7 @@ menu cont%(cn)d_capability1
 	CONT%(cn)d_CAP1_TARGET%
 
 menu cont%(cn)d_capability2
+	CONT%(cn)d_CAP2_USE
 	cont%(cn)d_cap2_type
 	CONT%(cn)d_CAP2_TARGET_CURRENT_CONT
 	CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE
@@ -258,6 +265,7 @@ menu cont%(cn)d_capability2
 	CONT%(cn)d_CAP2_TARGET%
 
 menu cont%(cn)d_capability3
+	CONT%(cn)d_CAP3_USE
 	cont%(cn)d_cap3_type
 	CONT%(cn)d_CAP3_TARGET_CURRENT_CONT
 	CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
@@ -288,6 +296,38 @@ choicegroup CONT%(cn)d_CAP3_TARGET_CURRENT_CONT
 	    CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
 	    CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER
 	    default CONT%(cn)d_CAP3_TARGET_CURRENT_CONT from y
+
+when CONT%(cn)d_CAP0_USE == n
+	suppress cont%(cn)d_cap0_type
+		 CONT%(cn)d_CAP0_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP0_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP0_TARGET
+
+when CONT%(cn)d_CAP1_USE == n
+	suppress cont%(cn)d_cap1_type
+		 CONT%(cn)d_CAP1_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP1_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP1_TARGET
+
+when CONT%(cn)d_CAP2_USE == n
+	suppress cont%(cn)d_cap2_type
+		 CONT%(cn)d_CAP2_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP2_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP2_TARGET
+
+when CONT%(cn)d_CAP3_USE == n
+	suppress cont%(cn)d_cap3_type
+		 CONT%(cn)d_CAP3_TARGET_CURRENT_CONT
+		 CONT%(cn)d_CAP3_TARGET_CURRENT_PAGER_SPACE
+		 CONT%(cn)d_CAP3_TARGET_ANOTHER_CONT
+		 CONT%(cn)d_CAP3_TARGET_ANOTHER_PAGER
+		 CONT%(cn)d_CAP3_TARGET
 
 when CONT%(cn)d_CAP0_IPC_TYPE == n
 	suppress CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT
@@ -334,6 +374,7 @@ default CONT%(cn)d_CAP3_TARGET		from 0
 
 # Symbols for Custom Capabilities
 symbols
+CONT%(cn)d_CAP0_USE			'Enable this Capability'
 cont%(cn)d_cap0_type			'Capability Operation Type'
 CONT%(cn)d_CAP0_IPC_TYPE		'IPC Capability'
 CONT%(cn)d_CAP0_TCTRL_TYPE		'Thread Control Capability'
@@ -345,6 +386,7 @@ CONT%(cn)d_CAP0_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
 CONT%(cn)d_CAP0_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
 CONT%(cn)d_CAP0_TARGET			'Enter Container ID'
 
+CONT%(cn)d_CAP1_USE			'Enable this Capability'
 cont%(cn)d_cap1_type			'Capability Operation Type'
 CONT%(cn)d_CAP1_IPC_TYPE		'IPC Capability'
 CONT%(cn)d_CAP1_TCTRL_TYPE		'Thread Control Capability'
@@ -356,6 +398,7 @@ CONT%(cn)d_CAP1_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s S
 CONT%(cn)d_CAP1_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
 CONT%(cn)d_CAP1_TARGET			'Enter Container ID'
 
+CONT%(cn)d_CAP2_USE			'Enable this Capability'
 cont%(cn)d_cap2_type			'Capability Operation Type'
 CONT%(cn)d_CAP2_IPC_TYPE		'IPC Capability'
 CONT%(cn)d_CAP2_TCTRL_TYPE		'Thread Control Capability'
@@ -367,6 +410,7 @@ CONT%(cn)d_CAP2_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s S
 CONT%(cn)d_CAP2_TARGET_ANOTHER_PAGER	'Capability Targets Another Container`s Pager'
 CONT%(cn)d_CAP2_TARGET			'Enter Container ID'
 
+CONT%(cn)d_CAP3_USE			'Enable this Capability'
 cont%(cn)d_cap3_type			'Capability Operation Type'
 CONT%(cn)d_CAP3_IPC_TYPE		'IPC Capability'
 CONT%(cn)d_CAP3_TCTRL_TYPE		'Thread Control Capability'
@@ -381,15 +425,15 @@ CONT%(cn)d_CAP3_TARGET			'Enter Container ID'
 
 # Symbols for Generic Capabilities
 symbols
-CONT%(cn)d_TCTRL_USE				'Create this Capability'
+CONT%(cn)d_TCTRL_USE				'Enable this Capability'
 CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
 CONT%(cn)d_TCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 
-CONT%(cn)d_EXREGS_USE				'Create this Capability'
+CONT%(cn)d_EXREGS_USE				'Enable this Capability'
 CONT%(cn)d_EXREGS_TARGET_CURRENT_CONT		'Capability Targets Current Container'
 CONT%(cn)d_EXREGS_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 
-CONT%(cn)d_IPC_USE				'Create this Capability'
+CONT%(cn)d_IPC_USE				'Enable this Capability'
 CONT%(cn)d_IPC_TARGET_CURRENT_CONT 		'Capability Targets Current Container'
 CONT%(cn)d_IPC_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 CONT%(cn)d_IPC_TARGET_ANOTHER_CONT		'Capability Targets Another Container'
@@ -418,8 +462,8 @@ cont%(cn)d_cap_exregs		'Container %(cn)d Exchange Registers Capability'
 cont%(cn)d_cap_ipc		'Container %(cn)d IPC Capability'
 cont%(cn)d_capability0 		'Container %(cn)d Custom Capability 0 Parameters'
 cont%(cn)d_capability1 		'Container %(cn)d Custom Capability 1 Parameters'
-cont%(cn)d_capability2 		'Container %(cn)d Custom Capability 1 Parameters'
-cont%(cn)d_capability3		'Container %(cn)d Custom Capability 1 Parameters'
+cont%(cn)d_capability2 		'Container %(cn)d Custom Capability 2 Parameters'
+cont%(cn)d_capability3		'Container %(cn)d Custom Capability 3 Parameters'
 
 cont%(cn)d_capability_list	'Container %(cn)d Capability List'
 
@@ -482,6 +526,7 @@ choicegroup CONT%(cn)d_TCTRL_TARGET_CURRENT_CONT
 default CONT%(cn)d_TCTRL_USE	from y
 default CONT%(cn)d_EXREGS_USE	from y
 default CONT%(cn)d_IPC_USE	from y
+
 default CONT%(cn)d_IPC_TARGET	from 0
 
 # Capability Menus
