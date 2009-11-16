@@ -208,28 +208,28 @@ choices cont%(cn)d_cap_custom0_type
 	CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE
 	CONT%(cn)d_CAP_CUSTOM0_TCTRL_TYPE
 	CONT%(cn)d_CAP_CUSTOM0_EXREGS_TYPE
-	CONT%(cn)d_CAP_CUSTOM0_CAP_TYPE
+	CONT%(cn)d_CAP_CUSTOM0_CAPCTRL_TYPE
 	default CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE
 
 choices cont%(cn)d_cap_custom1_type
 	CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE
 	CONT%(cn)d_CAP_CUSTOM1_TCTRL_TYPE
 	CONT%(cn)d_CAP_CUSTOM1_EXREGS_TYPE
-	CONT%(cn)d_CAP_CUSTOM1_CAP_TYPE
+	CONT%(cn)d_CAP_CUSTOM1_CAPCTRL_TYPE
 	default CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE
 
 choices cont%(cn)d_cap_custom2_type
 	CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE
 	CONT%(cn)d_CAP_CUSTOM2_TCTRL_TYPE
 	CONT%(cn)d_CAP_CUSTOM2_EXREGS_TYPE
-	CONT%(cn)d_CAP_CUSTOM2_CAP_TYPE
+	CONT%(cn)d_CAP_CUSTOM2_CAPCTRL_TYPE
 	default CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE
 
 choices cont%(cn)d_cap_custom3_type
 	CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE
 	CONT%(cn)d_CAP_CUSTOM3_TCTRL_TYPE
 	CONT%(cn)d_CAP_CUSTOM3_EXREGS_TYPE
-	CONT%(cn)d_CAP_CUSTOM3_CAP_TYPE
+	CONT%(cn)d_CAP_CUSTOM3_CAPCTRL_TYPE
 	default CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE
 
 default CONT%(cn)d_CAP_CUSTOM0_USE	from n
@@ -377,7 +377,7 @@ cont%(cn)d_cap_custom0_type			'Capability Operation Type'
 CONT%(cn)d_CAP_CUSTOM0_IPC_TYPE			'IPC Capability'
 CONT%(cn)d_CAP_CUSTOM0_TCTRL_TYPE		'Thread Control Capability'
 CONT%(cn)d_CAP_CUSTOM0_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP_CUSTOM0_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM0_CAPCTRL_TYPE		'Capability Control Capability'
 CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_CONT	'Capability Targets Current Container'
 CONT%(cn)d_CAP_CUSTOM0_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
 CONT%(cn)d_CAP_CUSTOM0_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
@@ -389,7 +389,7 @@ cont%(cn)d_cap_custom1_type			'Capability Operation Type'
 CONT%(cn)d_CAP_CUSTOM1_IPC_TYPE			'IPC Capability'
 CONT%(cn)d_CAP_CUSTOM1_TCTRL_TYPE		'Thread Control Capability'
 CONT%(cn)d_CAP_CUSTOM1_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP_CUSTOM1_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM1_CAPCTRL_TYPE		'Capability Control Capability'
 CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_CONT	'Capability Targets Current Container'
 CONT%(cn)d_CAP_CUSTOM1_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
 CONT%(cn)d_CAP_CUSTOM1_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
@@ -401,7 +401,7 @@ cont%(cn)d_cap_custom2_type			'Capability Operation Type'
 CONT%(cn)d_CAP_CUSTOM2_IPC_TYPE			'IPC Capability'
 CONT%(cn)d_CAP_CUSTOM2_TCTRL_TYPE		'Thread Control Capability'
 CONT%(cn)d_CAP_CUSTOM2_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP_CUSTOM2_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM2_CAPCTRL_TYPE		'Capability Control Capability'
 CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_CONT	'Capability Targets Current Container'
 CONT%(cn)d_CAP_CUSTOM2_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
 CONT%(cn)d_CAP_CUSTOM2_TARGET_ANOTHER_CONT	'Capability Targets Another Container'
@@ -413,7 +413,7 @@ cont%(cn)d_cap_custom3_type			'Capability Operation Type'
 CONT%(cn)d_CAP_CUSTOM3_IPC_TYPE			'IPC Capability'
 CONT%(cn)d_CAP_CUSTOM3_TCTRL_TYPE		'Thread Control Capability'
 CONT%(cn)d_CAP_CUSTOM3_EXREGS_TYPE		'Exchange Registers Capability'
-CONT%(cn)d_CAP_CUSTOM3_CAP_TYPE			'Capability Control Capability'
+CONT%(cn)d_CAP_CUSTOM3_CAPCTRL_TYPE		'Capability Control Capability'
 CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_CONT	'Capability Targets Current Container'
 CONT%(cn)d_CAP_CUSTOM3_TARGET_CURRENT_PAGER_SPACE 'Capability Targets Current Pager`s Space'
 CONT%(cn)d_CAP_CUSTOM3_TARGET_ANOTHER_CONT	'Capability Targets Another Container'

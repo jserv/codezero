@@ -131,7 +131,7 @@ cap_strings = { 'ipc' : \
 \t\t\t[${idx}] = {
 \t\t\t\t/* For cap spliting, creating, etc. */
 \t\t\t\t.target_type = ${target_type},
-\t\t\t\t.target = {cid},
+\t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL,
 \t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
 \t\t\t\t.start = 0, .end = 0,
@@ -148,7 +148,7 @@ def prepare_custom_capability(cont, param, val):
         capkey = capkey.lower()
         captype = captype.lower()
         cont.caps[capkey] = cap_strings[captype]
-    if 'TARGET' in param:
+    elif 'TARGET' in param:
         target_parts = param.split('_', 2)
         if len(target_parts) == 2:
             capkey = target_parts[0].lower()
@@ -164,10 +164,15 @@ def prepare_custom_capability(cont, param, val):
                 cont.caps[capkey] = templ.safe_substitute(target_type = ttype, cid = cont.id)
             else:
                 cont.caps[capkey] = templ.safe_substitute(target_type = ttype)
+    else: # Ignore custom_use symbol
+        return
+    print capkey
+    print cont.caps[capkey]
 
 def prepare_typed_capability(cont, param, val):
     captype, params = param.split('_', 1)
     captype = captype.lower()
+
 
     # USE makes us assign the initial cap string with blank fields
     if 'USE' in params:
@@ -204,8 +209,8 @@ def prepare_typed_capability(cont, param, val):
         else:
             cont.caps[captype] = templ.safe_substitute(cid = val)
 
-    print captype
-    print cont.caps[captype]
+        print captype
+        print cont.caps[captype]
 
 def prepare_capability(cont, param, val):
     if 'CUSTOM' in param:
