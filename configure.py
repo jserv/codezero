@@ -173,7 +173,6 @@ def configure_system(options, args):
               CML2_CONFIG_H + ' -i ' + CML2_CONFIG_FILE)
 
     # The rest:
-
     if not os.path.exists(os.path.dirname(CONFIG_H)):
         os.mkdir(os.path.dirname(CONFIG_H))
 

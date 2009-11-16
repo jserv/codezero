@@ -52,8 +52,25 @@ struct container {
 	struct pager *pager;			/* Boot-time array of pagers */
 };
 
+enum cinfo_target_type = {
+	/* Current container as a whole */
+	CURRENT_CONT = 1,
+
+	/* Current pager's address space */
+	CURRENT_PAGER_SPACE = 2,
+
+	/* Another container as a whole */
+	ANOTHER_CONT = 3,
+
+	/* Another container's pager as a thread */
+	ANOTHER_PAGER = 4,
+};
+
+
 /* Compact, raw capability structure */
 struct cap_info {
+	unsigned int target_type;
+	l4id_t target;
 	unsigned int type;
 	u32 access;
 	unsigned long start;

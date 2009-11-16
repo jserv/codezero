@@ -3,6 +3,8 @@
 import os, sys, shelve, shutil, re
 from projpaths import *
 from lib import *
+from caps import *
+
 
 class Container:
     def __init__(self, id):
@@ -29,6 +31,7 @@ class Container:
         self.virtmem = {}
         self.virtmem["START"] = {}
         self.virtmem["END"] = {}
+        self.caps = {}
         self.virt_regions = 0
         self.phys_regions = 0
 
@@ -46,6 +49,8 @@ class Container:
         print 'Container Pager utcb region end: %s' % conv_hex(self.pager_utcb_region_end)
         print 'Container Virtual regions: %s' % self.virt_regions
         print 'Container Physical regions: %s' % self.phys_regions
+        print 'Container Capabilities: %s' % self.caps
+        print '\n'
 
 class configuration:
 
@@ -167,6 +172,9 @@ class configuration:
             dirname = val[1:-1].lower()
             self.containers[id].dirname = dirname
             self.containers[id].name = dirname
+        elif param[:len("CAP_")] == "CAP_":
+            prefix, param_rest = param.split('_', 1)
+            prepare_capability(self.containers[id], param_rest, val)
         else:
             param1, param2 = param.split("_", 1)
             if param1 == "TYPE":
