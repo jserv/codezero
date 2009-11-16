@@ -7,6 +7,7 @@
 #
 import os, sys, shelve, glob
 from os.path import join
+from string import Template
 
 PROJRELROOT = '../..'
 
@@ -97,87 +98,6 @@ cap_physmem = \
 \t\t\t},
 '''
 
-cap_all_others = \
-'''
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_IPC | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_IPC_SEND | CAP_IPC_RECV
-\t\t\t\t          | CAP_IPC_FULL | CAP_IPC_SHORT
-\t\t\t\t          | CAP_IPC_EXTENDED | CAP_CHANGEABLE
-\t\t\t\t          | CAP_REPLICABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_TCTRL | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_TCTRL_CREATE | CAP_TCTRL_DESTROY
-\t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RUN
-\t\t\t\t          | CAP_TCTRL_RECYCLE | CAP_TCTRL_WAIT
-\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE
-\t\t\t\t          | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_EXREGS | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_EXREGS_RW_PAGER
-\t\t\t\t          | CAP_EXREGS_RW_UTCB | CAP_EXREGS_RW_SP
-\t\t\t\t          | CAP_EXREGS_RW_PC | CAP_EXREGS_RW_REGS
-\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_CAP | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_CAP_GRANT | CAP_CAP_READ
-\t\t\t\t          | CAP_CAP_SHARE | CAP_CAP_REPLICATE
-\t\t\t\t          | CAP_CAP_MODIFY
-\t\t\t\t| CAP_CAP_READ | CAP_CAP_SHARE,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_UMUTEX | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_UMUTEX_LOCK | CAP_UMUTEX_UNLOCK,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_QUANTITY
-\t\t\t\t	  | CAP_RTYPE_THREADPOOL,
-\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0,
-\t\t\t\t.size = 64,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_SPACEPOOL,
-\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0,
-\t\t\t\t.size = 64,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CPUPOOL,
-\t\t\t\t.access = 0, .start = 0, .end = 0,
-\t\t\t\t.size = 50,	/* Percentage */
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MUTEXPOOL,
-\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0,
-\t\t\t\t.size = 100,
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t/* For pmd accounting */
-\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MAPPOOL,
-\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0,
-\t\t\t\t/* Function of mem regions, nthreads etc. */
-\t\t\t\t.size = (64 * 30 + 100),
-\t\t\t},
-\t\t\t[%d] = {
-\t\t\t\t/* For cap spliting, creating, etc. */
-\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL,
-\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
-\t\t\t\t.start = 0, .end = 0,
-\t\t\t\t/* This may be existing caps X 2 etc. */
-\t\t\t\t.size = 30,
-\t\t\t},
-'''
 
 pager_ifdefs_todotext = \
 '''
@@ -237,10 +157,9 @@ def generate_kernel_cinfo(config, cinfo_path):
 
     with open(cinfo_path, 'w+') as cinfo_file:
         fbody = cinfo_file_start % pager_ifdefs
-        total_other_caps = 11
         for c in containers:
             # Currently only these are considered as capabilities
-            total_caps = c.virt_regions + c.phys_regions + total_other_caps
+            total_caps = c.virt_regions + c.phys_regions + len(c.caps)
             fbody += cinfo_start % (c.id, c.name)
             fbody += pager_start % { 'cn' : c.id, 'caps' : total_caps}
             cap_index = 0
@@ -250,7 +169,12 @@ def generate_kernel_cinfo(config, cinfo_path):
             for mem_index in range(c.phys_regions):
                 fbody += cap_physmem % { 'capidx' : cap_index, 'cn' : c.id, 'pn' : mem_index }
                 cap_index += 1
-            fbody += cap_all_others % tuple(range(cap_index, total_caps))
+
+            for capkey, capstr in c.caps.items():
+                templ = Template(capstr)
+                fbody += templ.safe_substitute(idx = cap_index)
+                cap_index += 1
+
             fbody += pager_end
             fbody += cinfo_end
         fbody += cinfo_file_end

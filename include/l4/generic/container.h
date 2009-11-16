@@ -52,7 +52,7 @@ struct container {
 	struct pager *pager;			/* Boot-time array of pagers */
 };
 
-enum cinfo_target_type = {
+enum cinfo_target_type {
 	/* Current container as a whole */
 	CURRENT_CONT = 1,
 
