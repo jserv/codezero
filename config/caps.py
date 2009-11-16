@@ -162,32 +162,61 @@ cap_strings = { 'ipc' : \
 #
 # Prepares descriptions of all non-memory capabilities
 #
-def prepare_capability(cont, param, val):
-    # USE makes us assign the initial cap string with blank fields
-    if 'USE' in param:
-        captype, rest = param.split('_', 1)
+# custom use
+# custom type rest
+# type use
+# type rest
+
+def prepare_custom_capability(cont, param, val):
+    if 'TYPE' in param:
+        capkey, captype, rest = param.split('_', 2)
+        capkey = capkey.lower()
         captype = captype.lower()
+        cont.caps[capkey] = cap_strings[captype]
+    if 'TARGET' in param:
+        target_parts = param.split('_', 2)
+        if len(target_parts) == 2:
+            capkey = target_parts[0].lower()
+            templ = Template(cont.caps[capkey])
+            cont.caps[capkey] = templ.safe_substitute(cid = val)
+        elif len(target_parts) == 3:
+            capkey = target_parts[0].lower()
+            ttype = target_parts[2]
+            templ = Template(cont.caps[capkey])
+
+            # Insert current container id, if target has current
+            if ttype[:len('CURRENT')] == 'CURRENT':
+                cont.caps[capkey] = templ.safe_substitute(target_type = ttype, cid = cont.id)
+            else:
+                cont.caps[capkey] = templ.safe_substitute(target_type = ttype)
+
+def prepare_typed_capability(cont, param, val):
+    captype, params = param.split('_', 1)
+    captype = captype.lower()
+
+    # USE makes us assign the initial cap string with blank fields
+    if 'USE' in params:
         cont.caps[captype] = cap_strings[captype]
+
+        # Prepare string template from capability type
+        templ = Template(cont.caps[captype])
 
         # If it is a pool, amend default target type and id
         if captype[-len('pool'):] == 'pool':
-            templ = Template(cont.caps[captype])
-            cont.caps[captype] = templ.safe_substitute(target_type = 'CURRENT_CONT',
+            cont.caps[captype] = templ.safe_substitute(target_type = 'CURRENT_PAGER_SPACE',
                                                        cid = cont.id)
 
     # Fill in the blank size field
-    elif 'SIZE' in param:
-        captype, rest = param.split('_', 1)
-        captype = captype.lower()
+    elif 'SIZE' in params:
+        # Get reference to capability string template
         templ = Template(cont.caps[captype])
         cont.caps[captype] = templ.safe_substitute(size = val)
-        print cont.caps[captype]
 
     # Fill in capability target type and target id fields
-    elif 'TARGET' in param:
-        captype, target, ttype = param.split('_', 2)
-        captype = captype.lower()
+    elif 'TARGET' in params:
+        # Get reference to capability string template
         templ = Template(cont.caps[captype])
+        target, ttype = params.split('_', 1)
 
         # Target type
         if ttype != None:
@@ -199,11 +228,15 @@ def prepare_capability(cont, param, val):
         # Get target value supplied by user
         else:
             cont.caps[captype] = templ.safe_substitute(cid = val)
-    else:
-        print "No match: ", param
 
     print captype
     print cont.caps[captype]
+
+def prepare_capability(cont, param, val):
+    if 'CUSTOM' in param:
+        prepare_custom_capability(cont, param, val)
+    else:
+        prepare_typed_capability(cont, param, val)
 
 '''
         self.threadpool = ''
