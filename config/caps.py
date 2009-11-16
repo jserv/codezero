@@ -141,31 +141,6 @@ cap_strings = { 'ipc' : \
 '''
 }
 
-#
-# CAP_USE can be one of these:
-# CAP_TYPE
-# CAPPOOL, CAPCTRL, EXREGS, TCTRL ...
-#    CAP_SIZE
-#
-# _CUSTOM[0-9]
-#   CAP_TYPE
-# CAP attributes can be one of these:
-#
-# TARGET_CURRENT_CONT
-# TARGET_PAGER_SPACE
-# TARGET_ANOTHER_CONT
-# TARGET_ANOTHER_PAGER
-#
-# TARGET_CONTAINER_ID
-#
-
-#
-# Prepares descriptions of all non-memory capabilities
-#
-# custom use
-# custom type rest
-# type use
-# type rest
 
 def prepare_custom_capability(cont, param, val):
     if 'TYPE' in param:
@@ -237,43 +212,4 @@ def prepare_capability(cont, param, val):
         prepare_custom_capability(cont, param, val)
     else:
         prepare_typed_capability(cont, param, val)
-
-'''
-        self.threadpool = ''
-        self.spacepool = ''
-        self.mappool = ''
-        self.cappool = ''
-        self.mutexpool = ''
-        self.tctrl = ''
-        self.exregs = ''
-        self.capctrl = ''
-        self.ipc = ''
-        self.custom0 = ''
-        self.custom1 = ''
-        self.custom2 = ''
-        self.custom3 = ''
-'''
-
-'''
-
-        elif param[:len('CUSTOM')] == 'CUSTOM':
-            matchobj = re.match(r"(CUSTOM){1}([0-9]){1}(\w+)", param)
-            prefix, idstr, rest = matchobj.groups()
-
-#
-# Prepares descriptions of all non-memory capabilities
-#
-def prepare_capability(cont, id, param, val):
-    if param[:len('THREADPOOL')] == 'THREADPOOL':
-        part1, part2 = param.split('_', 1)
-        if part1 == "USE" 
-    elif param[:len('SPACEPOOL')] == 'SPACEPOOL':
-    elif param[:len('MUTEXPOOL')] == 'MUTEXPOOL':
-    elif param[:len('CAPPOOL')] == 'CAPPOOL':
-    elif param[:len('IPC')] == 'IPC':
-    elif param[:len('TCTRL')] == 'TCTRL':
-    elif param[:len('EXREGS')] == 'EXREGS':
-    elif param[:len('CAPCTRL')] == 'CAPCTRL':
-    if param[:len('CUSTOM')] == 'CUSTOM':
-'''
 
