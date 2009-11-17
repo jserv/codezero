@@ -432,30 +432,34 @@ CONT%(cn)d_CAP_EXREGS_USE				'Enable this Capability'
 CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_CONTAINER		'Capability Targets Current Container'
 CONT%(cn)d_CAP_EXREGS_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 
-CONT%(cn)d_CAP_IPC_USE				'Enable this Capability'
+CONT%(cn)d_CAP_IPC_USE					'Enable this Capability'
 CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONTAINER 		'Capability Targets Current Container'
-CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE 		'Capability Targets Current Pager`s Space'
 CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_CONTAINER		'Capability Targets Another Container'
-CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_PAGER		'Capability Targets Another Container`s Pager'
+CONT%(cn)d_CAP_IPC_TARGET_ANOTHER_PAGER			'Capability Targets Another Container`s Pager'
 CONT%(cn)d_CAP_IPC_TARGET				'Enter Container ID'
 
-symbols
 CONT%(cn)d_CAP_CAPCTRL_USE				'Enable this Capability'
-CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER 		'Capability Targets Current Container'
+CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER 	'Capability Targets Current Container'
 CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+
+CONT%(cn)d_CAP_UMUTEX_USE				'Enable this Capability'
+CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER 		'Capability Targets Current Container'
+CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+
 
 
 symbols
 CONT%(cn)d_CAP_THREADPOOL_SIZE	'Number of Threads'
 CONT%(cn)d_CAP_SPACEPOOL_SIZE	'Number of Address Spaces'
-CONT%(cn)d_CAP_MAPPOOL_SIZE		'Number of PMD Mappings (E.g. Middle-level Page Tables)'
+CONT%(cn)d_CAP_MAPPOOL_SIZE	'Number of PMD Mappings (E.g. Middle-level Page Tables)'
 CONT%(cn)d_CAP_MUTEXPOOL_SIZE	'Number of Userspace Mutexes'
-CONT%(cn)d_CAP_CAPPOOL_SIZE		'Number of Capabilities (Created at run-time via Split, Replicate)'
+CONT%(cn)d_CAP_CAPPOOL_SIZE	'Number of Capabilities (Created at run-time via Split, Replicate)'
 CONT%(cn)d_CAP_THREADPOOL_USE	'Enable this Capability'
 CONT%(cn)d_CAP_SPACEPOOL_USE	'Enable this Capability'
-CONT%(cn)d_CAP_MAPPOOL_USE		'Enable this Capability'
+CONT%(cn)d_CAP_MAPPOOL_USE	'Enable this Capability'
 CONT%(cn)d_CAP_MUTEXPOOL_USE	'Enable this Capability'
-CONT%(cn)d_CAP_CAPPOOL_USE		'Enable this Capability'
+CONT%(cn)d_CAP_CAPPOOL_USE	'Enable this Capability'
 
 cont%(cn)d_cap_threadpool	'Container %(cn)d Thread Pool Capability'
 cont%(cn)d_cap_spacepool	'Container %(cn)d Space Pool Capability'
@@ -466,6 +470,7 @@ cont%(cn)d_cap_tctrl		'Container %(cn)d Thread Control Capability'
 cont%(cn)d_cap_exregs		'Container %(cn)d Exchange Registers Capability'
 cont%(cn)d_cap_ipc		'Container %(cn)d IPC Capability'
 cont%(cn)d_cap_capctrl		'Container %(cn)d Capability Control Capability'
+cont%(cn)d_cap_umutex		'Container %(cn)d Userspace Mutex Control Capability'
 cont%(cn)d_cap_custom0 		'Container %(cn)d Custom Capability 0 Parameters'
 cont%(cn)d_cap_custom1 		'Container %(cn)d Custom Capability 1 Parameters'
 cont%(cn)d_cap_custom2 		'Container %(cn)d Custom Capability 2 Parameters'
@@ -515,6 +520,10 @@ when CONT%(cn)d_CAP_CAPCTRL_USE == n
 	suppress CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER
 		 CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
 
+when CONT%(cn)d_CAP_UMUTEX_USE == n
+	suppress CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER
+		 CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE
+
 when CONT%(cn)d_CAP_IPC_TARGET_CURRENT_CONTAINER or
      CONT%(cn)d_CAP_IPC_TARGET_CURRENT_PAGER_SPACE
      	suppress CONT%(cn)d_CAP_IPC_TARGET
@@ -537,10 +546,15 @@ choicegroup CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER
 	    CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
 	    default CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER from y
 
+choicegroup CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER
+	    CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE
+	    default CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER from y
+
 default CONT%(cn)d_CAP_TCTRL_USE	from y
 default CONT%(cn)d_CAP_EXREGS_USE	from y
-default CONT%(cn)d_CAP_IPC_USE	from y
+default CONT%(cn)d_CAP_IPC_USE		from y
 default CONT%(cn)d_CAP_CAPCTRL_USE	from y
+default CONT%(cn)d_CAP_UMUTEX_USE	from y
 
 default CONT%(cn)d_CAP_IPC_TARGET	from 0
 
@@ -559,6 +573,11 @@ menu cont%(cn)d_cap_capctrl
 	CONT%(cn)d_CAP_CAPCTRL_USE
 	CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER
 	CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
+
+menu cont%(cn)d_cap_umutex
+	CONT%(cn)d_CAP_UMUTEX_USE
+	CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER
+	CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE
 
 menu cont%(cn)d_cap_ipc
 	CONT%(cn)d_CAP_IPC_USE
@@ -598,6 +617,7 @@ menu cont%(cn)d_capability_list
 	cont%(cn)d_cap_exregs
 	cont%(cn)d_cap_ipc
 	cont%(cn)d_cap_capctrl
+	cont%(cn)d_cap_umutex
 	cont%(cn)d_cap_custom0
 	cont%(cn)d_cap_custom1
 	cont%(cn)d_cap_custom2
