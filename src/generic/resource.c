@@ -430,6 +430,7 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 
 		cap_info = &pinfo->caps[i];
 
+		cap->resid = cap_info->target;
 		cap->type = cap_info->type;
 		cap->access = cap_info->access;
 		cap->start = cap_info->start;
@@ -527,8 +528,8 @@ void setup_kernel_resources(struct boot_resources *bootres,
 	 * See how many containers we have. Assign next
 	 * unused container id for kernel resources
 	 */
-	//kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
-	kres->cid = id_get(&kres->container_ids, 0);
+	kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
+	// kres->cid = id_get(&kres->container_ids, 0); // Gets id 0
 
 	/* First initialize the list of non-memory capabilities */
 	cap = boot_capability_create();

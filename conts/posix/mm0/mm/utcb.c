@@ -108,7 +108,7 @@ int task_delete_utcb_desc(struct tcb *task, struct utcb_desc *d)
 }
 
 /*
- * Upon fork, the utcb descriptor list is origaced by a new one, since it is a new
+ * Upon fork, the utcb descriptor list is replaced by a new one, since it is a new
  * address space. A new utcb is allocated and mmap'ed for the child task
  * running in the newly created address space.
  *

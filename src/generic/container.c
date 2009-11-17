@@ -94,7 +94,6 @@ int init_pager(struct pager *pager,
 	struct ktcb *task;
 	struct address_space *space;
 	int first = !!current_pgd;
-	struct capability *cap;
 
 	/*
 	 * Set up dummy current cap_list so that cap accounting
@@ -140,6 +139,7 @@ int init_pager(struct pager *pager,
 	/* Add the address space to container space list */
 	address_space_add(task->space);
 
+#if 0
 	/* Initialize uninitialized capability fields while on dummy */
 	list_foreach_struct(cap, &current->cap_list.caps, list) {
 		/* Initialize owner */
@@ -158,8 +158,9 @@ int init_pager(struct pager *pager,
 		else
 			cap->resid = CAP_RESID_NONE;
 	}
+#endif
 
-	printk("%s: Mapping 0x%lx bytes (0x%lx pages) from 0x%lx to 0x%lx for %s\n",
+	printk("%s: Mapping 0x%lx bytes (%lu pages) from 0x%lx to 0x%lx for %s\n",
 	       __KERNELNAME__, pager->memsize,
 	       __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
@@ -181,6 +182,93 @@ int init_pager(struct pager *pager,
 
 	/* Container list that keeps all tasks */
 	tcb_add(task);
+	return 0;
+}
+
+/*
+ * All first-level dynamically allocated resources
+ * are initialized, which includes the pager thread ids
+ * and pager space ids.
+ *
+ * Update all capability target ids that target such
+ * run-time allocated resources.
+ */
+int update_dynamic_capids(struct kernel_resources *kres)
+{
+	struct ktcb *pager, *tpager;
+	struct container *cont, *tcont;
+	struct capability *cap;
+
+	/* Containers */
+	list_foreach_struct(cont, &kres->containers.list, list) {
+		/* Pagers */
+		list_foreach_struct(pager, &cont->ktcb_list.list, task_list) {
+			/* Capabilities */
+			list_foreach_struct(cap,
+					    &pager->space->cap_list.caps,
+					    list) {
+
+				/* They all shall be owned by their pager */
+				cap->owner = pager->tid;
+
+				/*
+				 * Pager Space/Thread targets need updating
+				 * from the given static container id to their
+				 * run-time allocated ids.
+				 */
+
+				/* Quantity caps don't have target ids */
+				if (cap_type(cap) == CAP_TYPE_QUANTITY)
+					cap->resid = CAP_RESID_NONE;
+
+				/*
+				 * Space _always_ denotes current pager's
+				 * space. Other containers are not addressable
+				 * by space ids.
+				 */
+				if (cap_rtype(cap) == CAP_RTYPE_SPACE)
+					cap->resid = pager->space->spid;
+
+				/*
+				 * Thread _always_denotes another container's
+				 * pager. There is simply no other reasonable
+				 * thread target in the system.
+				 */
+				if (cap_rtype(cap) == CAP_RTYPE_THREAD) {
+
+					/* Find target container */
+					if (!(tcont =
+					      container_find(kres,
+						             cap->resid))) {
+						printk("FATAL: Capability "
+						       "configured to target "
+						       "non-existent "
+						       "container.\n");
+						BUG();
+
+					}
+
+					/* Find its pager */
+					if (list_empty(&tcont->ktcb_list.list)) {
+						printk("FATAL: Pager"
+						       "does not exist in "
+						       "container %d.\n",
+						       tcont->cid);
+						BUG();
+					}
+
+					tpager =
+					link_to_struct(
+						tcont->ktcb_list.list.next,
+						struct ktcb, task_list);
+
+					/* Assign pager's thread id to cap */
+					cap->resid = tpager->tid;
+				}
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -209,6 +297,12 @@ int container_init_pagers(struct kernel_resources *kres,
 		}
 	}
 
+	/* Update any capability fields that were dynamically allocated */
+	update_dynamic_capids(kres);
+
 	return 0;
 }
+
+
+
 

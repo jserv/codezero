@@ -517,7 +517,7 @@ int cap_find_replicate_reduce_grant(struct capability *cap)
 			if ((err =
 			     l4_capability_control(CAP_CONTROL_DESTROY,
 						   0, 0, 0, &new_cap)) < 0) {
-				printf("l4_capability_control() replication of "
+				printf("l4_capability_control() destruction of "
 				       "capability failed.\n Could not "
 				       "complete CAP_CONTROL_DESTROY request "
 				       " on cap (%d), err = %d.\n",
