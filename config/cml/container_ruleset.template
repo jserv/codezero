@@ -133,12 +133,14 @@ cont%(cn)d_posix_pager_params	'Container %(cn)d POSIX Pager Parameters'
 
 cont%(cn)d_examples_params	'Example Applications List'
 CONT%(cn)d_EXAMPLE_APP0		'Empty Application'
-CONT%(cn)d_EXAMPLE_APP1		'Hello world'
+CONT%(cn)d_EXAMPLE_APP1		'Hello World'
+CONT%(cn)d_EXAMPLE_APP2		'Thread Library Demo'
 
 
 choices cont%(cn)d_examples_params
 	CONT%(cn)d_EXAMPLE_APP0
 	CONT%(cn)d_EXAMPLE_APP1
+	CONT%(cn)d_EXAMPLE_APP2
 	default CONT%(cn)d_EXAMPLE_APP0
 
 menu cont%(cn)d_default_pager_params

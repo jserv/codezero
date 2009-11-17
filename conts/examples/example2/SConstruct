@@ -1,0 +1,67 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+#
+import os, shelve, sys
+from os.path import *
+
+PROJRELROOT = '../..'
+
+sys.path.append(PROJRELROOT)
+
+from config.projpaths import *
+from config.configuration import *
+
+
+config = configuration_retrieve()
+
+arch = config.arch
+
+LIBL4_RELDIR = 'conts/libl4'
+KERNEL_INCLUDE = join(PROJROOT, 'include')
+LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
+LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
+LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
+
+# Locally important paths are here
+LIBC_RELDIR = 'conts/libc'
+LIBC_DIR = join(PROJROOT, LIBC_RELDIR)
+LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
+LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
+                join(LIBC_DIR, 'include/arch' + '/' + arch)]
+
+LIBL4THREAD_RELDIR = 'conts/libl4thread'
+LIBL4THREAD_DIR = join(PROJROOT, LIBL4THREAD_RELDIR)
+LIBL4THREAD_LIBPATH = join(BUILDDIR, LIBL4THREAD_RELDIR)
+LIBL4THREAD_INCLUDE = join(LIBL4THREAD_DIR, 'include')
+
+LIBMEM_RELDIR = 'conts/libmem'
+LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
+LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
+LIBMEM_INCLUDE = LIBMEM_DIR
+
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
+                  # We don't use -nostdinc because sometimes we need standard headers,
+                  # such as stdarg.h e.g. for variable args, as in printk().
+                  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
+                             '-std=gnu99', '-Wall', '-Werror'],
+                  LINKFLAGS = ['-nostdlib', '-T' + "include/linker.lds", "-u_start"],
+                  ASFLAGS = ['-D__ASSEMBLY__'],
+                  PROGSUFFIX = '.elf', # The suffix to use for final executable
+                  ENV = {'PATH' : os.environ['PATH']}, # Inherit shell path
+                  LIBS = ['libl4thread', 'libl4', 'libmalloc', 'c-userspace', \
+		          'gcc', 'c-userspace'], # libgcc.a - This is required for division routines.
+                  CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBC_INCLUDE, \
+                             LIBL4THREAD_INCLUDE],
+                  LIBPATH = [LIBL4_LIBPATH, LIBC_LIBPATH, LIBL4THREAD_LIBPATH, \
+		             LIBMEM_LIBPATH],
+                  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+
+src = Glob('*.[cS]')
+src += Glob('src/*.[cS]')
+
+objs = env.Object(src)
+prog = env.Program('main.elf', objs)
+Depends(prog, 'include/linker.lds')
