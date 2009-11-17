@@ -105,7 +105,7 @@ BEGIN_PROC(arm_invalidate_dcache)
 END_PROC(arm_invalidate_dcache)
 
 BEGIN_PROC(arm_clean_dcache)
-	mcr	p15, 0 , pc, c7, c10, 3 @ Test/clean dcache line
+	mrc	p15, 0 , pc, c7, c10, 3 @ Test/clean dcache line
 	bne	arm_clean_dcache
 	mcr	p15, 0, ip, c7, c10, 4	@ Drain WB
 	mov	pc, lr
