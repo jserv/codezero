@@ -9,9 +9,8 @@ from string import Template
 cap_strings = { 'ipc' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
-\t\t\t\t.type = CAP_TYPE_IPC | CAP_RTYPE_CONTAINER,
+\t\t\t\t.type = CAP_TYPE_IPC | ${target_rtype},
 \t\t\t\t.access = CAP_IPC_SEND | CAP_IPC_RECV
 \t\t\t\t          | CAP_IPC_FULL | CAP_IPC_SHORT
 \t\t\t\t          | CAP_IPC_EXTENDED | CAP_CHANGEABLE
@@ -22,9 +21,8 @@ cap_strings = { 'ipc' : \
 , 'tctrl' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
-\t\t\t\t.type = CAP_TYPE_TCTRL | CAP_RTYPE_CONTAINER,
+\t\t\t\t.type = CAP_TYPE_TCTRL | ${target_rtype},
 \t\t\t\t.access = CAP_TCTRL_CREATE | CAP_TCTRL_DESTROY
 \t\t\t\t          | CAP_TCTRL_SUSPEND | CAP_TCTRL_RUN
 \t\t\t\t          | CAP_TCTRL_RECYCLE | CAP_TCTRL_WAIT
@@ -36,9 +34,8 @@ cap_strings = { 'ipc' : \
 , 'exregs' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
-\t\t\t\t.type = CAP_TYPE_EXREGS | CAP_RTYPE_CONTAINER,
+\t\t\t\t.type = CAP_TYPE_EXREGS | ${target_rtype},
 \t\t\t\t.access = CAP_EXREGS_RW_PAGER
 \t\t\t\t          | CAP_EXREGS_RW_UTCB | CAP_EXREGS_RW_SP
 \t\t\t\t          | CAP_EXREGS_RW_PC | CAP_EXREGS_RW_REGS
@@ -49,9 +46,8 @@ cap_strings = { 'ipc' : \
 , 'capctrl' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
-\t\t\t\t.type = CAP_TYPE_CAP | CAP_RTYPE_CONTAINER,
+\t\t\t\t.type = CAP_TYPE_CAP | ${target_rtype},
 \t\t\t\t.access = CAP_CAP_GRANT | CAP_CAP_READ
 \t\t\t\t          | CAP_CAP_SHARE | CAP_CAP_REPLICATE
 \t\t\t\t          | CAP_CAP_MODIFY
@@ -62,7 +58,6 @@ cap_strings = { 'ipc' : \
 , 'umutex' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_UMUTEX | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_UMUTEX_LOCK | CAP_UMUTEX_UNLOCK,
@@ -72,7 +67,6 @@ cap_strings = { 'ipc' : \
 , 'threadpool' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY
 \t\t\t\t	  | CAP_RTYPE_THREADPOOL,
@@ -84,7 +78,6 @@ cap_strings = { 'ipc' : \
 , 'spacepool' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_SPACEPOOL,
 \t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
@@ -95,7 +88,6 @@ cap_strings = { 'ipc' : \
 , 'cpupool' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CPUPOOL,
 \t\t\t\t.access = 0, .start = 0, .end = 0,
@@ -105,7 +97,6 @@ cap_strings = { 'ipc' : \
 , 'mutexpool' : \
 '''
 \t\t\t[${idx}] = {
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MUTEXPOOL,
 \t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
@@ -117,7 +108,6 @@ cap_strings = { 'ipc' : \
 '''
 \t\t\t[${idx}] = {
 \t\t\t\t/* For pmd accounting */
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_MAPPOOL,
 \t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
@@ -130,7 +120,6 @@ cap_strings = { 'ipc' : \
 '''
 \t\t\t[${idx}] = {
 \t\t\t\t/* For cap spliting, creating, etc. */
-\t\t\t\t.target_type = ${target_type},
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL,
 \t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
@@ -159,11 +148,19 @@ def prepare_custom_capability(cont, param, val):
             ttype = target_parts[2]
             templ = Template(cont.caps[capkey])
 
-            # Insert current container id, if target has current
-            if ttype[:len('CURRENT')] == 'CURRENT':
-                cont.caps[capkey] = templ.safe_substitute(target_type = ttype, cid = cont.id)
-            else:
-                cont.caps[capkey] = templ.safe_substitute(target_type = ttype)
+            # On current container, provide correct rtype and current containerid.
+            # Else we leave container id to user-supplied value
+            if ttype == 'CURRENT_CONTAINER':
+                cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_CONTAINER',
+                                                           cid = cont.id)
+            elif ttype == 'CURRENT_PAGER_SPACE':
+                cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_SPACE',
+                                                           cid = cont.id)
+            elif ttype == 'ANOTHER_CONTAINER':
+                cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_CONTAINER')
+            elif ttype == 'ANOTHER_PAGER':
+                cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_THREAD')
+
     else: # Ignore custom_use symbol
         return
     print capkey
@@ -181,10 +178,9 @@ def prepare_typed_capability(cont, param, val):
         # Prepare string template from capability type
         templ = Template(cont.caps[captype])
 
-        # If it is a pool, amend default target type and id
+        # If it is a pool, amend current container id as default
         if captype[-len('pool'):] == 'pool':
-            cont.caps[captype] = templ.safe_substitute(target_type = 'CURRENT_PAGER_SPACE',
-                                                       cid = cont.id)
+            cont.caps[captype] = templ.safe_substitute(cid = cont.id)
 
     # Fill in the blank size field
     elif 'SIZE' in params:
@@ -204,11 +200,20 @@ def prepare_typed_capability(cont, param, val):
         # Target type
         if len(target_parts) == 2:
             ttype = target_parts[1]
-            # Insert current container id, if target has current
-            if ttype[:len('CURRENT')] == 'CURRENT':
-                cont.caps[captype] = templ.safe_substitute(target_type = ttype, cid = cont.id)
-            else:
-                cont.caps[captype] = templ.safe_substitute(target_type = ttype)
+
+            # On current container, provide correct rtype and current containerid.
+            # Else we leave container id to user-supplied value
+            if ttype == 'CURRENT_CONTAINER':
+                cont.caps[captype] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_CONTAINER',
+                                                           cid = cont.id)
+            elif ttype == 'CURRENT_PAGER_SPACE':
+                cont.caps[captype] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_SPACE',
+                                                           cid = cont.id)
+            elif ttype == 'ANOTHER_CONTAINER':
+                cont.caps[captype] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_CONTAINER')
+            elif ttype == 'ANOTHER_PAGER':
+                cont.caps[captype] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_THREAD')
+
         # Get target value supplied by user in val
         else:
             cont.caps[captype] = templ.safe_substitute(cid = val)
