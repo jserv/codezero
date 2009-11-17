@@ -196,16 +196,20 @@ def prepare_typed_capability(cont, param, val):
     elif 'TARGET' in params:
         # Get reference to capability string template
         templ = Template(cont.caps[captype])
-        target, ttype = params.split('_', 1)
+
+        # Two types of strings are expected here: TARGET or TARGET_TARGETTYPE
+        # If TARGET, the corresponding value is in val
+        target_parts = params.split('_', 1)
 
         # Target type
-        if ttype != None:
+        if len(target_parts) == 2:
+            ttype = target_parts[1]
             # Insert current container id, if target has current
             if ttype[:len('CURRENT')] == 'CURRENT':
                 cont.caps[captype] = templ.safe_substitute(target_type = ttype, cid = cont.id)
             else:
                 cont.caps[captype] = templ.safe_substitute(target_type = ttype)
-        # Get target value supplied by user
+        # Get target value supplied by user in val
         else:
             cont.caps[captype] = templ.safe_substitute(cid = val)
 

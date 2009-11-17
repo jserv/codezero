@@ -54,13 +54,13 @@ struct container {
 
 enum cinfo_target_type {
 	/* Current container as a whole */
-	CURRENT_CONT = 1,
+	CURRENT_CONTAINER = 1,
 
 	/* Current pager's address space */
 	CURRENT_PAGER_SPACE = 2,
 
 	/* Another container as a whole */
-	ANOTHER_CONT = 3,
+	ANOTHER_CONTAINER = 3,
 
 	/* Another container's pager as a thread */
 	ANOTHER_PAGER = 4,
