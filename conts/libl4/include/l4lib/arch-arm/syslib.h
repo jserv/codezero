@@ -322,10 +322,16 @@ void *l4_del_virtual(void *virt, int npages);
 static inline void *l4_map_helper(void *phys, int npages)
 {
 	struct task_ids ids;
+	int err;
+
 	void *virt = l4_new_virtual(npages);
 
 	l4_getid(&ids);
-	l4_map(phys, virt, npages, MAP_USR_RW_FLAGS, ids.tid);
+
+	if ((err = l4_map(phys, virt, npages,
+			  MAP_USR_RW_FLAGS, ids.tid)) < 0)
+		return PTR_ERR(err);
+
 	return virt;
 }
 

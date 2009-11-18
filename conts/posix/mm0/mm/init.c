@@ -271,9 +271,13 @@ void init_physmem_secondary(struct membank *membank)
 	 * Use free pages from the bank as
 	 * the space for struct page array
 	 */
-	membank[0].page_array =
-		l4_map_helper((void *)membank[0].free,
-			      pg_npages);
+	if (IS_ERR(membank[0].page_array =
+		   l4_map_helper((void *)membank[0].free,
+				 pg_npages))) {
+		printf("FATAL: Page array mapping failed. err=%d\n",
+		       (int)membank[0].page_array);
+		BUG();
+	}
 
 	/* Update free memory left */
 	membank[0].free += pg_npages * PAGE_SIZE;
