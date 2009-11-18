@@ -190,8 +190,8 @@ int init_pager(struct pager *pager,
  * are initialized, which includes the pager thread ids
  * and pager space ids.
  *
- * Update all capability target ids that target such
- * run-time allocated resources.
+ * This updates all capability target ids where the target
+ * is a run-time allocated resource with a new resource id.
  */
 int update_dynamic_capids(struct kernel_resources *kres)
 {
