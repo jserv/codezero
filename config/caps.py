@@ -163,8 +163,8 @@ def prepare_custom_capability(cont, param, val):
 
     else: # Ignore custom_use symbol
         return
-    print capkey
-    print cont.caps[capkey]
+    #print capkey
+    #print cont.caps[capkey]
 
 def prepare_typed_capability(cont, param, val):
     captype, params = param.split('_', 1)
@@ -218,8 +218,8 @@ def prepare_typed_capability(cont, param, val):
         else:
             cont.caps[captype] = templ.safe_substitute(cid = val)
 
-        print captype
-        print cont.caps[captype]
+        #print captype
+        #print cont.caps[captype]
 
 def prepare_capability(cont, param, val):
     if 'CUSTOM' in param:
