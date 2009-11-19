@@ -521,7 +521,7 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 		   struct args_struct *env)
 {
 	unsigned long stack_used;
-	unsigned long arg_pages = __pfn(page_align_up(stack_used));
+	unsigned long arg_pages;
 	char *args_on_stack;
 	void *mapped;
 
@@ -532,6 +532,7 @@ int task_map_stack(struct vm_file *f, struct exec_file_desc *efd,
 	 * It also needs to be 8-byte aligned.
 	 */
 	stack_used = align_up(args->size + env->size + sizeof(int) * 3 + 8, 8);
+       	arg_pages = __pfn(page_align_up(stack_used));
 	task->stack_end = __pfn_to_addr(cont_mem_regions.task->end);
 	task->stack_start = __pfn_to_addr(cont_mem_regions.task->end) - DEFAULT_STACK_SIZE;
 	task->args_end = task->stack_end;
