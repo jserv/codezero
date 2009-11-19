@@ -4,7 +4,7 @@ import os, sys, shelve, shutil
 from os.path import join
 from config.projpaths import *
 from config.configuration import *
-from scripts.examples.examples_generator import *
+from scripts.baremetal.baremetal_generator import *
 from scripts.kernel.generate_kernel_cinfo import *
 from scripts.cml.generate_container_cml import *
 from optparse import OptionParser
@@ -184,9 +184,9 @@ def configure_system(options, args):
 
     configuration_save(config)
 
-    # Generate example container files if new ones defined
-    examples_cont_gen = ExamplesContGenerator()
-    examples_cont_gen.examples_container_generate(config)
+    # Generate baremetal container files if new ones defined
+    baremetal_cont_gen = BaremetalContGenerator()
+    baremetal_cont_gen.baremetal_container_generate(config)
 
     # Print out the configuration if asked
     if options.print_config:
