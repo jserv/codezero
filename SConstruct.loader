@@ -41,12 +41,13 @@ env = Environment(CC = config.kernel_toolchain + 'gcc',
 		  PROGSUFFIX = '.elf',
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = ['gcc', 'elf', 'libdev-baremetal', 'c-baremetal', 'gcc'],
-          LIBPATH = [join('build', LIBELF_PATH), join('build', LIBDEV_PATH), join('build', LIBC_PATH)],
+          LIBPATH = [join(join('build', LIBDEV_PATH), 'sys-' + variant), \
+                     join('build', LIBELF_PATH), join('build', LIBC_PATH)],
           CPPPATH = ['#include', LIBDEV_INCPATH, LIBC_INCPATH, LIBELF_INCPATH])
 
 libdev = SConscript('conts/libdev/SConscript', \
                     exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : variant}, \
-                    duplicate = 0, variant_dir = 'build/conts/libdev')
+                    duplicate = 0, variant_dir = 'build/conts/libdev/sys-' + variant)
 libc = SConscript('loader/libs/c/SConscript', \
                   exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : variant}, \
                   duplicate = 0, variant_dir = 'build/loader/libs/c')

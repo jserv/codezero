@@ -12,7 +12,8 @@ class Container:
         self.name = None
         self.type = None
         self.id = id
-	self.example_id = 0
+        self.src_path = None
+        self.baremetal_id = 0
         self.pager_lma = 0
         self.pager_vma = 0
         self.pager_size = 0
@@ -131,7 +132,10 @@ class configuration:
 
     # TODO: Carry this over to Container() as static method???
     def get_container_parameter(self, id, param, val):
-        if param[:len("PAGER_LMA")] == "PAGER_LMA":
+        if param[:len("SOURCE_PATH")] == "SOURCE_PATH":
+            parts = val.split("\"", 3)
+            self.containers[id].src_path = parts[1]
+        elif param[:len("PAGER_LMA")] == "PAGER_LMA":
             self.containers[id].pager_lma = int(val, 0)
         elif param[:len("PAGER_VMA")] == "PAGER_VMA":
             self.containers[id].pager_vma = int(val, 0)
@@ -173,9 +177,9 @@ class configuration:
             dirname = val[1:-1].lower()
             self.containers[id].dirname = dirname
             self.containers[id].name = dirname
-        elif param[:len("EXAMPLE_APP")] == "EXAMPLE_APP":
+        elif param[:len("BAREMETAL_APP")] == "BAREMETAL_APP":
             param1 = param.split("_", 1)
-            self.containers[id].example_id = param1[1][-1:]
+            self.containers[id].baremetal_id = param1[1][-1:]
         elif param[:len("CAP_")] == "CAP_":
             prefix, param_rest = param.split('_', 1)
             prepare_capability(self.containers[id], param_rest, val)
@@ -186,10 +190,10 @@ class configuration:
                     self.containers[id].type = "linux"
                 elif param2 == "POSIX":
                     self.containers[id].type = "posix"
-                elif param2 == "EXAMPLES":
-                    self.containers[id].type = "examples"
-                elif param2 == "TEST":
-                    self.containers[id].type = "test"
+                elif param2 == "BAREMETAL":
+                    self.containers[id].type = "baremetal"
+                elif param2 == "CUSTOM":
+                    self.containers[id].type = "custom"
     # Extract parameters for containers
     def get_container_parameters(self, name, val):
         matchobj = re.match(r"(CONFIG_CONT){1}([0-9]){1}(\w+)", name)

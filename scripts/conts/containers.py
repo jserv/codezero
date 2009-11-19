@@ -77,42 +77,22 @@ def build_posix_container(config, projpaths, container):
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container(config)
 
-# We simply use SCons to figure all this out from container.id
-# Builds the test container.
-def build_test_container(config, projpaths, container):
-    images = []
-    cwd = os.getcwd()
-    os.chdir(TESTDIR)
-    print '\nBuilding the Test Container...'
-    scons_cmd = 'scons ' + 'cont=' + str(container.id)
-    print "Issuing scons command: %s" % scons_cmd
-    os.system(scons_cmd)
-    builddir = source_to_builddir(TESTDIR, container.id)
-    os.path.walk(builddir, glob_by_walk, ['*.elf', images])
-
-    # Calculate and store size of pager
-    pager_binary = "cont" + str(container.id) + "/test/main.elf"
-    config.containers[container.id].pager_size = \
-            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
-
-    container_packer = DefaultContainerPacker(container, images)
-    return container_packer.pack_container(config)
-
 # This simply calls SCons on a given container, and collects
 # all images with .elf extension, instead of using whole classes
 # for building and packing.
 def build_default_container(config, projpaths, container):
     images = []
     cwd = os.getcwd()
-    projdir = join(join(PROJROOT, 'conts'), container.name)
+    projdir = join(join(BUILDDIR, 'cont') + str(container.id), \
+                   container.name)
     os.chdir(projdir)
     os.system("scons")
     os.path.walk(projdir, glob_by_walk, ['*.elf', images])
 
     # Calculate and store size of pager
-    pager_binary = "conts/" + container.name + "/main.elf"
+    pager_binary = join("cont" + str(container.id), container.name) + "/main.elf"
     config.containers[container.id].pager_size = \
-            conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
+            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container(config)
@@ -124,12 +104,10 @@ def build_all_containers():
         if container.type == 'linux':
             pass
             cont_images.append(build_linux_container(config, projpaths, container))
-        elif container.type == 'examples':
+        elif container.type == 'baremetal' or container.type == 'custom':
             cont_images.append(build_default_container(config, projpaths, container))
         elif container.type == 'posix':
             cont_images.append(build_posix_container(config, projpaths, container))
-        elif container.type == 'test':
-            cont_images.append(build_test_container(config, projpaths, container))
         else:
             print "Error: Don't know how to build " + \
                   "container of type: %s" % (container.type)

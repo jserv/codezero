@@ -7,17 +7,17 @@
 import os, shelve, sys
 from os.path import *
 
-PROJRELROOT = '../..'
+PROJRELROOT = '../../..'
 
 sys.path.append(PROJRELROOT)
 
 from config.projpaths import *
 from config.configuration import *
-
+from config.lib import *
 
 config = configuration_retrieve()
-
 arch = config.arch
+
 
 LIBL4_RELDIR = 'conts/libl4'
 KERNEL_INCLUDE = join(PROJROOT, 'include')
@@ -32,6 +32,10 @@ LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
 LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
                 join(LIBC_DIR, 'include/arch' + '/' + arch)]
 
+LIBDEV_RELDIR = 'conts/libdev'
+LIBDEV_DIR = join(PROJROOT, LIBDEV_RELDIR)
+LIBDEV_LIBPATH = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-userspace')
+LIBDEV_INCLUDE = [join(LIBDEV_DIR, 'uart/include')]
 
 env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
@@ -42,9 +46,9 @@ env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'], \
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable\
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path\
-		  LIBS = ['gcc', 'libl4', 'c-userspace', 'gcc', 'c-userspace'],	# libgcc.a - This is required for division routines.
-		  CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBC_INCLUDE],
-          LIBPATH = [LIBL4_LIBPATH, LIBC_LIBPATH],
+		  LIBS = ['gcc', 'libl4', 'c-userspace', 'libdev-userspace', 'gcc', 'c-userspace'],	# libgcc.a - This is required for division routines.
+		  CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBDEV_INCLUDE, LIBC_INCLUDE],
+          LIBPATH = [LIBL4_LIBPATH, LIBDEV_LIBPATH, LIBC_LIBPATH],
 		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
 src = Glob('*.[cS]')

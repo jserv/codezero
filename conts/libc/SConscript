@@ -25,7 +25,7 @@ LIBDEV_INCPATH = [LIBDEV_PATH + '/uart/include']
 e = env.Clone()
 e.Append(CPPPATH = ['include', 'include/sys-' + variant + '/arch-' + arch,
                     LIBDEV_INCPATH],
-         CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper()])
+         CCFLAGS = '-nostdinc')
 
 source = \
         Glob('src/*.c') + \

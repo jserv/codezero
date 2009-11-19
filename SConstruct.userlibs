@@ -34,10 +34,11 @@ libl4 = SConscript('conts/libl4/SConscript', \
 
 e = env.Clone()
 e.Replace(CPPFLAGS = '')
+type = 'userspace'
 libdev = SConscript('conts/libdev/SConscript', \
                     exports = { 'env' : e, 'arch' : arch, 'platform' : platform, 'type' : 'userspace' }, \
                     duplicate = 0, variant_dir = \
-                    join(BUILDDIR, os.path.relpath('conts/libdev', PROJROOT)))
+                    join(join(BUILDDIR, os.path.relpath('conts/libdev', PROJROOT)), 'sys-' + type))
 
 libc = SConscript('conts/libc/SConscript', \
                   exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : 'userspace' }, \
