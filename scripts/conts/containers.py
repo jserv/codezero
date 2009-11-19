@@ -83,15 +83,16 @@ def build_posix_container(config, projpaths, container):
 def build_default_container(config, projpaths, container):
     images = []
     cwd = os.getcwd()
-    projdir = join(join(PROJROOT, 'conts'), container.name)
+    projdir = join(join(BUILDDIR, 'cont') + str(container.id), \
+                   container.name)
     os.chdir(projdir)
     os.system("scons")
     os.path.walk(projdir, glob_by_walk, ['*.elf', images])
 
     # Calculate and store size of pager
-    pager_binary = "conts/" + container.name + "/main.elf"
+    pager_binary = join("cont" + str(container.id), container.name) + "/main.elf"
     config.containers[container.id].pager_size = \
-            conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
+            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container(config)

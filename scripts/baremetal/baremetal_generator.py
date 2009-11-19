@@ -22,7 +22,6 @@ from config.lib import *
 class BaremetalContGenerator:
     def __init__(self):
         self.CONT_SRC_DIR = ''   # Set when container is selected
-        self.BAREMETAL_SRC_BASEDIR = join(PROJROOT, 'conts')
         self.BAREMETAL_PROJ_SRC_DIR = join(PROJROOT, 'conts/baremetal')
 
         self.main_builder_name = 'build.py'
@@ -114,7 +113,7 @@ class BaremetalContGenerator:
         for cont in config.containers:
             if cont.type == "baremetal":
                 # Determine container directory name.
-                self.CONT_SRC_DIR = join(self.BAREMETAL_SRC_BASEDIR, cont.dirname.lower())
+                self.CONT_SRC_DIR = join(join(BUILDDIR, 'cont') + str(cont.id), cont.name)
                 self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
                 self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
                 self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
@@ -122,7 +121,7 @@ class BaremetalContGenerator:
                 self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), \
                                             self.container_h_name)
 
-                if not os.path.exists(join(self.BAREMETAL_SRC_BASEDIR, cont.dirname)):
+                if not os.path.exists(self.CONT_SRC_DIR):
                     self.create_baremetal_sources(config, cont)
                 else:
                     # Don't create new sources but update configuration
