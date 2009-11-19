@@ -1,5 +1,5 @@
 /*
- * UTCB handling helper routines
+ * UTCB handling helper routines.
  *
  * Copyright (C) 2009 B Labs Ltd.
  */
@@ -13,10 +13,13 @@
 #include <utcb.h>
 
 /* Extern declarations */
-extern struct l4t_global_list l4t_global_tasks;
+extern struct global_list global_tasks;
+
+/* Global variables */
+unsigned long lib_utcb_range_size;
 
 /* Function definitions */
-unsigned long get_utcb_addr(struct l4t_tcb *task)
+unsigned long get_utcb_addr(struct tcb *task)
 {
 	struct utcb_desc *udesc;
 	unsigned long slot;
@@ -30,7 +33,8 @@ unsigned long get_utcb_addr(struct l4t_tcb *task)
 			goto found;
 
 	/* Allocate a new utcb memory region and return its base. */
-	udesc = utcb_new_desc();
+	if (!(udesc = utcb_new_desc()))
+		return 0;
 	slot = utcb_new_slot(udesc);
 	list_insert(&udesc->list, &task->utcb_head->list);
 found:
@@ -39,7 +43,7 @@ found:
 	return slot;
 }
 
-int delete_utcb_addr(struct l4t_tcb *task)
+int delete_utcb_addr(struct tcb *task)
 {
 	struct utcb_desc *udesc;
 
@@ -68,55 +72,56 @@ static int set_utcb_addr(void)
 {
 	struct exregs_data exregs;
 	struct task_ids ids;
-	struct l4t_tcb *task;
+	struct tcb *task;
 	struct utcb_desc *udesc;
 	int err;
 
 	/* Create a task. */
-	if (IS_ERR(task = l4t_tcb_alloc_init(0, 0)))
+	if (IS_ERR(task = tcb_alloc_init(0, 0)))
 		return -ENOMEM;
 
 	/* Add child to the global task list. */
-	list_insert_tail(&task->list, &l4t_global_tasks.list);
-	l4t_global_tasks.total++;
+	list_insert_tail(&task->list, &global_tasks.list);
+	global_tasks.total++;
 
-	udesc = utcb_new_desc();
+	if (!(udesc = utcb_new_desc()))
+		return -ENOMEM;
 	task->utcb_addr = utcb_new_slot(udesc);
 	list_insert(&udesc->list, &task->utcb_head->list);
 
 	memset(&exregs, 0, sizeof(exregs));
-	exregs_set_utcb(&exregs, (unsigned long)task->utcb_addr);
+	exregs_set_utcb(&exregs, task->utcb_addr);
 
 	l4_getid(&ids);
+	task->tid = ids.tid;
 	if ((err = l4_exchange_registers(&exregs, ids.tid)) < 0) {
 		printf("libl4thread: l4_exchange_registers failed with "
-				"(%d).\n", err);
+			"(%d).\n", err);
 		return err;
 	}
 
 	return 0;
 }
 
-int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
+int l4_set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 {
 	int err;
 
 	/* Ensure that arguments are valid. */
-	// FIXME: Check if set_utcb_params is called
-	/*if (IS_UTCB_SETUP()) {*/
-		/*printf("libl4thread: You have already called: %s.\n",*/
-				/*__FUNCTION__);*/
-		/*return -EPERM;*/
-	/*}*/
+	if (IS_UTCB_SETUP()) {
+		printf("libl4thread: You have already called: %s.\n",
+			__FUNCTION__);
+		return -EPERM;
+	}
 	if (!utcb_start || !utcb_end) {
 		printf("libl4thread: Utcb address range cannot contain "
 			"0x0 as a start and/or end address(es).\n");
 		return -EINVAL;
 	}
-	/* Check if the start address is aligned on UTCB_SIZE. */
-	if (utcb_start & !UTCB_SIZE) {
+	/* Check if the start address is aligned on PAGE_SIZE. */
+	if (utcb_start & PAGE_MASK) {
 		printf("libl4thread: Utcb start address must be aligned "
-			"on UTCB_SIZE(0x%x).\n", UTCB_SIZE);
+			"on PAGE_SIZE(0x%x).\n", PAGE_SIZE);
 		return -EINVAL;
 	}
 	/* The range must be a valid one. */
@@ -128,7 +133,7 @@ int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 	/*
 	 * This check guarantees two things:
 	 *	1. The range must be multiple of UTCB_SIZE, at least one item.
-	 *	2. utcb_end is aligned on UTCB_SIZE
+	 *	2. utcb_end is aligned on UTCB_SIZE.
 	 */
 	if ((utcb_end - utcb_start) % UTCB_SIZE) {
 		printf("libl4thread: The given range size must be multiple "
@@ -137,12 +142,19 @@ int set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 	}
 	/* Arguments passed the validity tests. */
 
-	/* Init utcb virtual address pool */
-	utcb_pool_init(utcb_start, utcb_end);
+	/* Init utcb virtual address pool. */
+	if (utcb_pool_init(utcb_start, utcb_end) < 0)
+		BUG();
 
-	/* The very first thread's utcb address is assigned. */
+	/*
+	 * The very first thread's utcb address is assigned.
+	 * It should not return an error value.
+	 */
 	if ((err = set_utcb_addr()) < 0)
-		return err;
+		BUG();
+
+	/* Initialize internal variables. */
+	lib_utcb_range_size = utcb_end - utcb_start;
 
 	return 0;
 }
