@@ -188,8 +188,6 @@ class configuration:
                     self.containers[id].type = "posix"
                 elif param2 == "BAREMETAL":
                     self.containers[id].type = "baremetal"
-                elif param2 == "TEST":
-                    self.containers[id].type = "test"
     # Extract parameters for containers
     def get_container_parameters(self, name, val):
         matchobj = re.match(r"(CONFIG_CONT){1}([0-9]){1}(\w+)", name)

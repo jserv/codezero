@@ -30,8 +30,6 @@ LINUX_ATAGSDIR = join(LINUXDIR, 'atags')
 POSIXDIR = join(PROJROOT, 'conts/posix')
 POSIX_BOOTDESCDIR = join(POSIXDIR, 'bootdesc')
 
-TESTDIR = join(PROJROOT, 'conts/test')
-
 projpaths = {   \
     'LINUX_ATAGSDIR'  : LINUX_ATAGSDIR, \
     'LINUX_ROOTFSDIR' : LINUX_ROOTFSDIR, \
