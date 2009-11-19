@@ -233,10 +233,10 @@ void sched_exit_sync(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_DEAD;
 	current->flags &= ~TASK_EXITING;
-	preempt_enable();
 
 	if (current->pagerid != current->tid)
 		wake_up(&current->wqh_pager, 0);
+	preempt_enable();
 
 	schedule();
 }
@@ -247,10 +247,10 @@ void sched_exit_async(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_DEAD;
 	current->flags &= ~TASK_EXITING;
-	preempt_enable();
 
 	if (current->pagerid != current->tid)
 		wake_up(&current->wqh_pager, 0);
+	preempt_enable();
 
 	need_resched = 1;
 }
@@ -265,10 +265,10 @@ void sched_suspend_sync(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	preempt_enable();
 
 	if (current->pagerid != current->tid)
 		wake_up(&current->wqh_pager, 0);
+	preempt_enable();
 
 	schedule();
 }
@@ -279,10 +279,10 @@ void sched_suspend_async(void)
 	sched_rq_remove_task(current);
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
-	preempt_enable();
 
 	if (current->pagerid != current->tid)
 		wake_up(&current->wqh_pager, 0);
+	preempt_enable();
 
 	need_resched = 1;
 }

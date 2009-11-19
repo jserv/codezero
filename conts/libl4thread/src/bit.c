@@ -3,9 +3,7 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
-#include <lib/bit.h>
-#include <l4/macros.h>
-#include <l4/config.h>
+#include <bit.h>
 #include <stdio.h>
 #include INC_GLUE(memory.h)
 

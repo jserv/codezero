@@ -6,6 +6,10 @@
 #ifndef __LIB_THREAD_H__
 #define __LIB_THREAD_H__
 
+/* A helper macro easing utcb space creation. */
+#define DECLARE_UTCB_SPACE(name, entries) \
+	char name[(entries + PAGE_SIZE / UTCB_SIZE) * UTCB_SIZE] ALIGN(PAGE_SIZE);
+
 int l4_set_stack_params(unsigned long stack_top,
 			unsigned long stack_bottom,
 			unsigned long stack_size);

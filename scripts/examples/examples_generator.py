@@ -19,11 +19,11 @@ from config.projpaths import *
 from config.configuration import *
 from config.lib import *
 
-class BareContGenerator:
+class ExamplesContGenerator:
     def __init__(self):
         self.CONT_SRC_DIR = ''   # Set when container is selected
-        self.BARE_SRC_BASEDIR = join(PROJROOT, 'conts')
-        self.EXAMPLE_PROJ_SRC_DIR = join(PROJROOT, 'conts/bare_src')
+        self.EXAMPLES_SRC_BASEDIR = join(PROJROOT, 'conts')
+        self.EXAMPLES_PROJ_SRC_DIR = join(PROJROOT, 'conts/examples')
 
         self.main_builder_name = 'build.py'
         self.main_configurator_name = 'configure.py'
@@ -47,11 +47,12 @@ class BareContGenerator:
         self.build_desc_out = None
         self.src_main_out = None
 
-    def create_bare_srctree(self, config, cont):
+    def create_examples_srctree(self, config, cont):
         # First, create the base project directory and sources
-        shutil.copytree(self.EXAMPLE_PROJ_SRC_DIR, self.CONT_SRC_DIR)
+        str = 'example' + cont.example_id
+        shutil.copytree(join(self.EXAMPLES_PROJ_SRC_DIR, str), self.CONT_SRC_DIR)
 
-    def copy_bare_build_desc(self, config, cont):
+    def copy_examples_build_desc(self, config, cont):
         id_header = '[Container ID]\n'
         type_header = '\n[Container Type]\n'
         name_header = '\n[Container Name]\n'
@@ -78,7 +79,7 @@ class BareContGenerator:
                 fout.write(pager_physmem_header % ireg)
                 fout.write('\t' + cont.physmem["START"][ireg] + ' - ' + cont.physmem["END"][ireg] + '\n')
 
-    def copy_bare_build_readme(self, config, cont):
+    def copy_examples_build_readme(self, config, cont):
         with open(self.build_readme_in) as fin:
             str = fin.read()
             with open(self.build_readme_out, 'w+') as fout:
@@ -90,30 +91,30 @@ class BareContGenerator:
                                   self.main_configurator_name, \
                                   self.main_configurator_name))
 
-    def copy_bare_container_h(self, config, cont):
+    def copy_examples_container_h(self, config, cont):
         with open(self.container_h_in) as fin:
             str = fin.read()
             with open(self.container_h_out, 'w+') as fout:
                 # Make any manipulations here
                 fout.write(str % (cont.name, cont.id, cont.id))
 
-    def create_bare_sources(self, config, cont):
-        self.create_bare_srctree(config, cont)
-        self.copy_bare_build_readme(config, cont)
-        self.copy_bare_build_desc(config, cont)
+    def create_examples_sources(self, config, cont):
+        self.create_examples_srctree(config, cont)
+        self.copy_examples_build_readme(config, cont)
+        self.copy_examples_build_desc(config, cont)
         self.generate_linker_script(config, cont)
-        self.copy_bare_container_h(config, cont)
+        self.copy_examples_container_h(config, cont)
 
     def update_configuration(self, config, cont):
-        self.copy_bare_build_desc(config, cont)
+        self.copy_examples_build_desc(config, cont)
         self.generate_linker_script(config, cont)
-        self.copy_bare_container_h(config, cont)
+        self.copy_examples_container_h(config, cont)
 
-    def check_create_bare_sources(self, config):
+    def check_create_examples_sources(self, config):
         for cont in config.containers:
-            if cont.type == "bare":
+            if cont.type == "examples":
                 # Determine container directory name.
-                self.CONT_SRC_DIR = join(self.BARE_SRC_BASEDIR, cont.dirname.lower())
+                self.CONT_SRC_DIR = join(self.EXAMPLES_SRC_BASEDIR, cont.dirname.lower())
                 self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
                 self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
                 self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
@@ -121,8 +122,8 @@ class BareContGenerator:
                 self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), \
                                             self.container_h_name)
 
-                if not os.path.exists(join(self.BARE_SRC_BASEDIR, cont.dirname)):
-                    self.create_bare_sources(config, cont)
+                if not os.path.exists(join(self.EXAMPLES_SRC_BASEDIR, cont.dirname)):
+                    self.create_examples_sources(config, cont)
                 else:
                     # Don't create new sources but update configuration
                     self.update_configuration(config, cont)
@@ -134,12 +135,12 @@ class BareContGenerator:
                 fout.write(str % (conv_hex(cont.pager_vma), \
                                   conv_hex(cont.pager_lma)))
 
-    def bare_container_generate(self, config):
-        self.check_create_bare_sources(config)
+    def examples_container_generate(self, config):
+        self.check_create_examples_sources(config)
 
 if __name__ == "__main__":
     config = configuration_retrieve()
     config.config_print()
-    bare_cont = BareContGenerator()
-    bare_cont.bare_container_generate(config)
+    examples_cont = ExamplesContGenerator()
+    examples_cont.examples_container_generate(config)
 

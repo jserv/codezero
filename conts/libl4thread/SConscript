@@ -1,0 +1,32 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+
+import os, sys
+
+# Get global paths
+PROJRELROOT = '../..'
+
+sys.path.append(PROJRELROOT)
+
+from config.projpaths import *
+
+Import('env')
+
+LIBMEM_RELDIR = 'conts/libmem'
+LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
+
+LIBL4_RELDIR = 'conts/libl4'
+LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
+LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
+
+e = env.Clone()
+e.Append(CPPPATH = ['include/l4thread', LIBMEM_DIR, LIBL4_INCLUDE])
+
+source = [Glob('*.[cS]') + Glob('src/*.[cS]') + Glob('src/arch/*.[cS]')]
+objects = e.StaticObject(source)
+library = e.StaticLibrary('l4thread', objects)
+
+Return('library')

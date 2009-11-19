@@ -13,20 +13,19 @@ sys.path.append(PROJRELROOT)
 
 from config.projpaths import *
 from config.configuration import *
-from configure import *
+
 
 config = configuration_retrieve()
-arch = config.arch
-gcc_cpu_flag = config.gcc_cpu_flag
 
-# Wrapper library for system calls
+arch = config.arch
+
 LIBL4_RELDIR = 'conts/libl4'
 KERNEL_INCLUDE = join(PROJROOT, 'include')
 LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
 LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
 LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
 
-# Some user-space libraries
+# Locally important paths are here
 LIBC_RELDIR = 'conts/libc'
 LIBC_DIR = join(PROJROOT, LIBC_RELDIR)
 LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
@@ -43,11 +42,11 @@ LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
 LIBMEM_INCLUDE = LIBMEM_DIR
 
-env = Environment(CC = config.user_toolchain + 'gcc',
+env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
-		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
-                     '-Werror', ('-mcpu=' + gcc_cpu_flag)], \
+		  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
+			     '-std=gnu99', '-Wall', '-Werror'], \
 		  LINKFLAGS = ['-nostdlib', '-T' + "include/linker.lds", "-u_start"],\
 		  ASFLAGS = ['-D__ASSEMBLY__'], \
           PROGSUFFIX = '.elf', # The suffix to use for final executable

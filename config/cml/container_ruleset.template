@@ -1,7 +1,7 @@
 symbols
 CONT%(cn)d_TYPE_LINUX	'Linux Container'
-CONT%(cn)d_TYPE_BARE	'Bare Container'
-CONT%(cn)d_TYPE_POSIX	'POSIX Container'
+CONT%(cn)d_TYPE_EXAMPLES 'Examples Container'
+CONT%(cn)d_TYPE_POSIX	'Codezero POSIX Services'
 CONT%(cn)d_TYPE_TEST	'Test Container'
 CONT%(cn)d_OPT_NAME	'Container Name'
 
@@ -139,12 +139,12 @@ default CONT%(cn)d_VIRT4_END	from 0xe0000000
 default CONT%(cn)d_VIRT5_START	from 0xe0000000
 default CONT%(cn)d_VIRT5_END	from 0xf0000000
 
-default CONT%(cn)d_OPT_NAME from (CONT%(cn)d_TYPE_LINUX==y) ? "linux%(cn)d" : ((CONT%(cn)d_TYPE_BARE==y) ? "bare%(cn)d" : ((CONT%(cn)d_TYPE_TEST==y) ? "test%(cn)d" : "posix%(cn)d"))
+default CONT%(cn)d_OPT_NAME from (CONT%(cn)d_TYPE_LINUX==y) ? "linux%(cn)d" : ((CONT%(cn)d_TYPE_EXAMPLES==y) ? "example%(cn)d" : ((CONT%(cn)d_TYPE_TEST==y) ? "test%(cn)d" : "posix%(cn)d"))
 
-when CONT%(cn)d_TYPE_LINUX==y suppress cont%(cn)d_bare_pager_params cont%(cn)d_posix_pager_params
-when CONT%(cn)d_TYPE_BARE==y suppress cont%(cn)d_linux_pager_params cont%(cn)d_posix_pager_params
-when CONT%(cn)d_TYPE_TEST==y suppress cont%(cn)d_linux_pager_params cont%(cn)d_posix_pager_params
-when CONT%(cn)d_TYPE_POSIX==y suppress cont%(cn)d_linux_pager_params
+when CONT%(cn)d_TYPE_LINUX==y suppress cont%(cn)d_default_pager_params cont%(cn)d_posix_pager_params cont%(cn)d_examples_params
+when CONT%(cn)d_TYPE_EXAMPLES==y suppress cont%(cn)d_linux_pager_params cont%(cn)d_posix_pager_params
+when CONT%(cn)d_TYPE_TEST==y suppress cont%(cn)d_linux_pager_params cont%(cn)d_posix_pager_params cont%(cn)d_examples_params
+when CONT%(cn)d_TYPE_POSIX==y suppress cont%(cn)d_linux_pager_params cont%(cn)d_examples_params
 
 symbols
 cont%(cn)d_menu		'Container %(cn)d Parameters'
@@ -154,10 +154,22 @@ container%(cn)d_type	'Container %(cn)d Type'
 container%(cn)d_options	'Container %(cn)d Options'
 
 cont%(cn)d_linux_pager_params	'Container %(cn)d Linux Pager Parameters'
-cont%(cn)d_bare_pager_params	'Container %(cn)d Default Pager Parameters'
+cont%(cn)d_default_pager_params	'Container %(cn)d Default Pager Parameters'
 cont%(cn)d_posix_pager_params	'Container %(cn)d POSIX Pager Parameters'
 
-menu cont%(cn)d_bare_pager_params
+cont%(cn)d_examples_params	'Example Applications List'
+CONT%(cn)d_EXAMPLE_APP0		'Empty Application'
+CONT%(cn)d_EXAMPLE_APP1		'Hello World'
+CONT%(cn)d_EXAMPLE_APP2		'Thread Library Demo'
+
+
+choices cont%(cn)d_examples_params
+	CONT%(cn)d_EXAMPLE_APP0
+	CONT%(cn)d_EXAMPLE_APP1
+	CONT%(cn)d_EXAMPLE_APP2
+	default CONT%(cn)d_EXAMPLE_APP0
+
+menu cont%(cn)d_default_pager_params
 	CONT%(cn)d_PAGER_LMA@
 	CONT%(cn)d_PAGER_VMA@
 
@@ -625,21 +637,21 @@ menu cont%(cn)d_capability_list
 
 menu container%(cn)d_options
 	CONT%(cn)d_OPT_NAME$
+	cont%(cn)d_examples_params
 	cont%(cn)d_linux_pager_params
-	cont%(cn)d_bare_pager_params
+	cont%(cn)d_default_pager_params
 	cont%(cn)d_posix_pager_params
 	cont%(cn)d_physmem_list
 	cont%(cn)d_virtmem_list
 	cont%(cn)d_capability_list
 
 choices container%(cn)d_type
-	CONT%(cn)d_TYPE_BARE
+	CONT%(cn)d_TYPE_EXAMPLES
+        CONT%(cn)d_TYPE_LINUX
 	CONT%(cn)d_TYPE_POSIX
-	CONT%(cn)d_TYPE_LINUX
 	CONT%(cn)d_TYPE_TEST
-        default CONT%(cn)d_TYPE_BARE
+        default CONT%(cn)d_TYPE_EXAMPLES
 
 menu cont%(cn)d_menu
 	container%(cn)d_type
 	container%(cn)d_options
-

@@ -210,7 +210,7 @@ int mutex_control_unlock(struct mutex_queue_head *mqhead,
 	 * now wake all of them up in FIFO order.
 	 * FIXME: Make sure this is FIFO order. It doesn't seem so.
 	 */
-	wake_up(&mutex_queue->wqh_contenders, WAKEUP_ASYNC);
+	wake_up_all(&mutex_queue->wqh_contenders, WAKEUP_ASYNC);
 
 	/* Since noone is left, delete the mutex queue */
 	mutex_control_remove(mqhead, mutex_queue);

@@ -105,12 +105,18 @@ int thread_destroy_children(void)
 void thread_destroy_self(unsigned int exit_code)
 {
 	thread_destroy_children();
+
+	/* Wake up waiters */
+	wake_up_all(&current->wqh_send, WAKEUP_INTERRUPT);
+	wake_up_all(&current->wqh_recv, WAKEUP_INTERRUPT);
+
 	current->exit_code = exit_code;
 	sched_exit_sync();
 }
 
 int thread_wait(struct ktcb *task)
 {
+	unsigned int exit_code;
 	int ret;
 
 	/* Wait until task switches to desired state */
@@ -118,8 +124,12 @@ int thread_wait(struct ktcb *task)
 		   task->state == TASK_DEAD, ret);
 	if (ret < 0)
 		return ret;
-	else
-		return (int)task->exit_code;
+	else {
+		exit_code = (int)task->exit_code;
+		tcb_remove(task);
+		tcb_delete(task);
+		return exit_code;
+	}
 }
 
 int thread_destroy(struct ktcb *task, unsigned int exit_code)
