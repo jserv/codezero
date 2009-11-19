@@ -12,6 +12,7 @@ class Container:
         self.name = None
         self.type = None
         self.id = id
+        self.src_path = None
         self.baremetal_id = 0
         self.pager_lma = 0
         self.pager_vma = 0
@@ -131,7 +132,10 @@ class configuration:
 
     # TODO: Carry this over to Container() as static method???
     def get_container_parameter(self, id, param, val):
-        if param[:len("PAGER_LMA")] == "PAGER_LMA":
+        if param[:len("SOURCE_PATH")] == "SOURCE_PATH":
+            parts = val.split("\"", 3)
+            self.containers[id].src_path = parts[1]
+        elif param[:len("PAGER_LMA")] == "PAGER_LMA":
             self.containers[id].pager_lma = int(val, 0)
         elif param[:len("PAGER_VMA")] == "PAGER_VMA":
             self.containers[id].pager_vma = int(val, 0)
@@ -188,6 +192,8 @@ class configuration:
                     self.containers[id].type = "posix"
                 elif param2 == "BAREMETAL":
                     self.containers[id].type = "baremetal"
+                elif param2 == "CUSTOM":
+                    self.containers[id].type = "custom"
     # Extract parameters for containers
     def get_container_parameters(self, name, val):
         matchobj = re.match(r"(CONFIG_CONT){1}([0-9]){1}(\w+)", name)
