@@ -57,8 +57,8 @@ env = Environment(CC = config.user_toolchain + 'gcc',
                   ASFLAGS = ['-D__ASSEMBLY__'],
                   PROGSUFFIX = '.elf', # The suffix to use for final executable
                   ENV = {'PATH' : os.environ['PATH']}, # Inherit shell path
-                  LIBS = ['libl4thread', 'libl4', 'libmalloc', 'libdev-userspace', \
-                          'c-userspace', 'gcc', 'c-userspace'], # libgcc.a - This is required for division routines.
+                  LIBS = ['libl4thread', 'libl4', 'libmalloc', 'c-userspace', \
+                          'libdev-userspace', 'gcc', 'c-userspace'], # libgcc.a - This is required for division routines.
                   CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBDEV_INCLUDE, \
                              LIBC_INCLUDE, LIBL4THREAD_INCLUDE],
                   LIBPATH = [LIBL4_LIBPATH, LIBDEV_LIBPATH, LIBC_LIBPATH, LIBL4THREAD_LIBPATH, \
