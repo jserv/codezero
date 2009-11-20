@@ -1,6 +1,6 @@
 symbols
 CONT%(cn)d_TYPE_LINUX		'Linux Container'
-CONT%(cn)d_TYPE_BAREMETAL	'Barebones Container'
+CONT%(cn)d_TYPE_BAREMETAL	'Baremetal Container'
 CONT%(cn)d_TYPE_POSIX		'POSIX Container'
 CONT%(cn)d_TYPE_CUSTOM  	'Add New Customized Container'
 CONT%(cn)d_OPT_NAME		'Container Name'
@@ -162,18 +162,18 @@ cont%(cn)d_linux_pager_params	'Container %(cn)d Linux Pager Parameters'
 cont%(cn)d_default_pager_params	'Container %(cn)d Default Pager Parameters'
 cont%(cn)d_posix_pager_params	'Container %(cn)d POSIX Pager Parameters'
 
-cont%(cn)d_baremetal_params	'Baremetal Applications List'
-CONT%(cn)d_BAREMETAL_APP0	'Empty Application'
-CONT%(cn)d_BAREMETAL_APP1	'Hello World'
-CONT%(cn)d_BAREMETAL_APP2	'Thread Library Demo'
-CONT%(cn)d_BAREMETAL_APP3       'Test Application'
+cont%(cn)d_baremetal_params	'Baremetal Project'
+CONT%(cn)d_BAREMETAL_PROJ0	'Empty Project'
+CONT%(cn)d_BAREMETAL_PROJ1	'Hello World'
+CONT%(cn)d_BAREMETAL_PROJ2	'Thread Library Demo'
+CONT%(cn)d_BAREMETAL_PROJ3      'Test Project'
 
 choices cont%(cn)d_baremetal_params
-	CONT%(cn)d_BAREMETAL_APP0
-	CONT%(cn)d_BAREMETAL_APP1
-	CONT%(cn)d_BAREMETAL_APP2
-	CONT%(cn)d_BAREMETAL_APP3
-	default CONT%(cn)d_BAREMETAL_APP0
+	CONT%(cn)d_BAREMETAL_PROJ0
+	CONT%(cn)d_BAREMETAL_PROJ1
+	CONT%(cn)d_BAREMETAL_PROJ2
+	CONT%(cn)d_BAREMETAL_PROJ3
+	default CONT%(cn)d_BAREMETAL_PROJ0
 
 menu cont%(cn)d_default_pager_params
 	CONT%(cn)d_PAGER_LMA@

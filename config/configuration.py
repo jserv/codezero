@@ -177,7 +177,7 @@ class configuration:
             dirname = val[1:-1].lower()
             self.containers[id].dirname = dirname
             self.containers[id].name = dirname
-        elif param[:len("BAREMETAL_APP")] == "BAREMETAL_APP":
+        elif param[:len("BAREMETAL_PROJ")] == "BAREMETAL_PROJ":
             param1 = param.split("_", 1)
             self.containers[id].baremetal_id = param1[1][-1:]
         elif param[:len("CAP_")] == "CAP_":
