@@ -40,6 +40,8 @@ int main(int argc, char *argv[])
 	wait_pager(pagerid);
 
 	printf("\n%s: Running POSIX API tests.\n", __TASKNAME__);
+	
+	undeftest();
 
 	small_io_test();
 

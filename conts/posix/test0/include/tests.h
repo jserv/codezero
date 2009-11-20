@@ -25,5 +25,6 @@ int clonetest(void);
 int exectest(pid_t);
 int user_mutex_test(void);
 int small_io_test(void);
+int undeftest(void);
 
 #endif /* __TEST0_TESTS_H__ */
