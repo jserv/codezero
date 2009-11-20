@@ -7,7 +7,7 @@
 import os, shelve, sys
 from os.path import *
 
-PROJRELROOT = '../../..'
+PROJRELROOT = '../..'
 
 sys.path.append(PROJRELROOT)
 
