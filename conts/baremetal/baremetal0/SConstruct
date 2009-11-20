@@ -14,10 +14,10 @@ sys.path.append(PROJRELROOT)
 from config.projpaths import *
 from config.configuration import *
 
-
 config = configuration_retrieve()
-
+platform = config.platform
 arch = config.arch
+gcc_cpu_flag = config.gcc_cpu_flag
 
 LIBL4_RELDIR = 'conts/libl4'
 KERNEL_INCLUDE = join(PROJROOT, 'include')
@@ -36,13 +36,14 @@ LIBDEV_RELDIR = 'conts/libdev'
 LIBDEV_DIR = join(PROJROOT, LIBDEV_RELDIR)
 LIBDEV_LIBPATH = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-userspace')
 LIBDEV_INCLUDE = [join(LIBDEV_DIR, 'uart/include')]
+LIBDEV_CCFLAGS = '-DPLATFORM_' + platform.upper()
 
-env = Environment(CC = 'arm-none-linux-gnueabi-gcc',
-		  # We don't use -nostdinc because sometimes we need standard headers,
-		  # such as stdarg.h e.g. for variable args, as in printk().
-		  CCFLAGS = ['-g', '-mcpu=arm926ej-s', '-nostdlib', '-ffreestanding', \
-			     '-std=gnu99', '-Wall', '-Werror'], \
-		  LINKFLAGS = ['-nostdlib', '-T' + "include/linker.lds", "-u_start"],\
+env = Environment(CC = config.user_toolchain + 'gcc',
+          # We don't use -nostdinc because sometimes we need standard headers,
+          # such as stdarg.h e.g. for variable args, as in printk().
+          CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
+                     '-Werror', ('-mcpu=' + gcc_cpu_flag), LIBDEV_CCFLAGS],
+          LINKFLAGS = ['-nostdlib', '-T' + "include/linker.lds", "-u_start"],
 		  ASFLAGS = ['-D__ASSEMBLY__'], \
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable\
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path\
