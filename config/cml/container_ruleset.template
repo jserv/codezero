@@ -91,19 +91,6 @@ when CONT%(cn)d_PHYSMEM_REGIONS < 3 suppress CONT%(cn)d_PHYS3_START CONT%(cn)d_P
 
 when CONT%(cn)d_PHYSMEM_REGIONS < 4 suppress CONT%(cn)d_PHYS3_START CONT%(cn)d_PHYS3_END
 
-### Sanity check for memory regions ###
-require CONT%(cn)d_PHYS0_START < CONT%(cn)d_PHYS0_END
-require CONT%(cn)d_PHYS1_START < CONT%(cn)d_PHYS1_END
-require CONT%(cn)d_PHYS2_START < CONT%(cn)d_PHYS2_END
-require CONT%(cn)d_PHYS3_START < CONT%(cn)d_PHYS3_END
-
-require CONT%(cn)d_VIRT0_START < CONT%(cn)d_VIRT0_END
-require CONT%(cn)d_VIRT1_START < CONT%(cn)d_VIRT1_END
-require CONT%(cn)d_VIRT2_START < CONT%(cn)d_VIRT2_END
-require CONT%(cn)d_VIRT3_START < CONT%(cn)d_VIRT3_END
-require CONT%(cn)d_VIRT4_START < CONT%(cn)d_VIRT4_END
-require CONT%(cn)d_VIRT5_START < CONT%(cn)d_VIRT5_END
-
 # We assume kernel uses 0x0 - 0x40000 physical RAM.
 # Physical Regions for containers should start after kernel.
 require CONT%(cn)d_PHYS0_START >= 0x40000
