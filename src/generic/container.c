@@ -88,8 +88,8 @@ struct container *container_find(struct kernel_resources *kres, l4id_t cid)
  * since it uses the current kernel pgd.
  */
 int init_pager(struct pager *pager,
-		     struct container *cont,
-		     pgd_table_t *current_pgd)
+	       struct container *cont,
+	       pgd_table_t *current_pgd)
 {
 	struct ktcb *task;
 	struct address_space *space;
@@ -110,9 +110,9 @@ int init_pager(struct pager *pager,
 
 	/* If first, manually allocate/initalize space */
 	if (first) {
-		if (!(space = alloc_space())) {
+		if (!(space = alloc_space()))
 			return -ENOMEM;
-		}
+
 		/* Set up space id */
 		space->spid = id_new(&kernel_resources.space_ids);
 
@@ -139,28 +139,8 @@ int init_pager(struct pager *pager,
 	/* Add the address space to container space list */
 	address_space_add(task->space);
 
-#if 0
-	/* Initialize uninitialized capability fields while on dummy */
-	list_foreach_struct(cap, &current->cap_list.caps, list) {
-		/* Initialize owner */
-		cap->owner = task->tid;
-
-		/*
-		 * Initialize resource id, if possible.
-		 * Currently this is a temporary hack where
-		 * we allow only container ids and _assume_
-		 * that container is pager's own container.
-		 *
-		 * See capability resource ids for info
-		 */
-		if (cap_rtype(cap) == CAP_RTYPE_CONTAINER)
-			cap->resid = task->container->cid;
-		else
-			cap->resid = CAP_RESID_NONE;
-	}
-#endif
-
-	printk("%s: Mapping 0x%lx bytes (%lu pages) from 0x%lx to 0x%lx for %s\n",
+	printk("%s: Mapping 0x%lx bytes (%lu pages) "
+	       "from 0x%lx to 0x%lx for %s\n",
 	       __KERNELNAME__, pager->memsize,
 	       __pfn(page_align_up(pager->memsize)),
 	       pager->start_lma, pager->start_vma, cont->name);
@@ -302,7 +282,6 @@ int container_init_pagers(struct kernel_resources *kres,
 
 	return 0;
 }
-
 
 
 
