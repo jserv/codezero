@@ -267,18 +267,24 @@ int memcap_unmap(struct cap_list *used_list,
 		 const unsigned long unmap_end)
 {
 	struct capability *cap, *n;
-	int err;
+	int ret;
 
 	/*
 	 * If a used list was supplied, check that the
 	 * range does not intersect with the used list.
 	 * This is an optional sanity check.
 	 */
-	if (used_list)
-		list_foreach_removable_struct(cap, n, &used_list->caps, list)
+	if (used_list) {
+		list_foreach_removable_struct(cap, n,
+					      &used_list->caps,
+					      list) {
 			if (set_intersection(unmap_start, unmap_end,
-					     cap->start, cap->end))
-				return -EPERM;
+					     cap->start, cap->end)) {
+				ret = -EPERM;
+				goto out_err;
+			}
+		}
+	}
 
 	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
 		/* Check for intersection */
@@ -287,12 +293,59 @@ int memcap_unmap(struct cap_list *used_list,
 			if ((err = memcap_unmap_range(cap, cap_list,
 						      unmap_start,
 						      unmap_end))) {
-				return err;
+				goto out_err;
 			}
 			return 0;
 		}
 	}
-	return -EEXIST;
+	ret = -EEXIST;
+
+out_err:
+	if (ret == -ENOMEM)
+		printk("%s: FATAL: Insufficient boot memory "
+		       "to split capability\n", __KERNELNAME__);
+	else if (ret == -EPERM)
+		printk("%s: FATAL: %s memory capability range "
+		       "overlaps with an already used range. "
+		       "start=0x%lx, end=0x%lx\n", __KERNELNAME__,
+		       cap_type(cap) == CAP_TYPE_MAP_VIRTMEM ?
+		       "Virtual" : "Physical",
+		       __pfn_to_addr(cap->start),
+		       __pfn_to_addr(cap->end));
+	else if (ret == -EEXIST)
+		printk("%s: FATAL: %s memory capability range "
+		       "does not match with any available free range. "
+		       "start=0x%lx, end=0x%lx\n", __KERNELNAME__,
+		       cap_type(cap) == CAP_TYPE_MAP_VIRTMEM ?
+		       "Virtual" : "Physical",
+		       __pfn_to_addr(cap->start),
+		       __pfn_to_addr(cap->end));
+	BUG();
+}
+
+/*
+ * Finds a device memory capability and deletes it from
+ * the available device capabilities list
+ */
+int memcap_request_device(struct cap_list *cap_list,
+			  struct cap_info *devcap)
+{
+	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
+		if (cap->start == devcap->start &&
+		    cap->end == devcap->end &&
+		    cap->uattr == devcap->uattr) {
+			/* Unlink only. This is boot memory */
+			list_remove(&cap);
+			return 0;
+		}
+	}
+	printk("%s: FATAL: Device memory requested "
+	       "does not match any available device "
+	       "capabilities start=0x%lx, end=0x%lx "
+	       "uattr=0x%lx\n", __KERNELNAME__,
+	       __pfn_to_addr(devcap->start),
+	       __pfn_to_addr(devcap->end), devcap->uattr);
+	BUG();
 }
 
 /*
@@ -417,6 +470,8 @@ void init_kernel_resources(struct kernel_resources *kres)
 	memcap_unmap(0, &kres->physmem_free, kernel_area->start,
 		     kernel_area->end);
 
+	/* Set up platform-specific device capabilities */
+	platform_setup_device_caps(kres);
 
 	/* TODO:
 	 * Add all virtual memory areas used by the kernel
@@ -746,7 +801,6 @@ void init_resource_allocators(struct boot_resources *bootres,
 	kres->pmd_cache =
 		init_resource_cache(bootres->npmds,
 				    PMD_SIZE, kres, 1);
-
 }
 
 /*
@@ -785,61 +839,19 @@ int process_cap_info(struct cap_info *cap,
 		break;
 	}
 
-	switch (cap_type(cap)) {
-	case CAP_TYPE_MAP_VIRTMEM:
-		if ((ret = memcap_unmap(&kres->virtmem_used, &kres->virtmem_free,
-			     		cap->start, cap->end))) {
-			if (ret == -ENOMEM)
-				printk("%s: FATAL: Insufficient boot memory "
-				       "to split capability\n",
-				       __KERNELNAME__);
-			if (ret == -EPERM)
-				printk("%s: FATAL: Virtual memory capability range "
-				       "overlaps with an already used range. "
-				       "start=0x%lx, end=0x%lx\n",
-				       __KERNELNAME__,
-				       __pfn_to_addr(cap->start),
-				       __pfn_to_addr(cap->end));
-			if (ret == -EEXIST)
-				printk("%s: FATAL: Virtual memory capability range "
-				       "does not match with any available free range. "
-				       "start=0x%lx, end=0x%lx\n",
-				       __KERNELNAME__,
-				       __pfn_to_addr(cap->start),
-				       __pfn_to_addr(cap->end));
-
-			BUG();
-		}
-		break;
-
-	case CAP_TYPE_MAP_PHYSMEM:
-		if ((ret = memcap_unmap(&kres->physmem_used, &kres->physmem_free,
-			     		cap->start, cap->end))) {
-			if (ret == -ENOMEM)
-				printk("%s: FATAL: Insufficient boot memory "
-				       "to split capability\n",
-				       __KERNELNAME__);
-			if (ret == -EPERM)
-				printk("%s: FATAL: Physical memory capability range "
-				       "overlaps with an already used range. "
-				       "start=0x%lx, end=0x%lx\n",
-				       __KERNELNAME__,
-				       __pfn_to_addr(cap->start),
-				       __pfn_to_addr(cap->end));
-			if (ret == -EEXIST)
-				printk("%s: FATAL: Physical memory capability range "
-				       "does not match with any available free range. "
-				       "start=0x%lx, end=0x%lx\n",
-				       __KERNELNAME__,
-				       __pfn_to_addr(cap->start),
-				       __pfn_to_addr(cap->end));
-
-			BUG();
-		}
-
-		break;
-
+	if (cap_type(cap) == CAP_TYPE_MAP_VIRTMEM) {
+		memcap_unmap(&kres->virtmem_used,
+			     &kres->virtmem_free,
+			     cap->start, cap->end)
+	} else if (cap_type(cap) == CAP_TYPE_MAP_PHYSMEM) {
+		if (!cap_devmem(cap))
+			memcap_unmap(&kres->physmem_used,
+				     &kres->physmem_free,
+				     cap->start, cap->end)
+		else /* Delete device from free list */
+			memcap_request_device(&kres->devmem_free, cap);
 	}
+
 	return ret;
 }
 

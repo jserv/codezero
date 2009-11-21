@@ -40,6 +40,8 @@
 	{(c)->type &= ~CAP_RTYPE_MASK;		\
 	 (c)->type |= CAP_RTYPE_MASK & rtype;}
 
+#define cap_devmem(c)	(c)->uattr
+
 /*
  * User-defined device-types
  * (Kept in the user field)

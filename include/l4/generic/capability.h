@@ -71,8 +71,11 @@ struct capability {
 	unsigned long end;	/* Resource end value */
 	unsigned long size;	/* Resource size */
 
-	/* Used amount on resource _or_ user-defined attributes */
-	unsigned long user;
+	/* Use count of resource */
+	unsigned long used;
+
+	/* User-defined attributes on capability (like devtypes) */
+       	unsigned int uattr;
 };
 
 struct cap_list {
