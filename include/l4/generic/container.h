@@ -19,8 +19,8 @@
 #define curcont			(current->container)
 
 #define CONFIG_CONTAINER_NAMESIZE		64
-#define CONFIG_MAX_CAPS_USED			32
-#define CONFIG_MAX_PAGERS_USED			4
+#define CONFIG_MAX_CAPS_USED			16
+#define CONFIG_MAX_PAGERS_USED			1
 
 /* Container macro. No locks needed! */
 
