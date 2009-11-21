@@ -17,6 +17,8 @@
 #define INC_API(x)              <l4/api/x>
 #define INC_GLUE(x)             <l4/glue/__ARCH__/x>
 
+#define __initdata	SECTION(".init.data")
+
 /* use this to place code/data in a certain section */
 #define SECTION(x) __attribute__((section(x)))
 #define ALIGN(x) __attribute__((aligned (x)))

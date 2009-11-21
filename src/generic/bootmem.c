@@ -10,15 +10,22 @@
 #include <l4/lib/printk.h>
 #include <l4/generic/space.h>
 
-/* All memory allocated here is discarded after boot */
-
-#define BOOTMEM_SIZE		SZ_32K
+/*
+ * All memory allocated here is discarded after boot.
+ * Increase this size if bootmem allocations fail.
+ */
+#define BOOTMEM_SIZE		(SZ_4K * 4)
 
 SECTION(".init.pgd") pgd_table_t init_pgd;
 SECTION(".init.bootmem") char bootmem[BOOTMEM_SIZE];
-SECTION(".init.data") struct address_space init_space;
+__initdata struct address_space init_space;
 
 static unsigned long cursor = (unsigned long)&bootmem;
+
+unsigned long bootmem_free_pages(void)
+{
+	return BOOTMEM_SIZE - (page_align_up(cursor) - (unsigned long)&bootmem);
+}
 
 void *alloc_bootmem(int size, int alignment)
 {

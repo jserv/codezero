@@ -335,6 +335,7 @@ int free_boot_memory(struct kernel_resources *kres)
 		__pfn(virt_to_phys(_start_init));
 	unsigned long pfn_end =
 		__pfn(page_align_up(virt_to_phys(_end_init)));
+	unsigned long init_pfns = pfn_end - pfn_start;
 
 	/* Trim kernel used memory cap */
 	memcap_unmap(0, &kres->physmem_used, pfn_start, pfn_end);
@@ -350,9 +351,9 @@ int free_boot_memory(struct kernel_resources *kres)
 	list_foreach_struct(c, &kres->containers.list, list)
 		c->pager = 0;
 
-	printk("%s: Freed %lu KB init memory.\n",
-	       __KERNELNAME__,
-	       __pfn_to_addr((pfn_end - pfn_start)) / 1024);
+	printk("%s: Freed %lu KB init memory, of which %lu KB was used.\n",
+	       __KERNELNAME__, init_pfns * 4,
+	       (init_pfns - __pfn(page_align_up(bootmem_free_pages()))) * 4);
 
 	return 0;
 }

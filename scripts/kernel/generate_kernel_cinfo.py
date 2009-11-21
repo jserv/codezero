@@ -37,7 +37,7 @@ cinfo_file_start = \
  * Add irqs, exceptions
  */
 
-struct container_info cinfo[] = {
+__initdata struct container_info cinfo[] = {
 '''
 cinfo_file_end = \
 '''
