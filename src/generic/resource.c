@@ -261,7 +261,8 @@ int memcap_unmap_range(struct capability *cap,
  * by either shrinking, splitting or destroying the
  * intersecting capability. Similar to do_munmap()
  */
-int memcap_unmap(struct cap_list *used_list, struct cap_list *cap_list,
+int memcap_unmap(struct cap_list *used_list,
+		 struct cap_list *cap_list,
 		 const unsigned long unmap_start,
 		 const unsigned long unmap_end)
 {
@@ -351,9 +352,11 @@ int free_boot_memory(struct kernel_resources *kres)
 	list_foreach_struct(c, &kres->containers.list, list)
 		c->pager = 0;
 
-	printk("%s: Freed %lu KB init memory, of which %lu KB was used.\n",
+	printk("%s: Freed %lu KB init memory, "
+	       "of which %lu KB was used.\n",
 	       __KERNELNAME__, init_pfns * 4,
-	       (init_pfns - __pfn(page_align_up(bootmem_free_pages()))) * 4);
+	       (init_pfns -
+		__pfn(page_align_up(bootmem_free_pages()))) * 4);
 
 	return 0;
 }
