@@ -3,11 +3,10 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
-#include <l4/generic/capability.h>
-#include <l4/generic/cap-types.h>
 #include <l4/generic/platform.h>
 #include <l4/generic/space.h>
 #include <l4/generic/irq.h>
+#include <l4/generic/bootmem.h>
 #include INC_ARCH(linker.h)
 #include INC_PLAT(printascii.h)
 #include INC_SUBARCH(mm.h)
@@ -27,7 +26,8 @@
  */
 int platform_setup_device_caps(struct kernel_resources *kres)
 {
-	struct capability *uart[4], *timer[2], *irqctrl[2], *sysctrl;
+	struct capability *uart[4], *timer[2];
+//     	struct capability *irqctrl[2], *sysctrl;
 
 #if 0
 	/* Setup kernel capability for uart0 as used */
@@ -71,7 +71,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 #endif
 
 	/* Setup capabilities for other uarts as free */
-	uart[1] =  alloc_bootmem(sizeof(*uart[i]), 0);
+	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
 	uart[1]->start = __pfn(PB926_UART1_BASE);
 	uart[1]->end = uart[1]->start + 1;
 	uart[1]->uattr = CAP_DEVTYPE_UART;
@@ -94,11 +94,13 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 
 	/* Setup timer1 capability as free */
 	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
-	timer[1]->start = __pfn(PB926_TIMER12_BASE);
+	timer[1]->start = __pfn(PB926_TIMER23_BASE);
 	timer[1]->end = timer[1]->start + 1;
 	timer[1]->uattr = CAP_DEVTYPE_TIMER;
 	link_init(&timer[1]->list);
 	cap_list_insert(timer[1], &kres->devmem_free);
+
+	return 0;
 }
 
 /* We will use UART0 for kernel as well as user tasks, so map it to kernel and user space */

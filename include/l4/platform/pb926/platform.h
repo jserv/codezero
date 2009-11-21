@@ -9,6 +9,9 @@
 
 #include INC_PLAT(offsets.h)
 #include INC_GLUE(memlayout.h)
+#include <l4/generic/capability.h>
+#include <l4/generic/cap-types.h>
+#include <l4/generic/resource.h>
 
 #define PLATFORM_CONSOLE0_BASE			PB926_UART0_VBASE
 
@@ -27,6 +30,7 @@
 #define PLATFORM_TIMER2	2
 #define PLATFORM_TIMER3	3
 
+int platform_setup_device_caps(struct kernel_resources *kres);
 void platform_irq_enable(int irq);
 void platform_irq_disable(int irq);
 void timer_start(void);

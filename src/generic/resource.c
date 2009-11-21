@@ -12,6 +12,7 @@
 #include <l4/lib/memcache.h>
 #include INC_GLUE(memory.h)
 #include INC_ARCH(linker.h)
+#include INC_PLAT(platform.h)
 #include <l4/api/errno.h>
 
 struct kernel_resources kernel_resources;
@@ -290,7 +291,7 @@ int memcap_unmap(struct cap_list *used_list,
 		/* Check for intersection */
 		if (set_intersection(unmap_start, unmap_end,
 				     cap->start, cap->end)) {
-			if ((err = memcap_unmap_range(cap, cap_list,
+			if ((ret = memcap_unmap_range(cap, cap_list,
 						      unmap_start,
 						      unmap_end))) {
 				goto out_err;
@@ -330,19 +331,21 @@ out_err:
 int memcap_request_device(struct cap_list *cap_list,
 			  struct cap_info *devcap)
 {
+	struct capability *cap, *n;
+
 	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
 		if (cap->start == devcap->start &&
 		    cap->end == devcap->end &&
 		    cap->uattr == devcap->uattr) {
 			/* Unlink only. This is boot memory */
-			list_remove(&cap);
+			list_remove(&cap->list);
 			return 0;
 		}
 	}
 	printk("%s: FATAL: Device memory requested "
 	       "does not match any available device "
 	       "capabilities start=0x%lx, end=0x%lx "
-	       "uattr=0x%lx\n", __KERNELNAME__,
+	       "uattr=0x%x\n", __KERNELNAME__,
 	       __pfn_to_addr(devcap->start),
 	       __pfn_to_addr(devcap->end), devcap->uattr);
 	BUG();
@@ -842,12 +845,12 @@ int process_cap_info(struct cap_info *cap,
 	if (cap_type(cap) == CAP_TYPE_MAP_VIRTMEM) {
 		memcap_unmap(&kres->virtmem_used,
 			     &kres->virtmem_free,
-			     cap->start, cap->end)
+			     cap->start, cap->end);
 	} else if (cap_type(cap) == CAP_TYPE_MAP_PHYSMEM) {
 		if (!cap_devmem(cap))
 			memcap_unmap(&kres->physmem_used,
 				     &kres->physmem_free,
-				     cap->start, cap->end)
+				     cap->start, cap->end);
 		else /* Delete device from free list */
 			memcap_request_device(&kres->devmem_free, cap);
 	}
