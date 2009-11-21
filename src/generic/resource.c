@@ -12,6 +12,7 @@
 #include <l4/lib/memcache.h>
 #include INC_GLUE(memory.h)
 #include INC_ARCH(linker.h)
+#include <l4/api/errno.h>
 
 struct kernel_resources kernel_resources;
 
@@ -260,12 +261,23 @@ int memcap_unmap_range(struct capability *cap,
  * by either shrinking, splitting or destroying the
  * intersecting capability. Similar to do_munmap()
  */
-int memcap_unmap(struct cap_list *cap_list,
+int memcap_unmap(struct cap_list *used_list, struct cap_list *cap_list,
 		 const unsigned long unmap_start,
 		 const unsigned long unmap_end)
 {
 	struct capability *cap, *n;
 	int err;
+
+	/*
+	 * If a used list was supplied, check that the
+	 * range does not intersect with the used list.
+	 * This is an optional sanity check.
+	 */
+	if (used_list)
+		list_foreach_removable_struct(cap, n, &used_list->caps, list)
+			if (set_intersection(unmap_start, unmap_end,
+					     cap->start, cap->end))
+				return -EPERM;
 
 	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
 		/* Check for intersection */
@@ -279,8 +291,7 @@ int memcap_unmap(struct cap_list *cap_list,
 			return 0;
 		}
 	}
-	/* Return 1 to indicate unmap didn't occur */
-	return 1;
+	return -EEXIST;
 }
 
 /*
@@ -326,7 +337,7 @@ int free_boot_memory(struct kernel_resources *kres)
 		__pfn(page_align_up(virt_to_phys(_end_init)));
 
 	/* Trim kernel used memory cap */
-	memcap_unmap(&kres->physmem_used, pfn_start, pfn_end);
+	memcap_unmap(0, &kres->physmem_used, pfn_start, pfn_end);
 
 	/* Add it to unused physical memory */
 	memcap_map(&kres->physmem_free, pfn_start, pfn_end);
@@ -399,7 +410,7 @@ void init_kernel_resources(struct kernel_resources *kres)
 	cap_list_insert(kernel_area, &kres->physmem_used);
 
 	/* Unmap kernel used area from free physical memory capabilities */
-	memcap_unmap(&kres->physmem_free, kernel_area->start,
+	memcap_unmap(0, &kres->physmem_free, kernel_area->start,
 		     kernel_area->end);
 
 
@@ -772,39 +783,56 @@ int process_cap_info(struct cap_info *cap,
 
 	switch (cap_type(cap)) {
 	case CAP_TYPE_MAP_VIRTMEM:
-		if ((ret = memcap_unmap(&kres->virtmem_free,
+		if ((ret = memcap_unmap(&kres->virtmem_used, &kres->virtmem_free,
 			     		cap->start, cap->end))) {
-			if (ret < 0)
+			if (ret == -ENOMEM)
 				printk("%s: FATAL: Insufficient boot memory "
 				       "to split capability\n",
 				       __KERNELNAME__);
-			if (ret > 0)
-				printk("%s: FATAL: Memory capability range "
-				       "overlaps with another one. "
+			if (ret == -EPERM)
+				printk("%s: FATAL: Virtual memory capability range "
+				       "overlaps with an already used range. "
 				       "start=0x%lx, end=0x%lx\n",
 				       __KERNELNAME__,
 				       __pfn_to_addr(cap->start),
 				       __pfn_to_addr(cap->end));
+			if (ret == -EEXIST)
+				printk("%s: FATAL: Virtual memory capability range "
+				       "does not match with any available free range. "
+				       "start=0x%lx, end=0x%lx\n",
+				       __KERNELNAME__,
+				       __pfn_to_addr(cap->start),
+				       __pfn_to_addr(cap->end));
+
 			BUG();
 		}
 		break;
 
 	case CAP_TYPE_MAP_PHYSMEM:
-		if ((ret = memcap_unmap(&kres->physmem_free,
-					cap->start, cap->end))) {
-			if (ret < 0)
+		if ((ret = memcap_unmap(&kres->physmem_used, &kres->physmem_free,
+			     		cap->start, cap->end))) {
+			if (ret == -ENOMEM)
 				printk("%s: FATAL: Insufficient boot memory "
 				       "to split capability\n",
 				       __KERNELNAME__);
-			if (ret > 0)
-				printk("%s: FATAL: Memory capability range "
-				       "overlaps with another one. "
+			if (ret == -EPERM)
+				printk("%s: FATAL: Physical memory capability range "
+				       "overlaps with an already used range. "
 				       "start=0x%lx, end=0x%lx\n",
 				       __KERNELNAME__,
 				       __pfn_to_addr(cap->start),
 				       __pfn_to_addr(cap->end));
+			if (ret == -EEXIST)
+				printk("%s: FATAL: Physical memory capability range "
+				       "does not match with any available free range. "
+				       "start=0x%lx, end=0x%lx\n",
+				       __KERNELNAME__,
+				       __pfn_to_addr(cap->start),
+				       __pfn_to_addr(cap->end));
+
 			BUG();
 		}
+
 		break;
 
 	}
