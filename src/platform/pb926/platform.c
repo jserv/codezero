@@ -32,6 +32,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
 	uart[1]->start = __pfn(PB926_UART1_BASE);
 	uart[1]->end = uart[1]->start + 1;
+	uart[1]->size = uart[1]->end - uart[1]->start;
 	cap_set_devtype(uart[1], CAP_DEVTYPE_UART);
 	cap_set_devnum(uart[1], 1);
 	link_init(&uart[1]->list);
@@ -40,6 +41,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	uart[2] =  alloc_bootmem(sizeof(*uart[2]), 0);
 	uart[2]->start = __pfn(PB926_UART2_BASE);
 	uart[2]->end = uart[2]->start + 1;
+	uart[2]->size = uart[2]->end - uart[2]->start;
 	cap_set_devtype(uart[2], CAP_DEVTYPE_UART);
 	cap_set_devnum(uart[2], 2);
 	link_init(&uart[2]->list);
@@ -48,6 +50,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	uart[3] =  alloc_bootmem(sizeof(*uart[3]), 0);
 	uart[3]->start = __pfn(PB926_UART3_BASE);
 	uart[3]->end = uart[3]->start + 1;
+	uart[3]->size = uart[3]->end - uart[3]->start;
 	cap_set_devtype(uart[3], CAP_DEVTYPE_UART);
 	cap_set_devnum(uart[3], 3);
 	link_init(&uart[3]->list);
@@ -57,6 +60,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
 	timer[1]->start = __pfn(PB926_TIMER23_BASE);
 	timer[1]->end = timer[1]->start + 1;
+	timer[1]->size = timer[1]->end - timer[1]->start;
 	cap_set_devtype(timer[1], CAP_DEVTYPE_TIMER);
 	cap_set_devnum(timer[1], 1);
 	link_init(&timer[1]->list);

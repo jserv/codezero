@@ -66,4 +66,10 @@
 #define L4_REQUEST_CAPABILITY		50	/* Request a capability from pager */
 extern l4id_t pagerid;
 
+/* For ipc to uart service (TODO: Shared mapping buffers???) */
+#define L4_IPC_TAG_UART_SENDCHAR	51	/* Single char send (output) */
+#define L4_IPC_TAG_UART_RECVCHAR	52	/* Single char recv (input) */
+#define L4_IPC_TAG_UART_SENDBUF		53	/* Buffered send */
+#define L4_IPC_TAG_UART_RECVBUF		54	/* Buffered recv */
+
 #endif /* __IPCDEFS_H__ */
