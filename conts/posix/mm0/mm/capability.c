@@ -364,8 +364,11 @@ int cap_read_all()
 		BUG();
 	}
 
+
 	/* Copy them to real allocated structures */
 	copy_boot_capabilities(ncaps);
+
+	cap_list_print(&capability_list);
 
 	memset(&cont_mem_regions, 0, sizeof(cont_mem_regions));
 
@@ -394,7 +397,7 @@ int cap_read_all()
 					BUG();
 				}
 
-				if (!(cap->access & CAP_MAP_UTCB_BIT)) {
+				if (!(cap->access & CAP_MAP_UTCB)) {
 					printf("FATAL: Region designated "
 					       "for UTCB allocation does not "
 					       "have UTCB map permissions");

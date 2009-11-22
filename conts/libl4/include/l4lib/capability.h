@@ -8,32 +8,12 @@
 
 #include <l4lib/types.h>
 #include <l4/lib/list.h>
+#include <l4/api/capability.h>
 
 struct cap_list {
 	int ncaps;
 	struct link caps;
 };
-
-struct capability {
-	struct link list;
-
-	/* Capability identifiers */
-	l4id_t capid;		/* Unique capability ID */
-	l4id_t owner;		/* Capability owner ID */
-	l4id_t resid;		/* Targeted resource ID */
-	unsigned int type;	/* Capability and target resource type */
-
-	/* Capability limits/permissions */
-	u32 access;		/* Permitted operations */
-
-	/* Limits on the resource */
-	unsigned long start;	/* Resource start value */
-	unsigned long end;	/* Resource end value */
-	unsigned long size;	/* Resource size */
-
-	unsigned long used;	/* Resource used size */
-};
-
 
 static inline void cap_list_init(struct cap_list *clist)
 {
