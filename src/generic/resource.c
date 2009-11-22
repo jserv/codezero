@@ -773,7 +773,9 @@ void init_resource_allocators(struct boot_resources *bootres,
 	bootres->nkcaps += kres->virtmem_used.ncaps +
 			   kres->virtmem_free.ncaps +
 			   kres->physmem_used.ncaps +
-			   kres->physmem_free.ncaps + 2 + 3;
+			   kres->physmem_free.ncaps +
+			   kres->devmem_free.ncaps  +
+			   kres->devmem_used.ncaps  + 2 + 3;
 
 	/* Add that to all cap count */
 	bootres->ncaps += bootres->nkcaps;
