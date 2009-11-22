@@ -4,7 +4,7 @@
 
 /*
  * PL011 UART Generic driver implementation.
- * Copyright Bahadir Balban (C) 2006
+ * Copyright Bahadir Balban (C) 2009
  *
  * The particular intention of this code is that it has been carefully
  * written as decoupled from os-specific code and in a verbose way such
