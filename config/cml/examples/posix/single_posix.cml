@@ -2,7 +2,7 @@
 # Automatically generated, don't edit
 #
 # Generated on: bahadir-laptop
-# At: Tue, 20 Oct 2009 17:09:31 +0000
+# At: Sun, 22 Nov 2009 13:12:33 +0000
 # Linux version 2.6.24-22-generic (buildd@vernadsky) (gcc version 4.2.3 (Ubuntu 4.2.3-2ubuntu7)) #1 SMP Mon Nov 24 18:32:42 UTC 2008
 
 #
@@ -36,6 +36,12 @@ CONFIG_SUBARCH_V7=n
 #
 CONFIG_CPU_ARM926=y
 
+
+
+#
+# ARM Platform Type
+#
+
 #
 # ARM Platform Type
 #
@@ -44,19 +50,20 @@ CONFIG_PLATFORM_AB926=n
 CONFIG_PLATFORM_PB926=y
 
 
-#
-# Platform Drivers
-#
-CONFIG_DRIVER_UART_PL011=y
-CONFIG_DRIVER_TIMER_SP804=y
-CONFIG_DRIVER_IRQ_PL190=y
 
+
+#
+# Toolchain Prefix
+#
+CONFIG_TOOLCHAIN_KERNEL="arm-none-eabi-"
+CONFIG_TOOLCHAIN_USER="arm-none-linux-gnueabi-"
 
 CONFIG_CONTAINERS=1
 
 #
 # Container Setup
 #
+CONFIG_CAPABILITIES=y
 
 #
 # Container 0 Parameters
@@ -65,9 +72,10 @@ CONFIG_CONTAINERS=1
 #
 # Container 0 Type
 #
-CONFIG_CONT0_TYPE_LINUX=n
-CONFIG_CONT0_TYPE_BARE=n
+CONFIG_CONT0_TYPE_BAREMETAL=n
 CONFIG_CONT0_TYPE_POSIX=y
+CONFIG_CONT0_TYPE_CUSTOM=n
+CONFIG_CONT0_TYPE_LINUX=n
 
 
 #
@@ -81,6 +89,7 @@ CONFIG_CONT0_OPT_NAME="posix"
 CONFIG_CONT0_PAGER_LMA=0x40000
 CONFIG_CONT0_PAGER_VMA=0xa0000000
 
+
 #
 # Container 0 POSIX Pager Parameters
 #
@@ -93,45 +102,142 @@ CONFIG_CONT0_PAGER_UTCB_END=0xf8200000
 
 
 #
-# Container 0 Physical Memory Regions
+# Container 0 Physical Memory Regions (Capabilities)
 #
 CONFIG_CONT0_PHYSMEM_REGIONS=1
-
-#
-# Container 0 Physical Region 0 Memory Capabilities
-#
 CONFIG_CONT0_PHYS0_START=0x40000
 CONFIG_CONT0_PHYS0_END=0x1000000
 
+
 #
-# Container 0 Virtual Memory Regions
+# Container 0 Virtual Memory Regions (Capabilities)
 #
 CONFIG_CONT0_VIRTMEM_REGIONS=4
-
-#
-# Container 0 Virtual Region 0 Memory Capabilities
-#
 CONFIG_CONT0_VIRT0_START=0xa0000000
 CONFIG_CONT0_VIRT0_END=0xb0000000
-
-#
-# Container 0 Virtual Region 1 Memory Capabilities
-#
 CONFIG_CONT0_VIRT1_START=0x40000000
 CONFIG_CONT0_VIRT1_END=0x50000000
-
-#
-# Container 0 Virtual Region 2 Memory Capabilities
-#
 CONFIG_CONT0_VIRT2_START=0xf8100000
 CONFIG_CONT0_VIRT2_END=0xf8200000
-
-#
-# Container 0 Virtual Region 3 Memory Capabilities
-#
 CONFIG_CONT0_VIRT3_START=0x30000000
 CONFIG_CONT0_VIRT3_END=0x40000000
 
 
+#
+# Container 0 Capability List
+#
+
+#
+# Container 0 Thread Pool Capability
+#
+CONFIG_CONT0_CAP_THREADPOOL_USE=y
+CONFIG_CONT0_CAP_THREADPOOL_SIZE=64
+
+
+#
+# Container 0 Space Pool Capability
+#
+CONFIG_CONT0_CAP_SPACEPOOL_USE=y
+CONFIG_CONT0_CAP_SPACEPOOL_SIZE=64
+
+
+#
+# Container 0 Mutex Pool Capability
+#
+CONFIG_CONT0_CAP_MUTEXPOOL_USE=y
+CONFIG_CONT0_CAP_MUTEXPOOL_SIZE=100
+
+
+#
+# Container 0 Map Pool Capability
+#
+CONFIG_CONT0_CAP_MAPPOOL_USE=y
+CONFIG_CONT0_CAP_MAPPOOL_SIZE=800
+
+
+#
+# Container 0 Capability Pool Capability
+#
+CONFIG_CONT0_CAP_CAPPOOL_USE=y
+CONFIG_CONT0_CAP_CAPPOOL_SIZE=32
+
+
+#
+# Container 0 Thread Control Capability
+#
+CONFIG_CONT0_CAP_TCTRL_USE=y
+CONFIG_CONT0_CAP_TCTRL_TARGET_CURRENT_CONTAINER=y
+CONFIG_CONT0_CAP_TCTRL_TARGET_CURRENT_PAGER_SPACE=n
+
+
+#
+# Container 0 Exchange Registers Capability
+#
+CONFIG_CONT0_CAP_EXREGS_USE=y
+CONFIG_CONT0_CAP_EXREGS_TARGET_CURRENT_CONTAINER=y
+CONFIG_CONT0_CAP_EXREGS_TARGET_CURRENT_PAGER_SPACE=n
+
+
+#
+# Container 0 IPC Capability
+#
+CONFIG_CONT0_CAP_IPC_USE=y
+CONFIG_CONT0_CAP_IPC_TARGET_CURRENT_CONTAINER=y
+CONFIG_CONT0_CAP_IPC_TARGET_CURRENT_PAGER_SPACE=n
+CONFIG_CONT0_CAP_IPC_TARGET_ANOTHER_CONTAINER=n
+CONFIG_CONT0_CAP_IPC_TARGET_ANOTHER_PAGER=n
+
+
+#
+# Container 0 Capability Control Capability
+#
+CONFIG_CONT0_CAP_CAPCTRL_USE=y
+CONFIG_CONT0_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER=y
+CONFIG_CONT0_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE=n
+
+
+#
+# Container 0 Userspace Mutex Control Capability
+#
+CONFIG_CONT0_CAP_UMUTEX_USE=y
+CONFIG_CONT0_CAP_UMUTEX_TARGET_CURRENT_CONTAINER=y
+CONFIG_CONT0_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE=n
+
+
+#
+# Container 0 Custom Capability 0 Parameters
+#
+CONFIG_CONT0_CAP_CUSTOM0_USE=n
+
+
+#
+# Container 0 Custom Capability 1 Parameters
+#
+CONFIG_CONT0_CAP_CUSTOM1_USE=n
+
+
+#
+# Container 0 Custom Capability 2 Parameters
+#
+CONFIG_CONT0_CAP_CUSTOM2_USE=n
+
+
+#
+# Container 0 Custom Capability 3 Parameters
+#
+CONFIG_CONT0_CAP_CUSTOM3_USE=n
+
+
+
+
+
+
+#
+# Derived symbols
+#
+CONFIG_DRIVER_IRQ_PL190=y
+CONFIG_DRIVER_TIMER_SP804=y
+CONFIG_DRIVER_IRQ_GIC=n
+CONFIG_DRIVER_UART_PL011=y
 #
 # That's all, folks!

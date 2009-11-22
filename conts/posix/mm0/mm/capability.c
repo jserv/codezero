@@ -368,7 +368,7 @@ int cap_read_all()
 	/* Copy them to real allocated structures */
 	copy_boot_capabilities(ncaps);
 
-	cap_list_print(&capability_list);
+	// cap_list_print(&capability_list);
 
 	memset(&cont_mem_regions, 0, sizeof(cont_mem_regions));
 
