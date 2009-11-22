@@ -4,13 +4,13 @@
  * Copyright (C) 2009 B Labs Ltd.
  */
 #include <stdio.h>
+#include <malloc/malloc.h>
+#include <l4/api/errno.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/exregs.h>
-#include <errno.h>
-#include <malloc/malloc.h>
-#include <idpool.h>
-#include <utcb-common.h>
-#include <utcb.h>
+#include <l4lib/idpool.h>
+#include <l4lib/utcb-common.h>
+#include <l4lib/utcb.h>
 
 /* Extern declarations */
 extern struct global_list global_tasks;

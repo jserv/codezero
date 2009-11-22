@@ -40,8 +40,6 @@
 	{(c)->type &= ~CAP_RTYPE_MASK;		\
 	 (c)->type |= CAP_RTYPE_MASK & rtype;}
 
-#define cap_devmem(c)	(c)->uattr
-
 /*
  * User-defined device-types
  * (Kept in the user field)
@@ -50,7 +48,20 @@
 #define CAP_DEVTYPE_UART		2
 #define CAP_DEVTYPE_CLCD		3
 #define CAP_DEVTYPE_OTHER		0xF
-#define CAP_DEVTYPE_MASK		0xF
+#define CAP_DEVTYPE_MASK		0xFFFF
+#define CAP_DEVNUM_MASK			0xFFFF0000
+#define CAP_DEVNUM_SHIFT		16
+
+#define cap_is_devmem(c)		(c)->uattr
+#define cap_set_devtype(c, devtype)			\
+	{(c)->uattr &= ~CAP_DEVTYPE_MASK;		\
+	 (c)->uattr |= CAP_DEVTYPE_MASK & devtype;}
+#define cap_set_devnum(c, devnum)			\
+	{(c)->uattr &= ~CAP_DEVNUM_MASK;		\
+	 (c)->uattr |= CAP_DEVNUM_MASK & devnum;}
+#define cap_devnum(c)					\
+	(((c)->uattr & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
+#define cap_devtype(c)		((c)->uattr & CAP_DEVTYPE_MASK)
 
 /*
  * Access permissions

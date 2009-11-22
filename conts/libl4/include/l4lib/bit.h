@@ -1,6 +1,8 @@
 #ifndef __BIT_H__
 #define __BIT_H__
 
+#include <l4lib/types.h>
+
 unsigned int __clz(unsigned int bitvector);
 int find_and_set_first_free_bit(u32 *word, unsigned int lastbit);
 int find_and_set_first_free_contig_bits(u32 *word,  unsigned int limit,

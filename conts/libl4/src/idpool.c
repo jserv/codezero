@@ -4,7 +4,7 @@
  *
  * Copyright (C) 2009 B Labs Ltd.
  */
-#include <idpool.h>
+#include <l4lib/idpool.h>
 #include <stdio.h>
 #include <l4/api/errno.h>
 #include <malloc/malloc.h>

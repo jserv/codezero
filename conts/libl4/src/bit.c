@@ -3,8 +3,9 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
-#include <bit.h>
+#include <l4lib/bit.h>
 #include <stdio.h>
+#include <l4/macros.h>
 #include INC_GLUE(memory.h)
 
 /* Emulation of ARM's CLZ (count leading zeroes) instruction */

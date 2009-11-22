@@ -50,14 +50,9 @@ libmm, libmc, libmalloc = SConscript('conts/libmem/SConscript', \
                          duplicate = 0, variant_dir = \
                          join(BUILDDIR, os.path.relpath('conts/libmem', PROJROOT)))
 
-libl4thread = SConscript('conts/libl4thread/SConscript', \
-                   exports = { 'env' : env }, duplicate = 0, \
-                   variant_dir = join(BUILDDIR, os.path.relpath('conts/libl4thread', PROJROOT)))
-
 Alias('libl4', libl4)
 Alias('libdev', libdev)
 Alias('libc', libc)
 Alias('libmm', libmm)
 Alias('libmc', libmc)
 Alias('libmalloc', libmalloc)
-Alias('libl4thread', libl4thread)

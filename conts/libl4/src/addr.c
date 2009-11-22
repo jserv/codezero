@@ -4,7 +4,7 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
-#include <addr.h>
+#include <l4lib/addr.h>
 #include <stdio.h>
 
 /*

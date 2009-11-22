@@ -30,13 +30,18 @@ Import('arch')
 
 config = configuration_retrieve()
 
+LIBMEM_RELDIR = 'conts/libmem'
+LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
+
 env = Environment(CC = config.user_toolchain + 'gcc',
-		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding'],
+		  CCFLAGS = ['-g', '-std=gnu99', '-nostdlib', '-ffreestanding'],
 		  LINKFLAGS = ['-nostdlib'],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = 'gcc',
 		  CPPPATH = ['include', 'include/l4lib/arch', join(PROJROOT, 'include') ])
+
+env.Append(CPPPATH = [LIBMEM_DIR])
 
 def create_symlinks(arch):
     print  os.getcwd()

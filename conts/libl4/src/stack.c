@@ -4,10 +4,10 @@
  * Copyright © 2009 B Labs Ltd.
  */
 #include <stdio.h>
-#include <addr.h>
 #include <l4/api/errno.h>
+#include <l4lib/addr.h>
 #include <l4lib/mutex.h>
-#include <stack.h>
+#include <l4lib/stack.h>
 
 /* Extern declarations */
 extern struct l4_mutex lib_mutex;

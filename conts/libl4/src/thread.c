@@ -11,8 +11,8 @@
 #include <l4/api/thread.h>
 #include <l4/api/errno.h>
 #include <malloc/malloc.h>
-#include <utcb.h>
-#include <stack.h>
+#include <l4lib/utcb.h>
+#include <l4lib/stack.h>
 
 /* Extern declarations */
 extern void setup_new_thread(void);

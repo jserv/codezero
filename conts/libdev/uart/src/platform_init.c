@@ -16,7 +16,7 @@ struct pl011_uart uart;
  * Initialises the uart class data structures, and the device.
  * Terminal-like operation is assumed for default settings.
  */
-int pl011_initialise(struct pl011_uart * uart)
+int pl011_initialise(struct pl011_uart *uart)
 {
 	uart->frame_errors   = 0;
 	uart->parity_errors  = 0;

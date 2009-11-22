@@ -6,7 +6,7 @@
 #ifndef __ADDR_H__
 #define __ADDR_H__
 
-#include <idpool.h>
+#include <l4lib/idpool.h>
 
 /* Address pool to allocate from a range of addresses */
 struct address_pool {

@@ -27,68 +27,29 @@
 int platform_setup_device_caps(struct kernel_resources *kres)
 {
 	struct capability *uart[4], *timer[2];
-//     	struct capability *irqctrl[2], *sysctrl;
 
-#if 0
-	/* Setup kernel capability for uart0 as used */
-	uart[0] =  alloc_bootmem(sizeof(*uart[0]), 0);
-	uart[0]->start = __pfn(PB926_UART0_BASE);
-	uart[0]->end = uart[0]->start + 1;
-	uart[0]->uattr = CAP_DEVTYPE_UART;
-	link_init(&uart[0]->list);
-	cap_list_insert(uart[0], &kres->devmem_used);
-
-	/* Setup timer0 capability as used */
-	timer[0] =  alloc_bootmem(sizeof(*timer[0]), 0);
-	timer[0]->start = __pfn(PB926_TIMER01_BASE);
-	timer[0]->end = timer[0]->start + 1;
-	timer[0]->uattr = CAP_DEVTYPE_TIMER;
-	link_init(&timer[0]->list);
-	cap_list_insert(timer[0], &kres->devmem_used);
-
-	/* Setup irq controller 0 and 1 as used */
-	irqctrl[0] =  alloc_bootmem(sizeof(*irqctrl[0]), 0);
-	irqctrl[0]->start = __pfn(PB926_VIC_BASE);
-	irqctrl[0]->end = irqctrl[0]->start + 1;
-	irqctrl[0]->uattr = CAP_DEVTYPE_IRQCTRL;
-	link_init(&irqctrl[0]->list);
-	cap_list_insert(irqctrl[0], &kres->devmem_used);
-
-	irqctrl[1] =  alloc_bootmem(sizeof(*irqctrl[1]), 0);
-	irqctrl[1]->start = __pfn(PB926_SIC_BASE);
-	irqctrl[1]->end = irqctrl[1]->start + 1;
-	irqctrl[1]->uattr = CAP_DEVTYPE_IRQCTRL;
-	link_init(&irqctrl[1]->list);
-	cap_list_insert(irqctrl[1], &kres->devmem_used);
-
-	/* Set up system controller as used */
-	sysctrl =  alloc_bootmem(sizeof(*sysctrl), 0);
-	sysctrl->start = __pfn(PB926_SYSCTRL_BASE);
-	sysctrl->end = sysctrl->start + 1;
-	sysctrl->uattr = CAP_DEVTYPE_SYSCTRL;
-	link_init(&sysctrl->list);
-	cap_list_insert(sysctrl, &kres->devmem_used);
-#endif
-
-	/* Setup capabilities for other uarts as free */
+	/* Setup capabilities for userspace uarts and timers */
 	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
 	uart[1]->start = __pfn(PB926_UART1_BASE);
 	uart[1]->end = uart[1]->start + 1;
-	uart[1]->uattr = CAP_DEVTYPE_UART;
+	cap_set_devtype(uart[1], CAP_DEVTYPE_UART);
+	cap_set_devnum(uart[1], 1);
 	link_init(&uart[1]->list);
 	cap_list_insert(uart[1], &kres->devmem_free);
 
 	uart[2] =  alloc_bootmem(sizeof(*uart[2]), 0);
 	uart[2]->start = __pfn(PB926_UART2_BASE);
 	uart[2]->end = uart[2]->start + 1;
-	uart[2]->uattr = CAP_DEVTYPE_UART;
+	cap_set_devtype(uart[2], CAP_DEVTYPE_UART);
+	cap_set_devnum(uart[2], 2);
 	link_init(&uart[2]->list);
 	cap_list_insert(uart[2], &kres->devmem_free);
 
 	uart[3] =  alloc_bootmem(sizeof(*uart[3]), 0);
 	uart[3]->start = __pfn(PB926_UART3_BASE);
 	uart[3]->end = uart[3]->start + 1;
-	uart[3]->uattr = CAP_DEVTYPE_UART;
+	cap_set_devtype(uart[3], CAP_DEVTYPE_UART);
+	cap_set_devnum(uart[3], 3);
 	link_init(&uart[3]->list);
 	cap_list_insert(uart[3], &kres->devmem_free);
 
@@ -96,7 +57,8 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
 	timer[1]->start = __pfn(PB926_TIMER23_BASE);
 	timer[1]->end = timer[1]->start + 1;
-	timer[1]->uattr = CAP_DEVTYPE_TIMER;
+	cap_set_devtype(timer[1], CAP_DEVTYPE_TIMER);
+	cap_set_devnum(timer[1], 1);
 	link_init(&timer[1]->list);
 	cap_list_insert(timer[1], &kres->devmem_free);
 

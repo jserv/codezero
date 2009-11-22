@@ -7,7 +7,8 @@
 #include <malloc/malloc.h>
 #include <l4/api/errno.h>
 #include <l4/api/thread.h>
-#include <tcb.h>
+#include <l4lib/tcb.h>
+#include <l4/macros.h>
 
 /* Global task list. */
 struct global_list global_tasks = {

@@ -1,8 +1,9 @@
 #ifndef __IDPOOL_H__
 #define __IDPOOL_H__
 
-#include <bit.h>
+#include <l4lib/bit.h>
 #include <string.h>
+#include <l4/macros.h>
 #include INC_GLUE(memory.h)
 
 struct id_pool {

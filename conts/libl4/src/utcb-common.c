@@ -4,8 +4,8 @@
  * Copyright © 2009 B Labs Ltd.
  */
 #include <stdio.h>
-#include <addr.h>
-#include <utcb-common.h>
+#include <l4lib/addr.h>
+#include <l4lib/utcb-common.h>
 #include <malloc/malloc.h>
 
 /* Globally disjoint utcb virtual region pool */

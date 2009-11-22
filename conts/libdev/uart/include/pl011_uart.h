@@ -375,6 +375,7 @@ static inline void pl011_rx_dma_disable(unsigned int base)
 	write(val, (base +PL011_UARTDMACR));
 	return;
 }
+int pl011_initialise(struct pl011_uart *uart);
 
 #endif /* __PL011__UART__ */
 
