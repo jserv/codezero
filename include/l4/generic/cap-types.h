@@ -52,16 +52,17 @@
 #define CAP_DEVNUM_MASK			0xFFFF0000
 #define CAP_DEVNUM_SHIFT		16
 
-#define cap_is_devmem(c)		(c)->uattr
+#define cap_is_devmem(c)		(c)->uattr[0]
 #define cap_set_devtype(c, devtype)			\
-	{(c)->uattr &= ~CAP_DEVTYPE_MASK;		\
-	 (c)->uattr |= CAP_DEVTYPE_MASK & devtype;}
+	{(c)->uattr[0] &= ~CAP_DEVTYPE_MASK;		\
+	 (c)->uattr[0] |= CAP_DEVTYPE_MASK & devtype;}
 #define cap_set_devnum(c, devnum)			\
-	{(c)->uattr &= ~CAP_DEVNUM_MASK;		\
-	 (c)->uattr |= CAP_DEVNUM_MASK & devnum;}
+	{(c)->uattr[0] &= ~CAP_DEVNUM_MASK;		\
+	 (c)->uattr[0] |= CAP_DEVNUM_MASK & devnum;}
 #define cap_devnum(c)					\
-	(((c)->uattr & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
-#define cap_devtype(c)		((c)->uattr & CAP_DEVTYPE_MASK)
+	(((c)->uattr[0] & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
+#define cap_devtype(c)		((c)->uattr[0] & CAP_DEVTYPE_MASK)
+#define cap_irqno(c)	((c)->uattr[1])
 
 /*
  * Access permissions

@@ -48,6 +48,7 @@ static inline l4id_t tid_to_cid(l4id_t tid)
 	return (tid & TASK_CID_MASK) >> TASK_CID_SHIFT;
 }
 
+/* Values that rather have special meaning instead of an id value */
 static inline int tid_special_value(l4id_t id)
 {
 	/* Special ids have top 2 nibbles all set */

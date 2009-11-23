@@ -336,7 +336,7 @@ int memcap_request_device(struct cap_list *cap_list,
 	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
 		if (cap->start == devcap->start &&
 		    cap->end == devcap->end &&
-		    cap->uattr == devcap->uattr) {
+		    cap_is_devmem(cap)) {
 			/* Unlink only. This is boot memory */
 			list_remove(&cap->list);
 			return 0;
@@ -347,7 +347,7 @@ int memcap_request_device(struct cap_list *cap_list,
 	       "capabilities start=0x%lx, end=0x%lx "
 	       "uattr=0x%x\n", __KERNELNAME__,
 	       __pfn_to_addr(devcap->start),
-	       __pfn_to_addr(devcap->end), devcap->uattr);
+	       __pfn_to_addr(devcap->end), devcap->uattr[0]);
 	BUG();
 }
 
@@ -849,7 +849,7 @@ int process_cap_info(struct cap_info *cap,
 			     &kres->virtmem_free,
 			     cap->start, cap->end);
 	} else if (cap_type(cap) == CAP_TYPE_MAP_PHYSMEM) {
-		if (!cap_is_devmem(cap))
+		if (cap_is_devmem(cap))
 			memcap_unmap(&kres->physmem_used,
 				     &kres->physmem_free,
 				     cap->start, cap->end);

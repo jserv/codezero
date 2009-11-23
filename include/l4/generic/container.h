@@ -60,7 +60,7 @@ struct cap_info {
 	unsigned long start;
 	unsigned long end;
 	unsigned long size;
-	unsigned int uattr;	/* User-level attributes (like device types) */
+	unsigned int uattr[2];	/* User-level attributes (like device types) */
 };
 
 
