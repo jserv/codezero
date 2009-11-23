@@ -706,7 +706,7 @@ int cap_ipc_check(l4id_t to, l4id_t from,
 	struct ktcb *target;
 	struct sys_ipc_args args;
 
-	/* TODO: Receivers can get away from us (for now) */
+	/* TODO: We don't check receivers, this works well for now. */
 	if (ipc_type != IPC_SEND  && ipc_type != IPC_SENDRECV)
 		return 0;
 
@@ -796,48 +796,3 @@ int cap_thread_check(struct ktcb *task,
 	return 0;
 }
 #endif /* End of !CONFIG_CAPABILITIES */
-
-/*
- * FIXME:
- *
- * Capability resource ids
- *
- * Currently the kernel cinfo has no resource id field. This is
- * because resources are dynamically assigned an id at run-time.
- *
- * However, this prevents the user to specify capabilities on
- * particular resources since resources aren't id-able at
- * configuration time. There's also no straightforward way to
- * determine which id was meant at run-time.
- *
- * As a solution, resources that are id-able and that are targeted
- * by capabilities at configuration time should be assigned static
- * ids at configuration time. Any other id-able resources that are
- * subject to capabilities by run-time sharing/delegation/derivation
- * etc. should be assigned their ids dynamically.
- *
- * Example:
- *
- * A capability to ipc to a particular container.
- *
- * When this capability is defined at configuration time, it is only
- * meaningful if the container id is also supplied statically.
- *
- * If a pager later on generates a capability to ipc to a thread
- * that it created at run-time, and grant it to another container's
- * pager, (say a container thread would like to talk to another
- * container's thread) it should assign the dynamically assigned
- * target thread id as the capability resource id and hand it over.
- */
-int capability_set_resource_id(struct capability *cap)
-{
-	/* Identifiable resources */
-	switch(cap_rtype(cap)) {
-	case CAP_RTYPE_THREAD:
-	case CAP_RTYPE_SPACE:
-	case CAP_RTYPE_CONTAINER:
-		break;
-	}
-	return 0;
-}
-
