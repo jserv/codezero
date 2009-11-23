@@ -36,7 +36,7 @@ struct global_list {
 };
 
 struct tcb *find_task(int tid);
-struct tcb *tcb_alloc_init(struct tcb *parent, unsigned int flags);
+struct tcb *l4_tcb_alloc_init(struct tcb *parent, unsigned int flags);
 void global_add_task(struct tcb *task);
 void global_remove_task(struct tcb *task);
 

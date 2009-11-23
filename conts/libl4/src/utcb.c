@@ -77,7 +77,7 @@ static int set_utcb_addr(void)
 	int err;
 
 	/* Create a task. */
-	if (IS_ERR(task = tcb_alloc_init(0, 0)))
+	if (IS_ERR(task = l4_tcb_alloc_init(0, 0)))
 		return -ENOMEM;
 
 	/* Add child to the global task list. */

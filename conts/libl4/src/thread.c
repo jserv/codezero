@@ -50,7 +50,7 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 	}
 
 	/* Allocate tcb for the child. */
-	if (!(child = tcb_alloc_init(parent, flags))) {
+	if (!(child = l4_tcb_alloc_init(parent, flags))) {
 		// FIXME: What happens to utcb_head
 		printf("libl4thread: No heap space left.\n");
 		err = -ENOMEM;

@@ -41,7 +41,7 @@ struct tcb *find_task(int tid)
 	return 0;
 }
 
-struct tcb *tcb_alloc_init(struct tcb *parent, unsigned int flags)
+struct tcb *l4_tcb_alloc_init(struct tcb *parent, unsigned int flags)
 {
 	struct tcb *task;
 
