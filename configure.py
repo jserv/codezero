@@ -5,7 +5,6 @@ from os.path import join
 from config.projpaths import *
 from config.configuration import *
 from scripts.baremetal.baremetal_generator import *
-from scripts.custom.custom_generator import *
 from scripts.kernel.generate_kernel_cinfo import *
 from scripts.cml.generate_container_cml import *
 from optparse import OptionParser
@@ -189,11 +188,7 @@ def configure_system(options, args):
     baremetal_cont_gen = BaremetalContGenerator()
     baremetal_cont_gen.baremetal_container_generate(config)
 
-    # Generate custom container files if new ones defined
-    custom_cont_gen = CustomContGenerator()
-    custom_cont_gen.custom_container_generate(config)
-
-    # Print out the configuration if asked
+   # Print out the configuration if asked
     if options.print_config:
         config.config_print()
 

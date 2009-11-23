@@ -103,7 +103,7 @@ def build_all_containers():
         if container.type == 'linux':
             pass
             cont_images.append(build_linux_container(config, projpaths, container))
-        elif container.type == 'baremetal' or container.type == 'custom':
+        elif container.type == 'baremetal':
             cont_images.append(build_default_container(config, projpaths, container))
         elif container.type == 'posix':
             cont_images.append(build_posix_container(config, projpaths, container))
