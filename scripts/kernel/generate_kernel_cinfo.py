@@ -62,8 +62,8 @@ pager_start = \
 '''
 \t\t[0] = {
 \t\t\t.start_address = (CONFIG_CONT%(cn)d_START_PC_ADDR),
-\t\t\t.pager_lma = __pfn(CONFIG_CONT%(cn)d_PAGER_LMA),
-\t\t\t.pager_vma = __pfn(CONFIG_CONT%(cn)d_PAGER_VMA),
+\t\t\t.pager_lma = __pfn(CONFIG_CONT%(cn)d_PAGER_LOAD_ADDR),
+\t\t\t.pager_vma = __pfn(CONFIG_CONT%(cn)d_PAGER_VIRT_ADDR),
 \t\t\t.pager_size = __pfn(page_align_up(CONT%(cn)d_PAGER_MAPSIZE)),
 \t\t\t.ncaps = %(caps)d,
 \t\t\t.caps = {
@@ -122,16 +122,10 @@ pager_mapsize = \
 pager_ifdefs = \
 '''
 #if defined(CONFIG_CONT%(cn)d_TYPE_LINUX)
-    #define CONFIG_CONT%(cn)d_START_PC_ADDR \\
-        (CONFIG_CONT%(cn)d_LINUX_ZRELADDR - CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET + \\
-         CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
-    #define CONFIG_CONT%(cn)d_PAGER_LMA  (CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
-    #define CONFIG_CONT%(cn)d_PAGER_VMA  (CONFIG_CONT%(cn)d_LINUX_PAGE_OFFSET)
     #define CONT%(cn)d_PAGER_MAPSIZE \\
                 (CONT%(cn)d_PAGER_SIZE + CONFIG_CONT%(cn)d_LINUX_ZRELADDR - \\
                  CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
 #else
-    #define CONFIG_CONT%(cn)d_START_PC_ADDR (CONFIG_CONT%(cn)d_PAGER_VMA)
     #define CONT%(cn)d_PAGER_MAPSIZE (CONT%(cn)d_PAGER_SIZE)
 #endif
 '''

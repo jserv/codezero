@@ -29,8 +29,11 @@ CONT%(cn)d_VIRT4_END	'Container %(cn)d Virtual Region 4 End Address'
 CONT%(cn)d_VIRT5_START	'Container %(cn)d Virtual Region 5 Start Address'
 CONT%(cn)d_VIRT5_END	'Container %(cn)d Virtual Region 5 End Address'
 
-CONT%(cn)d_PAGER_LMA	'Container %(cn)d Pager LMA'
-CONT%(cn)d_PAGER_VMA	'Container %(cn)d Pager VMA'
+# FIXME: We dont need to pass PAGER_LMA and PAGER_VMA to config.h now
+# as we are using them just to derive other symbols, in this file only
+CONT%(cn)d_PAGER_LMA		'Container %(cn)d Pager LMA'
+CONT%(cn)d_PAGER_VMA		'Container %(cn)d Pager VMA'
+
 CONT%(cn)d_PAGER_SHM_START	'Container %(cn)d Shared Mappings Region Start'
 CONT%(cn)d_PAGER_SHM_END	'Container %(cn)d Shared Mappings Region End'
 CONT%(cn)d_PAGER_TASK_START	'Container %(cn)d Task Address Space Region Start'
@@ -131,6 +134,11 @@ when CONT%(cn)d_TYPE_LINUX==y suppress cont%(cn)d_default_pager_params cont%(cn)
 when CONT%(cn)d_TYPE_BAREMETAL==y suppress cont%(cn)d_linux_pager_params cont%(cn)d_posix_pager_params
 when CONT%(cn)d_TYPE_POSIX==y suppress cont%(cn)d_linux_pager_params
 unless CONT%(cn)d_TYPE_BAREMETAL==y suppress cont%(cn)d_baremetal_params
+
+# derive symbols, for cinfo.c, depending on the type of container selected
+derive CONT%(cn)d_PAGER_LOAD_ADDR from (CONT%(cn)d_TYPE_LINUX==y) ? CONT%(cn)d_LINUX_PHYS_OFFSET : CONT%(cn)d_PAGER_LMA
+derive CONT%(cn)d_PAGER_VIRT_ADDR from (CONT%(cn)d_TYPE_LINUX==y) ? CONT%(cn)d_LINUX_PAGE_OFFSET : CONT%(cn)d_PAGER_VMA
+derive CONT%(cn)d_START_PC_ADDR from (CONT%(cn)d_TYPE_LINUX != y) ? CONT%(cn)d_PAGER_VMA : (CONT%(cn)d_LINUX_PAGE_OFFSET + CONT%(cn)d_LINUX_ZRELADDR - CONT%(cn)d_LINUX_PHYS_OFFSET)
 
 symbols
 cont%(cn)d_menu		'Container %(cn)d Parameters'
