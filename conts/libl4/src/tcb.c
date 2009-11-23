@@ -11,29 +11,29 @@
 #include <l4/macros.h>
 
 /* Global task list. */
-struct global_list global_tasks = {
+struct l4lib_global_list global_tasks = {
 	.list = { &global_tasks.list, &global_tasks.list },
 	.total = 0,
 };
 
 /* Function definitions */
-void global_add_task(struct tcb *task)
+void global_add_task(struct l4lib_tcb *task)
 {
 	BUG_ON(!list_empty(&task->list));
 	list_insert_tail(&task->list, &global_tasks.list);
 	global_tasks.total++;
 }
 
-void global_remove_task(struct tcb *task)
+void  l4lib_global_remove_task(struct l4lib_tcb *task)
 {
 	BUG_ON(list_empty(&task->list));
 	list_remove_init(&task->list);
 	BUG_ON(--global_tasks.total < 0);
 }
 
-struct tcb *find_task(int tid)
+struct l4lib_tcb * l4lib_find_task(int tid)
 {
-	struct tcb *t;
+	struct l4lib_tcb *t;
 
 	list_foreach_struct(t, &global_tasks.list, list)
 		if (t->tid == tid)
@@ -41,11 +41,11 @@ struct tcb *find_task(int tid)
 	return 0;
 }
 
-struct tcb *l4_tcb_alloc_init(struct tcb *parent, unsigned int flags)
+struct l4lib_tcb *l4_tcb_alloc_init(struct l4lib_tcb *parent, unsigned int flags)
 {
-	struct tcb *task;
+	struct l4lib_tcb *task;
 
-	if (!(task = kzalloc(sizeof(struct tcb))))
+	if (!(task = kzalloc(sizeof(struct l4lib_tcb))))
 		return PTR_ERR(-ENOMEM);
 
 	link_init(&task->list);
@@ -54,7 +54,7 @@ struct tcb *l4_tcb_alloc_init(struct tcb *parent, unsigned int flags)
 		task->utcb_head = parent->utcb_head;
 	else {
 		/* COPY or NEW space */
-		if (!(task->utcb_head = kzalloc(sizeof(struct utcb_head)))) {
+		if (!(task->utcb_head = kzalloc(sizeof(struct l4lib_utcb_head)))) {
 			kfree(task);
 			return PTR_ERR(-ENOMEM);
 		}

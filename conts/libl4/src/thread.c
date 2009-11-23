@@ -28,7 +28,7 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 {
 	struct exregs_data exregs;
 	unsigned long utcb_addr;
-	struct tcb *parent, *child;
+	struct l4lib_tcb *parent, *child;
 	unsigned long stack_top_addr, stack_bot_addr;
 	int err = 0;
 
@@ -42,14 +42,14 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 	/* Before doing any operation get the global mutex. */
 	l4_mutex_lock(&lib_mutex);
 
-	/* Get parent's ids and find the tcb belonging to it. */
+	/* Get parent's ids and find the l4lib_tcb belonging to it. */
 	l4_getid(ids);
-	if (!(parent = find_task(ids->tid))) {
+	if (!(parent =  l4lib_find_task(ids->tid))) {
 		err = -ESRCH;
 		goto out_err1;
 	}
 
-	/* Allocate tcb for the child. */
+	/* Allocate l4lib_tcb for the child. */
 	if (!(child = l4_tcb_alloc_init(parent, flags))) {
 		// FIXME: What happens to utcb_head
 		printf("libl4thread: No heap space left.\n");
@@ -118,7 +118,7 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 
 	/* Error handling. */
 out_err6:
-	global_remove_task(child);
+	 l4lib_global_remove_task(child);
 out_err5:
 	l4_thread_control(THREAD_DESTROY, ids);
 out_err4:
@@ -137,7 +137,7 @@ out_err1:
 
 void l4_thread_exit(int retval)
 {
-	struct tcb *task;
+	struct l4lib_tcb *task;
 	struct task_ids ids;
 
 	/* Before doing any operation get the global mutex. */
@@ -146,11 +146,11 @@ void l4_thread_exit(int retval)
 	/* Find the task. */
 	l4_getid(&ids);
 	/* Cant find the thread means it wasnt added to the list. */
-	if (!(task = find_task(ids.tid)))
+	if (!(task =  l4lib_find_task(ids.tid)))
 		BUG();
 
 	/* Remove child from the global task list. */
-	global_remove_task(task);
+	 l4lib_global_remove_task(task);
 
 	/* Delete the stack space. */
 	if (delete_stack_space((void *)task->stack_addr) < 0)
@@ -175,19 +175,19 @@ void l4_thread_exit(int retval)
 
 int l4_thread_kill(struct task_ids *ids)
 {
-	struct tcb *task;
+	struct l4lib_tcb *task;
 
 	/* Before doing any operation get the global mutex. */
 	l4_mutex_lock(&lib_mutex);
 
 	/* Find the task to be killed. */
-	if (!(task = find_task(ids->tid))) {
+	if (!(task =  l4lib_find_task(ids->tid))) {
 		l4_mutex_unlock(&lib_mutex);
 		return -ESRCH;
 	}
 
 	/* Remove child from the global task list. */
-	global_remove_task(task);
+	 l4lib_global_remove_task(task);
 
 	/* Delete the stack space. */
 	if (delete_stack_space((void *)task->stack_addr) < 0)

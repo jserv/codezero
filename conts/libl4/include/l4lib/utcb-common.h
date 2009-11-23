@@ -8,7 +8,7 @@
 
 #include <l4/lib/list.h>
 
-struct utcb_desc {
+struct l4lib_utcb_desc {
 	struct link list;
 	unsigned long utcb_base;
 	struct id_pool *slots;
@@ -16,10 +16,10 @@ struct utcb_desc {
 
 int utcb_pool_init(unsigned long utcb_start, unsigned long utcb_end);
 
-unsigned long utcb_new_slot(struct utcb_desc *desc);
-int utcb_delete_slot(struct utcb_desc *desc, unsigned long address);
+unsigned long utcb_new_slot(struct l4lib_utcb_desc *desc);
+int utcb_delete_slot(struct l4lib_utcb_desc *desc, unsigned long address);
 
-struct utcb_desc *utcb_new_desc(void);
-int utcb_delete_desc(struct utcb_desc *desc);
+struct l4lib_utcb_desc *utcb_new_desc(void);
+int utcb_delete_desc(struct l4lib_utcb_desc *desc);
 
 #endif /* __UTCB_COMMON_H__ */

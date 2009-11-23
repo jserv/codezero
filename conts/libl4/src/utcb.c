@@ -13,15 +13,15 @@
 #include <l4lib/utcb.h>
 
 /* Extern declarations */
-extern struct global_list global_tasks;
+extern struct l4lib_global_list global_tasks;
 
 /* Global variables */
 unsigned long lib_utcb_range_size;
 
 /* Function definitions */
-unsigned long get_utcb_addr(struct tcb *task)
+unsigned long get_utcb_addr(struct l4lib_tcb *task)
 {
-	struct utcb_desc *udesc;
+	struct l4lib_utcb_desc *udesc;
 	unsigned long slot;
 
 	/* Setting this up twice is a bug. */
@@ -43,9 +43,9 @@ found:
 	return slot;
 }
 
-int delete_utcb_addr(struct tcb *task)
+int delete_utcb_addr(struct l4lib_tcb *task)
 {
-	struct utcb_desc *udesc;
+	struct l4lib_utcb_desc *udesc;
 
 	list_foreach_struct(udesc, &task->utcb_head->list, list) {
 		/* FIXME: Use variable alignment than a page */
@@ -72,8 +72,8 @@ static int set_utcb_addr(void)
 {
 	struct exregs_data exregs;
 	struct task_ids ids;
-	struct tcb *task;
-	struct utcb_desc *udesc;
+	struct l4lib_tcb *task;
+	struct l4lib_utcb_desc *udesc;
 	int err;
 
 	/* Create a task. */

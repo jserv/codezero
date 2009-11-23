@@ -37,7 +37,7 @@ static inline int utcb_delete_address(void *utcb_address, int nitems)
 }
 
 /* Return an empty utcb slot in this descriptor */
-unsigned long utcb_new_slot(struct utcb_desc *desc)
+unsigned long utcb_new_slot(struct l4lib_utcb_desc *desc)
 {
 	int slot;
 
@@ -47,16 +47,16 @@ unsigned long utcb_new_slot(struct utcb_desc *desc)
 		return desc->utcb_base + (unsigned long)slot * UTCB_SIZE;
 }
 
-int utcb_delete_slot(struct utcb_desc *desc, unsigned long address)
+int utcb_delete_slot(struct l4lib_utcb_desc *desc, unsigned long address)
 {
 	BUG_ON(id_del(desc->slots, (address - desc->utcb_base)
 		      / UTCB_SIZE) < 0);
 	return 0;
 }
 
-struct utcb_desc *utcb_new_desc(void)
+struct l4lib_utcb_desc *utcb_new_desc(void)
 {
-	struct utcb_desc *d;
+	struct l4lib_utcb_desc *d;
 
 	/* Allocate a new descriptor */
 	if (!(d	= kzalloc(sizeof(*d))))
@@ -81,7 +81,7 @@ struct utcb_desc *utcb_new_desc(void)
 	return d;
 }
 
-int utcb_delete_desc(struct utcb_desc *desc)
+int utcb_delete_desc(struct l4lib_utcb_desc *desc)
 {
 	/* Return descriptor address */
 	utcb_delete_address((void *)desc->utcb_base, 1);
