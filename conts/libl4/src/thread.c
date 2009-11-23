@@ -102,7 +102,7 @@ int l4_thread_create(struct task_ids *ids, unsigned int flags,
 
 	/* Add child to the global task list */
 	child->tid = ids->tid;
-	global_add_task(child);
+	l4lib_global_add_task(child);
 
 	/* Start the new thread */
 	if ((err = l4_thread_control(THREAD_RUN, ids)) < 0) {

@@ -18,7 +18,7 @@
 #define sys_exchange_registers_offset		0xC
 #define sys_schedule_offset			0x10
 #define sys_unmap_offset			0x14
-#define sys_space_control_offset		0x18
+#define sys_irq_control_offset			0x18
 #define sys_ipc_control_offset			0x1C
 #define sys_map_offset				0x20
 #define sys_getid_offset			0x24
@@ -37,7 +37,7 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids);
 int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid);
 int sys_schedule(void);
 int sys_unmap(unsigned long virtual, unsigned long npages, unsigned int tid);
-int sys_space_control(void);
+int sys_irq_control(unsigned int req, unsigned int flags, l4id_t id);
 int sys_ipc_control(void);
 int sys_map(unsigned long phys, unsigned long virt, unsigned long npages,
 	    unsigned int flags, l4id_t tid);

@@ -1,6 +1,8 @@
 #ifndef __MM0_CONTAINER_H__
 #define __MM0_CONTAINER_H__
 
+#define __PAGERNAME__			"mm0"
+
 #define SHMEM_REGION_START %(shmem_start)s
 #define SHMEM_REGION_END %(shmem_end)s
 

@@ -36,11 +36,6 @@ int sys_schedule(void)
 	return 0;
 }
 
-int sys_space_control(void)
-{
-	return -ENOSYS;
-}
-
 int sys_getid(struct task_ids *ids)
 {
 	struct ktcb *this = current;

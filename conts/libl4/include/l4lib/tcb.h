@@ -37,7 +37,7 @@ struct l4lib_global_list {
 
 struct l4lib_tcb *l4lib_find_task(int tid);
 struct l4lib_tcb *l4_tcb_alloc_init(struct l4lib_tcb *parent, unsigned int flags);
-void l4lib_l4lib_global_add_task(struct l4lib_tcb *task);
+void l4lib_global_add_task(struct l4lib_tcb *task);
 void l4lib_global_remove_task(struct l4lib_tcb *task);
 
 #endif /* __LIB_TCB_H__ */

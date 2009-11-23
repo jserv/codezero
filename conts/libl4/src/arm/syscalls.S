@@ -1,7 +1,7 @@
 /*
  * Userspace system call interface.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007 - 2009 Bahadir Balban
  */
 #include <l4lib/arch/asm.h>
 #include <l4lib/arch/utcb.h>
@@ -186,15 +186,15 @@ END_PROC(l4_ipc_control)
 
 /*
  * Manipulates address spaces, e.g. sets up shared memory areas between threads
- * @r0 = operation code, @r1 = struct shm_kdata *kdata
+ * @r0 = operation code, @r1 = operation flags, @r2 = An id (irqnum, or capid)
  */
-BEGIN_PROC(l4_space_control)
+BEGIN_PROC(l4_irq_control)
 	stmfd	sp!, {lr}
-	ldr	r12, =__l4_space_control
+	ldr	r12, =__l4_irq_control
 	mov	lr, pc
 	ldr	pc, [r12]
 	ldmfd	sp!, {pc}	@ Restore original lr and return.
-END_PROC(l4_space_control)
+END_PROC(l4_irq_control)
 
 /*
  * Locks/unlocks a userspace mutex.

@@ -849,7 +849,7 @@ int process_cap_info(struct cap_info *cap,
 			     &kres->virtmem_free,
 			     cap->start, cap->end);
 	} else if (cap_type(cap) == CAP_TYPE_MAP_PHYSMEM) {
-		if (cap_is_devmem(cap))
+		if (!cap_is_devmem(cap))
 			memcap_unmap(&kres->physmem_used,
 				     &kres->physmem_free,
 				     cap->start, cap->end);

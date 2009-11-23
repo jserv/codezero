@@ -58,9 +58,9 @@ typedef int (*__l4_thread_control_t)(unsigned int action, struct task_ids *ids);
 extern __l4_thread_control_t __l4_thread_control;
 int l4_thread_control(unsigned int action, struct task_ids *ids);
 
-typedef int (*__l4_space_control_t)(unsigned int action, void *kdata);
-extern __l4_space_control_t __l4_space_control;
-int l4_space_control(unsigned int action, void *kdata);
+typedef int (*__l4_irq_control_t)(unsigned int req, unsigned int flags, l4id_t id);
+extern __l4_irq_control_t __l4_irq_control;
+int l4_irq_control(unsigned int req, unsigned int flags, l4id_t id);
 
 typedef int (*__l4_ipc_control_t)(unsigned int action, l4id_t blocked_sender,
 				  u32 blocked_tag);

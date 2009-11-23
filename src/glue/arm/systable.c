@@ -17,7 +17,7 @@
 
 void kip_init_syscalls(void)
 {
-	kip.space_control = ARM_SYSCALL_PAGE + sys_space_control_offset;
+	kip.irq_control = ARM_SYSCALL_PAGE + sys_irq_control_offset;
 	kip.thread_control = ARM_SYSCALL_PAGE + sys_thread_control_offset;
 	kip.ipc_control = ARM_SYSCALL_PAGE + sys_ipc_control_offset;
 	kip.map = ARM_SYSCALL_PAGE + sys_map_offset;
@@ -76,9 +76,11 @@ int arch_sys_unmap(syscall_context_t *regs)
 			 (unsigned int)regs->r2);
 }
 
-int arch_sys_space_control(syscall_context_t *regs)
+int arch_sys_irq_control(syscall_context_t *regs)
 {
-	return sys_space_control();
+	return sys_irq_control((unsigned int)regs->r0,
+			       (unsigned int)regs->r1,
+			       (l4id_t)regs->r2);
 }
 
 int arch_sys_ipc_control(syscall_context_t *regs)
@@ -133,7 +135,7 @@ void syscall_init()
 	syscall_table[sys_schedule_offset >> 2] 		= (syscall_fn_t)arch_sys_schedule;
 	syscall_table[sys_getid_offset >> 2]	 		= (syscall_fn_t)arch_sys_getid;
 	syscall_table[sys_unmap_offset >> 2] 			= (syscall_fn_t)arch_sys_unmap;
-	syscall_table[sys_space_control_offset >> 2] 		= (syscall_fn_t)arch_sys_space_control;
+	syscall_table[sys_irq_control_offset >> 2] 		= (syscall_fn_t)arch_sys_irq_control;
 	syscall_table[sys_ipc_control_offset >> 2] 		= (syscall_fn_t)arch_sys_ipc_control;
 	syscall_table[sys_map_offset >> 2] 			= (syscall_fn_t)arch_sys_map;
 	syscall_table[sys_capability_control_offset >> 2]	= (syscall_fn_t)arch_sys_capability_control;

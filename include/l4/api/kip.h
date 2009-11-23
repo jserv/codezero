@@ -25,7 +25,7 @@
 
 
 #define CODEZERO_VERSION		0
-#define CODEZERO_SUBVERSION		1
+#define CODEZERO_SUBVERSION		2
 #define KDESC_DATE_SIZE			12
 #define KDESC_TIME_SIZE			9
 
@@ -49,7 +49,7 @@ struct kip {
 	u32 container_control;
 	u32 time;
 
-	u32 space_control;
+	u32 irq_control;
 	u32 thread_control;
 	u32 ipc_control;
 	u32 map;
@@ -71,9 +71,6 @@ struct kip {
 	struct kernel_descriptor kdesc;
 } __attribute__((__packed__));
 
-#define __PAGERNAME__			"mm0"
-#define __VFSNAME__			"fs0"
-#define __BLKDEVNAME__			"blkdev0"
 
 #if defined (__KERNEL__)
 extern struct kip kip;

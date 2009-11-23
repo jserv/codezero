@@ -18,7 +18,7 @@ __l4_getid_t __l4_getid = 0;
 __l4_thread_switch_t __l4_thread_switch = 0;
 __l4_thread_control_t __l4_thread_control = 0;
 __l4_ipc_control_t __l4_ipc_control = 0;
-__l4_space_control_t __l4_space_control = 0;
+__l4_irq_control_t __l4_irq_control = 0;
 __l4_exchange_registers_t __l4_exchange_registers = 0;
 __l4_container_control_t __l4_container_control = 0;
 __l4_capability_control_t __l4_capability_control = 0;
@@ -51,7 +51,7 @@ void __l4_init(void)
 	__l4_thread_switch =	(__l4_thread_switch_t)kip->thread_switch;
 	__l4_thread_control=	(__l4_thread_control_t)kip->thread_control;
 	__l4_ipc_control=	(__l4_ipc_control_t)kip->ipc_control;
-	__l4_space_control=	(__l4_space_control_t)kip->space_control;
+	__l4_irq_control=	(__l4_irq_control_t)kip->irq_control;
 	__l4_exchange_registers =
 			(__l4_exchange_registers_t)kip->exchange_registers;
 	__l4_capability_control =
