@@ -144,6 +144,7 @@ symbols
 cont%(cn)d_menu		'Container %(cn)d Parameters'
 cont%(cn)d_physmem_list	'Container %(cn)d Physical Memory Regions (Capabilities)'
 cont%(cn)d_virtmem_list	'Container %(cn)d Virtual Memory Regions (Capabilities)'
+cont%(cn)d_device_list	'Container %(cn)d Devices (Capabilities)'
 container%(cn)d_type	'Container %(cn)d Type'
 container%(cn)d_options	'Container %(cn)d Options'
 
@@ -207,6 +208,99 @@ menu cont%(cn)d_physmem_list
 	CONT%(cn)d_PHYS2_END@
 	CONT%(cn)d_PHYS3_START@
 	CONT%(cn)d_PHYS3_END@
+
+#
+# Device menu and options per container
+#
+symbols
+cont%(cn)d_device_uart1			'Container %(cn)d UART1 Menu'
+cont%(cn)d_device_uart2                 'Container %(cn)d UART2 Menu'
+cont%(cn)d_device_uart3                 'Container %(cn)d UART3 Menu'
+
+CONT%(cn)d_CAP_UART1_DEVICE_USE		'Container %(cn)d UART1 Enable'
+CONT%(cn)d_CAP_UART2_DEVICE_USE         'Container %(cn)d UART2 Enable'
+CONT%(cn)d_CAP_UART3_DEVICE_USE         'Container %(cn)d UART3 Enable'
+
+default CONT%(cn)d_CAP_UART1_DEVICE_USE		from n
+default CONT%(cn)d_CAP_UART2_DEVICE_USE 	from n
+default CONT%(cn)d_CAP_UART3_DEVICE_USE 	from n
+
+# Note: We are suppressing the menu not symbol here, as in future
+# we will add new parameters to menu, so suprpressing each symbol
+# will be cumbersome
+when CONT0_CAP_UART1_DEVICE_USE == y suppress
+	cont1_device_uart1
+	cont2_device_uart1
+	cont3_device_uart1
+
+when CONT1_CAP_UART1_DEVICE_USE == y suppress
+	cont0_device_uart1
+	cont2_device_uart1
+	cont3_device_uart1
+
+when CONT2_CAP_UART1_DEVICE_USE == y suppress
+	cont0_device_uart1
+	cont1_device_uart1
+	cont3_device_uart1
+
+when CONT3_CAP_UART1_DEVICE_USE == y suppress
+	cont0_device_uart1
+	cont1_device_uart1
+	cont2_device_uart1
+
+when CONT0_CAP_UART2_DEVICE_USE == y suppress
+	cont1_device_uart2
+	cont2_device_uart2
+	cont3_device_uart2
+
+when CONT1_CAP_UART2_DEVICE_USE == y suppress
+	cont0_device_uart2
+	cont2_device_uart2
+	cont3_device_uart2
+
+when CONT2_CAP_UART2_DEVICE_USE == y suppress
+	cont0_device_uart2
+	cont1_device_uart2
+	cont2_device_uart2
+
+when CONT3_CAP_UART2_DEVICE_USE == y suppress
+	cont0_device_uart2
+	cont1_device_uart2
+	cont2_device_uart2
+
+when CONT0_CAP_UART3_DEVICE_USE == y suppress
+	cont1_device_uart3
+	cont2_device_uart3
+	cont3_device_uart3
+
+when CONT1_CAP_UART3_DEVICE_USE == y suppress
+	cont0_device_uart3
+	cont2_device_uart3
+	cont3_device_uart3
+
+when CONT2_CAP_UART3_DEVICE_USE == y suppress
+	cont0_device_uart3
+	cont1_device_uart3
+	cont3_device_uart3
+
+when CONT3_CAP_UART3_DEVICE_USE == y suppress
+	cont0_device_uart3
+	cont1_device_uart3
+	cont2_device_uart3
+
+menu cont%(cn)d_device_uart1
+	CONT%(cn)d_CAP_UART1_DEVICE_USE
+
+menu cont%(cn)d_device_uart2
+	CONT%(cn)d_CAP_UART2_DEVICE_USE
+
+menu cont%(cn)d_device_uart3
+	CONT%(cn)d_CAP_UART3_DEVICE_USE
+
+menu cont%(cn)d_device_list
+	cont%(cn)d_device_uart1
+	cont%(cn)d_device_uart2
+	cont%(cn)d_device_uart3
 
 #
 # Settings for Custom Capabilities
@@ -639,6 +733,7 @@ menu container%(cn)d_options
 	cont%(cn)d_physmem_list
 	cont%(cn)d_virtmem_list
 	cont%(cn)d_capability_list
+	cont%(cn)d_device_list
 
 choices container%(cn)d_type
 	CONT%(cn)d_TYPE_BAREMETAL
