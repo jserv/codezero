@@ -17,19 +17,9 @@
 #include <string.h>
 #include <stdio.h>
 
-/* UTCB implementation */
-
 /*
- * NOTE: In syslib.h the first few mrs are used by data frequently
- * needed for all ipcs. Those mrs are defined the kernel message.h
+ * See kernel glue/arch/message.h for utcb details
  */
-
-struct utcb {
-	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
-	u32 saved_tag;		/* Saved tag field for stacked ipcs */
-	u32 saved_sender;	/* Saved sender field for stacked ipcs */
-	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
-};
 
 extern struct kip *kip;
 

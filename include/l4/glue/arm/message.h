@@ -58,7 +58,7 @@
  * Complicated for you? Suggest a simpler design and it shall be implemented!
  */
 
-#define MR_REST			((UTCB_SIZE >> 2) - MR_TOTAL - 2)	/* -2 is for fields on utcb */
+#define MR_REST			((UTCB_SIZE >> 2) - MR_TOTAL - 4)	/* -4 is for fields on utcb */
 #define MR_TOTAL		6
 #define MR_TAG			0	/* Contains the purpose of message */
 #define MR_SENDER		1	/* For anythread receivers to discover sender */
@@ -78,14 +78,15 @@
 
 #include INC_GLUE(memlayout.h)
 
-#if defined (__KERNEL__)
-
+#if !defined (__ASSEMBLY__)
 struct utcb {
 	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
 	u32 saved_tag;		/* Saved tag field for stacked ipcs */
 	u32 saved_sender;	/* Saved sender field for stacked ipcs */
+	u8  notify[8];		/* Notification slots */
 	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
 };
 #endif
+
 
 #endif /* __GLUE_ARM_MESSAGE_H__ */
