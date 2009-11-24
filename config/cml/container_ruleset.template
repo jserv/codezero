@@ -157,12 +157,14 @@ CONT%(cn)d_BAREMETAL_PROJ0	'Empty Project'
 CONT%(cn)d_BAREMETAL_PROJ1	'Hello World'
 CONT%(cn)d_BAREMETAL_PROJ2	'Thread Library Demo'
 CONT%(cn)d_BAREMETAL_PROJ3      'Test Project'
+CONT%(cn)d_BAREMETAL_PROJ4	'UART Service'
 
 choices cont%(cn)d_baremetal_params
 	CONT%(cn)d_BAREMETAL_PROJ0
 	CONT%(cn)d_BAREMETAL_PROJ1
 	CONT%(cn)d_BAREMETAL_PROJ2
 	CONT%(cn)d_BAREMETAL_PROJ3
+	CONT%(cn)d_BAREMETAL_PROJ4
 	default CONT%(cn)d_BAREMETAL_PROJ0
 
 menu cont%(cn)d_default_pager_params
