@@ -334,13 +334,21 @@ int memcap_request_device(struct cap_list *cap_list,
 	struct capability *cap, *n;
 
 	list_foreach_removable_struct(cap, n, &cap_list->caps, list) {
-		if (cap->start == devcap->start &&
-		    cap->end == devcap->end &&
-		    cap_is_devmem(cap)) {
-			/* Unlink only. This is boot memory */
-			list_remove(&cap->list);
-			return 0;
-		}
+	if (cap->uattr[0] == devcap->uattr[0]) {
+
+		/* 
+		  * We dont want the user to provide, start end addresses,
+		  * just selecting the type of device to be used is fine
+		  */
+		devcap->start = cap->start;
+		devcap->end = cap->end;
+		devcap->size = cap->size;
+		
+		/* Unlink only. This is boot memory */
+		list_remove(&cap->list);
+		return 0;
+	}
+
 	}
 	printk("%s: FATAL: Device memory requested "
 	       "does not match any available device "

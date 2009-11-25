@@ -122,9 +122,9 @@ int cap_read_all()
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
 		BUG();
 	}
-
+#if 0
 	cap_array_print(&caparray);
-
+#endif
 	return 0;
 }
 
@@ -149,7 +149,7 @@ int uart_probe_devices(void)
 	if (uarts != UARTS_TOTAL) {
 		printf("%s: Error, not all uarts could be found. "
 		       "uarts=%d\n", __CONTAINER_NAME__, uarts);
-		BUG();
+		return -ENODEV;
 	}
 	return 0;
 }
@@ -158,8 +158,6 @@ static struct pl011_uart uart[UARTS_TOTAL];
 
 int uart_setup_devices(void)
 {
-	BUG(); /* Make sure to have set the device capability size as well */
-
 	for (int i = 0; i < UARTS_TOTAL; i++) {
 		/* Map uart to a virtual address region */
 		if (IS_ERR(uart[i].base =
@@ -177,6 +175,7 @@ int uart_setup_devices(void)
 		/* Initialize uart */
 		pl011_initialise(&uart[i]);
 	}
+	return 0;
 }
 
 static struct address_pool device_vaddr_pool;
@@ -207,10 +206,8 @@ void init_vaddr_pool(void)
 				 * We may allocate virtual memory
 				 * addresses from this pool.
 				 */
-				address_pool_init(&device_vaddr_pool,
-					(unsigned long)__end,
-					__pfn_to_addr(caparray[i].end),
-					UARTS_TOTAL);
+				address_pool_init(&device_vaddr_pool, page_align_up(__end),
+					__pfn_to_addr(caparray[i].end), UARTS_TOTAL);
 				return;
 			} else
 				goto out_err;
@@ -226,14 +223,13 @@ out_err:
 
 void uart_generic_tx(char c, int devno)
 {
-
+	pl011_tx_char(uart[devno].base, *c);
 }
 
 char uart_generic_rx(int devno)
 {
 	return 0;
 }
-
 
 void handle_requests(void)
 {
@@ -265,10 +261,10 @@ void handle_requests(void)
 	 */
 	switch (tag) {
 	case L4_IPC_TAG_UART_SENDCHAR:
-		uart_generic_tx(0, 0); /*FIXME: Fill in */
+		uart_generic_tx(0, 1); /*FIXME: Fill in */
 		break;
 	case L4_IPC_TAG_UART_RECVCHAR:
-		uart_generic_rx(0); /* FIXME: Fill in */
+		uart_generic_rx(1); /* FIXME: Fill in */
 		break;
 	default:
 		printf("%s: Error received ipc from 0x%x residing "
