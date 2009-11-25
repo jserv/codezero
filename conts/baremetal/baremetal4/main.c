@@ -6,6 +6,7 @@
 #include <l4lib/addr.h>
 #include <l4lib/exregs.h>
 #include <l4lib/ipcdefs.h>
+#include <l4/api/errno.h>
 
 #include <l4/api/space.h>
 #include <capability.h>
@@ -139,6 +140,7 @@ int uart_probe_devices(void)
 	for (int i = 0; i < total_caps; i++) {
 		/* Match device type */
 		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_UART) {
+			printf("got uart\n");
 			/* Copy to correct device index */
 			memcpy(&uart_cap[cap_devnum(&caparray[i]) - 1],
 			       &caparray[i], sizeof(uart_cap[0]));
@@ -221,9 +223,15 @@ out_err:
 	BUG();
 }
 
+
+void *l4_new_virtual(int size)
+{
+	return address_new(&device_vaddr_pool, 1, size);
+}
+
 void uart_generic_tx(char c, int devno)
 {
-	pl011_tx_char(uart[devno].base, *c);
+	pl011_tx_char(uart[devno].base, c);
 }
 
 char uart_generic_rx(int devno)
