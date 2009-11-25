@@ -151,6 +151,18 @@ cap_strings = { 'ipc' : \
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 '''
+, 'timer' : \
+'''
+\t\t\t[${idx}] = {
+\t\t\t\t/* For device selection */
+\t\t\t\t.target = ${cid},
+\t\t\t\t.uattr = CAP_DEVTYPE_TIMER | (${devnum} << 16),
+\t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
+\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+'''
 }
 
 
