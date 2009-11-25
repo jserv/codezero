@@ -62,7 +62,7 @@
 #define PL011_OEIRQ		(1 << 10)
 
 struct pl011_uart {
-	unsigned int base;
+	unsigned long base;
 	unsigned int frame_errors;
 	unsigned int parity_errors;
 	unsigned int break_errors;

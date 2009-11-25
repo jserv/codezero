@@ -140,7 +140,6 @@ int uart_probe_devices(void)
 	for (int i = 0; i < total_caps; i++) {
 		/* Match device type */
 		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_UART) {
-			printf("got uart\n");
 			/* Copy to correct device index */
 			memcpy(&uart_cap[cap_devnum(&caparray[i]) - 1],
 			       &caparray[i], sizeof(uart_cap[0]));
@@ -161,12 +160,13 @@ static struct pl011_uart uart[UARTS_TOTAL];
 int uart_setup_devices(void)
 {
 	for (int i = 0; i < UARTS_TOTAL; i++) {
+		/* Get one page from address pool */
+		uart[i].base = (unsigned long)l4_new_virtual(1);
+		
 		/* Map uart to a virtual address region */
-		if (IS_ERR(uart[i].base =
-			   l4_map((void *)__pfn_to_addr(uart_cap[i].start),
-				  l4_new_virtual(uart_cap[i].size),
-				  uart_cap[i].size,
-				  MAP_USR_IO_FLAGS, self_tid()))) {
+		if (IS_ERR(l4_map((void *)__pfn_to_addr(uart_cap[i].start),
+				  	(void *)uart[i].base, uart_cap[i].size, MAP_USR_IO_FLAGS,
+				  	self_tid()))) {
 			printf("%s: FATAL: Failed to map UART device "
 			       "%d to a virtual address\n",
 			       __CONTAINER_NAME__,
@@ -223,10 +223,10 @@ out_err:
 	BUG();
 }
 
-
-void *l4_new_virtual(int size)
+void *l4_new_virtual(int npages)
 {
-	return address_new(&device_vaddr_pool, 1, size);
+	
+	return address_new(&device_vaddr_pool, npages, PAGE_SIZE);
 }
 
 void uart_generic_tx(char c, int devno)
@@ -236,7 +236,11 @@ void uart_generic_tx(char c, int devno)
 
 char uart_generic_rx(int devno)
 {
-	return 0;
+	char c;
+	
+	pl011_rx_char(uart[devno].base, &c);
+	
+	return c;
 }
 
 void handle_requests(void)
@@ -255,7 +259,7 @@ void handle_requests(void)
 	/* Syslib conventional ipc data which uses first few mrs. */
 	tag = l4_get_tag();
 	senderid = l4_get_sender();
-
+	
 	/*
 	 * TODO:
 	 *

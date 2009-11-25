@@ -358,7 +358,6 @@ int memcap_request_device(struct cap_list *cap_list,
 	       __pfn_to_addr(devcap->end), devcap->attr);
 	BUG();
 }
-
 /*
  * TODO: Evaluate if access bits are needed and add new cap ranges
  * only if their access bits match.
@@ -517,6 +516,7 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 		cap->start = cap_info->start;
 		cap->end = cap_info->end;
 		cap->size = cap_info->size;
+		cap->uattr = cap_info->uattr;
 
 		cap_list_insert(cap, &pager->cap_list);
 	}
