@@ -44,7 +44,6 @@ class LinuxUpdateKernel:
         # List of ARCHIDs, to be used by linux based on codezero config
         self.archid_list = (['PB926', '0x183'],
                             ['PB1176', '0x5E0'],
-                            ['PBA8', '0x769'],
                             ['EB', '0x33B'],
                             ['PB11MPCORE', '0x3D4'],)
 

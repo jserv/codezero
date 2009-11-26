@@ -26,8 +26,6 @@
 #define PL011_BASE		0x10009000
 #elif defined(PLATFORM_PB11MPCORE)
 #define PL011_BASE		0x10009000
-#elif defined(PLATFORM_PBA8)
-#define PL011_BASE		0x10009000
 #endif
 #endif
 
