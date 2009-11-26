@@ -2,22 +2,18 @@
 # Copyright (C) 2007 Bahadir Balban
 #
 
-import os
-import glob
-import sys
+import os, glob, sys
 from os.path import join
 from string import split
-from configure import *
 
+PROJRELROOT = '../..'
+sys.path.append(PROJRELROOT)
+
+from configure import *
 config = configuration_retrieve()
 
-project_root = "../.."
-headers_root = join(project_root, "include/l4")
+headers_root = join(PROJRELROOT, "include/l4")
 config_h = join(headers_root, "config.h")
-
-#libl4 paths
-libl4_headers = join(project_root, "tasks/libl4/include")
-libl4_libpath = join(project_root, "tasks/libl4")
 
 mm = "mm"
 kmalloc = "kmalloc"
@@ -29,19 +25,24 @@ kmalloc_dir = kmalloc
 memcache_dir = memcache
 tests_dir = tests
 
+LIBL4_RELDIR = 'conts/libl4'
+LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
+LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
+LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
+
 test_env = Environment(CC = 'gcc -m32',
 		  CCFLAGS = ['-g', '-std=gnu99', '-Wall', '-Werror'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = ['gcc', 'mm', 'km', 'mc'],
 		  LIBPATH = ['#'],
-		  CPPPATH = ['#include', join(project_root, "include"), "#", libl4_headers])
+		  CPPPATH = ['#include', join(PROJRELROOT, "include"), "#", LIBL4_INCLUDE])
 
 env = Environment(CC = config.user_toolchain + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-Wall', '-Werror', '-ffreestanding', '-std=gnu99'],
 		  LINKFLAGS = ['-nostdlib'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = 'gcc',
-		  CPPPATH = [join(project_root, "include"), "#", libl4_headers])
+		  CPPPATH = [join(PROJRELROOT, "include"), "#", LIBL4_INCLUDE])
 
 if os.path.exists(config_h) is False:
 	print "\nThis build requires a valid kernel configuration header."
