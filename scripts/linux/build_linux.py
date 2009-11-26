@@ -43,7 +43,6 @@ class LinuxUpdateKernel:
         self.cpuid_list = (['ARM926', '0x41069265'],)
         # List of ARCHIDs, to be used by linux based on codezero config
         self.archid_list = (['PB926', '0x183'],
-                            ['AB926', '0x25E'],
                             ['PB1176', '0x5E0'],
                             ['PBA8', '0x769'],
                             ['EB', '0x33B'],
