@@ -18,7 +18,7 @@
 /* Frequency of timer in MHz */
 #define TIMER_FREQUENCY	1
 
-#define TIMERS_TOTAL		3
+#define TIMERS_TOTAL		1
 
 static struct capability caparray[32];
 static int total_caps = 0;

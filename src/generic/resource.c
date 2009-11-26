@@ -343,7 +343,7 @@ int memcap_request_device(struct cap_list *cap_list,
 		devcap->start = cap->start;
 		devcap->end = cap->end;
 		devcap->size = cap->size;
-		
+
 		/* Unlink only. This is boot memory */
 		list_remove(&cap->list);
 		return 0;

@@ -58,35 +58,13 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 
 	/* Setup timer1 capability as free */
 	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
-	timer[1]->start =
-		__pfn(PB926_TIMER01_BASE + PLATFORM_TIMER_REL_OFFSET);
+	timer[1]->start = __pfn(PB926_TIMER23_BASE);
 	timer[1]->end = timer[1]->start + 1;
 	timer[1]->size = timer[1]->end - timer[1]->start;
 	cap_set_devtype(timer[1], CAP_DEVTYPE_TIMER);
 	cap_set_devnum(timer[1], 1);
 	link_init(&timer[1]->list);
 	cap_list_insert(timer[1], &kres->devmem_free);
-
-	/* Setup timer2 capability as free */
-	timer[2] =  alloc_bootmem(sizeof(*timer[2]), 0);
-	timer[2]->start = __pfn(PB926_TIMER23_BASE);
-	timer[2]->end = timer[2]->start + 1;
-	timer[2]->size = timer[2]->end - timer[2]->start;
-	cap_set_devtype(timer[2], CAP_DEVTYPE_TIMER);
-	cap_set_devnum(timer[2], 2);
-	link_init(&timer[2]->list);
-	cap_list_insert(timer[2], &kres->devmem_free);
-
-	/* Setup timer3 capability as free */
-	timer[3] =  alloc_bootmem(sizeof(*timer[3]), 0);
-	timer[3]->start = 
-		__pfn(PB926_TIMER23_BASE + PLATFORM_TIMER_REL_OFFSET);
-	timer[3]->end = timer[3]->start + 1;
-	timer[3]->size = timer[3]->end - timer[3]->start;
-	cap_set_devtype(timer[3], CAP_DEVTYPE_TIMER);
-	cap_set_devnum(timer[3], 3);
-	link_init(&timer[3]->list);
-	cap_list_insert(timer[3], &kres->devmem_free);
 
 	return 0;
 }

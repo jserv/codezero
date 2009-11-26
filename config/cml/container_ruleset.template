@@ -220,23 +220,17 @@ symbols
 cont%(cn)d_device_uart1			'Container %(cn)d UART1 Menu'
 cont%(cn)d_device_uart2                 'Container %(cn)d UART2 Menu'
 cont%(cn)d_device_uart3                 'Container %(cn)d UART3 Menu'
-cont%(cn)d_device_timer1                'Container %(cn)d TIMER1 Menu'
-cont%(cn)d_device_timer2                'Container %(cn)d TIMER2 Menu'
-cont%(cn)d_device_timer3                'Container %(cn)d TIMER3 Menu'
+cont%(cn)d_device_timer1                'Container %(cn)d TIMER23 Menu'
 
 CONT%(cn)d_CAP_UART1_DEVICE_USE		'Container %(cn)d UART1 Enable'
 CONT%(cn)d_CAP_UART2_DEVICE_USE         'Container %(cn)d UART2 Enable'
 CONT%(cn)d_CAP_UART3_DEVICE_USE         'Container %(cn)d UART3 Enable'
-CONT%(cn)d_CAP_TIMER1_DEVICE_USE        'Container %(cn)d TIMER1 Enable'
-CONT%(cn)d_CAP_TIMER2_DEVICE_USE        'Container %(cn)d TIMER2 Enable'
-CONT%(cn)d_CAP_TIMER3_DEVICE_USE        'Container %(cn)d TIMER3 Enable'
+CONT%(cn)d_CAP_TIMER1_DEVICE_USE        'Container %(cn)d TIMER23 Enable'
 
 default CONT%(cn)d_CAP_UART1_DEVICE_USE		from n
 default CONT%(cn)d_CAP_UART2_DEVICE_USE 	from n
 default CONT%(cn)d_CAP_UART3_DEVICE_USE 	from n
 default CONT%(cn)d_CAP_TIMER1_DEVICE_USE	from n
-default CONT%(cn)d_CAP_TIMER2_DEVICE_USE        from n
-default CONT%(cn)d_CAP_TIMER3_DEVICE_USE        from n
 
 # Note: We are suppressing the menu not symbol here, as in future
 # we will add new parameters to menu, so suprpressing each symbol
@@ -321,46 +315,6 @@ when CONT3_CAP_TIMER1_DEVICE_USE == y suppress
         cont1_device_timer1
         cont2_device_timer1
 
-when CONT0_CAP_TIMER2_DEVICE_USE == y suppress
-	cont1_device_timer2
-        cont2_device_timer2
-        cont3_device_timer2
-
-when CONT1_CAP_TIMER2_DEVICE_USE == y suppress
-       cont0_device_timer2
-       cont2_device_timer2
-       cont3_device_timer2
-
-when CONT2_CAP_TIMER2_DEVICE_USE == y suppress
-        cont0_device_timer2
-        cont1_device_timer2
-        cont3_device_timer2
-
-when CONT3_CAP_TIMER2_DEVICE_USE == y suppress
-        cont0_device_timer2
-        cont1_device_timer2
-        cont2_device_timer2
-
-when CONT0_CAP_TIMER3_DEVICE_USE == y suppress
-        cont1_device_timer3
-        cont2_device_timer3
-        cont3_device_timer3
-
-when CONT1_CAP_TIMER3_DEVICE_USE == y suppress
-       cont0_device_timer3
-       cont2_device_timer3
-       cont3_device_timer3
-
-when CONT2_CAP_TIMER3_DEVICE_USE == y suppress
-        cont0_device_timer3
-        cont1_device_timer3
-        cont3_device_timer3
-
-when CONT3_CAP_TIMER3_DEVICE_USE == y suppress
-        cont0_device_timer3
-        cont1_device_timer3
-        cont2_device_timer3
-
 menu cont%(cn)d_device_uart1
 	CONT%(cn)d_CAP_UART1_DEVICE_USE
 
@@ -373,19 +327,12 @@ menu cont%(cn)d_device_uart3
 menu cont%(cn)d_device_timer1
 	CONT%(cn)d_CAP_TIMER1_DEVICE_USE
 
-menu cont%(cn)d_device_timer2
-	CONT%(cn)d_CAP_TIMER2_DEVICE_USE
-
-menu cont%(cn)d_device_timer3
-	CONT%(cn)d_CAP_TIMER3_DEVICE_USE
-
 menu cont%(cn)d_device_list
 	cont%(cn)d_device_uart1
 	cont%(cn)d_device_uart2
 	cont%(cn)d_device_uart3
 	cont%(cn)d_device_timer1
-	cont%(cn)d_device_timer2
-	cont%(cn)d_device_timer3
+
 #
 # Settings for Custom Capabilities
 #
