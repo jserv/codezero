@@ -166,7 +166,6 @@ int timer_setup_devices(void)
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* Get one page from address pool */
 		timer[i].base = (unsigned long)l4_new_virtual(1);
-		printf("timer base %x phy %lx\n", timer[i].base, timer_cap[i].start);
 		
 		/* Map timers to a virtual address region */
 		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer_cap[i].start),

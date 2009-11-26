@@ -516,7 +516,9 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 		cap->start = cap_info->start;
 		cap->end = cap_info->end;
 		cap->size = cap_info->size;
-		cap->uattr = cap_info->uattr;
+		cap->uattr[0] = cap_info->uattr[0];
+		cap->uattr[1] = cap_info->uattr[1];
+		
 
 		cap_list_insert(cap, &pager->cap_list);
 	}
