@@ -148,7 +148,9 @@ cap_strings = { 'ipc' : \
 \t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
 \t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t\t.start = __pfn(PLATFORM_CONSOLE${devnum}_PHY_BASE),
+\t\t\t\t.end = __pfn(PLATFORM_CONSOLE${devnum}_PHY_BASE) + 1,
+\t\t\t\t.size = 1,
 \t\t\t},
 '''
 , 'timer' : \
@@ -160,11 +162,12 @@ cap_strings = { 'ipc' : \
 \t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
 \t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
-\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t\t.start = __pfn(PLATFORM_TIMER${devnum}_PHY_BASE),
+\t\t\t\t.end = __pfn(PLATFORM_TIMER${devnum}_PHY_BASE) + 1,
+\t\t\t\t.size = 1,
 \t\t\t},
 '''
 }
-
 
 #
 # These are carefully crafted functions, touch with care.
@@ -232,7 +235,8 @@ def prepare_typed_capability(cont, param, val):
 
         # If device, amend current container id and devnum as default
         if 'DEVICE' in params:
-            cont.caps[captype] = templ.safe_substitute(cid = cont.id, devnum = devid)
+            cont.caps[captype] = \
+                    templ.safe_substitute(cid = cont.id, devnum = devid)
 
     # Fill in the blank size field
     elif 'SIZE' in params:
