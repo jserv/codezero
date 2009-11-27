@@ -163,21 +163,11 @@ class LinuxBuilder:
         self.LINUX_KERNEL_BUILDDIR = \
             source_to_builddir(LINUX_KERNELDIR, container.id)
 
-        self.linux_lds_in = join(self.LINUX_KERNELDIR, "linux.lds.in")
-        self.linux_lds_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.lds")
-        self.linux_S_in = join(self.LINUX_KERNELDIR, "linux.S.in")
-        self.linux_S_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.S")
-
-        self.linux_h_in = join(self.LINUX_KERNELDIR, "linux.h.in")
-        self.linux_h_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.h")
-
-        self.linux_elf_out = join(self.LINUX_KERNEL_BUILDDIR, "linux.elf")
-
         self.container = container
         self.kernel_binary_image = \
             join(os.path.relpath(self.LINUX_KERNEL_BUILDDIR, LINUX_KERNELDIR), \
-                 "arch/arm/boot/Image")
-        self.kernel_image = None
+                 "vmlinux")
+        self.kernel_image = join(self.LINUX_KERNEL_BUILDDIR, "linux.elf")
         self.kernel_updater = LinuxUpdateKernel(self.container)
 
     def build_linux(self, config):
@@ -195,24 +185,14 @@ class LinuxBuilder:
                   "CROSS_COMPILE=" + config.user_toolchain + " O=" + \
                   self.LINUX_KERNEL_BUILDDIR)
 
-        with open(self.linux_h_out, 'w+') as output:
-            with open(self.linux_h_in, 'r') as input:
-                output.write(input.read() % {'cn' : self.container.id})
+        # Generate kernel_image, elf to be used by codezero
+        linux_elf_gen_cmd = ("arm-none-linux-gnueabi-objcopy -R .note \
+            -R .note.gnu.build-id -R .comment -S --change-addresses " + \
+            str(conv_hex(-self.container.linux_page_offset + self.container.linux_phys_offset)) + \
+            " " + self.kernel_binary_image + " " + self.kernel_image)
 
-        with open(self.linux_S_in, 'r') as input:
-            with open(self.linux_S_out, 'w+') as output:
-                content = input.read() % self.kernel_binary_image
-                output.write(content)
-
-        os.system(config.user_toolchain + "cpp -I%s -P %s > %s" % \
-                  (self.LINUX_KERNEL_BUILDDIR, self.linux_lds_in, \
-                   self.linux_lds_out))
-        os.system(config.user_toolchain + "gcc -nostdlib -o %s -T%s %s" % \
-                  (self.linux_elf_out, self.linux_lds_out, self.linux_S_out))
-
-        # Get the kernel image path
-        self.kernel_image = self.linux_elf_out
-
+        #print cmd
+        os.system(linux_elf_gen_cmd)
         print 'Done...'
 
     def clean(self):
