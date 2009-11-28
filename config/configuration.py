@@ -131,10 +131,7 @@ class configuration:
 
     # TODO: Carry this over to Container() as static method???
     def get_container_parameter(self, id, param, val):
-        if param[:len("SOURCE_PATH")] == "SOURCE_PATH":
-            parts = val.split("\"", 3)
-            self.containers[id].src_path = parts[1]
-        elif param[:len("PAGER_LMA")] == "PAGER_LMA":
+        if param[:len("PAGER_LMA")] == "PAGER_LMA":
             self.containers[id].pager_lma = int(val, 0)
         elif param[:len("PAGER_VMA")] == "PAGER_VMA":
             self.containers[id].pager_vma = int(val, 0)
