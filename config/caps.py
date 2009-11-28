@@ -31,6 +31,17 @@ cap_strings = { 'ipc' : \
 \t\t\t\t.start = 0, .end = 0, .size = 0,
 \t\t\t},
 '''
+, 'irqctrl' : \
+'''
+\t\t\t[${idx}] = {
+\t\t\t\t.target = ${cid},
+\t\t\t\t.type = CAP_TYPE_IRQCTRL | ${target_rtype},
+\t\t\t\t.access = CAP_IRQCTRL_REGISTER
+\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE
+\t\t\t\t          | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+'''
 , 'exregs' : \
 '''
 \t\t\t[${idx}] = {
@@ -131,6 +142,9 @@ cap_strings = { 'ipc' : \
 }
 
 
+#
+# These are carefully crafted functions, touch with care.
+#
 def prepare_custom_capability(cont, param, val):
     if 'TYPE' in param:
         capkey, captype, rest = param.split('_', 2)
