@@ -139,5 +139,6 @@
 #define EACTIVE		132	/* Task active */
 #define ENOIPC		133	/* General IPC error */
 #define ENOCAP		134	/* None or insufficient capability */
+#define ENOUTCB		135	/* Task has no utcb set up */
 
 #endif /* __ERRNO_H__ */

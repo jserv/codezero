@@ -8,17 +8,18 @@
 
 #include <l4/lib/string.h>
 #include INC_PLAT(irq.h)
+#include INC_ARCH(types.h)
 
 /* Represents none or spurious irq */
-#define IRQ_NIL					(-1)
+#define IRQ_NIL				0xFFFFFFFF
 
 /* Successful irq handling state */
 #define IRQ_HANDLED				0
 
-typedef void (*irq_op_t)(int irq);
+typedef void (*irq_op_t)(l4id_t irq);
 struct irq_chip_ops {
 	void (*init)(void);
-	int (*read_irq)(void);
+	l4id_t (*read_irq)(void);
 	irq_op_t ack_and_mask;
 	irq_op_t unmask;
 };
@@ -27,16 +28,24 @@ struct irq_chip {
 	char name[32];
 	int level;		/* Cascading level */
 	int cascade;		/* The irq that lower chip uses on this chip */
-	int offset;		/* The global offset for this irq chip */
+	int start;		/* The global irq offset for this chip */
+	int end;		/* End of this chip's irqs */
 	struct irq_chip_ops ops;
 };
 
-typedef int (*irq_handler_t)(void);
+struct irq_desc;
+typedef int (*irq_handler_t)(struct irq_desc *irq_desc);
 struct irq_desc {
 	char name[8];
 	struct irq_chip *chip;
 
-	/* TODO: This could be a list for multiple handlers */
+	/* Thread registered for this irq */
+	struct ktcb *irq_thread;
+
+	/* Notification slot for this irq */
+	int task_notify_slot;
+
+	/* NOTE: This could be a list for multiple handlers for shared irqs */
 	irq_handler_t handler;
 };
 
@@ -48,7 +57,7 @@ static inline void irq_enable(int irq_index)
 	struct irq_desc *this_irq = irq_desc_array + irq_index;
 	struct irq_chip *this_chip = this_irq->chip;
 
-	this_chip->ops.unmask(irq_index - this_chip->offset);
+	this_chip->ops.unmask(irq_index - this_chip->start);
 }
 
 static inline void irq_disable(int irq_index)
@@ -56,23 +65,11 @@ static inline void irq_disable(int irq_index)
 	struct irq_desc *this_irq = irq_desc_array + irq_index;
 	struct irq_chip *this_chip = this_irq->chip;
 
-	this_chip->ops.ack_and_mask(irq_index - this_chip->offset);
+	this_chip->ops.ack_and_mask(irq_index - this_chip->start);
 }
 
-static inline void register_irq(char *name, int irq_index, irq_handler_t handler)
-{
-	struct irq_desc *this_desc = irq_desc_array + irq_index;
-	struct irq_chip *current_chip = irq_chip_array;
-
-	strncpy(&this_desc->name[0], name, sizeof(this_desc->name));
-
-	for (int i = 0; i < IRQ_CHIPS_MAX; i++)
-		if (irq_index <= current_chip->offset) {
-			this_desc->chip = current_chip;
-			break;
-		}
-	this_desc->handler = handler;
-}
+int irq_register(struct ktcb *task, int notify_slot,
+		 l4id_t irq_index, irq_handler_t handler);
 
 void do_irq(void);
 void irq_controllers_init(void);

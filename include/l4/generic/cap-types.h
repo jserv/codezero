@@ -15,7 +15,7 @@
 #define CAP_TYPE_MAP_PHYSMEM	(1 << 2)
 #define CAP_TYPE_MAP_VIRTMEM	(1 << 3)
 #define CAP_TYPE_IPC		(1 << 4)
-#define CAP_TYPE_SCHED		(1 << 5)
+#define CAP_TYPE_IRQCTRL	(1 << 5)
 #define CAP_TYPE_UMUTEX		(1 << 6)
 #define CAP_TYPE_QUANTITY	(1 << 7)
 #define CAP_TYPE_CAP		(1 << 8)
@@ -52,17 +52,16 @@
 #define CAP_DEVNUM_MASK			0xFFFF0000
 #define CAP_DEVNUM_SHIFT		16
 
-#define cap_is_devmem(c)		(c)->uattr[0]
+#define cap_is_devmem(c)		((c)->attr)
 #define cap_set_devtype(c, devtype)			\
-	{(c)->uattr[0] &= ~CAP_DEVTYPE_MASK;		\
-	 (c)->uattr[0] |= CAP_DEVTYPE_MASK & devtype;}
+	{(c)->attr &= ~CAP_DEVTYPE_MASK;		\
+	 (c)->attr |= CAP_DEVTYPE_MASK & devtype;}
 #define cap_set_devnum(c, devnum)			\
-	{(c)->uattr[0] &= ~CAP_DEVNUM_MASK;		\
-	 (c)->uattr[0] |= CAP_DEVNUM_MASK & devnum;}
+	{(c)->attr &= ~CAP_DEVNUM_MASK;		\
+	 (c)->attr |= CAP_DEVNUM_MASK & devnum;}
 #define cap_devnum(c)					\
-	(((c)->uattr[0] & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
-#define cap_devtype(c)		((c)->uattr[0] & CAP_DEVTYPE_MASK)
-#define cap_irqno(c)	((c)->uattr[1])
+	(((c)->attr & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
+#define cap_devtype(c)		((c)->attr & CAP_DEVTYPE_MASK)
 
 /*
  * Access permissions
@@ -102,6 +101,14 @@
 #define CAP_MAP_UNCACHED	(1 << 4)
 #define CAP_MAP_UNMAP		(1 << 5)
 #define CAP_MAP_UTCB		(1 << 6)
+
+/*
+ * IRQ Control capability
+ *
+ * This is a common one and it applies to both
+ * CAP_TYPE_IRQCTRL and CAP_TYPE_MAP_PHYSMEM
+ */
+#define CAP_IRQCTRL_REGISTER	(1 << 7)
 
 /* Ipc capability */
 #define CAP_IPC_SEND		(1 << 0)

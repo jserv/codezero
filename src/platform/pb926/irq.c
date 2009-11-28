@@ -17,7 +17,8 @@ struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
 		.name = "Vectored irq controller",
 		.level = 0,
 		.cascade = IRQ_SIC,
-		.offset = 0,
+		.start = VIC_CHIP_OFFSET,
+		.end = VIC_CHIP_OFFSET + VIC_IRQS_MAX,
 		.ops = {
 			.init = pl190_vic_init,
 			.read_irq = pl190_read_irq,
@@ -29,7 +30,8 @@ struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
 		.name = "Secondary irq controller",
 		.level = 1,
 		.cascade = IRQ_NIL,
-		.offset = SIRQ_CHIP_OFFSET,
+		.start = SIC_CHIP_OFFSET,
+		.end = SIC_CHIP_OFFSET + SIC_IRQS_MAX,
 		.ops = {
 			.init = pl190_sic_init,
 			.read_irq = pl190_sic_read_irq,
@@ -39,7 +41,7 @@ struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
 	},
 };
 
-static int platform_timer_handler(void)
+static int platform_timer_handler(struct irq_desc *desc)
 {
 	/*
 	 * Microkernel is using just TIMER0,

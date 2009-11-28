@@ -15,6 +15,7 @@
 #include <l4/api/thread.h>
 #include <l4/api/exregs.h>
 #include <l4/api/ipc.h>
+#include <l4/api/irq.h>
 #include INC_GLUE(message.h)
 #include INC_GLUE(ipc.h)
 
@@ -642,6 +643,119 @@ struct capability *cap_match_mem(struct capability *cap,
 	return cap;
 }
 
+struct sys_irqctrl_args {
+	struct ktcb *registrant;
+	unsigned int req;
+	unsigned int flags;
+	l4id_t irq;
+};
+
+/*
+ * CAP_TYPE_MAP already matched upon entry.
+ *
+ * Match only device-specific details, e.g. irq registration
+ * capability
+ */
+struct capability *cap_match_devmem(struct capability *cap,
+				    void *args_ptr)
+{
+	struct sys_irqctrl_args *args = args_ptr;
+	struct ktcb *target = args->registrant;
+	unsigned int perms;
+
+	/* It must be a physmem type */
+	if (cap_type(cap) != CAP_TYPE_MAP_PHYSMEM)
+		return 0;
+
+	/* It must be a device */
+	if (!cap_is_devmem(cap))
+		return 0;
+
+	/* Irq numbers should match */
+	if (cap->irq != args->irq)
+		return 0;
+
+	/* Check permissions, we only check irq specific */
+	switch (args->req) {
+	case IRQ_CONTROL_REGISTER:
+		perms = CAP_IRQCTRL_REGISTER;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	default:
+		/* Anything else is an invalid/unrecognised argument */
+		return 0;
+	}
+
+	/*
+	 * Check that irq registration to target is covered
+	 * by the capability containment rules.
+	 */
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
+	}
+
+	return cap;
+}
+
+/*
+ * CAP_TYPE_IRQCTRL already matched
+ */
+struct capability *cap_match_irqctrl(struct capability *cap,
+				     void *args_ptr)
+{
+	struct sys_irqctrl_args *args = args_ptr;
+	struct ktcb *target = args->registrant;
+
+	/* Check operation privileges */
+	switch (args->req) {
+	case IRQ_CONTROL_REGISTER:
+		if (!(cap->access & CAP_IRQCTRL_REGISTER))
+			return 0;
+		break;
+	default:
+		/* We refuse to accept anything else */
+		return 0;
+	}
+
+	/*
+	 * Target thread is the thread that is going to
+	 * handle the irqs. Check if capability matches
+	 * the target in any of its containment level.
+	 */
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		if (target->tid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_SPACE:
+		if (target->space->spid != cap->resid)
+			return 0;
+		break;
+	case CAP_RTYPE_CONTAINER:
+		if (target->container->cid != cap->resid)
+			return 0;
+		break;
+	default:
+		BUG(); /* Unknown cap type is a bug */
+	}
+
+	return cap;
+}
+
 #if defined(CONFIG_CAPABILITIES)
 int cap_mutex_check(unsigned long mutex_address, int mutex_op)
 {
@@ -761,6 +875,34 @@ int cap_thread_check(struct ktcb *task,
 	return 0;
 }
 
+
+int cap_irq_check(struct ktcb *registrant, unsigned int req,
+		  unsigned int flags, l4id_t irq)
+{
+	struct sys_irqctrl_args args = {
+		.registrant = registrant,
+		.req = req,
+		.flags = flags,
+		.irq = irq,
+	};
+
+	/* Find the irq control capability of caller */
+	if (!(cap_find(current, cap_match_irqctrl,
+		       &args, CAP_TYPE_IRQCTRL)))
+		return -ENOCAP;
+
+	/*
+	 * Find the device capability and
+	 * check that it allows irq registration
+	 */
+	if (!(cap_find(current, cap_match_devmem,
+		       &args, CAP_TYPE_MAP_PHYSMEM)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+
 #else /* Meaning !CONFIG_CAPABILITIES */
 int cap_mutex_check(unsigned long mutex_address, int mutex_op)
 {
@@ -795,4 +937,11 @@ int cap_thread_check(struct ktcb *task,
 {
 	return 0;
 }
+
+int cap_irq_check(struct ktcb *registrant, unsigned int req,
+		  unsigned int flags, l4id_t irq)
+{
+	return 0;
+}
+
 #endif /* End of !CONFIG_CAPABILITIES */

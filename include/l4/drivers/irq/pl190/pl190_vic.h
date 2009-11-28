@@ -9,6 +9,7 @@
 #define __PL190_VIC_H__
 
 #include INC_PLAT(platform.h)
+#include INC_ARCH(types.h)
 
 #define PL190_BASE				PLATFORM_IRQCTRL_BASE
 #define PL190_SIC_BASE				PLATFORM_SIRQCTRL_BASE
@@ -42,15 +43,16 @@
 #define PL190_SIC_PICENCLR			(PL190_SIC_BASE + 0x24)
 
 void pl190_vic_init(void);
-void pl190_ack_irq(int irq);
-void pl190_mask_irq(int irq);
-void pl190_unmask_irq(int irq);
-int pl190_read_irq(void);
+void pl190_ack_irq(l4id_t irq);
+void pl190_mask_irq(l4id_t irq);
+void pl190_unmask_irq(l4id_t irq);
+l4id_t pl190_read_irq(void);
 
-int pl190_sic_read_irq(void);
-void pl190_sic_mask_irq(int irq);
-void pl190_sic_mask_irq(int irq);
-void pl190_sic_ack_irq(int irq);
-void pl190_sic_unmask_irq(int irq);
+l4id_t pl190_sic_read_irq(void);
+void pl190_sic_mask_irq(l4id_t irq);
+void pl190_sic_mask_irq(l4id_t irq);
+void pl190_sic_ack_irq(l4id_t irq);
+void pl190_sic_unmask_irq(l4id_t irq);
 void pl190_sic_init(void);
+
 #endif /* __PL190_VIC_H__ */

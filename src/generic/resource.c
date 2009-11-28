@@ -345,9 +345,9 @@ int memcap_request_device(struct cap_list *cap_list,
 	printk("%s: FATAL: Device memory requested "
 	       "does not match any available device "
 	       "capabilities start=0x%lx, end=0x%lx "
-	       "uattr=0x%x\n", __KERNELNAME__,
+	       "attr=0x%x\n", __KERNELNAME__,
 	       __pfn_to_addr(devcap->start),
-	       __pfn_to_addr(devcap->end), devcap->uattr[0]);
+	       __pfn_to_addr(devcap->end), devcap->attr);
 	BUG();
 }
 

@@ -78,12 +78,15 @@
 
 #include INC_GLUE(memlayout.h)
 
+#define TASK_NOTIFY_SLOTS		8
+#define TASK_NOTIFY_MAX			0xFF
+
 #if !defined (__ASSEMBLY__)
 struct utcb {
 	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
 	u32 saved_tag;		/* Saved tag field for stacked ipcs */
 	u32 saved_sender;	/* Saved sender field for stacked ipcs */
-	u8  notify[8];		/* Notification slots */
+	u8  notify[TASK_NOTIFY_SLOTS]; /* Notification slots */
 	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
 };
 #endif

@@ -221,16 +221,19 @@ void task_update_utcb(struct ktcb *task)
  * upon an ipc that requires the kernel to access that utcb, in other
  * words foreign utcbs are mapped lazily.
  */
-int tcb_check_and_lazy_map_utcb(struct ktcb *task)
+int tcb_check_and_lazy_map_utcb(struct ktcb *task, int page_in)
 {
 	unsigned int phys;
 	int ret;
 
-	BUG_ON(!task->utcb_address);
+	if (!task->utcb_address)
+		return -ENOUTCB;
 
 	/*
-	 * If task == current && not mapped,
+	 * If task == current && not mapped && page_in,
 	 * 	page-in, if not return -EFAULT
+	 * If task == current && not mapped && !page_in,
+	 * 	return -EFAULT
 	 * If task != current && not mapped,
 	 * 	return -EFAULT since can't page-in on behalf of it.
 	 * If task != current && task mapped,
@@ -239,10 +242,16 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task)
 	 * 	but mapped == current mapped, return 0
 	 */
 
+	/* FIXME:
+	 *
+	 * Do the check_access part without distinguishing current/non-current
+	 * Do the rest (i.e. mapping the value to the current table) only if the utcb is non-current
+	 */
+
 	if (current == task) {
 		/* Check own utcb, if not there, page it in */
 		if ((ret = check_access(task->utcb_address, UTCB_SIZE,
-					MAP_SVC_RW_FLAGS, 1)) < 0)
+					MAP_SVC_RW_FLAGS, page_in)) < 0)
 			return -EFAULT;
 		else
 			return 0;

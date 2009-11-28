@@ -89,8 +89,9 @@ struct capability {
 	/* Use count of resource */
 	unsigned long used;
 
-	/* User attributes on capability such as device type, irqno */
-       	u32 uattr[2];
+	/* Device attributes, if this is a device. */
+	unsigned int attr;
+	l4id_t irq;
 };
 
 #endif /* __API_CAPABILITY_H__ */

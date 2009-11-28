@@ -104,4 +104,7 @@ int cap_ipc_check(l4id_t to, l4id_t from,
 int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags);
 int cap_mutex_check(unsigned long mutex_address, int mutex_op);
 
+int cap_irq_check(struct ktcb *registrant, unsigned int req,
+		  unsigned int flags, l4id_t irq);
+
 #endif /* __GENERIC_CAPABILITY_H__ */

@@ -132,6 +132,9 @@ struct ktcb {
 	struct waitqueue_head wqh_send;
 	l4id_t expected_sender;
 
+	/* Waitqueue for notifiactions */
+	struct waitqueue_head wqh_notify;
+
 	/* Waitqueue for pagers to wait for task states */
 	struct waitqueue_head wqh_pager;
 
@@ -180,7 +183,7 @@ void ktcb_list_remove(struct ktcb *task, struct ktcb_list *ktcb_list);
 void ktcb_list_add(struct ktcb *new, struct ktcb_list *ktcb_list);
 void init_ktcb_list(struct ktcb_list *ktcb_list);
 void task_update_utcb(struct ktcb *task);
-int tcb_check_and_lazy_map_utcb(struct ktcb *task);
+int tcb_check_and_lazy_map_utcb(struct ktcb *task, int page_in);
 
 #endif /* __TCB_H__ */
 
