@@ -26,4 +26,5 @@ SECTIONS
 		. = ALIGN(8);
 		__stack = .;
 	}
+	__end = .;
 }

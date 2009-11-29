@@ -13,14 +13,14 @@
 #include <l4/generic/cap-types.h>
 #include <l4/generic/resource.h>
 
-#define PLATFORM_CONSOLE0_BASE			PB926_UART0_VBASE
+#define PLATFORM_CONSOLE0_BASE		PB926_UART0_VBASE
 
 /* SP804 timer has TIMER1 at TIMER0 + 0x20 address */
-#define PLATFORM_TIMER0_BASE		PB926_TIMER01_VBASE
+#define PLATFORM_TIMER0_BASE			PB926_TIMER01_VBASE
 
 #define PLATFORM_SP810_BASE			PB926_SYSCTRL_VBASE
-#define PLATFORM_IRQCTRL_BASE			PB926_VIC_VBASE
-#define PLATFORM_SIRQCTRL_BASE			PB926_SIC_VBASE
+#define PLATFORM_IRQCTRL_BASE		PB926_VIC_VBASE
+#define PLATFORM_SIRQCTRL_BASE		PB926_SIC_VBASE
 
 /* Total number of timers present in this platform */
 #define	TOTAL_TIMERS			4
@@ -29,6 +29,16 @@
 #define PLATFORM_TIMER1	1
 #define PLATFORM_TIMER2	2
 #define PLATFORM_TIMER3	3
+
+/* Wrapping Plaform specific Physical Device Addresses */
+#define	PLATFORM_CONSOLE0_PHY_BASE	PB926_UART0_BASE
+#define	PLATFORM_CONSOLE1_PHY_BASE	PB926_UART1_BASE
+#define	PLATFORM_CONSOLE2_PHY_BASE	PB926_UART2_BASE
+#define	PLATFORM_CONSOLE3_PHY_BASE	PB926_UART3_BASE
+
+#define	PLATFORM_TIMER0_PHY_BASE		PB926_TIMER01_BASE
+#define	PLATFORM_TIMER1_PHY_BASE		PB926_TIMER23_BASE
+
 
 int platform_setup_device_caps(struct kernel_resources *kres);
 void platform_irq_enable(int irq);

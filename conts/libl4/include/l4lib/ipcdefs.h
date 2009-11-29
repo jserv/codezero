@@ -72,4 +72,8 @@ extern l4id_t pagerid;
 #define L4_IPC_TAG_UART_SENDBUF		53	/* Buffered send */
 #define L4_IPC_TAG_UART_RECVBUF		54	/* Buffered recv */
 
+/* For ipc to timer service (TODO: Shared mapping buffers???) */
+#define L4_IPC_TAG_TIMER_GETTIME		55
+
+
 #endif /* __IPCDEFS_H__ */

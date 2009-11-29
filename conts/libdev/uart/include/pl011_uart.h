@@ -26,8 +26,6 @@
 #define PL011_BASE		0x10009000
 #elif defined(PLATFORM_PB11MPCORE)
 #define PL011_BASE		0x10009000
-#elif defined(PLATFORM_PBA8)
-#define PL011_BASE		0x10009000
 #endif
 #endif
 
@@ -62,7 +60,7 @@
 #define PL011_OEIRQ		(1 << 10)
 
 struct pl011_uart {
-	unsigned int base;
+	unsigned long base;
 	unsigned int frame_errors;
 	unsigned int parity_errors;
 	unsigned int break_errors;

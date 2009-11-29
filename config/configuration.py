@@ -12,7 +12,6 @@ class Container:
         self.name = None
         self.type = None
         self.id = id
-        self.src_path = None
         self.baremetal_id = 0
         self.pager_lma = 0
         self.pager_vma = 0

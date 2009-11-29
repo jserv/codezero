@@ -21,12 +21,16 @@ variant = type
 # Path for uart files
 LIBDEV_UART_PATH = join(PROJROOT, 'conts/libdev/uart')
 
+# Path for timer files
+LIBDEV_TIEMR_PATH = join(PROJROOT, 'conts/libdev/timer/sp804')
+
 e = env.Clone()
-e.Append(CPPPATH = [LIBDEV_UART_PATH + '/include'],
+e.Append(CPPPATH = [LIBDEV_UART_PATH + '/include', LIBDEV_TIEMR_PATH + '/include'],
          CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper(),
                     '-DPLATFORM_' + platform.upper()])
 
-source = Glob('uart/src' + '/*.c')
+source = Glob('uart/src' + '/*.c') + \
+         Glob('timer/sp804/src' + '/*.c')
 
 objects = e.StaticObject(source)
 library = e.StaticLibrary('libdev-' + variant, objects)

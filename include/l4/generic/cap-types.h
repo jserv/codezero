@@ -58,7 +58,7 @@
 	 (c)->attr |= CAP_DEVTYPE_MASK & devtype;}
 #define cap_set_devnum(c, devnum)			\
 	{(c)->attr &= ~CAP_DEVNUM_MASK;		\
-	 (c)->attr |= CAP_DEVNUM_MASK & devnum;}
+	 (c)->attr |= CAP_DEVNUM_MASK & (devnum << CAP_DEVNUM_SHIFT);}
 #define cap_devnum(c)					\
 	(((c)->attr & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
 #define cap_devtype(c)		((c)->attr & CAP_DEVTYPE_MASK)

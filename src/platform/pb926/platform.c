@@ -26,7 +26,7 @@
  */
 int platform_setup_device_caps(struct kernel_resources *kres)
 {
-	struct capability *uart[4], *timer[2];
+	struct capability *uart[4], *timer[4];
 
 	/* Setup capabilities for userspace uarts and timers */
 	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
