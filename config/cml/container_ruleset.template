@@ -216,6 +216,8 @@ menu cont%(cn)d_physmem_list
 #
 # Device menu and options per container
 #
+# FIXME: All this is to be moved to a per-platform description file.
+#
 symbols
 cont%(cn)d_device_uart1			'Container %(cn)d UART1 Menu'
 cont%(cn)d_device_uart2                 'Container %(cn)d UART2 Menu'
@@ -231,89 +233,6 @@ default CONT%(cn)d_CAP_UART1_DEVICE_USE		from n
 default CONT%(cn)d_CAP_UART2_DEVICE_USE 	from n
 default CONT%(cn)d_CAP_UART3_DEVICE_USE 	from n
 default CONT%(cn)d_CAP_TIMER1_DEVICE_USE	from n
-
-# Note: We are suppressing the menu not symbol here, as in future
-# we will add new parameters to menu, so suprpressing each symbol
-# will be cumbersome
-when CONT0_CAP_UART1_DEVICE_USE == y suppress
-	cont1_device_uart1
-	cont2_device_uart1
-	cont3_device_uart1
-
-when CONT1_CAP_UART1_DEVICE_USE == y suppress
-	cont0_device_uart1
-	cont2_device_uart1
-	cont3_device_uart1
-
-when CONT2_CAP_UART1_DEVICE_USE == y suppress
-	cont0_device_uart1
-	cont1_device_uart1
-	cont3_device_uart1
-
-when CONT3_CAP_UART1_DEVICE_USE == y suppress
-	cont0_device_uart1
-	cont1_device_uart1
-	cont2_device_uart1
-
-when CONT0_CAP_UART2_DEVICE_USE == y suppress
-	cont1_device_uart2
-	cont2_device_uart2
-	cont3_device_uart2
-
-when CONT1_CAP_UART2_DEVICE_USE == y suppress
-	cont0_device_uart2
-	cont2_device_uart2
-	cont3_device_uart2
-
-when CONT2_CAP_UART2_DEVICE_USE == y suppress
-	cont0_device_uart2
-	cont1_device_uart2
-	cont2_device_uart2
-
-when CONT3_CAP_UART2_DEVICE_USE == y suppress
-	cont0_device_uart2
-	cont1_device_uart2
-	cont2_device_uart2
-
-when CONT0_CAP_UART3_DEVICE_USE == y suppress
-	cont1_device_uart3
-	cont2_device_uart3
-	cont3_device_uart3
-
-when CONT1_CAP_UART3_DEVICE_USE == y suppress
-	cont0_device_uart3
-	cont2_device_uart3
-	cont3_device_uart3
-
-when CONT2_CAP_UART3_DEVICE_USE == y suppress
-	cont0_device_uart3
-	cont1_device_uart3
-	cont3_device_uart3
-
-when CONT3_CAP_UART3_DEVICE_USE == y suppress
-	cont0_device_uart3
-	cont1_device_uart3
-	cont2_device_uart3
-
-when CONT0_CAP_TIMER1_DEVICE_USE == y suppress
-	cont1_device_timer1
-	cont2_device_timer1
-	cont3_device_timer1
-
-when CONT1_CAP_TIMER1_DEVICE_USE == y suppress
-	cont0_device_timer1
-	cont2_device_timer1
-	cont3_device_timer1
-
-when CONT2_CAP_TIMER1_DEVICE_USE == y suppress
-	cont0_device_timer1
-	cont1_device_timer1
-	cont3_device_timer1
-
-when CONT3_CAP_TIMER1_DEVICE_USE == y suppress
-        cont0_device_timer1
-        cont1_device_timer1
-        cont2_device_timer1
 
 menu cont%(cn)d_device_uart1
 	CONT%(cn)d_CAP_UART1_DEVICE_USE

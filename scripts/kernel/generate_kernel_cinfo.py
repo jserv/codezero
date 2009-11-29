@@ -108,7 +108,7 @@ pager_ifdefs_todotext = \
  * TODO:
  * This had to be defined this way because in CML2 there
  * is no straightforward way to derive symbols from expressions, even
- * it is stated in the manual that it can be done.
+ * if it is stated in the manual that it can be done.
  * As a workaround, a ternary expression of (? : ) was tried but this
  * complains that type deduction could not be done.
  */'''
