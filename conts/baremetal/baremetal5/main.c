@@ -194,6 +194,7 @@ static struct address_pool device_vaddr_pool;
 /*
  * Initialize a virtual address pool
  * for mapping physical devices.
+ 
  */
 void init_vaddr_pool(void)
 {

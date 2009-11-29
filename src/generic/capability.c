@@ -15,7 +15,7 @@
 #include <l4/api/thread.h>
 #include <l4/api/exregs.h>
 #include <l4/api/ipc.h>
-#include <l4/api/irq.h>
+//#include <l4/api/irq.h>
 #include INC_GLUE(message.h)
 #include INC_GLUE(ipc.h)
 
