@@ -32,10 +32,11 @@
 l4id_t pl190_read_irq(void)
 {
 	l4id_t irq;
-	 if ((irq =__clz(read(PL190_VIC_IRQSTATUS))))
-		 return irq;
-	 else
+
+	 if ((irq = (31 - __clz(read(PL190_VIC_IRQSTATUS)))) < 0)
 		 return IRQ_NIL;
+	 else
+		 return irq;
 }
 
 void pl190_mask_irq(l4id_t irq)
@@ -60,10 +61,10 @@ l4id_t pl190_sic_read_irq(void)
 {
 	l4id_t irq;
 
-	if ((irq =__clz(read(PL190_SIC_STATUS))))
-		return irq;
-	else
+	if ((irq =(31 - __clz(read(PL190_SIC_STATUS)))) < 0)
 		return IRQ_NIL;
+	else
+		return irq;
 }
 
 void pl190_sic_mask_irq(l4id_t irq)

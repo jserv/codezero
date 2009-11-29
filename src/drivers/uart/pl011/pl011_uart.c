@@ -233,7 +233,7 @@ int pl011_initialise_device(struct pl011_uart * uart)
 	/* Initialise data register for 8 bit data read/writes */
 	pl011_set_word_width(uart->base, 8);
 
-	/* 
+	/*
 	 * Fifos are disabled because by default it is assumed the port
 	 * will be used as a user terminal, and in that case the typed
 	 * characters will only show up when fifos are flushed, rather than

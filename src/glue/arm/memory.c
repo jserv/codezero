@@ -84,7 +84,7 @@ void copy_pgd_kern_all(pgd_table_t *to)
 				ARM_SYSCALL_VECTOR + PAGE_SIZE);
 
 	/* We temporarily map uart registers to every process */
-	copy_pgd_kern_by_vrange(to, from, USERSPACE_UART_BASE,
-				USERSPACE_UART_BASE + PAGE_SIZE);
+	copy_pgd_kern_by_vrange(to, from, USERSPACE_CONSOLE_VIRTUAL,
+				USERSPACE_CONSOLE_VIRTUAL + PAGE_SIZE);
 }
 

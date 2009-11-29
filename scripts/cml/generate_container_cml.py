@@ -37,11 +37,11 @@ def add_container_constraint(cid):
 
 device_suppress_rule = \
 '''
-when CONT${CONTID}_CAP_${DEVNAME}_DEVICE_USE == y suppress
+when CONT${CONTID}_CAP_DEVICE_${DEVNAME}_USE == y suppress
 '''
 
 device_suppress_sym = \
-'''\tcont${CONTID}_device_${DEVNAME_LOWER}
+'''\tcont${CONTID}_cap_device_${DEVNAME_LOWER}
 '''
 
 devices = ['UART1', 'UART2', 'UART3', 'TIMER1']

@@ -34,7 +34,7 @@ unsigned int kernel_mapping_end;
 /* Maps the early memory regions needed to bootstrap the system */
 void init_kernel_mappings(void)
 {
-	memset(&init_pgd, 0, sizeof(pgd_table_t));
+	memset((void *)virt_to_phys(&init_pgd), 0, sizeof(pgd_table_t));
 
 	/* Map kernel area to its virtual region */
 	add_section_mapping_init(align(virt_to_phys(_start_text),SZ_1MB),

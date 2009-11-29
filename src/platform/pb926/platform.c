@@ -72,7 +72,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 /* We will use UART0 for kernel as well as user tasks, so map it to kernel and user space */
 void init_platform_console(void)
 {
-	add_boot_mapping(PB926_UART0_BASE, PLATFORM_CONSOLE0_BASE, PAGE_SIZE,
+	add_boot_mapping(PB926_UART0_BASE, PLATFORM_CONSOLE_VIRTUAL, PAGE_SIZE,
 			 MAP_IO_DEFAULT_FLAGS);
 
 	/*
@@ -80,7 +80,7 @@ void init_platform_console(void)
 	 * userspace printf can work. Note, this raw mapping is to be
 	 * removed in the future, when file-based io is implemented.
 	 */
-	add_boot_mapping(PB926_UART0_BASE, USERSPACE_UART_BASE, PAGE_SIZE,
+	add_boot_mapping(PB926_UART0_BASE, USERSPACE_CONSOLE_VIRTUAL, PAGE_SIZE,
 			 MAP_USR_IO_FLAGS);
 
 	uart_init();
@@ -93,10 +93,10 @@ void init_platform_console(void)
  */
 void init_platform_timer(void)
 {
-	add_boot_mapping(PB926_TIMER01_BASE, PLATFORM_TIMER0_BASE, PAGE_SIZE,
+	add_boot_mapping(PB926_TIMER01_BASE, PLATFORM_TIMER0_VIRTUAL, PAGE_SIZE,
 			 MAP_IO_DEFAULT_FLAGS);
 
-	add_boot_mapping(PB926_SYSCTRL_BASE, PB926_SYSCTRL_VBASE, PAGE_SIZE,
+	add_boot_mapping(PB926_SYSCTRL_BASE, PLATFORM_SYSCTRL_VIRTUAL, PAGE_SIZE,
 			 MAP_IO_DEFAULT_FLAGS);
 
 	timer_init();
@@ -104,9 +104,9 @@ void init_platform_timer(void)
 
 void init_platform_irq_controller()
 {
-	add_boot_mapping(PB926_VIC_BASE, PLATFORM_IRQCTRL_BASE, PAGE_SIZE,
+	add_boot_mapping(PB926_VIC_BASE, PLATFORM_IRQCTRL0_VIRTUAL, PAGE_SIZE,
 			 MAP_IO_DEFAULT_FLAGS);
-	add_boot_mapping(PB926_SIC_BASE, PLATFORM_SIRQCTRL_BASE, PAGE_SIZE,
+	add_boot_mapping(PB926_SIC_BASE, PLATFORM_IRQCTRL1_VIRTUAL, PAGE_SIZE,
 			 MAP_IO_DEFAULT_FLAGS);
 	irq_controllers_init();
 }

@@ -371,7 +371,7 @@ int is_kern_pgdi(int i)
 	    (i == PGD_INDEX(USER_KIP_PAGE)) ||
 	    (i == PGD_INDEX(ARM_HIGH_VECTOR)) ||
 	    (i == PGD_INDEX(ARM_SYSCALL_VECTOR)) ||
-	    (i == PGD_INDEX(USERSPACE_UART_BASE)))
+	    (i == PGD_INDEX(USERSPACE_CONSOLE_VIRTUAL)))
 		return 1;
 	else
 		return 0;

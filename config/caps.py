@@ -139,31 +139,18 @@ cap_strings = { 'ipc' : \
 \t\t\t\t.size = ${size},
 \t\t\t},
 '''
-, 'uart' : \
+, 'device' : \
 '''
 \t\t\t[${idx}] = {
 \t\t\t\t/* For device selection */
 \t\t\t\t.target = ${cid},
-\t\t\t\t.attr = CAP_DEVTYPE_UART | (${devnum} << 16),
+\t\t\t\t.attr = (CAP_DEVTYPE_${devtype} & CAP_DEVTYPE_MASK)
+\t\t\t\t\t| ((${devnum} << CAP_DEVNUM_SHIFT) & CAP_DEVNUM_MASK),
 \t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
-\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
-\t\t\t\t.start = __pfn(PLATFORM_CONSOLE${devnum}_PHY_BASE),
-\t\t\t\t.end = __pfn(PLATFORM_CONSOLE${devnum}_PHY_BASE) + 1,
-\t\t\t\t.size = 1,
-\t\t\t},
-'''
-, 'timer' : \
-'''
-\t\t\t[${idx}] = {
-\t\t\t\t/* For device selection */
-\t\t\t\t.target = ${cid},
-\t\t\t\t.attr = CAP_DEVTYPE_TIMER | (${devnum} << 16),
-\t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
-\t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
-\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP | CAP_MAP_UTCB,
-\t\t\t\t.start = __pfn(PLATFORM_TIMER${devnum}_PHY_BASE),
-\t\t\t\t.end = __pfn(PLATFORM_TIMER${devnum}_PHY_BASE) + 1,
+\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP,
+\t\t\t\t.start = __pfn(PLATFORM_${devname}_BASE),
+\t\t\t\t.end = __pfn(PLATFORM_${devname}_BASE + PLATFORM_${devname}_SIZE),
 \t\t\t\t.size = 1,
 \t\t\t},
 '''
@@ -193,38 +180,42 @@ def prepare_custom_capability(cont, param, val):
             # Else we leave container id to user-supplied value
             if ttype == 'CURRENT_CONTAINER':
                 cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_CONTAINER',
-                                                           cid = cont.id)
+                                                          cid = cont.id)
             elif ttype == 'CURRENT_PAGER_SPACE':
                 cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_SPACE',
-                                                           cid = cont.id)
+                                                          cid = cont.id)
             elif ttype == 'ANOTHER_CONTAINER':
                 cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_CONTAINER')
             elif ttype == 'ANOTHER_PAGER':
                 cont.caps[capkey] = templ.safe_substitute(target_rtype = 'CAP_RTYPE_THREAD')
+    elif 'DEVICE' in param:
+        # Extract all fields
+        unused, device_name, rest = param.split('_', 2)
+        capkey = device_name.lower()
+        cont.caps[capkey] = cap_strings['device']
+        templ = Template(cont.caps[capkey])
+        device_id = device_name[-1:]
+        device_type = device_name[:-1]
+
+        # Fill in all blanks
+        cont.caps[capkey] = \
+            templ.safe_substitute(cid = cont.id,
+                                  devname = device_name,
+                                  devnum = device_id,
+                                  devtype = device_type)
 
     else: # Ignore custom_use symbol
         return
-    #print capkey
-    #print cont.caps[capkey]
+    # print capkey
+    # print cont.caps[capkey]
 
 def prepare_typed_capability(cont, param, val):
     captype, params = param.split('_', 1)
     captype = captype.lower()
 
-
     # USE makes us assign the initial cap string with blank fields
     if 'USE' in params:
-
-        # Special case for device
-        if 'DEVICE' in params:
-            # Extract device name and number
-            devid = captype[-1:]
-            devname = captype[: -1]
-
-            cont.caps[captype] = cap_strings[devname]
-
-        else:
-            cont.caps[captype] = cap_strings[captype]
+        cont.caps[captype] = cap_strings[captype]
 
         # Prepare string template from capability type
         templ = Template(cont.caps[captype])
@@ -232,11 +223,6 @@ def prepare_typed_capability(cont, param, val):
         # If it is a pool, amend current container id as default
         if captype[-len('pool'):] == 'pool':
             cont.caps[captype] = templ.safe_substitute(cid = cont.id)
-
-        # If device, amend current container id and devnum as default
-        if 'DEVICE' in params:
-            cont.caps[captype] = \
-                    templ.safe_substitute(cid = cont.id, devnum = devid)
 
     # Fill in the blank size field
     elif 'SIZE' in params:
@@ -278,7 +264,7 @@ def prepare_typed_capability(cont, param, val):
         #print cont.caps[captype]
 
 def prepare_capability(cont, param, val):
-    if 'CUSTOM' in param:
+    if 'CUSTOM' in param or 'DEVICE' in param:
         prepare_custom_capability(cont, param, val)
     else:
         prepare_typed_capability(cont, param, val)

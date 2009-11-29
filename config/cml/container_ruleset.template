@@ -219,38 +219,38 @@ menu cont%(cn)d_physmem_list
 # FIXME: All this is to be moved to a per-platform description file.
 #
 symbols
-cont%(cn)d_device_uart1			'Container %(cn)d UART1 Menu'
-cont%(cn)d_device_uart2                 'Container %(cn)d UART2 Menu'
-cont%(cn)d_device_uart3                 'Container %(cn)d UART3 Menu'
-cont%(cn)d_device_timer1                'Container %(cn)d TIMER23 Menu'
+cont%(cn)d_cap_device_uart1		'Container %(cn)d UART1 Menu'
+cont%(cn)d_cap_device_uart2             'Container %(cn)d UART2 Menu'
+cont%(cn)d_cap_device_uart3             'Container %(cn)d UART3 Menu'
+cont%(cn)d_cap_device_timer1            'Container %(cn)d TIMER23 Menu'
 
-CONT%(cn)d_CAP_UART1_DEVICE_USE		'Container %(cn)d UART1 Enable'
-CONT%(cn)d_CAP_UART2_DEVICE_USE         'Container %(cn)d UART2 Enable'
-CONT%(cn)d_CAP_UART3_DEVICE_USE         'Container %(cn)d UART3 Enable'
-CONT%(cn)d_CAP_TIMER1_DEVICE_USE        'Container %(cn)d TIMER23 Enable'
+CONT%(cn)d_CAP_DEVICE_UART1_USE		'Container %(cn)d UART1 Enable'
+CONT%(cn)d_CAP_DEVICE_UART2_USE         'Container %(cn)d UART2 Enable'
+CONT%(cn)d_CAP_DEVICE_UART3_USE         'Container %(cn)d UART3 Enable'
+CONT%(cn)d_CAP_DEVICE_TIMER1_USE        'Container %(cn)d TIMER23 Enable'
 
-default CONT%(cn)d_CAP_UART1_DEVICE_USE		from n
-default CONT%(cn)d_CAP_UART2_DEVICE_USE 	from n
-default CONT%(cn)d_CAP_UART3_DEVICE_USE 	from n
-default CONT%(cn)d_CAP_TIMER1_DEVICE_USE	from n
+default CONT%(cn)d_CAP_DEVICE_UART1_USE		from n
+default CONT%(cn)d_CAP_DEVICE_UART2_USE 	from n
+default CONT%(cn)d_CAP_DEVICE_UART3_USE 	from n
+default CONT%(cn)d_CAP_DEVICE_TIMER1_USE	from n
 
-menu cont%(cn)d_device_uart1
-	CONT%(cn)d_CAP_UART1_DEVICE_USE
+menu cont%(cn)d_cap_device_uart1
+	CONT%(cn)d_CAP_DEVICE_UART1_USE
 
-menu cont%(cn)d_device_uart2
-	CONT%(cn)d_CAP_UART2_DEVICE_USE
+menu cont%(cn)d_cap_device_uart2
+	CONT%(cn)d_CAP_DEVICE_UART2_USE
 
-menu cont%(cn)d_device_uart3
-	CONT%(cn)d_CAP_UART3_DEVICE_USE
+menu cont%(cn)d_cap_device_uart3
+	CONT%(cn)d_CAP_DEVICE_UART3_USE
 
-menu cont%(cn)d_device_timer1
-	CONT%(cn)d_CAP_TIMER1_DEVICE_USE
+menu cont%(cn)d_cap_device_timer1
+	CONT%(cn)d_CAP_DEVICE_TIMER1_USE
 
 menu cont%(cn)d_device_list
-	cont%(cn)d_device_uart1
-	cont%(cn)d_device_uart2
-	cont%(cn)d_device_uart3
-	cont%(cn)d_device_timer1
+	cont%(cn)d_cap_device_uart1
+	cont%(cn)d_cap_device_uart2
+	cont%(cn)d_cap_device_uart3
+	cont%(cn)d_cap_device_timer1
 
 #
 # Settings for Custom Capabilities

@@ -17,7 +17,7 @@ void timer_init(void)
 	sp810_set_timclk(PLATFORM_TIMER0, 1);
 
 	/* Initialise timer */
-	sp804_init(PLATFORM_TIMER0_BASE, SP804_TIMER_RUNMODE_PERIODIC, \
+	sp804_init(PLATFORM_TIMER0_VIRTUAL, SP804_TIMER_RUNMODE_PERIODIC, \
 		   SP804_TIMER_WRAPMODE_WRAPPING, SP804_TIMER_WIDTH32BIT, \
 		   SP804_TIMER_IRQENABLE);
 }
@@ -29,6 +29,6 @@ void timer_start(void)
 	irq_enable(IRQ_TIMER01);
 
 	/* Enable timer */
-	sp804_enable(PLATFORM_TIMER0_BASE, 1);
+	sp804_enable(PLATFORM_TIMER0_VIRTUAL, 1);
 }
 

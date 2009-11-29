@@ -13,7 +13,7 @@ extern struct pl011_uart uart;
 void uart_init()
 {
 	/* We are using UART0 for kernel */
-	uart.base = PLATFORM_CONSOLE0_BASE;
+	uart.base = PLATFORM_CONSOLE_VIRTUAL;
 	pl011_initialise_device(&uart);
 }
 

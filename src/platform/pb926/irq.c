@@ -47,7 +47,7 @@ static int platform_timer_handler(struct irq_desc *desc)
 	 * Microkernel is using just TIMER0,
 	 * so we call handler with TIMER01 index
 	 */
-	sp804_irq_handler(PLATFORM_TIMER0_BASE);
+	sp804_irq_handler(PLATFORM_TIMER0_VIRTUAL);
 	return do_timer_irq();
 }
 

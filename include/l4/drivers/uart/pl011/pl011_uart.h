@@ -80,7 +80,7 @@ static inline void pl011_uart_enable(unsigned int uart_base)
 	read(val, (uart_base + PL011_UARTCR));
 	val |= PL011_UARTEN;
 	write(val, (uart_base + PL011_UARTCR));
-	
+
 	return;
 }
 

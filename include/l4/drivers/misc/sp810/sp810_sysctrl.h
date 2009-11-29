@@ -27,7 +27,7 @@
 			: clrbit(bit, base + reg)
 
 /* The SP810 system controller offsets */
-#define SP810_BASE			PLATFORM_SP810_BASE
+#define SP810_BASE			PLATFORM_SYSCTRL_VIRTUAL
 #define SP810_SCCTRL			(SP810_BASE + 0x0)
 /* ... Fill in as needed. */
 
