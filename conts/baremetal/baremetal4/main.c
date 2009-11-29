@@ -21,6 +21,24 @@ static int total_caps = 0;
 
 struct capability uart_cap[UARTS_TOTAL];
 
+void cap_dev_print(struct capability *cap)
+{
+	switch (cap_devtype(cap)) {
+	case CAP_DEVTYPE_UART:
+		printf("Device type:\t\t\t%s%d\n", "UART", cap_devnum(cap));
+		break;
+	case CAP_DEVTYPE_TIMER:
+		printf("Device type:\t\t\t%s%d\n", "Timer", cap_devnum(cap));
+		break;
+	case CAP_DEVTYPE_CLCD:
+		printf("Device type:\t\t\t%s%d\n", "CLCD", cap_devnum(cap));
+		break;
+	default:
+		return;
+	}
+	printf("Device Irq:\t\t%d\n", cap->irq);
+}
+
 void cap_print(struct capability *cap)
 {
 	printf("Capability id:\t\t\t%d\n", cap->capid);
@@ -35,7 +53,12 @@ void cap_print(struct capability *cap)
 		printf("Capability type:\t\t%s\n", "Exchange Registers");
 		break;
 	case CAP_TYPE_MAP_PHYSMEM:
-		printf("Capability type:\t\t%s\n", "Map/Physmem");
+		if (!cap_is_devmem(cap)) {
+			printf("Capability type:\t\t%s\n", "Map/Physmem");
+		} else {
+			printf("Capability type:\t\t%s\n", "Map/Physmem/Device");
+			cap_dev_print(cap);
+		}
 		break;
 	case CAP_TYPE_MAP_VIRTMEM:
 		printf("Capability type:\t\t%s\n", "Map/Virtmem");
@@ -45,6 +68,9 @@ void cap_print(struct capability *cap)
 		break;
 	case CAP_TYPE_UMUTEX:
 		printf("Capability type:\t\t%s\n", "Mutex");
+		break;
+	case CAP_TYPE_IRQCTRL:
+		printf("Capability type:\t\t%s\n", "IRQ Control");
 		break;
 	case CAP_TYPE_QUANTITY:
 		printf("Capability type:\t\t%s\n", "Quantitative");
@@ -123,9 +149,8 @@ int cap_read_all()
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
 		BUG();
 	}
-#if 0
+
 	cap_array_print(&caparray);
-#endif
 	return 0;
 }
 
@@ -149,7 +174,7 @@ int uart_probe_devices(void)
 
 	if (uarts != UARTS_TOTAL) {
 		printf("%s: Error, not all uarts could be found. "
-		       "uarts=%d\n", __CONTAINER_NAME__, uarts);
+		       "total uarts=%d\n", __CONTAINER_NAME__, uarts);
 		return -ENODEV;
 	}
 	return 0;
@@ -209,8 +234,10 @@ void init_vaddr_pool(void)
 				 * We may allocate virtual memory
 				 * addresses from this pool.
 				 */
-				address_pool_init(&device_vaddr_pool, page_align_up(__end),
-					__pfn_to_addr(caparray[i].end), UARTS_TOTAL);
+				address_pool_init(&device_vaddr_pool,
+						  page_align_up(__end),
+						  __pfn_to_addr(caparray[i].end),
+						  UARTS_TOTAL);
 				return;
 			} else
 				goto out_err;
@@ -295,9 +322,10 @@ void handle_requests(void)
 /*
  * UTCB-size aligned utcb.
  *
- * BIG WARNING NOTE: This declaration is legal if we are
- * running in a disjoint virtual address space, where the
- * utcb declaration lies in a unique virtual address in
+ * BIG WARNING NOTE:
+ * This in-place declaration is legal if we are running
+ * in a disjoint virtual address space, where the utcb
+ * declaration lies in a unique virtual address in
  * the system.
  */
 #define DECLARE_UTCB(name) \

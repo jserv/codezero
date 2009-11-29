@@ -25,6 +25,25 @@ static int total_caps = 0;
 
 struct capability timer_cap[TIMERS_TOTAL];
 
+
+void cap_dev_print(struct capability *cap)
+{
+	switch (cap_devtype(cap)) {
+	case CAP_DEVTYPE_UART:
+		printf("Device type:\t\t\t%s%d\n", "UART", cap_devnum(cap));
+		break;
+	case CAP_DEVTYPE_TIMER:
+		printf("Device type:\t\t\t%s%d\n", "Timer", cap_devnum(cap));
+		break;
+	case CAP_DEVTYPE_CLCD:
+		printf("Device type:\t\t\t%s%d\n", "CLCD", cap_devnum(cap));
+		break;
+	default:
+		return;
+	}
+	printf("Device Irq:\t\t%d\n", cap->irq);
+}
+
 void cap_print(struct capability *cap)
 {
 	printf("Capability id:\t\t\t%d\n", cap->capid);
@@ -39,7 +58,12 @@ void cap_print(struct capability *cap)
 		printf("Capability type:\t\t%s\n", "Exchange Registers");
 		break;
 	case CAP_TYPE_MAP_PHYSMEM:
-		printf("Capability type:\t\t%s\n", "Map/Physmem");
+		if (!cap_is_devmem(cap)) {
+			printf("Capability type:\t\t%s\n", "Map/Physmem");
+		} else {
+			printf("Capability type:\t\t%s\n", "Map/Physmem/Device");
+			cap_dev_print(cap);
+		}
 		break;
 	case CAP_TYPE_MAP_VIRTMEM:
 		printf("Capability type:\t\t%s\n", "Map/Virtmem");
@@ -50,49 +74,7 @@ void cap_print(struct capability *cap)
 	case CAP_TYPE_UMUTEX:
 		printf("Capability type:\t\t%s\n", "Mutex");
 		break;
-	case CAP_TYPE_QUANTITY:
-		printf("Capability type:\t\t%s\n", "Quantitative");
-		break;
-	default:
-		printf("Capability type:\t\t%s\n", "Unknown");
-		break;
-	}
-
-	switch (cap_rtype(cap)) {
-	case CAP_RTYPE_THREAD:
-		printf("Capability resource type:\t%s\n", "Thread");
-		break;
-	case CAP_RTYPE_SPACE:
-		printf("Capability resource type:\t%s\n", "Space");
-		break;
-	case CAP_RTYPE_CONTAINER:
-		printf("Capability resource type:\t%s\n", "Container");
-		break;
-	case CAP_RTYPE_THREADPOOL:
-		printf("Capability resource type:\t%s\n", "Thread Pool");
-		break;
-	case CAP_RTYPE_SPACEPOOL:
-		printf("Capability resource type:\t%s\n", "Space Pool");
-		break;
-	case CAP_RTYPE_MUTEXPOOL:
-		printf("Capability resource type:\t%s\n", "Mutex Pool");
-		break;
-	case CAP_RTYPE_MAPPOOL:
-		printf("Capability resource type:\t%s\n", "Map Pool (PMDS)");
-		break;
-	case CAP_RTYPE_CPUPOOL:
-		printf("Capability resource type:\t%s\n", "Cpu Pool");
-		break;
-	case CAP_RTYPE_CAPPOOL:
-		printf("Capability resource type:\t%s\n", "Capability Pool");
-		break;
-	default:
-		printf("Capability resource type:\t%s\n", "Unknown");
-		break;
-	}
-	printf("\n");
-}
-
+	case CAP_TYPE_IRQCTRL:
 void cap_array_print()
 {
 	printf("Capabilities\n"
