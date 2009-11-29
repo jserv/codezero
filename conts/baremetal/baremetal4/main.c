@@ -162,11 +162,12 @@ int uart_setup_devices(void)
 	for (int i = 0; i < UARTS_TOTAL; i++) {
 		/* Get one page from address pool */
 		uart[i].base = (unsigned long)l4_new_virtual(1);
-		
+
 		/* Map uart to a virtual address region */
 		if (IS_ERR(l4_map((void *)__pfn_to_addr(uart_cap[i].start),
-				  	(void *)uart[i].base, uart_cap[i].size, MAP_USR_IO_FLAGS,
-				  	self_tid()))) {
+				  (void *)uart[i].base, uart_cap[i].size,
+				  MAP_USR_IO_FLAGS,
+				  self_tid()))) {
 			printf("%s: FATAL: Failed to map UART device "
 			       "%d to a virtual address\n",
 			       __CONTAINER_NAME__,
@@ -225,7 +226,6 @@ out_err:
 
 void *l4_new_virtual(int npages)
 {
-	
 	return address_new(&device_vaddr_pool, npages, PAGE_SIZE);
 }
 
@@ -237,9 +237,9 @@ void uart_generic_tx(char c, int devno)
 char uart_generic_rx(int devno)
 {
 	char c;
-	
+
 	pl011_rx_char(uart[devno].base, &c);
-	
+
 	return c;
 }
 
@@ -251,15 +251,15 @@ void handle_requests(void)
 
 	printf("%s: Initiating ipc.\n", __CONTAINER__);
 	if ((ret = l4_receive(L4_ANYTHREAD)) < 0) {
-		printf("%s: %s: IPC Error: %d. Quitting...\n", __CONTAINER__,
-		       __FUNCTION__, ret);
+		printf("%s: %s: IPC Error: %d. Quitting...\n",
+		       __CONTAINER__, __FUNCTION__, ret);
 		BUG();
 	}
 
 	/* Syslib conventional ipc data which uses first few mrs. */
 	tag = l4_get_tag();
 	senderid = l4_get_sender();
-	
+
 	/*
 	 * TODO:
 	 *
