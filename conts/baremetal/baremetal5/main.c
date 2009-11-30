@@ -193,7 +193,7 @@ int timer_setup_devices(void)
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* Get one page from address pool */
 		timer[i].base = (unsigned long)l4_new_virtual(1);
-		
+
 		/* Map timers to a virtual address region */
 		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer_cap[i].start),
 				  	(void *)timer[i].base, timer_cap[i].size, MAP_USR_IO_FLAGS,
@@ -210,7 +210,7 @@ int timer_setup_devices(void)
 			SP804_TIMER_WRAPMODE_WRAPPING, SP804_TIMER_WIDTH32BIT, \
 			SP804_TIMER_IRQDISABLE);
 
-		/* Enable Timer */		
+		/* Enable Timer */
 		sp804_enable(timer[i].base, 1);
 	}
 	return 0;
@@ -221,7 +221,6 @@ static struct address_pool device_vaddr_pool;
 /*
  * Initialize a virtual address pool
  * for mapping physical devices.
- 
  */
 void init_vaddr_pool(void)
 {
@@ -262,7 +261,6 @@ out_err:
 
 void *l4_new_virtual(int npages)
 {
-	
 	return address_new(&device_vaddr_pool, npages, PAGE_SIZE);
 }
 
@@ -271,8 +269,16 @@ int timer_gettime(int devno)
 	return sp804_read_value(timer[devno].base);
 }
 
+void timer_sleep(int sec)
+{
+	/*
+	  * TODO: We need to have a timer struct already present to be used
+	  * as reference for us. to implement this call
+	  */
+}
 void handle_requests(void)
 {
+	u32 mr[MR_UNUSED_TOTAL];
 	l4id_t senderid;
 	u32 tag;
 	int ret;
@@ -287,7 +293,11 @@ void handle_requests(void)
 	/* Syslib conventional ipc data which uses first few mrs. */
 	tag = l4_get_tag();
 	senderid = l4_get_sender();
-	
+
+	/* Read mrs not used by syslib */
+	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
+		mr[i] = read_mr(MR_UNUSED_START + i);
+
 	/*
 	 * TODO:
 	 *
@@ -302,6 +312,10 @@ void handle_requests(void)
 	switch (tag) {
 	case L4_IPC_TAG_TIMER_GETTIME:
 		timer_gettime(1);
+		break;
+
+	case L4_IPC_TAG_TIMER_SLEEP:
+		timer_sleep(mr[0]);
 		break;
 
 	default:

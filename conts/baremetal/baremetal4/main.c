@@ -149,8 +149,10 @@ int cap_read_all()
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
 		BUG();
 	}
-
+#if 0
 	cap_array_print(&caparray);
+#endif
+
 	return 0;
 }
 
@@ -272,6 +274,7 @@ char uart_generic_rx(int devno)
 
 void handle_requests(void)
 {
+	u32 mr[MR_UNUSED_TOTAL];
 	l4id_t senderid;
 	u32 tag;
 	int ret;
@@ -287,6 +290,10 @@ void handle_requests(void)
 	tag = l4_get_tag();
 	senderid = l4_get_sender();
 
+	/* Read mrs not used by syslib */
+	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
+		mr[i] = read_mr(MR_UNUSED_START + i);
+
 	/*
 	 * TODO:
 	 *
@@ -298,12 +305,18 @@ void handle_requests(void)
 	 * the request should (currently) come from a task
 	 * inside the current container
 	 */
+
+	/*
+	  * FIXME: Right now we are talking to UART1 by default, we need to define protocol
+	  * for sommunication with UART service
+	  */
 	switch (tag) {
 	case L4_IPC_TAG_UART_SENDCHAR:
-		uart_generic_tx(0, 1); /*FIXME: Fill in */
+		printf("got L4_IPC_TAG_UART_SENDCHAR with char %d\n ", mr[0]);
+		uart_generic_tx((char)mr[0], 0);
 		break;
 	case L4_IPC_TAG_UART_RECVCHAR:
-		uart_generic_rx(1); /* FIXME: Fill in */
+		mr[0] = (int)uart_generic_rx(0);
 		break;
 	default:
 		printf("%s: Error received ipc from 0x%x residing "

@@ -74,6 +74,6 @@ extern l4id_t pagerid;
 
 /* For ipc to timer service (TODO: Shared mapping buffers???) */
 #define L4_IPC_TAG_TIMER_GETTIME		55
-
+#define L4_IPC_TAG_TIMER_SLEEP		56
 
 #endif /* __IPCDEFS_H__ */
