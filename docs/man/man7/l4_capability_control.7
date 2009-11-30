@@ -1,0 +1,104 @@
+.TH L4_CAPABILITY_CONTROL 7 2009-11-07 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_capability_control" "- Set/Get Various capabilities of thread"
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_capability_control (unsigned int " "req" ", unsigned int " "flags",
+.BI "                           l4id_t " "capid" ", l4id_t " "tid" ", void " "*buf" ");"
+.SH DESCRIPTION
+.BR l4_capability_control() " -"
+Sets various capabilities of a thread, capabilities are read/modified always with respect to current task/thread, current address space or current container. The thread calling this system call must posses a capability to do capability. It returns
+.B ENOCAP
+if the capabilities specified by 
+.I req
+and
+.I flags
+are not valid capabilities for current thread. 
+
+.I req
+is type of requtest and can take one of these values
+.TP
+.BR CAP_CONTROL_NCAPS               
+Get capability count, sum of private capabilities, address space capabilities and container capabilities.
+.TP
+.BR CAP_CONTROL_READ
+Returns a 
+.BI "struct " "capability"
+via 
+.I buf.
+.TP
+.BR CAP_CONTROL_SHARE               
+If
+.B CAP_SHARE_SINGLE
+is specified in 
+.IR "flag",
+only the capability is moved from container capability list to address space capablity list, if 
+.B CAP_SHARE_ALL
+is specified in
+.IR "flag",
+all capabiliteis are moved from container's capability list to address sapce capability list.
+.TP
+.BR CAP_CONTROL_GRANT
+Grant the capabilities in the buffer
+.IR "buf",
+if 
+.I flag 
+has 
+.BR "CAP_GRANT_SINGLE",
+if 
+.B CAP_GRANT_ALL
+is provided with flag all capabilities are granted, if
+.B CAP_GRANT_IMMUTABLE
+is specified in flags then all(or one) capabilities are made immutable.
+.TP
+.BR CAP_CONTROL_REPLICATE
+Replicates an existing capability. This is for expanding capabilities to managed children.
+.TP
+.B CAP_CONTROL_SPLIT
+Capabilities are split by diff'ing resources possessed between capabilities.
+.I flags 
+may be one of
+.B CAP_SPLIT_SIZE     
+or
+.B CAP_SPLIT_ACCESS   
+or
+.B CAP_SPLIT_RANGE.
+
+.TP
+.BR CAP_CONTROL_DEDUCE              
+Deduction can be by access permissions, start, end, size fields, or the target resource type. Inter-container deduction is not allowed. Target resource deduction denotes reducing the applicable space of the target, e.g. from a container to a space in that container.
+.TP
+.BR CAP_CONTROL_DESTROY
+Destroys a capability specified in
+.IR "flag".
+
+.TP
+.I capid
+Currently not used, for Future
+.TP
+.I tid
+Currently not used, for Future
+.TP
+.I buf
+pointer to buffer, which holds more information depending on 
+.IR "req".
+
+.SH RETURN VALUE
+.IR "l4_capability_control"()
+Returns 0 on success, and negetive error value on failure. See below for errors
+
+.SH ERRORS
+.TP 
+.B EINVAL
+when a capability struct is passed, but it has some invalid fields.
+.TP
+.B ENOCAP
+when capabilities doesn't match or doesn't exists.
+
+.SH SEE ALSO
+.BR "capability"(7)

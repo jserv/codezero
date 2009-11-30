@@ -1,0 +1,26 @@
+.TH L4_MAP 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_map" "- Sets up virtual to physical address mappings."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_map(void " "*p" ", void " "*v" ", u32 " "npages" ", u32 " "flags" ", l4id_t " "tid" ")"
+.SH DESCRIPTION
+.BR l4_map()  " Sets up virtual to physical address mappings."
+
+.RB "Sets up a virtual to physical mapping for the thread identified by " "tid" ", from virtual address " "v" " to physical address " "p" ", spanning " "npages" " number of pages, using the given " "flags" "."
+
+
+.SH L4 Userspace Library Functions
+
+.nf
+/*
+ * Map given physical address to a virtual address 
+ * in the current task spanning npages in size.
+ */
+
+.BI "static inline void *l4_map_helper(void " "*phys" ", int " "npages" ");"

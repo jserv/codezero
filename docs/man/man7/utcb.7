@@ -1,0 +1,55 @@
+.TH L4_UTCB 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "UTCB" "- User visible thread control block"
+
+.SH SYNOPSIS
+
+.B #include <l4lib/arch/utcb.h>
+
+UTCB is a memory block designated as thread local storage that also serves as storage space for per-thread message registers transferred during an IPC between two threads.
+
+.fi
+.SH DESCRIPTION
+
+UTCB address is a virtual address that is unique for each thread available on the system and is discovered at run-time by reading the 
+.BR "Kernel Interface Page" "."
+It also stores message registers that are transferred between threads during an IPC. Depending on whether the IPC is a send or a receive, the message register fields are either transferred to other threads, or overwritten by message registers of other threads. For details please refer to the 
+.BR l4_ipc ()
+system call reference page.
+
+.fi
+UTCB address pool is predefined by the microkernel, but each individual address is allocated by the pagers. 
+
+.fi
+The UTCB structure is subject to change. New fields may be reserved on the UTCB as needed.
+
+
+.ti 8
+.BI "struct " "utcb " 
+{
+.ti 12
+.BI  "u32 "  "mr[MR_TOTAL]" ";       /* MRs that are mapped to real registers */"
+.ti 12
+.BI  "u32 "  "saved_tag" ";          /* Saved tag field for stacked ipcs */"
+.ti 12
+.BI  "u32 "  "saved_sender" ";       /* Saved sender field for stacked ipcs */"
+.ti 12
+.BI  "u32 "  "mr_rest[MR_REST]" ";   /* Complete the utcb for up to 64 words */"
+.ti 8
+};
+
+.fi
+UTCB may contain thread-local information; on the ARM architecture, the only fields on the UTCB that are not message registers are the 
+.I saved_tag
+and 
+.I saved_sender
+fields, which are used for saving the context of an earlier IPC if a new IPC is going to be made before finishing the first one in a stacked fashion.
+
+.in 8
+.SH L4 Userspace Library Functions
+.nf
+
+/* Functions to read/write utcb registers */
+.BI "static inline unsigned int read_mr(int " "offset");
+.BI "static inline void write_mr(unsigned int " "offset" ", unsigned int " "val" ")"

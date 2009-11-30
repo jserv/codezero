@@ -1,0 +1,65 @@
+.TH L4_THREAD_CONTROL 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_thread_control" "- create, destroy, suspend and resume threads."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_thread_control(unsigned int " "action" ", struct task_ids *" "ids" ")"
+.SH DESCRIPTION
+.BR l4_thread_control()  
+manipulates threads in the system.
+.fi
+This is a privileged call that can be used by pagers only.
+
+
+The  
+.I action  
+field is the main action specifier where one of the following may be supplied as valid actions.
+
+.TP
+.B THREAD_CREATE
+Creates a new thread in a new or existing space depending on the spid argument
+.TP
+.B THREAD_DESTROY 
+Destroys a thread, and its address space if it is the only thread left
+.TP
+.B THREAD_SUSPEND 
+Suspends execution of a thread 
+.TP
+.B THREAD_RUN 
+Run/Resumes execution of a thread 
+.TP
+.B THREAD_RECYCLE
+Reuses threads UTCB/Address space
+.TP
+.B THREAD_WAIT
+Wait for thread to complete
+
+.ti 8
+The 
+.IR "ids.tid" " and " "ids.spid" 
+arguments specify the thread and address space that is going to be manipulated with the specified 
+.I "action" 
+argument.
+
+.ti 10
+.BI "struct" " task_ids " 
+{
+.ti 18
+.BI "int" " tid" ";"
+.ti 18
+.BI "int" " spid" ";"
+.ti 18
+.BI "int" " tgid" ";"
+.ti 10
+};
+
+.SH L4 Userspace Library Functions
+.nf
+N/A
+ 
+ 

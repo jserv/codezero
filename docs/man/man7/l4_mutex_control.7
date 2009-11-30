@@ -1,0 +1,56 @@
+.TH L4_MUTEX_CONTROL 7 2009-11-07 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_mutex_control" "- Userspace locking and synchronization for shared memory"
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_mutex_control(void " "*mutex_word" ", int " "op" ");"
+.SH DESCRIPTION
+.BR l4_mutex_control() " - Userspace locking and synchronization for shared memory."
+
+.B op 
+argument defines whether the operation is a 
+.B lock 
+or 
+.B unlock 
+operation.
+
+.B mutex_word
+argument specifies the userspace virtual address for the lock.
+
+.ti 16
+Typically the lock is placed on a shared memory segment.
+.ti 16
+The virtual address can be different on different address spaces referring to the same lock.
+
+Mutexes are locked and unlocked with no system call assistance if there is no lock contention.
+
+If a lock contention occurs, lock holder and lock contender synchronize by the assistance of this system call.
+
+In its current state this system call represents a *binary semaphore* implementation.
+
+.nf
+.in 16
+#define L4_MUTEX_LOCK	0
+#define L4_MUTEX_UNLOCK	1
+.nf
+.in 16
+.B struct l4_mutex {
+.BI	"unsigned int " "lock" ";"
+.B } __attribute__((aligned(sizeof(int))));
+
+
+.SH L4 Userspace Library Functions
+
+.nf
+
+.BI "void l4_mutex_init(struct l4_mutex " "*m" ");"
+.BI "int l4_mutex_lock(struct l4_mutex " "*m" ");"
+.BI "int l4_mutex_unlock(struct l4_mutex " "*m" ");"
+
+
+

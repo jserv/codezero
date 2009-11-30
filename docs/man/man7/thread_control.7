@@ -1,0 +1,28 @@
+.\"
+.\" Man page for the Codezero Project
+.\"
+.\" L4 Thread Control system call
+.\"
+
+.TH L4_THREAD_CONTROL 7 2009-10-21 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+l4_thread_control \- Create a new thread in the system
+.SH SYNOPSIS
+.B #include <l4lib/arch/syscalls.h>
+.br
+.B #include <l4lib/arch/syslib.h>
+.sp
+.BI "int l4_thread_control(unsigned int " "action, " "struct task_ids * " "ids) "
+.sp
+.SH DESCRIPTION
+.B l4_thread_control()
+manipulates threads in the system.
+.I action
+field is the main action specifier where one of
+.BR THREAD_CREATE,
+.BR THREAD_RUN,
+.BR THREAD_SUSPEND,
+.BR THREAD_RESUME,
+.BR THREAD_DESTROY,
+.BR THREAD_RECYCLE,
+may be supplied as valid actions.

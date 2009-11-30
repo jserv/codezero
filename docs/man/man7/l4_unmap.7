@@ -1,0 +1,27 @@
+.TH L4_UNMAP 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_unmap" "- Removes virtual to physical address mappings."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_unmap(void " "*virtual" ", unsigned long " "npages" ", l4id_t " "tid" ")"
+.SH DESCRIPTION
+.BR l4_unmap()  " Removes virtual to physical address mappings from a thread's address space"
+
+.RB "Removes a virtual to physical mapping for the thread identified by " "tid" ", startingfrom virtual address " "virtual" ", spanning " "npages" " number of pages."
+
+
+.SH L4 Userspace Library Functions
+
+.nf
+/*
+ * Unmaps the given virtual address from current address space
+ * spanning npages number of pages. Returns negative value
+ * if the address was already unmapped.
+ */
+
+.BI "static inline void *l4_unmap_helper(void " "*virt" ", int " "npages" ");"

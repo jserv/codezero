@@ -1,0 +1,89 @@
+.TH L4_EXCHANGE_REGISTERS 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_exchange_registers" "- Modifies the context of a suspended thread."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_exchange_registers(void " "*exregs_struct" ", l4id_t " "tid" ");"
+.SH DESCRIPTION
+.BR l4_exchange_registers()  " Modifies the context of a suspended thread."
+
+Pagers can modify any register, the pager id or utcb virtual address of a thread using this call.
+
+An architecture specific 
+.BI "struct " exregs_data
+is passed to the kernel for modifying the context of a thread.
+
+Each bit in the 
+.B valid_vect 
+field determines which register offsets are to be modified.
+
+.B flags
+field determines whether to set the 
+.BR pagerid " and " utcb_address
+fields of the thread.
+
+.nf
+.in 8
+/* Values for the flags fields */
+#define EXREGS_SET_PAGER	1
+#define EXREGS_SET_UTCB	2
+#define EXREGS_READ	4
+.nf
+.in 8
+
+/* Generic structure passed by userspace pagers 
+ * for exchanging registers  
+ */
+.B struct exregs_data {
+.in 16
+.BI "exregs_context_t " "context" ";"
+.BI "u32 " "valid_vect" ";"
+.BI	"u32 " "flags" ";"
+.BI "l4id_t " "pagerid" ";"
+.BI "unsigned long " "utcb_address" ";"
+.ti 8
+.B };
+
+.in 8
+/* Exchange registers context structure for ARM */
+.B typedef struct arm_exregs_context {
+.in 16
+.BI	"u32 " "r0" ";		/* 0x4 */"
+.BI	"u32 " "r1" ";		/* 0x8 */"
+.BI	"u32 " "r2" ";		/* 0xC */"
+.BI	"u32 " "r3" ";		/* 0x10 */"
+.BI	"u32 " "r4" ";		/* 0x14 */"
+.BI	"u32 " "r5" ";		/* 0x18 */"
+.BI	"u32 " "r6" "; 		/* 0x1C */"
+.BI	"u32 " "r7" ";		/* 0x20 */"
+.BI	"u32 " "r8" ";		/* 0x24 */"
+.BI	"u32 " "r9" ";		/* 0x28 */"
+.BI	"u32 " "r10" ";		/* 0x2C */"
+.BI	"u32 " "r11" ";		/* 0x30 */"
+.BI	"u32 " "r12" ";		/* 0x34 */"
+.BI	"u32 " "sp" ";		/* 0x38 */"
+.BI	"u32 " "lr" ";		/* 0x3C */"
+.BI	"u32 " "pc" ";		/* 0x40 */"
+.ti 8
+.B } __attribute__((__packed__)) exregs_context_t;
+
+
+.in 8
+.SH L4 Userspace Library Functions
+
+.nf
+/*
+ * Exchange register library calls to modify program counter,
+ * stack, pager id, utcb address and any hardware register.
+ */
+
+.BI "void exregs_set_stack(struct exregs_data " "*s" ", unsigned long " sp);
+.BI "void exregs_set_mr(struct exregs_data " "*s" ", int " "offset" ", unsigned long " "val" ");"
+.BI "void exregs_set_pc(struct exregs_data " "*s" ", unsigned long " "pc" ");"
+.BI "void exregs_set_pager(struct exregs_data " "*s" ", l4id_t " "pagerid" ");"
+.BI "void exregs_set_utcb(struct exregs_data  "*s" ", unsigned long " "virt" ");"

@@ -1,0 +1,44 @@
+.TH L4_GETID 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_getid" "- Returns thread id, thread group id and space id of a thread."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_getid(struct task_ids " "*ids" ");"
+.SH DESCRIPTION
+.BR l4_getid()  " Returns thread id, thread group id and space id of a thread."
+
+.SH Operational Model
+Thread ID, Thread Group ID, and Space ID are received via the 
+.B ids
+structure.
+.nf
+Every thread in the system has a globally unique Thread ID.
+An address space may have one or more threads. Therefore threads may share their Space IDs.
+A Thread Group Leader has a Thread ID same as its Thread Group ID.
+A newly created thread may join an existing thread group or create a new group. This behaviour is defined by the thread's pager.
+
+.nf
+.in 16
+.B "struct task_ids {"
+.BI "int " "tid" "; /* Thread ID */"
+.BI "int " "spid" "; /* Space ID */"
+.BI "int " "tgid" "; /* Thread Group ID */"
+.B "};"
+
+.SH L4 Userspace Library Functions
+
+.nf
+/*
+ * Returns Thread ID of current thread
+ */
+
+.BI "static inline l4id_t self_tid(" "void" "){"
+.BI "struct task_ids " "ids" ";"
+.BI "l4_getid(" "&ids" ");"
+.BI "return " "ids.tid" ";"
+.B }

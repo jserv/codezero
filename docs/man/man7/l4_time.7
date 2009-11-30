@@ -1,0 +1,27 @@
+.TH L4_TIME 7 2009-11-07 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_time" "- Sets or returns system time."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_time(void " "*timeval" ", int " "set" ");"
+.SH DESCRIPTION
+.BR l4_time() " - Sets or returns system time."
+
+System time is read in the 
+.B timeval 
+argument field.
+
+If 
+.B set
+argument is a non-zero value, system time is set using the values in 
+.B timeval
+
+Currently setting the time feature is disabled
+
+Currently the system time is returned since the system has started rather than a set date.
+

@@ -1,0 +1,52 @@
+.TH L4_IPC 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
+.SH NAME
+.nf
+.BR "l4_ipc" "- Provides inter-process communication between threads."
+
+.SH SYNOPSIS
+.nf
+.B #include <l4lib/arch/syscalls.h>
+.B #include <l4lib/arch/syslib.h>
+
+.BI "int l4_ipc(l4id_t " "to, " "l4id_t " "from, " "unsigned int " "flags" ")"
+.SH DESCRIPTION
+.BR l4_ipc()  " Provides inter-process communication between threads."
+
+IPC calls transfer messages between threads that are stored in each thread's unique UTCB area accessible in the thread's address space.
+
+UTCB is a system-defined memory block that provides thread-local storage. See UTCB for more details.
+
+There are 3 types of IPC defined as shown below
+
+.B Short IPC
+.ti 16
+Transfers only the  
+.I "Primary Message Registers"
+
+.B Full IPC
+.ti 16
+Transfers the complete UTCB of the thread. 
+
+.B Extended IPC
+.ti 16
+Transfers a message buffer of up to 2 Kilobytes in size, using any address located in the address space.
+
+
+.SH L4 Userspace Library Functions
+
+.nf
+/* Short IPC Calls */
+.BI "static inline int l4_send(l4id_t " "to" ", unsigned int " "tag" ");"
+.BI "static inline int l4_receive(l4id_t " "from" ");"
+.BI "static inline int l4_sendrecv(l4id_t " "to" ", l4id_t " "from" ", unsigned int " "tag" ");"
+
+.nf
+/* Full IPC Calls */
+.BI "static inline int l4_send_full(l4id_t " "to" ", unsigned int " "tag" ");"
+.BI "static inline int l4_receive_full(l4id_t " "from" ");"
+.BI "static inline int l4_sendrecv_full(l4id_t " "to" ", l4id_t " "from" ", unsigned int " "tag" ");"
+
+.nf 
+/* Extended IPC Calls */
+.BI "static inline int l4_send_extended(l4id_t " "to" ", unsigned int " "tag" ", unsigned int " "size" ", void " "*buf" ");"
+.BI "static inline int l4_receive_extended(l4id_t " "from" ", unsigned int " "size" ", void " "*buf" ");"
