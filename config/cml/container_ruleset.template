@@ -47,12 +47,12 @@ CONT%(cn)d_LINUX_ROOTFS_ADDRESS	'Container %(cn)d Linux ROOTFS Address'
 
 default CONT%(cn)d_PAGER_LMA	 	from CONT%(cn)d_PHYS0_START
 default CONT%(cn)d_PAGER_VMA	 	from CONT%(cn)d_VIRT0_START
-default CONT%(cn)d_PAGER_SHM_START	from 0x40000000
-default CONT%(cn)d_PAGER_SHM_END	from 0x50000000
-default CONT%(cn)d_PAGER_TASK_START	from 0x30000000
-default CONT%(cn)d_PAGER_TASK_END	from 0x40000000
-default CONT%(cn)d_PAGER_UTCB_START	from 0xf8100000
-default CONT%(cn)d_PAGER_UTCB_END	from 0xf8200000
+default CONT%(cn)d_PAGER_SHM_START	from CONT%(cn)d_VIRT1_START
+default CONT%(cn)d_PAGER_SHM_END	from CONT%(cn)d_VIRT1_END
+default CONT%(cn)d_PAGER_TASK_START	from CONT%(cn)d_VIRT2_START
+default CONT%(cn)d_PAGER_TASK_END	from CONT%(cn)d_VIRT2_END
+default CONT%(cn)d_PAGER_UTCB_START	from CONT%(cn)d_VIRT3_START
+default CONT%(cn)d_PAGER_UTCB_END	from CONT%(cn)d_VIRT3_END
 default CONT%(cn)d_LINUX_ZRELADDR	from (CONT%(cn)d_LINUX_PHYS_OFFSET + 0x8000)
 default CONT%(cn)d_LINUX_PAGE_OFFSET 	from CONT%(cn)d_VIRT0_START
 default CONT%(cn)d_LINUX_PHYS_OFFSET 	from CONT%(cn)d_PHYS0_START
