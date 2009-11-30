@@ -1,7 +1,7 @@
 .TH L4_CAPABILITY_CONTROL 7 2009-11-07 "Codezero" "Codezero Programmer's Manual"
 .SH NAME
 .nf
-.BR "l4_capability_control" "- Set/Get Various capabilities of thread"
+.BR "l4_capability_control" " - Capability inspection and manipulation"
 
 .SH SYNOPSIS
 .nf
@@ -11,33 +11,40 @@
 .BI "int l4_capability_control (unsigned int " "req" ", unsigned int " "flags",
 .BI "                           l4id_t " "capid" ", l4id_t " "tid" ", void " "*buf" ");"
 .SH DESCRIPTION
-.BR l4_capability_control() " -"
-Sets various capabilities of a thread, capabilities are read/modified always with respect to current task/thread, current address space or current container. The thread calling this system call must posses a capability to do capability. It returns
-.B ENOCAP
-if the capabilities specified by 
-.I req
-and
-.I flags
-are not valid capabilities for current thread. 
-
-.I req
-is type of requtest and can take one of these values
+.BR l4_capability_control() " - "
+enables a thread to read and manipulate the list of capabilities that it possesses. Capabilities may be shared, granted to other threads, or they may be replicated, destroyed, reduced in privileges or split into parts, effectively enabling a dynamically configurable resource management architecture. The thread calling this system call must possess relevant capabilities as any operation done by this call are also subject to capability checking.
 .TP
-.BR CAP_CONTROL_NCAPS               
+.fi
+.I req
+denotes the type of request. See below for a full list.
+.TP
+.fi
+.I flags
+denotes additional flags for the given request. See below for a list of flags.
+.TP
+.fi
+
+.I buf
+almost always contains a capability structure that describes the request with regard to given
+.IR "req"
+and
+.IR "flags."
+.TP
+.BR CAP_CONTROL_NCAPS
 Get capability count, sum of private capabilities, address space capabilities and container capabilities.
 .TP
 .BR CAP_CONTROL_READ
-Returns a 
+Returns a
 .BI "struct " "capability"
-via 
+via
 .I buf.
 .TP
-.BR CAP_CONTROL_SHARE               
+.BR CAP_CONTROL_SHARE
 If
 .B CAP_SHARE_SINGLE
-is specified in 
+is specified in
 .IR "flag",
-only the capability is moved from container capability list to address space capablity list, if 
+only the capability is moved from container capability list to address space capablity list, if
 .B CAP_SHARE_ALL
 is specified in
 .IR "flag",
@@ -46,11 +53,11 @@ all capabiliteis are moved from container's capability list to address sapce cap
 .BR CAP_CONTROL_GRANT
 Grant the capabilities in the buffer
 .IR "buf",
-if 
-.I flag 
-has 
+if
+.I flag
+has
 .BR "CAP_GRANT_SINGLE",
-if 
+if
 .B CAP_GRANT_ALL
 is provided with flag all capabilities are granted, if
 .B CAP_GRANT_IMMUTABLE
@@ -61,16 +68,16 @@ Replicates an existing capability. This is for expanding capabilities to managed
 .TP
 .B CAP_CONTROL_SPLIT
 Capabilities are split by diff'ing resources possessed between capabilities.
-.I flags 
+.I flags
 may be one of
-.B CAP_SPLIT_SIZE     
-or
-.B CAP_SPLIT_ACCESS   
+.B CAP_SPLIT_SIZE
+,
+.B CAP_SPLIT_ACCESS
 or
 .B CAP_SPLIT_RANGE.
 
 .TP
-.BR CAP_CONTROL_DEDUCE              
+.BR CAP_CONTROL_DEDUCE
 Deduction can be by access permissions, start, end, size fields, or the target resource type. Inter-container deduction is not allowed. Target resource deduction denotes reducing the applicable space of the target, e.g. from a container to a space in that container.
 .TP
 .BR CAP_CONTROL_DESTROY
@@ -85,7 +92,7 @@ Currently not used, for Future
 Currently not used, for Future
 .TP
 .I buf
-pointer to buffer, which holds more information depending on 
+pointer to buffer, which holds more information depending on
 .IR "req".
 
 .SH RETURN VALUE
@@ -93,12 +100,14 @@ pointer to buffer, which holds more information depending on
 Returns 0 on success, and negetive error value on failure. See below for errors
 
 .SH ERRORS
-.TP 
+.TP
 .B EINVAL
-when a capability struct is passed, but it has some invalid fields.
+when a capability struct is passed in
+.IR "buf"
+but has some invalid fields.
 .TP
 .B ENOCAP
-when capabilities doesn't match or doesn't exists.
+when capabilities required don't exist or do not have sufficient privileges.
 
 .SH SEE ALSO
 .BR "capability"(7)
