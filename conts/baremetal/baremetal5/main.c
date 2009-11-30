@@ -75,6 +75,51 @@ void cap_print(struct capability *cap)
 		printf("Capability type:\t\t%s\n", "Mutex");
 		break;
 	case CAP_TYPE_IRQCTRL:
+		printf("Capability type:\t\t%s\n", "IRQ Control");
+		break;
+	case CAP_TYPE_QUANTITY:
+		printf("Capability type:\t\t%s\n", "Quantitative");
+		break;
+	default:
+		printf("Capability type:\t\t%s\n", "Unknown");
+		break;
+	}
+
+	switch (cap_rtype(cap)) {
+	case CAP_RTYPE_THREAD:
+		printf("Capability resource type:\t%s\n", "Thread");
+		break;
+	case CAP_RTYPE_SPACE:
+		printf("Capability resource type:\t%s\n", "Space");
+		break;
+	case CAP_RTYPE_CONTAINER:
+		printf("Capability resource type:\t%s\n", "Container");
+		break;
+	case CAP_RTYPE_THREADPOOL:
+		printf("Capability resource type:\t%s\n", "Thread Pool");
+		break;
+	case CAP_RTYPE_SPACEPOOL:
+		printf("Capability resource type:\t%s\n", "Space Pool");
+		break;
+	case CAP_RTYPE_MUTEXPOOL:
+		printf("Capability resource type:\t%s\n", "Mutex Pool");
+		break;
+	case CAP_RTYPE_MAPPOOL:
+		printf("Capability resource type:\t%s\n", "Map Pool (PMDS)");
+		break;
+	case CAP_RTYPE_CPUPOOL:
+		printf("Capability resource type:\t%s\n", "Cpu Pool");
+		break;
+	case CAP_RTYPE_CAPPOOL:
+		printf("Capability resource type:\t%s\n", "Capability Pool");
+		break;
+	default:
+		printf("Capability resource type:\t%s\n", "Unknown");
+		break;
+	}
+	printf("\n");
+}
+
 void cap_array_print()
 {
 	printf("Capabilities\n"
