@@ -75,6 +75,11 @@ void cap_print(struct capability *cap)
 		printf("Capability type:\t\t%s\n", "Mutex");
 		break;
 	case CAP_TYPE_IRQCTRL:
+		printf("Capability resource type:\t%s\n", "IRQ");
+		break;
+	}
+}
+
 void cap_array_print()
 {
 	printf("Capabilities\n"

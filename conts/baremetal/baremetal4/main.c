@@ -149,8 +149,10 @@ int cap_read_all()
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
 		BUG();
 	}
-
+#if 0
 	cap_array_print(&caparray);
+#endif
+
 	return 0;
 }
 
