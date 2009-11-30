@@ -12,7 +12,6 @@ class Container:
         self.name = None
         self.type = None
         self.id = id
-        self.baremetal_id = 0
         self.pager_lma = 0
         self.pager_vma = 0
         self.pager_size = 0
@@ -170,12 +169,11 @@ class configuration:
                 if regionid + 1 > self.containers[id].phys_regions:
                     self.containers[id].phys_regions = regionid + 1
         elif param[:len("OPT_NAME")] == "OPT_NAME":
-            dirname = val[1:-1].lower()
-            self.containers[id].dirname = dirname
-            self.containers[id].name = dirname
-        elif param[:len("BAREMETAL_PROJ")] == "BAREMETAL_PROJ":
-            param1 = param.split("_", 1)
-            self.containers[id].baremetal_id = param1[1][-1:]
+            name = val[1:-1].lower()
+            self.containers[id].name = name
+        elif param[:len("BAREMETAL_PROJ_")] == "BAREMETAL_PROJ_":
+            param1 = param.split("_", 2)
+            self.containers[id].dirname = param1[2].lower()
         elif param[:len("CAP_")] == "CAP_":
             prefix, param_rest = param.split('_', 1)
             prepare_capability(self.containers[id], param_rest, val)

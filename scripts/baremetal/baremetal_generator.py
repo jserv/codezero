@@ -49,8 +49,7 @@ class BaremetalContGenerator:
 
     def create_baremetal_srctree(self, config, cont):
         # First, create the base project directory and sources
-        str = 'baremetal' + cont.baremetal_id
-        shutil.copytree(join(self.BAREMETAL_PROJ_SRC_DIR, str), self.CONT_SRC_DIR)
+        shutil.copytree(join(self.BAREMETAL_PROJ_SRC_DIR, cont.dirname), self.CONT_SRC_DIR)
 
     def copy_baremetal_build_desc(self, config, cont):
         id_header = '[Container ID]\n'
@@ -114,7 +113,7 @@ class BaremetalContGenerator:
         for cont in config.containers:
             if cont.type == "baremetal":
                 # Determine container directory name.
-                self.CONT_SRC_DIR = join(self.BAREMETAL_SRC_BASEDIR, cont.dirname.lower())
+                self.CONT_SRC_DIR = join(self.BAREMETAL_SRC_BASEDIR, cont.name.lower())
                 self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
                 self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
                 self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
@@ -122,7 +121,7 @@ class BaremetalContGenerator:
                 self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), \
                                             self.container_h_name)
 
-                if not os.path.exists(join(self.BAREMETAL_SRC_BASEDIR, cont.dirname)):
+                if not os.path.exists(join(self.BAREMETAL_SRC_BASEDIR, cont.name)):
                     self.create_baremetal_sources(config, cont)
                 else:
                     # Don't create new sources but update configuration
