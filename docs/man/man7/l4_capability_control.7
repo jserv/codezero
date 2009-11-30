@@ -30,25 +30,43 @@ almost always contains a capability structure that describes the request with re
 and
 .IR "flags."
 .TP
+.TP
+.I capid
+Currently unused
+.TP
+.I tid
+Unused
+.TP
+
 .BR CAP_CONTROL_NCAPS
-Get capability count, sum of private capabilities, address space capabilities and container capabilities.
+Get capability count. This is the sum of thread-private capabilities, address space capabilities and container capabilities.
 .TP
 .BR CAP_CONTROL_READ
-Returns a
+Returns an array of
 .BI "struct " "capability"
-via
+structures in
 .I buf.
+The number of capabilities in the array should be first obtained by the
+.B CAP_CONTROL_NCAPS
+request.
 .TP
 .BR CAP_CONTROL_SHARE
-If
+Shares a single capability or list of capabilities with a collection entity such as an address space or a container. If
 .B CAP_SHARE_SINGLE
 is specified in
 .IR "flag",
-only the capability is moved from container capability list to address space capablity list, if
+only the given capability is shared with that entity, and if
 .B CAP_SHARE_ALL
 is specified in
 .IR "flag",
-all capabiliteis are moved from container's capability list to address sapce capability list.
+all capabilities in the given list are shared with that entity.
+
+The sharing must be made with a collection entity that contains the original entity. For example, a capability possessed by a thread may be shared with the thread's address space, or the thread's container. However it is not possible to share a capability in one container with another container. See
+.B CAP_CONTROL_REPLICATE
+and
+.B CAP_CONTROL_GRANT
+on other methods of transferring a possessed capability to another entity.
+
 .TP
 .BR CAP_CONTROL_GRANT
 Grant the capabilities in the buffer
@@ -84,29 +102,19 @@ Deduction can be by access permissions, start, end, size fields, or the target r
 Destroys a capability specified in
 .IR "flag".
 
-.TP
-.I capid
-Currently not used, for Future
-.TP
-.I tid
-Currently not used, for Future
-.TP
-.I buf
-pointer to buffer, which holds more information depending on
-.IR "req".
 
 .SH RETURN VALUE
 .IR "l4_capability_control"()
-Returns 0 on success, and negetive error value on failure. See below for errors
+Returns 0 on success, and negative value on failure. See below for error codes.
 
 .SH ERRORS
 .TP
-.B EINVAL
+.B -EINVAL
 when a capability struct is passed in
 .IR "buf"
-but has some invalid fields.
+but with invalid fields.
 .TP
-.B ENOCAP
+.B -ENOCAP
 when capabilities required don't exist or do not have sufficient privileges.
 
 .SH SEE ALSO

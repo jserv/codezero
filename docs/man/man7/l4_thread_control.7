@@ -1,7 +1,7 @@
 .TH L4_THREAD_CONTROL 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
 .SH NAME
 .nf
-.BR "l4_thread_control" "- create, destroy, suspend and resume threads."
+.BR "l4_thread_control" " - create, destroy, suspend, resume, recycle and wait on threads."
 
 .SH SYNOPSIS
 .nf
@@ -9,57 +9,142 @@
 .B #include <l4lib/arch/syslib.h>
 
 .BI "int l4_thread_control(unsigned int " "action" ", struct task_ids *" "ids" ")"
+
+
 .SH DESCRIPTION
-.BR l4_thread_control()  
-manipulates threads in the system.
+.BR l4_thread_control()
+system call manipulates threads in the system. Pagers may create, destroy, recycle, suspend and resume threads via this call. While Codezero Microkernel aims to provide dynamic privilege and resource management in the form of capabilities, this system call inherently assumes a hierarchical parent-child relationship between the caller and the target thread, such that the caller should be the pager of the targeted thread. See the Subsection
+.B THREAD RELATIONSHIPS
+below for a detailed explanation of the matter.
 .fi
-This is a privileged call that can be used by pagers only.
 
-
-The  
-.I action  
-field is the main action specifier where one of the following may be supplied as valid actions.
+.I action
+field is the main action specifier where one of the following may be supplied as valid actions:
+.TP
 
 .TP
 .B THREAD_CREATE
-Creates a new thread in a new or existing space depending on the spid argument
+Creates a new thread in a new or existing space depending on the spid argument. If spid argument denotes an existing space, new thread is added to that space. If spid argument has the value
+.B THREAD_ID_INVALID
+this is taken as a new address space creation request, and the new thread is placed into a newly allocated address space.
+Following are the action flags that are associated with a
+.B THREAD_CREATE
+request:
+
+.in 14
+.B TC_AS_PAGER
+Sets the creator of the thread as the pager of the new thread.
+
+.B TC_SHARE_PAGER
+Sets the creator's pagerid as the pager of the new thread.
+
+.B TC_SHARE_UTCB
+Sets the new thread's utcb as the creator's utcb. Threads may validly share UTCBs by making sure that they don't initiate IPC at the same time, or ensure synchronized access to UTCB fields.
+
+.B TC_SHARE_GROUP
+Sets the new thread's thread group id as the id specified by
+.I tgid field.
+
+.B TC_SHARE_SPACE
+Places the new thread into the address space specified by
+.I spid
+
+.B TC_COPY_SPACE
+Copies all page tables of the address space specified by
+.I spid
+to the new thread's newly created address space. This flag is particularly useful for implementing the
+.B POSIX fork()
+system call.
+
+.B TC_NEW_SPACE
+Creates the new thread in a brand new address space.
 .TP
-.B THREAD_DESTROY 
-Destroys a thread, and its address space if it is the only thread left
+.B THREAD_DESTROY
+Destroys a thread, and its address space if the thread destroyed is the only thread left in that address space.
 .TP
-.B THREAD_SUSPEND 
-Suspends execution of a thread 
+.B THREAD_SUSPEND
+Suspends execution of a thread. The thread goes into a dormant state.
 .TP
-.B THREAD_RUN 
-Run/Resumes execution of a thread 
+.B THREAD_RUN
+Runs or resumes execution of a thread.
 .TP
 .B THREAD_RECYCLE
-Reuses threads UTCB/Address space
+Clears all existing state of a thread, but does not deallocate the thread, leaving it dormant. The only information retained is the existing thread ids of the original thread. This is particularly useful for implementing the execve() POSIX system call.
 .TP
 .B THREAD_WAIT
-Wait for thread to complete
+Waits on a thread to exit, with exit status.
+
+On a system setup where a pager is responsible for creating threads in separate address spaces and communicating with them via IPC, the children may send an exit IPC message to their pager. This way, a pager may synchronously receive exit status of a child in the form of IPC, and take action to destroy it as part of handling the IPC. However, on systems where the application is a multi-threaded single address space application, a thread wait call provides a simple synchronous channel for the parent to wait on its child's exit status, without requiring any extra set up for IPC handling.
 
 .ti 8
-The 
-.IR "ids.tid" " and " "ids.spid" 
-arguments specify the thread and address space that is going to be manipulated with the specified 
-.I "action" 
-argument.
 
-.ti 10
-.BI "struct" " task_ids " 
-{
-.ti 18
-.BI "int" " tid" ";"
-.ti 18
-.BI "int" " spid" ";"
-.ti 18
-.BI "int" " tgid" ";"
-.ti 10
+.I ids
+field specifies the thread, address space, and thread group ids of the targeted thread. Below is the declaration for this structure:
+
+.nf
+.TP
+.BI "struct" " task_ids { "
+.in 15
+.BI "int " "tid" ";   /* Fully qualified thread id */"
+.BI "int " "spid" ";  /* Address space id (local to container) */"
+.BI "int " "tgid" ";  /* Thread group id (local, defined by userspace protocol) */"
+.ti 7
 };
+.ti 7
+.TP
+.fi
+.I tid
+argument specifies the targeted thread id for the request. This is a fully qualified thread id that uniquely identifies the thread in the system. The benefit of a fully qualified id is that it may be used to address threads that exist in other containers in the system.
+.BI "__cid("tid ")"
+macro extracts the Container ID information from the fully qualified thread id, whereas the
+.BI " __raw_tid("tid ")"
+macro provides the raw Thread ID, which omits the container ID information from the thread id. Such a raw ID still uniquely identifies the thread across containers.
+.TP
+.fi
+.I spid
+field has meaning only on a
+.B THREAD_CREATE
+request. It either identifies the targeted address space, or by providing an invalid id, signals to the system that a new address space needs to be created.
+.TP
+.fi
+.I tgid
+field is provided as an extra id slot for the thread. The pager of the thread may designate a group of threads to be in the same thread group, defining the group by a userspace protocol. This field has no meaning from the kernel's perspective, and may be removed in future releases.
+
+.SH THREAD RELATIONSHIPS
+Codezero aims to provide fine-grain privilege levels to threads in the system in the form of capabilities. Capabilities enable privileges of threads over each other to become highly configurable, resulting in the hierarchical relationship between them to become very blurry. However, even though such a relationship is not enforced by the architecture, often it comes natural that threads are created by other threads. As a result, even though a thread hierarchy is not enforced by the capability design, it is implicitly catered for by a
+.I pagerid
+field inside the kernel, to denote the relationship that a thread has create or destroy rights on another thread. The relationship is only a one-level relationship, and it may be manipulated upon thread creation by
+.B TC_AS_PAGER
+or
+.B TC_SHARE_PAGER
+fields.
+
 
 .SH L4 Userspace Library Functions
 .nf
 N/A
- 
- 
+
+.SH RETURN VALUE
+.IR "l4_thread_control"()
+Returns 0 on success, and negative value on failure. See below for error codes.
+
+.SH ERRORS
+
+.B -EINVAL
+returned when
+.IR "req"
+field has an invalid value.
+
+.B -ENOCAP
+returned when capabilities required don't exist or do not have sufficient privileges.
+
+.B -EFAULT
+returned when
+.I ids
+argument would cause a page fault.
+
+.B -ESRCH
+returned when a given thread id has not been found in the container.
+
+.SH SEE ALSO
+.BR "capability"(7), " l4_exchange_registers"(7)
