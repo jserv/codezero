@@ -231,8 +231,16 @@ int timer_gettime(int devno)
 	return sp804_read_value(timer[devno].base);
 }
 
+void timer_sleep(int sec)
+{
+	/*
+	  * TODO: We need to have a timer struct already present to be used 
+	  * as reference for us. to implement this call
+	  */
+}
 void handle_requests(void)
 {
+	u32 mr[MR_UNUSED_TOTAL];
 	l4id_t senderid;
 	u32 tag;
 	int ret;
@@ -247,7 +255,11 @@ void handle_requests(void)
 	/* Syslib conventional ipc data which uses first few mrs. */
 	tag = l4_get_tag();
 	senderid = l4_get_sender();
-	
+
+	/* Read mrs not used by syslib */
+	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
+		mr[i] = read_mr(MR_UNUSED_START + i);
+
 	/*
 	 * TODO:
 	 *
@@ -262,6 +274,10 @@ void handle_requests(void)
 	switch (tag) {
 	case L4_IPC_TAG_TIMER_GETTIME:
 		timer_gettime(1);
+		break;
+
+	case L4_IPC_TAG_TIMER_SLEEP:
+		timer_sleep(mr[0]);
 		break;
 
 	default:
