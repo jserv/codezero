@@ -8,10 +8,12 @@
 .B #include <l4/api/capability.h>
 .B #include <l4/generic/cap-types.h>
 
+
 .SH DESCRIPTION
 A capability is a unique representation of security qualifiers on a particular resource.
 Each thread, address space and container is associated with its own capability list represented by the below structure.
 
+The capability structure is defined as follows:
 .nf
 .TP
 .BI "struct" " capability " "{"
