@@ -30,6 +30,7 @@ cinfo_file_start = \
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
 #include INC_PLAT(platform.h)
+#include INC_PLAT(irq.h)
 
 %s
 

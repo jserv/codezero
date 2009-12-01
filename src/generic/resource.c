@@ -509,6 +509,7 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 		cap->end = cap_info->end;
 		cap->size = cap_info->size;
 		cap->attr = cap_info->attr;
+		cap->irq = cap_info->irq;
 
 		cap_list_insert(cap, &pager->cap_list);
 	}
@@ -576,6 +577,9 @@ void copy_boot_capabilities(struct cap_list *caplist)
 		realcap->access = bootcap->access;
 		realcap->start = bootcap->start;
 		realcap->end = bootcap->end;
+		realcap->size = bootcap->size;
+		realcap->attr = bootcap->attr;
+		realcap->irq = bootcap->irq;
 
 		/* Unlink boot one */
 		list_remove(&bootcap->list);

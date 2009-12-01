@@ -348,7 +348,7 @@ int ipc_sendrecv(l4id_t to, l4id_t from, unsigned int flags)
 		if ((ret = ipc_send(to, flags)) < 0)
 			return ret;
 		/*
-		 * Get origy. A client would block its server
+		 * Get reply. A client would block its server
 		 * only very briefly between these calls.
 		 */
 		if ((ret = ipc_recv(from, flags)) < 0)
@@ -537,7 +537,6 @@ int sys_ipc(l4id_t to, l4id_t from, unsigned int flags)
 {
 	unsigned int ipc_dir = 0;
 	int ret = 0;
-	struct ktcb *t = current; if (!t);
 
 	/* Check arguments */
 	if (tid_special_value(from) &&

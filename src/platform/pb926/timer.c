@@ -25,8 +25,8 @@ void timer_init(void)
 /* Microkernel is using TIMER0, so we will initialize only this one */
 void timer_start(void)
 {
-	/* Enable irq line for TIMER0*/
-	irq_enable(IRQ_TIMER01);
+	/* Enable irq line for TIMER0 */
+	irq_enable(IRQ_TIMER0);
 
 	/* Enable timer */
 	sp804_enable(PLATFORM_TIMER0_VIRTUAL, 1);

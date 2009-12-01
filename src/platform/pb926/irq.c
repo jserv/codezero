@@ -56,8 +56,8 @@ static int platform_timer_handler(struct irq_desc *desc)
  * Else register with register_irq()
  */
 struct irq_desc irq_desc_array[IRQS_MAX] = {
-	[IRQ_TIMER01] = {
-		.name = "Timer01",
+	[IRQ_TIMER0] = {
+		.name = "Timer0",
 		.chip = &irq_chip_array[0],
 		.handler = platform_timer_handler,
 	},

@@ -144,14 +144,15 @@ cap_strings = { 'ipc' : \
 \t\t\t[${idx}] = {
 \t\t\t\t/* For device selection */
 \t\t\t\t.target = ${cid},
-\t\t\t\t.attr = (CAP_DEVTYPE_${devtype} & CAP_DEVTYPE_MASK)
-\t\t\t\t\t| ((${devnum} << CAP_DEVNUM_SHIFT) & CAP_DEVNUM_MASK),
 \t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
 \t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP,
 \t\t\t\t.start = __pfn(PLATFORM_${devname}_BASE),
 \t\t\t\t.end = __pfn(PLATFORM_${devname}_BASE + PLATFORM_${devname}_SIZE),
 \t\t\t\t.size = 1,
+\t\t\t\t.attr = (CAP_DEVTYPE_${devtype} & CAP_DEVTYPE_MASK)
+\t\t\t\t\t| ((${devnum} << CAP_DEVNUM_SHIFT) & CAP_DEVNUM_MASK),
+\t\t\t\t.irq = IRQ_${devname},
 \t\t\t},
 '''
 }

@@ -18,6 +18,7 @@
 
 /* SP804 timer has TIMER1 at TIMER0 + 0x20 address */
 #define	PLATFORM_TIMER0_BASE		PB926_TIMER01_BASE
+
 /* Total number of timers present in this platform */
 #define	TOTAL_TIMERS			4
 

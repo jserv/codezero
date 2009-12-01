@@ -34,9 +34,9 @@
 #define SIC_IRQ_SWI			0
 #define SIC_IRQ_UART3			6
 
-/* Global irq numbers */
-#define IRQ_TIMER01		(VIC_IRQ_TIMER01 + VIC_CHIP_OFFSET)
-#define IRQ_TIMER23		(VIC_IRQ_TIMER23 + VIC_CHIP_OFFSET)
+/* Global irq numbers, note these should reflect global device names */
+#define IRQ_TIMER0		(VIC_IRQ_TIMER01 + VIC_CHIP_OFFSET)
+#define IRQ_TIMER1		(VIC_IRQ_TIMER23 + VIC_CHIP_OFFSET)
 #define IRQ_RTC			(VIC_IRQ_RTC + VIC_CHIP_OFFSET)
 #define IRQ_UART0		(VIC_IRQ_UART0 + VIC_CHIP_OFFSET)
 #define IRQ_UART1		(VIC_IRQ_UART1 + VIC_CHIP_OFFSET)
