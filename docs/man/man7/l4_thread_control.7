@@ -13,9 +13,9 @@
 
 .SH DESCRIPTION
 .BR l4_thread_control()
-system call manipulates threads in the system. Pagers may create, destroy, recycle, suspend and resume threads via this call. While Codezero Microkernel aims to provide dynamic privilege and resource management in the form of capabilities, this system call inherently assumes a hierarchical parent-child relationship between the caller and the target thread, such that the caller should be the pager of the targeted thread. See the Subsection
+system call manipulates threads in the system. Pagers may create, destroy, recycle, suspend and resume threads via this call. While Codezero Microkernel aims to provide dynamic privilege and resource management in the form of capabilities, this system call inherently assumes a hierarchical parent-child relationship between the caller and the target thread, such that the caller should be the pager of the targeted thread. See the
 .B THREAD RELATIONSHIPS
-below for a detailed explanation of the matter.
+subsection below for a detailed explanation of the matter.
 .fi
 
 .I action
@@ -104,14 +104,19 @@ macro provides the raw Thread ID, which omits the container ID information from 
 .I spid
 field has meaning only on a
 .B THREAD_CREATE
-request. It either identifies the targeted address space, or by providing an invalid id, signals to the system that a new address space needs to be created.
+request, in conjunction with one of
+.B TC_SHARE_SPACE,
+.B TC_NEW_SPACE
+or
+.B TC_COPY_SPACE
+flags
 .TP
 .fi
 .I tgid
 field is provided as an extra id slot for the thread. The pager of the thread may designate a group of threads to be in the same thread group, defining the group by a userspace protocol. This field has no meaning from the kernel's perspective, and may be removed in future releases.
 
 .SH THREAD RELATIONSHIPS
-Codezero aims to provide fine-grain privilege levels to threads in the system in the form of capabilities. Capabilities enable privileges of threads over each other to become highly configurable, resulting in the hierarchical relationship between them to become very blurry. However, even though such a relationship is not enforced by the architecture, often it comes natural that threads are created by other threads. As a result, even though a thread hierarchy is not enforced by the capability design, it is implicitly catered for by a
+Codezero aims to provide fine-grain privilege levels to threads in the system in the form of capabilities. Capabilities enable privileges of threads over each other to become highly configurable, resulting in the hierarchical relationship between them to become blurry. However, even though such a relationship is not enforced by the architecture, often it comes natural that threads are created by other threads. As a result, even though a thread hierarchy is not enforced by the capability design, it is implicitly catered for by a
 .I pagerid
 field inside the kernel, to denote the relationship that a thread has create or destroy rights on another thread. The relationship is only a one-level relationship, and it may be manipulated upon thread creation by
 .B TC_AS_PAGER
