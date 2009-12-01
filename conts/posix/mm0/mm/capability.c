@@ -441,7 +441,7 @@ int cap_read_all()
 	    !cont_mem_regions.physmem ||
 	    !cont_mem_regions.pager) {
 		printf("%s: Error, pager does not have one of the required"
-	 	       "mem capabilities defined. (TASK, SHM, PHYSMEM, UTCB)\n",
+	 	       "mem capabilities defined. (TASK, SHM, PHYSMEM, UTCB, PAGER)\n",
 		       __TASKNAME__);
 		printf("%p, %p, %p, %p, %p\n", cont_mem_regions.task,
 		       cont_mem_regions.shmem, cont_mem_regions.utcb,
