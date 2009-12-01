@@ -56,10 +56,6 @@
 #define SP804_TIMERMIS		0x14
 #define SP804_TIMERBGLOAD	0x18
 
-struct sp804_timer {
-	unsigned int base;
-};
-
 void sp804_init(unsigned int timer_base, int runmode, int wrapmode, \
 		int width, int irq_enable);
 void sp804_irq_handler(unsigned int timer_base);
