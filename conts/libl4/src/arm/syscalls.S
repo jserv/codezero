@@ -112,16 +112,14 @@ END_PROC(l4_map)
 
 /*
  * Reads/manipulates capabilities of a thread, particularly a pager.
- * @r0 = request type, @r1 = request flags,
- * @r2 = capid, @r3 = target thread id, @r4 = io buffer ptr
+ * @r0 = request type, @r1 = request flags, @r2 = Capability buffer pointer
  */
 BEGIN_PROC(l4_capability_control)
-	stmfd	sp!, {r4, lr}
-	ldr	r4, [sp, #8]		@ FIXME: Is this right?
+	stmfd	sp!, {lr}
 	ldr	r12, =__l4_capability_control
-	mov	lr, pc			@ We must return here to restore r4.
+	mov	lr, pc
 	ldr	pc, [r12]
-	ldmfd	sp!, {r4, pc}
+	ldmfd	sp!, {pc}	@ Restore original lr and return.
 END_PROC(l4_capability_control)
 
 /*

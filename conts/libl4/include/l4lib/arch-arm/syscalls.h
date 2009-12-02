@@ -42,8 +42,7 @@ int l4_ipc(l4id_t to, l4id_t from, u32 flags);
 
 typedef int (*__l4_capability_control_t)(unsigned int req, unsigned int flags, void *buf);
 extern __l4_capability_control_t __l4_capability_control;
-int l4_capability_control(unsigned int req, unsigned int flags,
-			  l4id_t capid, l4id_t tid, void *buf);
+int l4_capability_control(unsigned int req, unsigned int flags, void *buf);
 
 typedef int (*__l4_map_t)(void *phys, void *virt,
 			  u32 npages, u32 flags, l4id_t tid);

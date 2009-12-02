@@ -626,10 +626,9 @@ int cap_replicate(struct capability *dupl)
 }
 
 /*
- * Read, manipulate capabilities. Currently only capability read support.
+ * Read, manipulate capabilities.
  */
-int sys_capability_control(unsigned int req, unsigned int flags,
-			   l4id_t capid, l4id_t target, void *userbuf)
+int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 {
 	int err = 0;
 

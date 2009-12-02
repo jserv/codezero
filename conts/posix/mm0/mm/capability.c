@@ -22,6 +22,25 @@ struct cap_list capability_list;
 __initdata static struct capability *caparray;
 __initdata static int total_caps = 0;
 
+
+void cap_dev_print(struct capability *cap)
+{
+	switch (cap_devtype(cap)) {
+	case CAP_DEVTYPE_UART:
+		printf("Device type:\t\t\t%s%d\n", "UART", cap_devnum(cap));
+		break;
+	case CAP_DEVTYPE_TIMER:
+		printf("Device type:\t\t\t%s%d\n", "Timer", cap_devnum(cap));
+		break;
+	case CAP_DEVTYPE_CLCD:
+		printf("Device type:\t\t\t%s%d\n", "CLCD", cap_devnum(cap));
+		break;
+	default:
+		return;
+	}
+	printf("Device Irq:\t\t%d\n", cap->irq);
+}
+
 void cap_print(struct capability *cap)
 {
 	printf("Capability id:\t\t\t%d\n", cap->capid);
@@ -36,17 +55,24 @@ void cap_print(struct capability *cap)
 		printf("Capability type:\t\t%s\n", "Exchange Registers");
 		break;
 	case CAP_TYPE_MAP_PHYSMEM:
-		printf("Capability type:\t\t%s\n", "Map/Physmem");
+		if (!cap_is_devmem(cap)) {
+			printf("Capability type:\t\t%s\n", "Map/Physmem");
+		} else {
+			printf("Capability type:\t\t%s\n", "Map/Physmem/Device");
+			cap_dev_print(cap);
+		}
 		break;
 	case CAP_TYPE_MAP_VIRTMEM:
 		printf("Capability type:\t\t%s\n", "Map/Virtmem");
 		break;
-
 	case CAP_TYPE_IPC:
 		printf("Capability type:\t\t%s\n", "Ipc");
 		break;
 	case CAP_TYPE_UMUTEX:
 		printf("Capability type:\t\t%s\n", "Mutex");
+		break;
+	case CAP_TYPE_IRQCTRL:
+		printf("Capability type:\t\t%s\n", "IRQ Control");
 		break;
 	case CAP_TYPE_QUANTITY:
 		printf("Capability type:\t\t%s\n", "Quantitative");
@@ -90,6 +116,18 @@ void cap_print(struct capability *cap)
 	}
 	printf("\n");
 }
+
+void cap_array_print()
+{
+	printf("Capabilities\n"
+	       "~~~~~~~~~~~~\n");
+
+	for (int i = 0; i < total_caps; i++)
+		cap_print(&caparray[i]);
+
+	printf("\n");
+}
+
 
 void cap_list_print(struct cap_list *cap_list)
 {
@@ -154,7 +192,7 @@ found:
 
 	/* Split the mutex capability, passing the difference */
 	if ((err = l4_capability_control(CAP_CONTROL_SPLIT,
-					 0, 0, 0, diff_cap)) < 0) {
+					 0, diff_cap)) < 0) {
 		printf("l4_capability_control() replication of "
 		       "ipc capability failed.\n Could not "
 		       "complete CAP_CONTROL_SPLIT request on cap (%d), "
@@ -176,7 +214,7 @@ found:
 	 * to use this pool of mutexes.
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 0, 0, mutex_cap)) < 0) {
+					 mutex_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");
@@ -204,7 +242,7 @@ found2:
 	 * to use this pool of mutexes.
 	 */
 	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 0, 0, mutex_cap)) < 0) {
+					 mutex_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");
@@ -258,7 +296,7 @@ found:
 
 	/* Replicate the ipc capability, giving original as reference */
 	if ((err = l4_capability_control(CAP_CONTROL_REPLICATE,
-					 0, 0, 0, ipc_cap)) < 0) {
+					 0, ipc_cap)) < 0) {
 		printf("l4_capability_control() replication of "
 		       "ipc capability failed.\n Could not "
 		       "complete CAP_CONTROL_REPLICATE request on cap (%d), "
@@ -279,7 +317,7 @@ found:
 	cap_set_rtype(ipc_cap, CAP_RTYPE_SPACE);
 	ipc_cap->resid = ids.spid; /* This space is target resource */
 	if ((err = l4_capability_control(CAP_CONTROL_DEDUCE,
-					 0, 0, 0, ipc_cap)) < 0) {
+					 0, ipc_cap)) < 0) {
 		printf("l4_capability_control() deduction of "
 		       "ipc capability failed.\n Could not "
 		       "complete CAP_CONTROL_DEDUCE request on cap (%d), "
@@ -295,8 +333,9 @@ found:
 	 * This effectively enables all threads/spaces in this container
 	 * to communicate to us only, and be able to do nothing else.
 	 */
-	if ((err = l4_capability_control(CAP_CONTROL_SHARE, CAP_SHARE_SINGLE,
-					 0, 0, ipc_cap)) < 0) {
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
+					 CAP_SHARE_SINGLE,
+					 ipc_cap)) < 0) {
 		printf("l4_capability_control() sharing of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_SHARE request.\n");
@@ -344,7 +383,7 @@ int cap_read_all()
 
 	/* Read number of capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
-					 0, 0, 0, &ncaps)) < 0) {
+					 0, &ncaps)) < 0) {
 		printf("l4_capability_control() reading # of"
 		       " capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_NCAPS request.\n");
@@ -357,7 +396,7 @@ int cap_read_all()
 
 	/* Read all capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_READ,
-					 0, 0, 0, caparray)) < 0) {
+					 0, caparray)) < 0) {
 		printf("l4_capability_control() reading of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
@@ -480,7 +519,7 @@ int cap_find_replicate_reduce_grant(struct capability *cap)
 
 		/* Replicate capability, giving original as reference */
 		if ((err = l4_capability_control(CAP_CONTROL_REPLICATE,
-						 0, 0, 0, &new_cap)) < 0) {
+						 0, &new_cap)) < 0) {
 			printf("l4_capability_control() replication of "
 			       "capability failed.\n Could not complete "
 			       "CAP_CONTROL_REPLICATE request on cap (%d), "
@@ -515,11 +554,11 @@ int cap_find_replicate_reduce_grant(struct capability *cap)
 
 
 		if ((err = l4_capability_control(CAP_CONTROL_DEDUCE,
-						 0, 0, 0, &new_cap)) < 0) {
+						 0, &new_cap)) < 0) {
 			/* Couldn't deduce this one, destroy the replica */
 			if ((err =
 			     l4_capability_control(CAP_CONTROL_DESTROY,
-						   0, 0, 0, &new_cap)) < 0) {
+						   0, &new_cap)) < 0) {
 				printf("l4_capability_control() destruction of "
 				       "capability failed.\n Could not "
 				       "complete CAP_CONTROL_DESTROY request "
@@ -549,7 +588,7 @@ success:
 	if ((err = l4_capability_control(CAP_CONTROL_GRANT,
 					 CAP_GRANT_SINGLE |
 					 CAP_GRANT_IMMUTABLE,
-					 0, 0, &new_cap)) < 0) {
+					 &new_cap)) < 0) {
 		printf("l4_capability_control() granting of "
 		       "capability (%d) failed.\n Could not "
 		       "complete CAP_CONTROL_GRANT request.\n",
