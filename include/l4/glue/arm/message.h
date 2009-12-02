@@ -14,7 +14,7 @@
  * the microkernel will read and they have system-wide meaning.
  *
  * Primary message registers:
- * r3 - r8: These 6 registers are the primary message registers MR0-MR6
+ * r3 - r8: These 6 registers are the primary message registers MR0-MR6.
  * Their format is application-specific, i.e. the microkernel imposes no
  * format restrictions on them.
  *

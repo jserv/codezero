@@ -128,9 +128,14 @@ static inline int l4_get_retval(void)
 }
 
 /*
- * If we're about to do another ipc, this saves the last ipc's
- * parameters such as the sender and tag information.
- * Any previously saved data in save slots are destroyed.
+ * This is useful for stacked IPC. A stacked IPC happens
+ * when a new IPC is initiated before concluding the current
+ * one.
+ *
+ * This saves the last ipc's parameters such as the sender
+ * and tag information. Any previously saved data in save
+ * slots are destroyed. This is fine as IPC stacking is only
+ * useful if done once.
  */
 static inline void l4_save_ipcregs(void)
 {
