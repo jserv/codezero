@@ -13,6 +13,7 @@
 #include INC_GLUE(message.h)
 #include <l4/lib/wait.h>
 
+#if 0
 /*
  * Default function that handles userspace
  * threaded irqs. Increases notification count and wakes
@@ -32,6 +33,8 @@
  *
  * - Recursive irqs are enabled, but we are also protected
  *   from them because the current irq number is masked.
+ *
+ *   FIXME: Instead of UTCB, do it by incrementing a semaphore.
  */
 int thread_notify_default(struct irq_desc *desc)
 {
@@ -75,9 +78,6 @@ int irq_control_register(struct ktcb *task, int notify_slot, l4id_t irqnum)
 {
 	int err;
 
-	if (notify_slot >= TASK_NOTIFY_SLOTS)
-		return -EINVAL;
-
 	/*
 	 * Check that utcb memory accesses won't fault us.
 	 *
@@ -116,6 +116,16 @@ int sys_irq_control(unsigned int req, int slot, unsigned int flags, l4id_t irqno
 	default:
 			return -EINVAL;
 	}
+	return 0;
+}
+#endif
+
+/*
+ * Register/deregister device irqs. Optional synchronous and
+ * asynchronous irq handling.
+ */
+int sys_irq_control(unsigned int req, int slot, unsigned int flags, l4id_t irqno)
+{
 	return 0;
 }
 
