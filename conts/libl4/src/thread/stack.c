@@ -7,7 +7,7 @@
 #include <l4/api/errno.h>
 #include <l4lib/addr.h>
 #include <l4lib/mutex.h>
-#include <l4lib/stack.h>
+#include <l4lib/thread/stack.h>
 
 /* Extern declarations */
 extern struct l4_mutex lib_mutex;

@@ -5,7 +5,7 @@
  */
 #include <stdio.h>
 #include <l4lib/addr.h>
-#include <l4lib/utcb-common.h>
+#include <l4lib/thread/utcb-common.h>
 #include <malloc/malloc.h>
 
 /* Globally disjoint utcb virtual region pool */

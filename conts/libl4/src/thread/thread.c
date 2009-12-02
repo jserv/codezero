@@ -4,15 +4,15 @@
  * Copyright (C) 2009 B Labs Ltd.
  */
 #include <stdio.h>
+#include <malloc/malloc.h>
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/arch/syslib.h>
 #include <l4lib/exregs.h>
 #include <l4lib/mutex.h>
 #include <l4/api/thread.h>
 #include <l4/api/errno.h>
-#include <malloc/malloc.h>
-#include <l4lib/utcb.h>
-#include <l4lib/stack.h>
+#include <l4lib/thread/utcb-common.h>
+#include <l4lib/thread/stack.h>
 
 /* Extern declarations */
 extern void setup_new_thread(void);

@@ -9,7 +9,7 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/exregs.h>
 #include <l4lib/idpool.h>
-#include <l4lib/utcb-common.h>
+#include <l4lib/thread/utcb-common.h>
 #include <l4lib/utcb.h>
 
 /* Extern declarations */
