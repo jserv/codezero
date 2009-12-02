@@ -27,20 +27,18 @@ Typically the lock is placed on a shared memory segment.
 .ti 16
 The virtual address can be different on different address spaces referring to the same lock.
 
-Mutexes are locked and unlocked with no system call assistance if there is no lock contention.
-
-If a lock contention occurs, lock holder and lock contender synchronize by the assistance of this system call.
-
-In its current state this system call represents a *binary semaphore* implementation.
+Mutexes are locked and unlocked with no system call assistance if there is no lock contention. If a lock contention occurs, lock holder and lock contender synchronize by the assistance of this system call. In its current state this system call represents a 
+"binary semaphore" implementation.
 
 .nf
-.in 16
-#define L4_MUTEX_LOCK	0
-#define L4_MUTEX_UNLOCK	1
-.nf
-.in 16
+#define L4_MUTEX_LOCK   0
+.br
+#define L4_MUTEX_UNLOCK  1
+.br
 .B struct l4_mutex {
+.in 12
 .BI	"unsigned int " "lock" ";"
+.in 7
 .B } __attribute__((aligned(sizeof(int))));
 
 

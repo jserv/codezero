@@ -8,10 +8,9 @@
 .B #include <l4lib/arch/syscalls.h>
 .B #include <l4lib/arch/syslib.h>
 
-.BI "int l4_capability_control (unsigned int " "req" ", unsigned int " "flags",
-.BI "                           l4id_t " "capid" ", l4id_t " "tid" ", void " "*buf" ");"
+.BI "int l4_capability_control (unsigned int " "req" ", unsigned int " "flags" ", void *" buf ");
 .SH DESCRIPTION
-.BR l4_capability_control() " - "
+.B l4_capability_control()
 enables a thread to read and manipulate the list of capabilities that it possesses. Capabilities may be shared, granted to other threads, or they may be replicated, destroyed, reduced in privileges or split into parts, effectively enabling a dynamically configurable resource management architecture. The thread calling this system call must possess relevant capabilities as any operation done by this call are also subject to capability checking.
 .TP
 .fi
@@ -29,13 +28,6 @@ almost always contains a capability structure that describes the request with re
 .IR "req"
 and
 .IR "flags."
-.TP
-.TP
-.I capid
-Currently unused
-.TP
-.I tid
-Unused
 .TP
 
 .BR CAP_CONTROL_NCAPS
@@ -55,13 +47,11 @@ Shares a single capability or list of capabilities with a collection entity such
 .B CAP_SHARE_SINGLE
 is specified in
 .IR "flag",
-only the given capability is shared with that entity, and if
+a single capability is shared. Currently no method has been defined for sharing a larger entity than a single capability at a time, i.e. a list of capabilities. To achieve this, a
 .B CAP_SHARE_ALL
-is specified in
-.IR "flag",
-all capabilities in the given list are shared with that entity.
+flag is planned for a future release.
 
-The sharing must be made with a collection entity that contains the original entity. For example, a capability possessed by a thread may be shared with the thread's address space, or the thread's container. However it is not possible to share a capability in one container with another container. See
+The sharing must be made with a thread collection entity that contains the capability owner. For example, a capability possessed by a thread may be shared with the thread's address space, or the thread's container. However it is not possible to share a capability in one container with another container. See
 .B CAP_CONTROL_REPLICATE
 and
 .B CAP_CONTROL_GRANT
@@ -69,38 +59,41 @@ on other methods of transferring a possessed capability to another entity.
 
 .TP
 .BR CAP_CONTROL_GRANT
-Grant the capabilities in the buffer
+Grants a single capability to a target thread. The granted capability must be described in the
 .IR "buf",
-if
-.I flag
-has
+field. Since ownership may only be exercised by threads, the grantee must be a thread whose thread id is provided in the
+.I owner
+field of the capability provided, leaving all other fields intact.
+
+Currently,
 .BR "CAP_GRANT_SINGLE",
-if
+must be provided in the
+.I flag
+field, as no method has been defined for granting a larger entity than a single capability, i.e. a list of capabilities. To achieve this, a
 .B CAP_GRANT_ALL
-is provided with flag all capabilities are granted, if
+flag is planned for a future release.
+If
 .B CAP_GRANT_IMMUTABLE
-is specified in flags then all(or one) capabilities are made immutable.
+is specified in the flags, this means the granted capability should be made immutable on-the-fly. This is required as granting needs grant capabilities on the capability, but a grantor may want to remove it as it grants it.
 .TP
 .BR CAP_CONTROL_REPLICATE
-Replicates an existing capability. This is for expanding capabilities to managed children.
+Replicates an existing capability. This is useful for expanding capabilities to managed children. For example, a pager may make a replica of its capability to ipc to all threads in the container, deduce the capability to only cover itself as a thread target, and share this with the container. As a result, all threads in the container may ipc to the pager but nobody else, including each other.
 .TP
 .B CAP_CONTROL_SPLIT
-Capabilities are split by diff'ing resources possessed between capabilities.
+Capabilities are split by taking the diff of resources possessed between capabilities.
 .I flags
-may be one of
-.B CAP_SPLIT_SIZE
-,
+field may be one of
+.BR " CAP_SPLIT_SIZE",
 .B CAP_SPLIT_ACCESS
 or
-.B CAP_SPLIT_RANGE.
-
+.BR "CAP_SPLIT_RANGE",
+.RI " by which the capability is either split by its " "size", " access" ", or" " start " and " end" " fields, respectively."
 .TP
 .BR CAP_CONTROL_DEDUCE
-Deduction can be by access permissions, start, end, size fields, or the target resource type. Inter-container deduction is not allowed. Target resource deduction denotes reducing the applicable space of the target, e.g. from a container to a space in that container.
+Deduction can be by access permissions, start, end, size fields, or the target resource type. Target resource deduction denotes reducing the applicable space of the target, e.g. from a container to a space in that container. For example, an ipc capability that targets a container may be deduced to one that targets only a single address space, or even a single thread.
 .TP
 .BR CAP_CONTROL_DESTROY
-Destroys a capability specified in
-.IR "flag".
+Destroys a capability.
 
 
 .SH RETURN VALUE
