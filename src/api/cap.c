@@ -69,6 +69,7 @@ int cap_share_single(struct capability *user)
 	return 0;
 }
 
+#if 0
 /* Shares the whole list */
 int cap_share_all(void)
 {
@@ -76,18 +77,23 @@ int cap_share_all(void)
 		      &current->space->cap_list);
 	return 0;
 }
+#endif
 
 int cap_share(struct capability *cap, unsigned int flags)
 {
 	if (flags & CAP_SHARE_SINGLE)
 		cap_share_single(cap);
-	else if (flags & CAP_SHARE_ALL)
-		cap_share_all();
 	else
 		return -EINVAL;
+
 	return 0;
 }
 
+#if 0
+
+/*
+ * Currently unused. API hasn't settled.
+ */
 /* Grants all caps */
 int cap_grant_all(struct capability *req, unsigned int flags)
 {
@@ -134,6 +140,8 @@ out_err:
 	return err;
 }
 
+#endif
+
 int cap_grant_single(struct capability *req, unsigned int flags)
 {
 	struct capability *cap;
@@ -176,8 +184,6 @@ int cap_grant(struct capability *cap, unsigned int flags)
 {
 	if (flags & CAP_GRANT_SINGLE)
 		cap_grant_single(cap, flags);
-	else if (flags & CAP_GRANT_ALL)
-		cap_grant_all(cap, flags);
 	else
 		return -EINVAL;
 	return 0;
