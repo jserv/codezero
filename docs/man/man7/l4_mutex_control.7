@@ -19,6 +19,7 @@ Any virtual address on an address space may be used as a mutex lock, and mutexes
 implementation. Note that the userspace threads involved with locking must cooperate, as a non-cooperative thread may cause one or more of the threads to block indefinitely on the lock.
 
 .RB "As with all other system calls, the success of this call is subject to the caller having sufficient capabilities. See " "capability" "(7) for more information."
+.RB "On the matter of capabilities, mutex allocation inside the kernel by this call is subject to the caller having the " "mutexpool " "typed memory pool capability. The individual mutex instances however, are not first class objects as capability tracking of each mutex would put too much memory burden on the system."
 
 .I op
 argument defines whether the operation is a
@@ -35,8 +36,12 @@ Unlocks a contended mutex.
 
 .in 7
 .I mutex_word
-argument specifies the userspace virtual address for the lock. See below for a userspace representation of the mutex structure:
+argument specifies the userspace virtual address for the lock. See below for a userspace representation of the mutex structure.
 
+
+.SH L4 USERSPACE LIBRARY
+
+.nf
 .br
 .in 7
 .B struct l4_mutex {
@@ -44,11 +49,6 @@ argument specifies the userspace virtual address for the lock. See below for a u
 .BI	"unsigned int " "lock" ";"
 .in 7
 .B } __attribute__((aligned(sizeof(int))));
-
-
-.SH L4 USERSPACE LIBRARY
-
-.nf
 
 .BI "void l4_mutex_init(struct l4_mutex " "*m" ");"
 .BI "int l4_mutex_lock(struct l4_mutex " "*m" ");"
