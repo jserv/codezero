@@ -26,7 +26,7 @@
  */
 int platform_setup_device_caps(struct kernel_resources *kres)
 {
-	struct capability *uart[4], *timer[4];
+	struct capability *uart[4], *timer[4], *clcd[1];
 
 	/* Setup capabilities for userspace uarts and timers */
 	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
@@ -65,6 +65,16 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	cap_set_devnum(timer[1], 1);
 	link_init(&timer[1]->list);
 	cap_list_insert(timer[1], &kres->devmem_free);
+
+	/* Setup clcd capability as free */
+	clcd[0] =  alloc_bootmem(sizeof(*clcd[0]), 0);
+	clcd[0]->start = __pfn(PB926_CLCD_BASE);
+	clcd[0]->end = clcd[0]->start + 1;
+	clcd[0]->size = clcd[0]->end - clcd[0]->start;
+	cap_set_devtype(clcd[0], CAP_DEVTYPE_CLCD);
+	cap_set_devnum(clcd[0], 0);
+	link_init(&clcd[0]->list);
+	cap_list_insert(clcd[0], &kres->devmem_free);
 
 	return 0;
 }

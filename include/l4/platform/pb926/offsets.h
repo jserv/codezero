@@ -24,6 +24,7 @@
 #define	PB926_UART1_BASE		0x101F2000 /* Console port (UART1) */
 #define	PB926_UART2_BASE		0x101F3000 /* Console port (UART2) */
 #define	PB926_UART3_BASE		0x10009000 /* Console port (UART3) */
+#define	PB926_CLCD_BASE		0x10120000 /* Color LCD */
 
 /*
  * Uart virtual address until a file-based console access

@@ -9,11 +9,12 @@
 #include <l4/api/errno.h>
 
 #include <l4/api/space.h>
+#include <malloc/malloc.h>
 #include <capability.h>
 #include <container.h>
 #include "sp804_timer.h"
 #include <linker.h>
-
+#include <timer.h>
 
 /* Frequency of timer in MHz */
 #define TIMER_FREQUENCY	1
@@ -188,16 +189,36 @@ int timer_probe_devices(void)
 
 static struct sp804_timer timer[TIMERS_TOTAL];
 
+struct timer_task *get_timer_task(l4id_t tgid)
+{
+	/* May be we can prepare a cache for timer_task structs */
+	struct timer_task *task = (struct timer_task *)kzalloc(sizeof(struct timer_task));
+
+	link_init(&task->list);
+	task->tgid = tgid;
+	task->wait_count = timer[0].count;
+
+	return task;
+}
+
+void free_timer_task(struct timer_task *task)
+{
+	kfree(task);
+}
+
 int timer_setup_devices(void)
 {
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* Get one page from address pool */
 		timer[i].base = (unsigned long)l4_new_virtual(1);
+		timer[i].count = 0;
+		link_init(&timer[i].tasklist);
+		l4_mutex_init(&timer[i].lock);
 
 		/* Map timers to a virtual address region */
 		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer_cap[i].start),
-				  	(void *)timer[i].base, timer_cap[i].size, MAP_USR_IO_FLAGS,
-				  	self_tid()))) {
+				  (void *)timer[i].base, timer_cap[i].size, MAP_USR_IO_FLAGS,
+				  self_tid()))) {
 			printf("%s: FATAL: Failed to map TIMER device "
 			       "%d to a virtual address\n",
 			       __CONTAINER_NAME__,
@@ -206,7 +227,7 @@ int timer_setup_devices(void)
 		}
 
 		/* Initialise timer */
-		sp804_init(timer[i].base, SP804_TIMER_RUNMODE_FREERUN, \
+		sp804_init(timer[i].base, SP804_TIMER_RUNMODE_PERIODIC, \
 			SP804_TIMER_WRAPMODE_WRAPPING, SP804_TIMER_WIDTH32BIT, \
 			SP804_TIMER_IRQDISABLE);
 
@@ -264,18 +285,48 @@ void *l4_new_virtual(int npages)
 	return address_new(&device_vaddr_pool, npages, PAGE_SIZE);
 }
 
-int timer_gettime(int devno)
+void timer_irq_handler(void)
 {
-	return sp804_read_value(timer[devno].base);
+	struct timer_task *struct_ptr, *temp_ptr;
+
+	timer[0].count += 1;
+
+	/*
+	 * FIXME:
+	 * Traverse through the sleeping process list and
+	 * wake any process if required, we need to put this part in bottom half
+	 */
+	list_foreach_removable_struct(struct_ptr, temp_ptr, &timer[0].tasklist, list)
+		if (struct_ptr->wait_count == timer[0].count) {
+
+			/* Remove task from list */
+			l4_mutex_lock(&timer[0].lock);
+			list_remove(&struct_ptr->list);
+			l4_mutex_unlock(&timer[0].lock);
+
+			/* wake the sleeping process, send wake ipc */
+
+			free_timer_task(struct_ptr);
+		}
 }
 
-void timer_sleep(int sec)
+int timer_gettime(void)
 {
-	/*
-	  * TODO: We need to have a timer struct already present to be used
-	  * as reference for us. to implement this call
-	  */
+	return timer[0].count;
 }
+
+void timer_sleep(l4id_t tgid, int sec)
+{
+	struct timer_task *task = get_timer_task(tgid);
+
+	/* Check for overflow */
+	task->wait_count += (sec * 1000000);
+
+	l4_mutex_lock(&timer[0].lock);
+	list_insert_tail(&task->list, &timer[0].tasklist);
+	l4_mutex_unlock(&timer[0].lock);
+}
+
 void handle_requests(void)
 {
 	u32 mr[MR_UNUSED_TOTAL];
@@ -311,11 +362,12 @@ void handle_requests(void)
 	 */
 	switch (tag) {
 	case L4_IPC_TAG_TIMER_GETTIME:
-		timer_gettime(1);
+		mr[0] = timer_gettime();
 		break;
 
 	case L4_IPC_TAG_TIMER_SLEEP:
-		timer_sleep(mr[0]);
+		timer_sleep(senderid, mr[0]);
+		/* TODO: Halt the caller for mr[0] seconds */
 		break;
 
 	default:

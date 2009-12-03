@@ -24,13 +24,18 @@ LIBDEV_UART_PATH = join(PROJROOT, 'conts/libdev/uart')
 # Path for timer files
 LIBDEV_TIEMR_PATH = join(PROJROOT, 'conts/libdev/timer/sp804')
 
+# Path for clcd files
+LIBDEV_CLCD_PATH = join(PROJROOT, 'conts/libdev/clcd/pl110')
+
 e = env.Clone()
-e.Append(CPPPATH = [LIBDEV_UART_PATH + '/include', LIBDEV_TIEMR_PATH + '/include'],
+e.Append(CPPPATH = [LIBDEV_UART_PATH + '/include', LIBDEV_TIEMR_PATH + '/include',
+                    LIBDEV_CLCD_PATH + '/include',],
          CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper(),
                     '-DPLATFORM_' + platform.upper()])
 
 source = Glob('uart/src' + '/*.c') + \
-         Glob('timer/sp804/src' + '/*.c')
+         Glob('timer/sp804/src' + '/*.c') + \
+        Glob('clcd/pl110/src' + '/*.c')
 
 objects = e.StaticObject(source)
 library = e.StaticLibrary('libdev-' + variant, objects)

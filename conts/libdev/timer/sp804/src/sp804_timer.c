@@ -10,6 +10,8 @@
 #define		setbit(bit, a)	write(read(a) | bit, a)
 #define		clrbit(bit, a)  write(read(a) & ~bit, a)
 
+extern void timer_irq_handler(void);
+
 void sp804_irq_handler(unsigned int timer_base)
 {
 	/*
@@ -17,6 +19,7 @@ void sp804_irq_handler(unsigned int timer_base)
 	 * as it automatically reloads and wraps
 	 */
 	write(1, (timer_base + SP804_TIMERINTCLR));
+	timer_irq_handler();
 }
 
 static inline void sp804_control(unsigned int timer_base, int bit, int setclr)
