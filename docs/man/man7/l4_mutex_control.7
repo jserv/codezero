@@ -10,39 +10,43 @@
 
 .BI "int l4_mutex_control(void " "*mutex_word" ", int " "op" ");"
 .SH DESCRIPTION
-.BR l4_mutex_control() " - Userspace locking and synchronization for shared memory."
+.BR "l4_mutex_control()" " - provides userspace locking and synchronization for shared memory."
+.RI "The " "mutex_word " "argument contains the virtual address for the lock, and is typically placed on a shared memory segment."
+It would still be valid if the lock virtual address is different on different address spaces, as the kernel uses the actual physical address for uniquely identifying the lock.
 
-.B op 
-argument defines whether the operation is a 
-.B lock 
-or 
-.B unlock 
-operation.
+Any virtual address on an address space may be used as a mutex lock, and mutexes are locked and unlocked with no system call assistance if there is no lock contention. If a lock contention occurs, lock holder and lock contender synchronize by the assistance of this system call. In its current state, this system call represents a
+.B "binary semaphore"
+implementation. Note that the userspace threads involved with locking must cooperate, as a non-cooperative thread may cause one or more of the threads to block indefinitely on the lock.
 
-.B mutex_word
-argument specifies the userspace virtual address for the lock.
+.RB "As with all other system calls, the success of this call is subject to the caller having sufficient capabilities. See " "capability" "(7) for more information."
 
-.ti 16
-Typically the lock is placed on a shared memory segment.
-.ti 16
-The virtual address can be different on different address spaces referring to the same lock.
+.I op
+argument defines whether the operation is a
+.BR "lock" ","
+or an
+.B unlock
+operation:
+.TP
+.B L4_MUTEX_LOCK
+Locks a contended mutex.
+.TP
+.B L4_MUTEX_UNLOCK
+Unlocks a contended mutex.
 
-Mutexes are locked and unlocked with no system call assistance if there is no lock contention. If a lock contention occurs, lock holder and lock contender synchronize by the assistance of this system call. In its current state this system call represents a 
-"binary semaphore" implementation.
+.in 7
+.I mutex_word
+argument specifies the userspace virtual address for the lock. See below for a userspace representation of the mutex structure:
 
-.nf
-#define L4_MUTEX_LOCK   0
 .br
-#define L4_MUTEX_UNLOCK  1
-.br
+.in 7
 .B struct l4_mutex {
-.in 12
+.in 15
 .BI	"unsigned int " "lock" ";"
 .in 7
 .B } __attribute__((aligned(sizeof(int))));
 
 
-.SH L4 Userspace Library Functions
+.SH L4 USERSPACE LIBRARY
 
 .nf
 
@@ -52,3 +56,19 @@ Mutexes are locked and unlocked with no system call assistance if there is no lo
 
 
 
+.SH RETURN VALUE
+.BR "l4_mutex_control()" " returns 0 on success, and negative value on failure. See below for error codes."
+
+.SH ERRORS
+.TP
+.B -ENOMEM
+The caller has no sufficient capability to allocate a mutex structure in the kernel.
+.TP
+.B -EINVAL
+.RI "Invalid value in the " "op " "field. "
+.TP
+.B -ENOCAP
+Caller has no capability to make this system call.
+
+.SH SEE ALSO
+.BR "capability" "(7)"
