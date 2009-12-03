@@ -19,30 +19,27 @@ The UTCB stores message registers that are transferred between threads during an
 .BR l4_ipc ()
 system call reference page.
 
-UTCB may also be used for any thread-local information that is private to each thread in an address space. For example on stacked IPCs where a new IPC is initiated before the current IPC has been completed,
-.I saved_tag
-and
-.I saved_sender
-fields serve the purpose of saving the unfinished IPC information.
-.I notify
-field provides asynchronous notification slots for asynchronous messages. For a full description of each field please refer to below.
+.RI "UTCB may also be used for any thread-local information that is private to each thread in an address space. For example on stacked IPCs where a new IPC is initiated before the current IPC has been completed, " "saved_tag " "and " "saved_sender " "fields serve the purpose of saving the unfinished IPC information. For a full description of each field please refer to below. "
 .fi
 
 .ti 8
 .BI "struct " "utcb "
 {
-.ti 12
+.ti 16
 .BI  "u32 "  "mr[MR_TOTAL]" ";       /* MRs that are mapped to real registers */"
-.ti 12
+.ti 16
 .BI  "u32 "  "saved_tag" ";          /* Saved tag field for stacked ipc */"
-.ti 12
+.ti 16
 .BI  "u32 "  "saved_sender" ";       /* Saved sender field for stacked ipc */"
-.ti 12
-.BI  "u8 "   " notify[8]" ";          /* Asynchronous notification slots. One slot per byte. */"
-.ti 12
+.ti 16
 .BI  "u32 "  "mr_rest[MR_REST]" ";   /* Complete the utcb to 64 words */"
 .ti 8
 };
+
+.TP
+.fi
+.I mr[MR_TOTAL]
+.RB "Primary message registers. On the ARM Architecture there are 6 of these registers, named as " "MR0 - MR5" ". As an optimisation, these registers may be mapped to real registers by the kernel during an ipc. However this behaviour is not warranted by the kernel API."
 
 .TP
 .fi
@@ -54,10 +51,8 @@ Saved IPC tag field on a stacked IPC.
 Saved sender id on a stacked IPC.
 .TP
 .fi
-.I notify
-This field consists of eight single-byte slots that are used for asynchronous messaging. Each thread subscribes to one or more slots, and may sleep on these slots if needed. Any asynchronous message sent to the thread updates these slots with new values. IRQs are often handled in userspace with the help of these slots. See
-.B l4_irq_control()
-for detailed information.
+.I mr_rest[MR_REST]
+.RB "Rest of the message registers located on the UTCB. These registers are transferred upon an ipc only if the ipc type is a " "full ipc" ". See " "l4_ipc" "(7) for more details."
 
 .SH UTCB ALLOCATION
 UTCB address and memory allocation is not maintained by Codezero Microkernel. Both UTCB allocation and maintainence is expected to be handled in userspace.
@@ -70,20 +65,20 @@ The simplest solution to create a UTCB is to simply declare a UTCB size aligned 
 .BI "#define DECLARE_UTCB(" name ")
 .B struct utcb name ALIGN(sizeof(struct utcb))
 
+and use it by:
+
 .B DECLARE_UTCB(utcb);
 
 While this works, it requires the statically allocated structure to lie in a virtual address area that is disjoint from any other virtual address in the system.
 
-Pagers may set a thread's utcb by the
-.I l4_exchange_registers()
-system call. See this call on how to set up a new utcb.
+.RB "Pagers may set a thread's utcb by the " "l4_exchange_registers() " "system call. Please see " "l4_exchange_registers" "(7) for more details."
 
 .fi
 The UTCB structure may be of variable size, and has been set to a total of 256 bytes on an ARM system. The UTCB structure is subject to change. New fields may be reserved on the UTCB as needed.
 
 
 .in 8
-.SH L4 Userspace Library Functions
+.SH L4 USERSPACE LIBRARY
 .nf
 
 /* Functions to read/write utcb registers */
@@ -91,4 +86,4 @@ The UTCB structure may be of variable size, and has been set to a total of 256 b
 .BI "static inline void write_mr(unsigned int " "offset" ", unsigned int " "val" ")"
 
 .SH SEE ALSO
-.BR "l4_irq_control"(7), " l4_exchange_registers"(7)
+.BR "l4_ipc"(7), " l4_exchange_registers"(7)
