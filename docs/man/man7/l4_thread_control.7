@@ -74,7 +74,7 @@ Clears all existing state of a thread, but does not deallocate the thread, leavi
 .B THREAD_WAIT
 Waits on a thread to exit, with exit status.
 
-On a system setup where a pager is responsible for creating threads in separate address spaces and communicating with them via IPC, the children may send an exit IPC message to their pager. This way, a pager may synchronously receive exit status of a child in the form of IPC, and take action to destroy it as part of handling the IPC. However, on systems where the application is a multi-threaded single address space application, a thread wait call provides a simple synchronous channel for the parent to wait on its child's exit status, without requiring any extra set up for IPC handling.
+On a system setup where a pager is responsible for creating threads in separate address spaces and communicating with them via IPC, the children may send an exit IPC message to their pager. This way, a pager may synchronously receive exit status of a child in the form of IPC, and take action to destroy it as part of handling the IPC. However, on systems where the application is a multi-threaded, single address space application, a thread wait call provides a simple synchronous channel for the parent to wait on its child's exit status, without requiring any extra set up for IPC handling.
 
 .ti 8
 
