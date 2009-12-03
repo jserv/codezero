@@ -76,10 +76,8 @@ Waits on a thread to exit, with exit status.
 
 On a system setup where a pager is responsible for creating threads in separate address spaces and communicating with them via IPC, the children may send an exit IPC message to their pager. This way, a pager may synchronously receive exit status of a child in the form of IPC, and take action to destroy it as part of handling the IPC. However, on systems where the application is a multi-threaded, single address space application, a thread wait call provides a simple synchronous channel for the parent to wait on its child's exit status, without requiring any extra set up for IPC handling.
 
-.ti 8
-
-.I ids
-field specifies the thread, address space, and thread group ids of the targeted thread. Below is the declaration for this structure:
+.ti 7
+.IR "ids " "field specifies the thread, address space, and thread group ids of the targeted thread. Below is the declaration for this structure:"
 
 .nf
 .TP
@@ -114,6 +112,9 @@ flags
 .fi
 .I tgid
 field is provided as an extra id slot for the thread. The pager of the thread may designate a group of threads to be in the same thread group, defining the group by a userspace protocol. This field has no meaning from the kernel's perspective, and may be removed in future releases.
+
+.in 7
+.RB "See " "l4_getid" "(7) for more details on resource ids in Codezero."
 
 .SH THREAD RELATIONSHIPS
 Codezero aims to provide fine-grain privilege levels to threads in the system in the form of capabilities. Capabilities enable privileges of threads over each other to become highly configurable, resulting in the hierarchical relationship between them to become blurry. However, even though such a relationship is not enforced by the architecture, often it comes natural that threads are created by other threads. As a result, even though a thread hierarchy is not enforced by the capability design, it is implicitly catered for by a
@@ -152,4 +153,4 @@ argument would cause a page fault.
 returned when a given thread id has not been found in the container.
 
 .SH SEE ALSO
-.BR "capability"(7), " l4_exchange_registers"(7)
+.BR "capability"(7), " l4_exchange_registers" "(7), " "l4_getid" "(7)"

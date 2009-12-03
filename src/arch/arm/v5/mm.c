@@ -443,7 +443,7 @@ int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd)
 			break;
 
 		case PGD_TYPE_FAULT:
-			ret = -1;
+			ret = -ENOMAP;
 			break;
 
 		case PGD_TYPE_SECTION:

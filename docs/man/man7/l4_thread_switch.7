@@ -10,9 +10,10 @@
 
 .BI "int l4_thread_switch(u32 " "dest" ");"
 .SH DESCRIPTION
-.BR l4_thread_switch()  " - Yields the CPU."
+.BR l4_thread_switch()  " - yields the CPU. Current thread yields the CPU donating its left timeslice to thread with id specified in the
+.I dest
+field.
 
-Current thread yields the CPU donating its left timeslice to thread with ID specified in the 
-.B dest 
-argument.
+.SH RETURN VALUE
+Always succeeds with a return value of 0.
 

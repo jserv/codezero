@@ -68,10 +68,11 @@ void update_system_time(void)
 int sys_time(struct timeval *tv, int set)
 {
 	int retries = 20;
+	int err;
 
-	if (check_access((unsigned long)tv, sizeof(*tv),
-			 MAP_USR_RW_FLAGS, 1) < 0)
-		return -EINVAL;
+	if ((err = check_access((unsigned long)tv, sizeof(*tv),
+				MAP_USR_RW_FLAGS, 1)) < 0)
+		return err;
 
 	/* Get time */
 	if (!set) {

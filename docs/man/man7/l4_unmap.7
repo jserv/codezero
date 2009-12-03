@@ -1,7 +1,7 @@
 .TH L4_UNMAP 7 2009-11-02 "Codezero" "Codezero Programmer's Manual"
 .SH NAME
 .nf
-.BR "l4_unmap" "- Removes virtual to physical address mappings."
+.BR "l4_unmap" " - removes virtual to physical address mappings."
 
 .SH SYNOPSIS
 .nf
@@ -10,9 +10,9 @@
 
 .BI "int l4_unmap(void " "*virtual" ", unsigned long " "npages" ", l4id_t " "tid" ")"
 .SH DESCRIPTION
-.BR l4_unmap()  " Removes virtual to physical address mappings from a thread's address space"
+.B l4_unmap()
+.RI "removes a virtual to physical mapping from the address space of the thread identified by " "tid " "starting from virtual address " "virtual" ", and spanning " "npages" " number of pages."
 
-.RB "Removes a virtual to physical mapping for the thread identified by " "tid" ", startingfrom virtual address " "virtual" ", spanning " "npages" " number of pages."
 
 
 .SH L4 USERSPACE LIBRARY
@@ -23,5 +23,24 @@
  * spanning npages number of pages. Returns negative value
  * if the address was already unmapped.
  */
-
 .BI "static inline void *l4_unmap_helper(void " "*virt" ", int " "npages" ");"
+
+.fi
+.SH RETURN VALUE
+.BR "l4_unmap"()
+returns 0 on success, and negative value on failure. See below for error codes.
+
+.SH ERRORS
+
+.B -ESRCH
+The thread to remove the mapping could not be found on the system.
+
+.B -ENOCAP
+Capabilities required don't exist or caller do not have sufficient privileges.
+
+.B -1
+There is already an unmapped area in one of the pages that were unmapped. This may or may not be an error, depending on what state the caller expects the unmapped area to be in.
+
+.SH SEE ALSO
+.BR "l4_map"(7)
+
