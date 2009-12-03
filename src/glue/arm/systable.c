@@ -99,9 +99,7 @@ int arch_sys_capability_control(syscall_context_t *regs)
 {
 	return sys_capability_control((unsigned int)regs->r0,
 				      (unsigned int)regs->r1,
-				      (l4id_t)regs->r2,
-				      (l4id_t)regs->r3,
-				      (void *)regs->r4);
+				      (void *)regs->r2);
 }
 
 int arch_sys_container_control(syscall_context_t *regs)
