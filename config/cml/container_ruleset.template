@@ -134,7 +134,8 @@ derive baremetal%(cn)d from
 ((CONT%(cn)d_BAREMETAL_PROJ_THREADS_DEMO==y) ? "thread_demo%(cn)d" :
 ((CONT%(cn)d_BAREMETAL_PROJ_TEST==y) ? "test%(cn)d" :
 ((CONT%(cn)d_BAREMETAL_PROJ_UART_SERVICE==y) ? "uart_service%(cn)d" :
-((CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE==y) ? "timer_service%(cn)d" : "baremetal_noname%(cn)d" )))))
+((CONT%(cn)d_BAREMETAL_PROJ_CLCD_SERVICE==y) ? "clcd_service%(cn)d" :
+((CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE==y) ? "timer_service%(cn)d" : "baremetal_noname%(cn)d" ))))))
 
 default CONT%(cn)d_OPT_NAME from (CONT%(cn)d_TYPE_LINUX==y) ? "linux%(cn)d" : ((CONT%(cn)d_TYPE_BAREMETAL==y) ? baremetal%(cn)d : "posix%(cn)d")
 
@@ -167,6 +168,7 @@ CONT%(cn)d_BAREMETAL_PROJ_THREADS_DEMO	'Thread Library Demo'
 CONT%(cn)d_BAREMETAL_PROJ_TEST      	'Test Project'
 CONT%(cn)d_BAREMETAL_PROJ_UART_SERVICE	'UART Service'
 CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE 'Timer Service'
+CONT%(cn)d_BAREMETAL_PROJ_CLCD_SERVICE 	'CLCD Service'
 
 choices cont%(cn)d_baremetal_params
 	CONT%(cn)d_BAREMETAL_PROJ_EMPTY
@@ -175,6 +177,7 @@ choices cont%(cn)d_baremetal_params
 	CONT%(cn)d_BAREMETAL_PROJ_TEST
 	CONT%(cn)d_BAREMETAL_PROJ_UART_SERVICE
 	CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE
+	CONT%(cn)d_BAREMETAL_PROJ_CLCD_SERVICE
 	default CONT%(cn)d_BAREMETAL_PROJ_EMPTY
 
 menu cont%(cn)d_default_pager_params
@@ -231,16 +234,19 @@ cont%(cn)d_cap_device_uart1		'Container %(cn)d UART1 Menu'
 cont%(cn)d_cap_device_uart2             'Container %(cn)d UART2 Menu'
 cont%(cn)d_cap_device_uart3             'Container %(cn)d UART3 Menu'
 cont%(cn)d_cap_device_timer1            'Container %(cn)d TIMER23 Menu'
+cont%(cn)d_cap_device_clcd            	'Container %(cn)d CLCD Menu'
 
 CONT%(cn)d_CAP_DEVICE_UART1_USE		'Container %(cn)d UART1 Enable'
 CONT%(cn)d_CAP_DEVICE_UART2_USE         'Container %(cn)d UART2 Enable'
 CONT%(cn)d_CAP_DEVICE_UART3_USE         'Container %(cn)d UART3 Enable'
 CONT%(cn)d_CAP_DEVICE_TIMER1_USE        'Container %(cn)d TIMER23 Enable'
+CONT%(cn)d_CAP_DEVICE_CLCD0_USE        	'Container %(cn)d CLCD Enable'
 
 default CONT%(cn)d_CAP_DEVICE_UART1_USE		from n
 default CONT%(cn)d_CAP_DEVICE_UART2_USE 	from n
 default CONT%(cn)d_CAP_DEVICE_UART3_USE 	from n
 default CONT%(cn)d_CAP_DEVICE_TIMER1_USE	from n
+default CONT%(cn)d_CAP_DEVICE_CLCD0_USE        	from n
 
 menu cont%(cn)d_cap_device_uart1
 	CONT%(cn)d_CAP_DEVICE_UART1_USE
@@ -254,11 +260,15 @@ menu cont%(cn)d_cap_device_uart3
 menu cont%(cn)d_cap_device_timer1
 	CONT%(cn)d_CAP_DEVICE_TIMER1_USE
 
+menu cont%(cn)d_cap_device_clcd
+	CONT%(cn)d_CAP_DEVICE_CLCD0_USE
+
 menu cont%(cn)d_device_list
 	cont%(cn)d_cap_device_uart1
 	cont%(cn)d_cap_device_uart2
 	cont%(cn)d_cap_device_uart3
 	cont%(cn)d_cap_device_timer1
+	cont%(cn)d_cap_device_clcd
 
 #
 # Settings for Custom Capabilities
