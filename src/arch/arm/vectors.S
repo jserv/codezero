@@ -12,7 +12,7 @@ __vector_vaddr:
 
 BEGIN_PROC(arm_high_vector)
 	b	arm_reset_exception
-	b	arm_undef_exception
+	b	arm_undef_exception_reentrant
 	b	arm_swi_exception
 	b	arm_prefetch_abort_exception_reentrant
 	b	arm_data_abort_exception_reentrant
@@ -58,7 +58,7 @@ BEGIN_PROC(arm_undef_exception)
 	mrs	r1, spsr	@ Get previous abort state
 	mov	r5, lr		@ Save it in r5 in case r0 is trashed
 	mov	lr, pc		@ Save return address
-	ldr	pc, =dump_undef_abort
+	ldr	pc, =undef_handler
 1:
 	b	1b
 END_PROC(arm_undef_exception)
@@ -86,6 +86,94 @@ END_PROC(arm_undef_exception)
 		ldr	\regs_off, [\regs_off]
 		str	\regs_addr, [\ktcb, \regs_off]
 	.endm
+	/* Depending on the SPSR condition determines whether irqs should be enabled
+	 * during abort handling. If abort occured in userspace it orders irqs
+	 * should be enabled. Else if irqs come from kernel mode, it orders irqs are
+	 * enabled only if they were alreday enabled before the abort. */
+	.macro	can_abort_enable_irqs temp1, r_spsr
+		and \temp1, \r_spsr, #ARM_MODE_MASK
+		cmp \temp1, #ARM_MODE_USR	 @ Usermode indicates irqs can be enabled.
+		beq 1f			    @ Z flag set. Which indicates "can enable"
+		and \temp1, \r_spsr, #ARM_IRQ_BIT @ Clear irq bit indicates irqs were enabled
+		cmp \temp1, #0		    @ before the abort and can be safely enabled.
+	1:				    @ Z flag must be set for "can enable" here.
+	.endm
+
+	/* Pushes the user sp and lr to stack, updates the stack pointer */
+	.macro push_user_sp_lr sp
+		@ stack state: (Low) |..|..|->(Original)| (High)
+		stmfd	\sp, {sp, lr}^	@ Push USR banked regs to stack.
+		nop			@ Need a NOOP after push/popping user registers.
+		@ stack state: (Low) |SP_USR|LR_USR|->(Original)| (High)
+		sub	\sp, \sp, #8	@ Adjust SP, since stack op on banked regs is no writeback.
+		@ stack state: (Low) |->SP_USR|LR_USR|(Original)| (High)
+	.endm
+
+	.macro is_psr_usr rx
+		and	\rx, \rx, #ARM_MODE_MASK
+		cmp	\rx, #ARM_MODE_USR
+	.endm
+
+
+#define	UNDEF_R0	0
+#define UNDEF_SPSR	-4
+#define UNDEF_R14	-8
+
+BEGIN_PROC(arm_undef_exception_reentrant)
+	@ lr contains address of instruction following the one caused undef
+	@ sub	lr, lr, #4
+	str	lr, [sp, #UNDEF_R14]	@ Store undef address
+	mrs	lr, spsr		@ Get SPSR
+	str	lr, [sp, #UNDEF_SPSR]	@ Store SPSR
+	str	r0, [sp, #UNDEF_R0]	@ Store r0
+	@ NOTE: Can increase undef nest here.
+	mov	r0, sp			@ Keep current sp point in R0
+	mrs	lr, cpsr		@ Change to SVC mode.
+	bic	lr, #ARM_MODE_MASK
+	orr	lr, lr, #ARM_MODE_SVC
+	msr	cpsr_fc, r14
+	@ FIXME: Ensure 8-byte stack here.
+	str	lr, [sp, #-8]!	@ Save lr_svc 2 words down from interrupted SP_SVC
+    	@ Transfer Undef state to SVC
+	ldr	lr, [r0, #UNDEF_R14]
+	str	lr, [sp, #4]
+	@ Stack state:  |LR_SVC<-|LR_UNDEF|{original SP_SVC}|
+	ldr	lr, [r0, #UNDEF_SPSR]
+	ldr	r0, [r0, #UNDEF_R0]
+	stmfd	sp!, {r0-r3,r12,lr}
+	@ Stack state:  |R0<-|R1|R2|R3|R12|UNDEF_SPSR|LR_SVC|LR_DUNDEF|{original SP_SVC}|
+	push_user_sp_lr sp
+    
+	@ All undef state saved. Can safely enable irqs here, if need be.
+	ldr	r3, [sp, #28]		@ Load UNDEF_SPSR
+	can_abort_enable_irqs r0, r3	@ Judge if irqs can be enabled depending on prev state.
+	bne	1f			@ Branch here based on previous irq judgement.
+	enable_irqs r3
+1:
+	/* Now check in what mode exception occured, and return that mode's LR in R4
+	 * Also poplulate r0,r1,r2 parameters for undef_handler
+	*/
+	ldr	r1, [sp, #28]		@ Load UNDEF_SPSR
+	is_psr_usr r0			@ Test if UNDEF_SPSR was user mode.
+	ldrne	r2, [sp, #32]		@ Abort occured in kernel, load LR_SVC
+	ldreq	r2, [sp, #4]		@ Abort occured in user, load LR_USR
+	ldr	r0, [sp, #36]		@ Load LR_UNDEF saved previously.
+	mov	lr, pc
+	ldr	pc, =undef_handler 	@ Jump to function outside this page.
+	disable_irqs r0			@ Disable irqs to avoid corrupting spsr.
+					@ (i.e. an interrupt could overwrite spsr with current psr)
+	ldmfd	sp, {sp, lr}^		@ Restore user sp and lr which might have been corrupt on preemption
+	nop				@ User reg mod requires nop
+	add	sp, sp, #8		@ Update SP.
+	ldmfd	sp!, {r0-r3,r12,lr}	@ Restore previous context. (note, lr has spsr)
+	msr	spsr_cxsf, r14		@ Restore spsr register from lr.
+	@ Stack state: |LR_SVC<-|LR_PREV(UNDEF)|{original SP_SVC}|
+	ldmfd	sp!, {r14, pc}^		@ Return, restoring cpsr. Note r14 gets r14_svc,
+					@ and pc gets lr_undef. Saved at #4 and #8 offsets
+					@ down from where svc stack had left.
+END_PROC(arm_undef_exception_reentrant)
+
+    
 /*
  * vect_swi
  *
@@ -185,34 +273,6 @@ END_PROC(arm_swi_exception)
 #define	ABT_R0		0
 #define ABT_SPSR	-4
 #define ABT_R14		-8
-
-	/* Depending on the SPSR condition determines whether irqs should be enabled
-	 * during abort handling. If abort occured in userspace it orders irqs
-	 * should be enabled. Else if irqs come from kernel mode, it orders irqs are
-	 * enabled only if they were alreday enabled before the abort. */
-	.macro	can_abort_enable_irqs temp1, r_spsr
-		and \temp1, \r_spsr, #ARM_MODE_MASK
-		cmp \temp1, #ARM_MODE_USR	  @ Usermode indicates irqs can be enabled.
-		beq 1f			    	  @ Z flag set. Which indicates "can enable"
-		and \temp1, \r_spsr, #ARM_IRQ_BIT @ Clear irq bit indicates irqs were enabled
-		cmp \temp1, #0		    	  @ before the abort and can be safely enabled.
-	1:					  @ Z flag must be set for "can enable" here.
-	.endm
-
-	/* Pushes the user sp and lr to stack, updates the stack pointer */
-	.macro push_user_sp_lr sp
-		@ stack state: (Low) |..|..|->(Original)| (High)
-		stmfd	\sp, {sp, lr}^	@ Push USR banked regs to stack.
-		nop			@ Need a NOOP after push/popping user registers.
-		@ stack state: (Low) |SP_USR|LR_USR|->(Original)| (High)
-		sub	\sp, \sp, #8	@ Adjust SP, since stack op on banked regs is no writeback.
-		@ stack state: (Low) |->SP_USR|LR_USR|(Original)| (High)
-	.endm
-
-	.macro is_psr_usr rx
-	and	\rx, \rx, #ARM_MODE_MASK
-	cmp	\rx, #ARM_MODE_USR
-	.endm
 
 /*
  * vect_pabt

@@ -334,12 +334,31 @@ error:
 		;
 }
 
-void dump_undef_abort(u32 undef_addr, unsigned int spsr)
+void undef_handler(u32 undef_addr, u32 spsr, u32 lr)
 {
 	dprintk("Undefined instruction at address: ", undef_addr);
 	printk("Undefined instruction: %d, PC: 0x%x, Mode: %s\n",
 	       current->tid, undef_addr,
 	       (spsr & ARM_MODE_MASK) == ARM_MODE_SVC ? "SVC" : "User");
+	
+	if (KERN_ADDR(lr)) {
+		printk("Panic: Undef in Kernel\n");
+		goto error;
+	}
+
+	fault_ipc_to_pager(undef_addr, 0, undef_addr);
+
+	if (current->flags & TASK_SUSPENDING) {
+		BUG_ON(current->nlocks);
+		sched_suspend_sync();
+	} else if (current->flags & TASK_EXITING) {
+		BUG_ON(current->nlocks);
+		sched_exit_sync();
+	}
+
+	return;
+
+error:
 	printascii("Halting system...\n");
 	BUG();
 }
