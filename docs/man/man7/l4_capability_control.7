@@ -74,7 +74,7 @@ field, as no method has been defined for granting a larger entity than a single 
 flag is planned for a future release.
 If
 .B CAP_GRANT_IMMUTABLE
-is specified in the flags, this means the granted capability should be made immutable on-the-fly. This is required as granting needs grant capabilities on the capability, but a grantor may want to remove it as it grants it.
+is specified in the flags, this means the granted capability should be made immutable on-the-fly. This is required as granting needs grant capabilities on the capability, but a granter may want to remove it as it grants it.
 .TP
 .BR CAP_CONTROL_REPLICATE
 Replicates an existing capability. This is useful for expanding capabilities to managed children. For example, a pager may make a replica of its capability to ipc to all threads in the container, deduce the capability to only cover itself as a thread target, and share this with the container. As a result, all threads in the container may ipc to the pager but nobody else, including each other.

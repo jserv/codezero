@@ -44,18 +44,22 @@ The capability structure is defined as follows:
 .fi
 .I capid
 denotes the unique capability ID.
+
 .TP
 .fi
 .I resid
 denotes the unique ID of targeted resource. The smallest resource targetable by a capability is a thread. There are also collections of targetable resources such as an address space or a container. An address space target resource implies all threads inside that address space, and a container target resource implies all threads inside that container. Quantitative capabilities such as typed memory pools do not possess a target, and therefore have an invalid resource ID.
+
 .TP
 .fi
 .I owner
 denotes the unique ID of the one and only capability owner. This is always a thread ID. The ownership of a capability determines who has the right to practise the capability modification privileges available over the capability, such as sharing, granting, spliting, reducing or destruction of the capability.
+
 .TP
 .fi
 .I type
 field contains the capability type or targeted resource type. The capability type determines the generic operations that the capability describes. For example a capability describing a system call would likely have a type name that resembles the name of that system call. See below for the list of valid capability types. The resource type denotes the type of targeted resources. In case this is a thread or a collection of threads, the type may be one of thread, address space, or container. Quantitative resources also have different types, describing the resource. Since quantitative resources such as memory pools, or memory regions are not associated with a target id, the types have no meaning for the resid field for these capabilities. See below for the full list of valid resource types.
+
 .TP
 .fi
 .I access
