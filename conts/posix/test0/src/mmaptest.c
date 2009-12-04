@@ -33,7 +33,7 @@ int mmaptest(void)
 	if (write(fd, &x, sizeof(x)) < 0)
 		goto out_err;
 
-	if ((int)(base = mmap(0, PAGE_SIZE*16, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) < 0)
+	if (IS_ERR(base = mmap(0, PAGE_SIZE*16, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)))
 		goto out_err;
 
 	*(unsigned int *)(base + PAGE_SIZE*2) = 0x1000;

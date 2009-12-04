@@ -49,8 +49,8 @@ int user_mutex_test(void)
 	 * Create a shared anonymous memory region. This can be
 	 * accessed by both parent and child after a fork.
 	 */
-	if ((int)(base = mmap(0, map_size, PROT_READ | PROT_WRITE,
-			      MAP_SHARED | MAP_ANONYMOUS, 0, 0)) < 0) {
+	if (IS_ERR(base = mmap(0, map_size, PROT_READ | PROT_WRITE,
+			      MAP_SHARED | MAP_ANONYMOUS, 0, 0))) {
 		printf("%s: mmap for extended ipc buffer failed: %x\n",
 			    __FUNCTION__, (int)base);
 		goto out_err;
