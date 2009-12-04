@@ -51,7 +51,7 @@ int user_mutex_test(void)
 	 */
 	if ((int)(base = mmap(0, map_size, PROT_READ | PROT_WRITE,
 			      MAP_SHARED | MAP_ANONYMOUS, 0, 0)) < 0) {
-		printf("%s: mmap for extended ipc buffer failed: %d\n",
+		printf("%s: mmap for extended ipc buffer failed: %x\n",
 			    __FUNCTION__, (int)base);
 		goto out_err;
 	} else
