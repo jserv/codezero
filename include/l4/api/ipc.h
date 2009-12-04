@@ -8,6 +8,7 @@
 
 /* Pagefault */
 #define L4_IPC_TAG_PFAULT		0
+#define L4_IPC_TAG_UNDEF_FAULT		1
 
 #define L4_IPC_FLAGS_TYPE_MASK		0x0000000F
 #define L4_IPC_FLAGS_SHORT		0x00000000	/* Short IPC involves just primary message registers */

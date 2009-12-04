@@ -11,21 +11,17 @@
 
 #include <l4/api/ipc.h>
 
-/* SHMID used betweeen FS0 and BLKDEV0 servers */
-#define FS_BLKDEV_SHMID			0
-
 /*** IPC Tags used between server tasks ***/
 
+/*
+ * Tag 0 for L4_IPC_TAG_PFAULT
+ * Tag 1 for L4_IPC_TAG_UNDEF_FAULT
+ */
+
 /* For ping ponging */
-#define L4_IPC_TAG_SYNC_EXTENDED	1
-#define L4_IPC_TAG_SYNC_FULL		2
-#define L4_IPC_TAG_SYNC			3
-
-/* To obtain default shared page address */
-#define L4_IPC_TAG_SHPAGE		4
-
-/* XXX: unused */
-#define L4_IPC_TAG_GRANT		5
+#define L4_IPC_TAG_SYNC_EXTENDED	3
+#define L4_IPC_TAG_SYNC_FULL		4
+#define L4_IPC_TAG_SYNC			5
 
 /* Posix system call tags */
 #define L4_IPC_TAG_SHMGET		6

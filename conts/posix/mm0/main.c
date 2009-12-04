@@ -79,6 +79,11 @@ void handle_requests(void)
 		/* This has no receive phase */
 		return;
 
+	case L4_IPC_TAG_UNDEF_FAULT:
+		/* Undefined instruction fault. Ignore. */
+		// printf("Undefined instruction fault caught.\n");
+		ret = 0;
+		break;
 	case L4_IPC_TAG_PFAULT: {
 		struct page *p;
 

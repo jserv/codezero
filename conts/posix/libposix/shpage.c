@@ -16,6 +16,8 @@
 #include <shpage.h>
 #include <libposix.h>
 
+#if 0
+
 /*
  * Shared page initialisation of posix-like tasks.
  *
@@ -95,3 +97,4 @@ int shared_page_init(void)
 	return 0;
 }
 
+#endif

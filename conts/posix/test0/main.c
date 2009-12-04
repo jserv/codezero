@@ -40,8 +40,7 @@ int main(int argc, char *argv[])
 	wait_pager(pagerid);
 
 	printf("\n%s: Running POSIX API tests.\n", __TASKNAME__);
-	
-	undeftest();
+
 
 	small_io_test();
 
@@ -56,6 +55,8 @@ int main(int argc, char *argv[])
 	fileio();
 
 	clonetest();
+
+	undeftest();
 
 	if (parent_of_all == getpid()) {
 		ipc_full_test();

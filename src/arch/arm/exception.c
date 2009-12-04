@@ -62,13 +62,13 @@ void ipc_restore_state(struct ipc_state *state)
 }
 
 /* Send data fault ipc to the faulty task's pager */
-int fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far)
+int fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far, u32 ipc_tag)
 {
 	int err;
 
 	/* mr[0] has the fault tag. The rest is the fault structure */
 	u32 mr[MR_TOTAL] = {
-		[MR_TAG] = L4_IPC_TAG_PFAULT,
+		[MR_TAG] = ipc_tag,
 		[MR_SENDER] = current->tid
 	};
 
@@ -165,7 +165,8 @@ int pager_pagein_request(unsigned long addr, unsigned long size,
 	/* For every page to be used by the kernel send a page-in request */
 	for (int i = 0; i < npages; i++)
 		if ((err = fault_ipc_to_pager(0, abort,
-					      addr + (i * PAGE_SIZE))) < 0)
+					      addr + (i * PAGE_SIZE),
+					      L4_IPC_TAG_PFAULT)) < 0)
 			return err;
 
 	/* Restore ipc state */
@@ -277,7 +278,7 @@ void data_abort_handler(u32 faulted_pc, u32 fsr, u32 far)
 		goto error;
 
 	/* This notifies the pager */
-	fault_ipc_to_pager(faulted_pc, fsr, far);
+	fault_ipc_to_pager(faulted_pc, fsr, far, L4_IPC_TAG_PFAULT);
 
 	if (current->flags & TASK_SUSPENDING) {
 		BUG_ON(current->nlocks);
@@ -310,7 +311,7 @@ void prefetch_abort_handler(u32 faulted_pc, u32 fsr, u32 far, u32 lr)
 
 	if (KERN_ADDR(lr))
 		goto error;
-	fault_ipc_to_pager(faulted_pc, fsr, far);
+	fault_ipc_to_pager(faulted_pc, fsr, far, L4_IPC_TAG_PFAULT);
 
 	if (current->flags & TASK_SUSPENDING) {
 		BUG_ON(current->nlocks);
@@ -336,17 +337,18 @@ error:
 
 void undef_handler(u32 undef_addr, u32 spsr, u32 lr)
 {
-	dprintk("Undefined instruction at address: ", undef_addr);
-	printk("Undefined instruction: %d, PC: 0x%x, Mode: %s\n",
-	       current->tid, undef_addr,
-	       (spsr & ARM_MODE_MASK) == ARM_MODE_SVC ? "SVC" : "User");
-	
+	dbg_abort("Undefined instruction @ PC: ", undef_addr);
+
+	//printk("Undefined instruction: tid: %d, PC: 0x%x, Mode: %s\n",
+	//       current->tid, undef_addr,
+	//       (spsr & ARM_MODE_MASK) == ARM_MODE_SVC ? "SVC" : "User");
+
 	if (KERN_ADDR(lr)) {
 		printk("Panic: Undef in Kernel\n");
 		goto error;
 	}
 
-	fault_ipc_to_pager(undef_addr, 0, undef_addr);
+	fault_ipc_to_pager(undef_addr, 0, undef_addr, L4_IPC_TAG_UNDEF_FAULT);
 
 	if (current->flags & TASK_SUSPENDING) {
 		BUG_ON(current->nlocks);
@@ -359,6 +361,10 @@ void undef_handler(u32 undef_addr, u32 spsr, u32 lr)
 	return;
 
 error:
+	disable_irqs();
+	dprintk("SPSR:", spsr);
+	dprintk("LR:", lr);
+	printascii("Kernel panic.\n");
 	printascii("Halting system...\n");
 	BUG();
 }
