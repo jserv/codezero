@@ -106,5 +106,63 @@ Quantitative capabilities have been introduced for allocation of structures that
 .B CAP_TYPE_CAP
 .RB "Defines the capability to manipulate existing capabilities. Any thread who attempts to share, grant, modify, or replicate its capabilities must make a call to the " "l4_capability_control " "system call. This capability defines the operations available making this call. A caller must own this capability, and also own all other capabilities that are going to be modified."
 
+.SH CAPABILITY RESOURCE TYPES
+Capability resource types define the type of resource id stored in the
+.I resid
+field.
+.TP
+.B CAP_RTYPE_THREAD
+Threads are the smallest resource entities in the system, targetable by a system call. A capability with this resource type defines the ability to manipulate a single thread. E.g.
+.BR "l4_thread_control " "or " "l4_ipc " "syscalls could only operate on the single thread, whose id is defined by the "
+.I resid
+field.
+.TP
+.B CAP_RTYPE_SPACE
+Address spaces contain one or more threads. A capability with this resource type may act on any thread inside the defined address space, defined by the
+.I resid
+field of the capability.
+.TP
+.B CAP_RTYPE_CONTAINER
+Containers provide the outermost isolation level on the system. A capability with this resource type would have the most comprehensive privileges, since a container defines the largest collection of entities, containing threads and address spaces. As an example, a thread having a capability with a container resource type, could issue that system call on all the address spaces and threads that exist in that container.
+
+.fi
+.in 7
+The rest of the resources in the system are defined as quantitative resources, and they consist of different types of memory pools. As mentioned earlier, their
+.I resid
+fields invalid, and they get used and checked implicitly as part of other capability operations.
+
+.TP
+.B CAP_RTYPE_CPUPOOL
+Defines the CPU resources of a thread. Depending on the underlying scheduler, it may mean cpu time percentage or a priority. Also, real-time threads may invalidate the value of these capabilities.
+
+.TP
+.B CAP_RTYPE_THREADPOOL
+Defines the maximum number of threads that may be created by its possessor. Implicitly used and checked as part of the
+.B l4_thread_control
+system call.
+
+.TP
+.B CAP_RTYPE_SPACEPOOL
+Defines the maximum number of address spaces (e.g. page tables, and any other related structures) that may be created by its possessor. Similarly affects success of
+.B l4_thread_control
+system call by providing address space accounting.
+
+.TP
+.B CAP_RTYPE_MUTEXPOOL
+Defines the maximum number of mutexes that may be contended and get temporarily created inside the kernel at any one time. Normally userspace mutex operations are resolved in userspace, but on contended mutexes, kernel internally creates and consumes mutex structures for the userspace.
+
+.TP
+.B CAP_RTYPE_MAPPOOL
+On some cpu architectures such as ARM, a virtual to physical memory mapping may require the kernel to allocate intermediate page table structures. This capability defines and enables resource accounting for the allocation of such structures.
+
+.TP
+.B CAP_RTYPE_CAPPOOL
+When capabilities are manipulated at run-time, some operations may result in allocation of new capability structures. For example, a
+.B replicate
+or a
+.B split
+operation may create new capabilities in the system. This capability accounts for such operations that result in creation of a new capability.
+
+
 .SH SEE ALSO
 .BR "l4_capability_control"(7)
