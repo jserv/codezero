@@ -1,67 +1,47 @@
 
 		Codezero Microkernel v0.2 Release
 
-		Copyright (C) 2007-2009 Bahadir Bilgehan Balban
+		Copyright (C) 2007 - 2009 Bahadir Bilgehan Balban
+
 
 1.) What is Codezero?
 
-Codezero is a new L4 microkernel that has been written from scratch. It is a
-modern microkernel implementation that provides capabilities for virtualization
-and implementation of native OS services. Codezero can act as a virtualisation
-platform, a hardware abstraction layer, and as a basis for developing operating
-system services. Codezero's primary focus is on embedded systems.
+Codezero is an L4 microkernel that has been written from scratch. It targets
+embedded systems and its purpose is to act as a secure embedded hypervisor. It
+aims to become the most modern L4 implementation by evolving the L4 microkernel
+API into the future. In a nutshell, Codezero provides all the basic mechanism
+to abstract away the hardware, build OS services, isolate applications and
+fine-grain security in a single package.
 
 
 2.) Why the name Codezero?
 
-The project focuses on simplicity and clarity in software design. Everything is
-kept simple, from the user-level services down to the build system that does
-not take part in the actual microkernel. Codezero is a microkernel that is
-easy-to-use and modify, providing a rapid kernel software development
-environment.
+The project philosophy is to create the simplest and leanest microkernel that
+is generic and applicable to many different applications. Feature creep is what
+we don't have in Codezero. Simple, elegant design is the project philosophy.
 
 
 3.) Why use Codezero?
 
-Codezero aims to provide easy hands-on experience; you may simply download the
-source tree, install the tools using this guide, and get up and running with
-development on your virtual embedded platform from the comfort of your host PC.
-
-Codezero strives to incorporate the most modern design features and presents
-them in a well-written source code base. In other words, Codezero strives to be
-technically cutting edge. Updates are rapid and open community is encouraged to
-get involved in core development.
+Codezero aims to be technically cutting-edge. It's design is open and improves
+by evolution. It is also easy-to-use, well-documented and portable, mostly
+maturing on the ARM architecture. These might be the appealing reasons from a
+technical point-of-view. It is also backed by a responsive team, in case you
+have more demanding requirements.
 
 
 4.) What is the license?
 
 The current release is distributed under GNU General Public License Version 3.
 For contributions we ask for a copyright share agreement and you may freely
-contribute to the project this way. This is our current model, but if you feel
-this is too restrictive, feel free to mention your ideas in our mailing list.
+contribute to the project this way. We also have commercial licensing options
+available. This is our current model for keeping the project design and
+development completely open, while thriving it by professional funding. If you
+feel this is too restrictive, feel free to mention your ideas in our mailing
+list.
 
 The third party source code under the directories loader/ tools/ libs/c
 libs/elf have their own copyright and licenses, separate from this project. All
 third party source code is open source in the OSI definition. Please check
 these directories for their respective licenses.
-
-
-5.) Why not improve on a popular open source kernel instead of Codezero?
-
-Open source POSIX kernels are not designed for running on embedded platforms.
-  * Their source code is encumbered and cluttered with legacy or unrelated
-    components.
-  * Their user bases are saturated, their core developers are engaged and
-    focused on non-embedded platforms.
-  * Their source code base is too complex to grasp and most components enforce
-    unnecessary policy on embedded applications.
-
-Codezero is simple, clean, and focused on embedded systems. Still, existing
-open source kernels are valuable with some of their features and drivers. As a
-result, we attempt to virtualize them on top of Codezero.
-
-Other embedded open source kernels are also out there. Codezero aims to differ
-by clarity, simplicity and its cutting edge features.
-
-
 
