@@ -38,11 +38,6 @@ LIBDEV_LIBPATH = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-userspace')
 LIBDEV_INCLUDE = [join(LIBDEV_DIR, 'uart/include')]
 LIBDEV_CCFLAGS = '-DPLATFORM_' + platform.upper()
 
-LIBL4THREAD_RELDIR = 'conts/libl4thread'
-LIBL4THREAD_DIR = join(PROJROOT, LIBL4THREAD_RELDIR)
-LIBL4THREAD_LIBPATH = join(BUILDDIR, LIBL4THREAD_RELDIR)
-LIBL4THREAD_INCLUDE = join(LIBL4THREAD_DIR, 'include')
-
 LIBMEM_RELDIR = 'conts/libmem'
 LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
@@ -57,12 +52,10 @@ env = Environment(CC = config.user_toolchain + 'gcc',
                   ASFLAGS = ['-D__ASSEMBLY__'],
                   PROGSUFFIX = '.elf', # The suffix to use for final executable
                   ENV = {'PATH' : os.environ['PATH']}, # Inherit shell path
-                  LIBS = ['libl4thread', 'libl4', 'libmalloc', 'c-userspace', \
-                          'libdev-userspace', 'gcc', 'c-userspace'], # libgcc.a - This is required for division routines.
-                  CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBDEV_INCLUDE, \
-                             LIBC_INCLUDE, LIBL4THREAD_INCLUDE],
-                  LIBPATH = [LIBL4_LIBPATH, LIBDEV_LIBPATH, LIBC_LIBPATH, LIBL4THREAD_LIBPATH, \
-		                     LIBMEM_LIBPATH],
+                  LIBS = ['libl4', 'libmalloc', 'c-userspace', 'libdev-userspace', \
+                          'gcc', 'c-userspace'], # libgcc.a - This is required for division routines.
+                  CPPPATH = ["#include", KERNEL_INCLUDE, LIBL4_INCLUDE, LIBDEV_INCLUDE, LIBC_INCLUDE],
+                  LIBPATH = [LIBL4_LIBPATH, LIBDEV_LIBPATH, LIBC_LIBPATH, LIBMEM_LIBPATH],
                   CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
 src = Glob('*.[cS]')

@@ -17,7 +17,7 @@ struct l4lib_global_list global_tasks = {
 };
 
 /* Function definitions */
-void global_add_task(struct l4lib_tcb *task)
+void l4lib_global_add_task(struct l4lib_tcb *task)
 {
 	BUG_ON(!list_empty(&task->list));
 	list_insert_tail(&task->list, &global_tasks.list);

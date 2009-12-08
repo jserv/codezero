@@ -1,8 +1,8 @@
 #ifndef __L4_THREAD_H__
 #define __L4_THREAD_H__
 
-#include <libl4/arch/utcb.h>
-#include <libl4/arch/types.h>
+#include <l4lib/arch/utcb.h>
+#include <l4lib/arch/types.h>
 
 struct l4_thread_struct {
 	l4id_t tlid;			/* Thread local id */
