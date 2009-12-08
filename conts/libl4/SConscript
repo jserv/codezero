@@ -39,7 +39,7 @@ env = Environment(CC = config.user_toolchain + 'gcc',
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  ENV = {'PATH' : os.environ['PATH']},
 		  LIBS = 'gcc',
-		  CPPPATH = ['include', 'include/l4lib/arch', join(PROJROOT, 'include') ])
+		  CPPPATH = ['include', 'include/l4lib/arch', join(PROJROOT, 'include')])
 
 env.Append(CPPPATH = [LIBMEM_DIR])
 
@@ -55,7 +55,7 @@ def create_symlinks(arch):
         os.system(cmd)
 
 #create_symlinks(arch)
-objects = env.StaticObject(Glob('src/*.c') + Glob('src/thread/*.c') + Glob('src/' + arch + '/*.[cS]'))
+objects = env.StaticObject(Glob('src/*.c') + Glob('src/thread/*.c') + Glob('src/' + arch + '/*.[cS]') + Glob('src/capability/*c'))
 library = env.StaticLibrary('l4', objects)
 
 Return('library')

@@ -1,6 +1,8 @@
 #ifndef __LIST_H__
 #define __LIST_H__
 
+#include <l4/macros.h>
+
 #define L4_DEADWORD				0xDEADCCCC
 
 struct link {

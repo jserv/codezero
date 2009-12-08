@@ -6,9 +6,8 @@
 #ifndef __API_CAPABILITY_H__
 #define __API_CAPABILITY_H__
 
-#if defined(__KERNEL__)
 #include <l4/lib/list.h>
-#endif
+#include INC_ARCH(types.h)
 
 /* Capability syscall request types */
 #define CAP_CONTROL_NCAPS		0x00000000

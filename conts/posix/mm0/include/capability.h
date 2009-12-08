@@ -17,7 +17,6 @@ void copy_boot_capabilities();
 
 int sys_request_cap(struct tcb *sender, struct capability *c);
 
-void cap_print(struct capability *cap);
 void cap_list_print(struct cap_list *cap_list);
 void setup_caps();
 #endif /* __MM0_CAPABILITY_H__ */

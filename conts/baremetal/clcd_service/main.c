@@ -9,7 +9,7 @@
 #include <l4/api/errno.h>
 
 #include <l4/api/space.h>
-#include <capability.h>
+#include <l4lib/capability/cap_print.h>
 #include <container.h>
 #include <pl110_clcd.h>  /* FIXME: Its best if this is <libdev/uart/pl011.h> */
 #include <linker.h>
@@ -28,7 +28,7 @@ int cap_read_all()
 
 	/* Read number of capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
-					 0, 0, 0, &ncaps)) < 0) {
+					 0, &ncaps)) < 0) {
 		printf("l4_capability_control() reading # of"
 		       " capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_NCAPS request.\n");
@@ -38,7 +38,7 @@ int cap_read_all()
 
 	/* Read all capabilities */
 	if ((err = l4_capability_control(CAP_CONTROL_READ,
-					 0, 0, 0, caparray)) < 0) {
+					 0, caparray)) < 0) {
 		printf("l4_capability_control() reading of "
 		       "capabilities failed.\n Could not "
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
