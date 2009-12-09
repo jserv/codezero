@@ -7,6 +7,7 @@
 #include <l4lib/addr.h>
 #include <l4lib/thread/utcb-common.h>
 #include <malloc/malloc.h>
+#include INC_GLUE(message.h)
 
 /* Globally disjoint utcb virtual region pool */
 static struct address_pool utcb_region_pool;

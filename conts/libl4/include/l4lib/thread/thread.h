@@ -14,9 +14,13 @@ struct l4_thread_struct {
 
 /* -- Bora start -- */
 
-/* A helper macro easing utcb space creation. */
+/*
+  * A helper macro easing utcb space creation,
+  * FIXME: We need to fix address allocation path, so as to use
+  * actual size of units instead of page size
+  */
 #define DECLARE_UTCB_SPACE(name, entries) \
-	char name[(entries + PAGE_SIZE / UTCB_SIZE) * UTCB_SIZE] ALIGN(PAGE_SIZE);
+	char name[entries * PAGE_SIZE] ALIGN(PAGE_SIZE);
 
 int l4_set_stack_params(unsigned long stack_top,
 			unsigned long stack_bottom,

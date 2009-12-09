@@ -130,6 +130,7 @@ int l4_set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 			"than utcb start address.\n");
 		return -EINVAL;
 	}
+#if 0
 	/*
 	 * This check guarantees two things:
 	 *	1. The range must be multiple of UTCB_SIZE, at least one item.
@@ -140,6 +141,7 @@ int l4_set_utcb_params(unsigned long utcb_start, unsigned long utcb_end)
 			"of the utcb size(%d).\n", UTCB_SIZE);
 		return -EINVAL;
 	}
+#endif
 	/* Arguments passed the validity tests. */
 
 	/* Init utcb virtual address pool. */
