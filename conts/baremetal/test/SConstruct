@@ -61,6 +61,7 @@ env = Environment(CC = config.user_toolchain + 'gcc',
 
 src = Glob('*.[cS]')
 src += Glob('src/*.[cS]')
+src += Glob('src/arch/*.[cS]')
 
 objs = env.Object(src)
 prog = env.Program('main.elf', objs)

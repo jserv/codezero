@@ -12,7 +12,7 @@ char *__stack_ptr = &stack[1][0];
 char utcb[THREADS_TOTAL][UTCB_SIZE] ALIGN(8);
 char *__utcb_ptr = &utcb[1][0];
 
-extern void setup_new_thread(void);
+extern void local_setup_new_thread(void);
 
 int thread_create(int (*func)(void *), void *args, unsigned int flags,
 		  struct task_ids *new_ids)
@@ -44,16 +44,16 @@ int thread_create(int (*func)(void *), void *args, unsigned int flags,
 		return -ENOMEM;
 
 	/* First word of new stack is arg */
-	((unsigned long *)__stack_ptr)[-1] = (unsigned long)args;
+	*(((unsigned int *)__stack_ptr) -1) = (unsigned int)args;
 
 	/* Second word of new stack is function address */
-	((unsigned long *)__stack_ptr)[-2] = (unsigned long)func;
+	*(((unsigned int *)__stack_ptr) -2) = (unsigned int)func;
 
 	/* Setup new thread pc, sp, utcb */
 	memset(&exregs, 0, sizeof(exregs));
 	exregs_set_stack(&exregs, (unsigned long)__stack_ptr);
 	exregs_set_utcb(&exregs, (unsigned long)__utcb_ptr);
-	exregs_set_pc(&exregs, (unsigned long)setup_new_thread);
+	exregs_set_pc(&exregs, (unsigned long)local_setup_new_thread);
 
 	if ((err = l4_exchange_registers(&exregs, ids.tid)) < 0)
 		return err;
