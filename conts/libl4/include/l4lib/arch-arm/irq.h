@@ -9,13 +9,14 @@
  */
 static inline char l4_atomic_dest_readb(void *location)
 {
-	unsigned char zero = 0;
-	unsigned char val;
-	char *loc = location;
+	unsigned char zero = 0; /* Input */
+	unsigned char val;	/* Output */
+	char *loc = location;	/* Both input and output */
 
 	__asm__ __volatile__ (
-		"swpb	%1, %2, [%0] \n"
-		:: "r" (*loc), "r" (val), "r" (zero)
+		"swpb	%1, %3, [%0] \n"
+		: "=r" (*loc), "=r" (val)
+		: "r" (*loc), "r" (zero)
 	);
 
 	return val;

@@ -49,7 +49,8 @@ static inline void irq_local_disable_save(unsigned long *state)
 		"mrs	%0, cpsr_fc\n"
 		"orr	%1, %0, #0x80\n"
 		"msr	cpsr_fc, %1\n"
-		:: "r" (*state), "r" (temp)
+		: "=r" (*state)
+		: "r" (*state),"r" (temp)
 	);
 }
 /* Simply change it back to original state supplied in @flags. This might enable
