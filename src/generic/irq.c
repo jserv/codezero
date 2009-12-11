@@ -34,6 +34,10 @@ int irq_register(struct ktcb *task, int notify_slot, l4id_t irq_index)
 	if (!this_desc->handler || !this_desc->chip)
 		return -ENOIRQ;
 
+	/* Index must be valid */
+	if (irq_index > IRQS_MAX || irq_index < 0)
+		return -ENOIRQ;
+
 	/* Setup the task and notify slot */
 	this_desc->task = task;
 	this_desc->task_notify_slot = notify_slot;

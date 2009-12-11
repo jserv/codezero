@@ -48,6 +48,7 @@ int irq_thread_notify(struct irq_desc *desc)
 		       "task id=0x%x err=%d\n"
 		       "Destroying task.", __FUNCTION__,
 		       desc->task->tid, err);
+		/* FIXME: Racy for irqs. */
 		thread_destroy(desc->task);
 		/* FIXME: Deregister and disable irq as well */
 	}
@@ -60,7 +61,7 @@ int irq_thread_notify(struct irq_desc *desc)
 		utcb->notify[desc->task_notify_slot]++;
 
 	/* Async wake up any waiter irq threads */
-	wake_up(&desc->task->wqh_notify, WAKEUP_ASYNC | WAKEUP_IRQ);
+	wake_up(&desc->task->wqh_notify, WAKEUP_ASYNC);
 
 	return 0;
 }
@@ -91,9 +92,29 @@ int irq_control_register(struct ktcb *task, int slot, l4id_t irqnum)
 	return 0;
 }
 
-int irq_wait()
+/*
+ * Makes current task wait on the given irq
+ */
+int irq_wait(l4id_t irq_index)
 {
-	return 0;
+	struct irq_desc *desc = irq_desc_array + irq_index;
+	struct utcb *utcb = (struct utcb *)current->utcb_address;
+	int ret;
+
+	/* Index must be valid */
+	if (irq_index > IRQS_MAX || irq_index < 0)
+		return -EINVAL;
+
+	/* UTCB must be mapped */
+	if ((ret = tcb_check_and_lazy_map_utcb(current, 1)) < 0)
+		return ret;
+
+	/* Wait until the irq changes slot value */
+	WAIT_EVENT(&desc->wqh_irq,
+		   !utcb->notify[desc->task_notify_slot],
+		   ret);
+
+	return ret;
 }
 
 
@@ -101,26 +122,24 @@ int irq_wait()
  * Register/deregister device irqs. Optional synchronous and
  * asynchronous irq handling.
  */
-int sys_irq_control(unsigned int req, unsigned int flags, l4id_t irqno)
+int sys_irq_control(unsigned int req, unsigned int flags, l4id_t irqnum)
 {
 	/* Currently a task is allowed to register only for itself */
 	struct ktcb *task = current;
 	int err;
 
-	if ((err = cap_irq_check(task, req, flags, irqno)) < 0)
+	if ((err = cap_irq_check(task, req, flags, irqnum)) < 0)
 		return err;
 
 	switch (req) {
 	case IRQ_CONTROL_REGISTER:
-		if ((err = irq_control_register(task, flags, irqno)) < 0)
-			return err;
-		break;
+		return irq_control_register(task, flags, irqnum);
 	case IRQ_CONTROL_WAIT:
-		irq_wait();
-		break;
+		return irq_wait(irqnum);
 	default:
-			return -EINVAL;
+		return -EINVAL;
 	}
+
 	return 0;
 }
 

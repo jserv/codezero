@@ -110,7 +110,8 @@ int timer_setup_devices(void)
 
 		/* Map timers to a virtual address region */
 		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer_cap[i].start),
-				  (void *)timer[i].base, timer_cap[i].size, MAP_USR_IO_FLAGS,
+				  (void *)timer[i].base, timer_cap[i].size,
+				  MAP_USR_IO_FLAGS,
 				  self_tid()))) {
 			printf("%s: FATAL: Failed to map TIMER device "
 			       "%d to a virtual address\n",

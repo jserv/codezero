@@ -15,7 +15,6 @@ struct waitqueue {
 enum wakeup_flags {
 	WAKEUP_INTERRUPT = (1 << 0),	/* Set interrupt flag for task */
 	WAKEUP_SYNC	 = (1 << 1),	/* Wake it up synchronously */
-	WAKEUP_IRQ	 = (1 << 2)	/* Disable irqs on spinlocks */
 };
 
 #define CREATE_WAITQUEUE_ON_STACK(wq, tsk)		\
@@ -51,18 +50,20 @@ void task_unset_wqh(struct ktcb *task);
 do {								\
 	ret = 0;						\
 	for (;;) {						\
-		spin_lock(&(wqh)->slock);			\
+		unsigned long irqsave;				\
+		spin_lock_irq(&(wqh)->slock, &irqsave);		\
 		if (condition) {				\
-			spin_unlock(&(wqh)->slock);		\
+			spin_unlock_irq(&(wqh)->slock, irqsave);\
 			break;					\
 		}						\
 		CREATE_WAITQUEUE_ON_STACK(wq, current);		\
 		task_set_wqh(current, wqh, &wq);		\
 		(wqh)->sleepers++;				\
-		list_insert_tail(&wq.task_list, &(wqh)->task_list);\
-		/* printk("(%d) waiting...\n", current->tid); */ \
+		list_insert_tail(&wq.task_list, 		\
+				 &(wqh)->task_list);		\
+		/* printk("(%d) waiting...\n", current->tid); */\
 		sched_prepare_sleep();				\
-		spin_unlock(&(wqh)->slock);			\
+		spin_unlock_irq(&(wqh)->slock, irqsave);	\
 		schedule();					\
 		/* Did we wake up normally or get interrupted */\
 		if (current->flags & TASK_INTERRUPTED) {	\
@@ -72,6 +73,7 @@ do {								\
 		}						\
 	}							\
 } while(0);
+
 
 void wake_up(struct waitqueue_head *wqh, unsigned int flags);
 int wake_up_task(struct ktcb *task, unsigned int flags);

@@ -60,7 +60,7 @@ int thread_exit(struct ktcb *task)
 	return thread_signal(task, TASK_EXITING, TASK_DEAD);
 }
 
-static inline int TASK_IS_CHILD(struct ktcb *task)
+static inline int task_is_child(struct ktcb *task)
 {
 	return (((task) != current) &&
 		((task)->pagerid == current->tid));
@@ -91,7 +91,7 @@ int thread_destroy_children(void)
 	list_foreach_removable_struct(task, n,
 				      &curcont->ktcb_list.list,
 				      task_list) {
-		if (TASK_IS_CHILD(task)) {
+		if (task_is_child(task)) {
 			spin_unlock(&curcont->ktcb_list.list_lock);
 			thread_destroy_child(task);
 			spin_lock(&curcont->ktcb_list.list_lock);
@@ -136,7 +136,7 @@ int thread_destroy(struct ktcb *task, unsigned int exit_code)
 {
 	exit_code &= THREAD_EXIT_MASK;
 
-	if (TASK_IS_CHILD(task))
+	if (task_is_child(task))
 		return thread_destroy_child(task);
 	else if (task == current)
 		thread_destroy_self(exit_code);

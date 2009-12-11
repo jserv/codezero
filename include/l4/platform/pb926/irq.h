@@ -16,8 +16,8 @@
 #define SIC_CHIP_OFFSET			32
 
 /* Maximum irqs on VIC and SIC */
-#define VIC_IRQS_MAX			PL190_IRQS_MAX
-#define SIC_IRQS_MAX			PL190_SIC_IRQS_MAX
+#define VIC_IRQS_MAX			32
+#define SIC_IRQS_MAX			32
 
 #define IRQS_MAX			VIC_IRQS_MAX + SIC_IRQS_MAX
 

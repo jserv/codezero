@@ -7,6 +7,7 @@
 #define __GENERIC_IRQ_H__
 
 #include <l4/lib/string.h>
+#include <l4/lib/wait.h>
 #include INC_PLAT(irq.h)
 #include INC_ARCH(types.h)
 
@@ -44,6 +45,9 @@ struct irq_desc {
 
 	/* Notification slot for this irq */
 	int task_notify_slot;
+
+	/* Waitqueue head for this irq */
+	struct waitqueue_head wqh_irq;
 
 	/* NOTE: This could be a list for multiple handlers for shared irqs */
 	irq_handler_t handler;

@@ -34,16 +34,16 @@ extern unsigned int current_irq_nest_count;
 static int voluntary_preempt = 0;
 
 
-void sched_lock_runqueues(void)
+void sched_lock_runqueues(unsigned long *irqflags)
 {
-	spin_lock(&scheduler.sched_rq[0].lock);
+	spin_lock_irq(&scheduler.sched_rq[0].lock, irqflags);
 	spin_lock(&scheduler.sched_rq[1].lock);
 }
 
-void sched_unlock_runqueues(void)
+void sched_unlock_runqueues(unsigned long irqflags)
 {
-	spin_unlock(&scheduler.sched_rq[0].lock);
 	spin_unlock(&scheduler.sched_rq[1].lock);
+	spin_unlock_irq(&scheduler.sched_rq[0].lock, irqflags);
 }
 
 int preemptive()
@@ -142,24 +142,27 @@ static void sched_rq_swap_runqueues(void)
 /* Helper for adding a new task to a runqueue */
 static void sched_rq_add_task(struct ktcb *task, struct runqueue *rq, int front)
 {
+	unsigned long irqflags;
+
 	BUG_ON(!list_empty(&task->rq_list));
 
-	sched_lock_runqueues();
+	sched_lock_runqueues(&irqflags);
 	if (front)
 		list_insert(&task->rq_list, &rq->task_list);
 	else
 		list_insert_tail(&task->rq_list, &rq->task_list);
 	rq->total++;
 	task->rq = rq;
-	sched_unlock_runqueues();
+	sched_unlock_runqueues(irqflags);
 }
 
 /* Helper for removing a task from its runqueue. */
 static inline void sched_rq_remove_task(struct ktcb *task)
 {
 	struct runqueue *rq;
+	unsigned long irqflags;
 
-	sched_lock_runqueues();
+	sched_lock_runqueues(&irqflags);
 
 	/*
 	 * We must lock both, otherwise rqs may swap and
@@ -172,7 +175,7 @@ static inline void sched_rq_remove_task(struct ktcb *task)
 	rq->total--;
 
 	BUG_ON(rq->total < 0);
-	sched_unlock_runqueues();
+	sched_unlock_runqueues(irqflags);
 }
 
 

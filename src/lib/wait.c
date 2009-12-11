@@ -15,10 +15,12 @@
 void task_set_wqh(struct ktcb *task, struct waitqueue_head *wqh,
 		  struct waitqueue *wq)
 {
-	spin_lock(&task->waitlock);
+	unsigned long irqflags;
+
+	spin_lock_irq(&task->waitlock, &irqflags);
 	task->waiting_on = wqh;
 	task->wq = wq;
-	spin_unlock(&task->waitlock);
+	spin_unlock_irq(&task->waitlock, irqflags);
 }
 
 
@@ -28,10 +30,12 @@ void task_set_wqh(struct ktcb *task, struct waitqueue_head *wqh,
  */
 void task_unset_wqh(struct ktcb *task)
 {
-	spin_lock(&task->waitlock);
+	unsigned long irqflags;
+
+	spin_lock_irq(&task->waitlock, &irqflags);
 	task->waiting_on = 0;
 	task->wq = 0;
-	spin_unlock(&task->waitlock);
+	spin_unlock_irq(&task->waitlock, irqflags);
 
 }
 
@@ -69,17 +73,19 @@ int wait_on_prepared_wait(void)
  */
 int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq)
 {
+	unsigned long irqflags;
+
 	/* Disable to protect from sleeping by preemption */
 	preempt_disable();
 
-	spin_lock(&wqh->slock);
+	spin_lock_irq(&wqh->slock, &irqflags);
 	wqh->sleepers++;
 	list_insert_tail(&wq->task_list, &wqh->task_list);
 	task_set_wqh(current, wqh, wq);
 	sched_prepare_sleep();
 	//printk("(%d) waiting on wqh at: 0x%p\n",
 	//       current->tid, wqh);
-	spin_unlock(&wqh->slock);
+	spin_unlock_irq(&wqh->slock, irqflags);
 
 	return 0;
 }
@@ -87,15 +93,17 @@ int wait_on_prepare(struct waitqueue_head *wqh, struct waitqueue *wq)
 /* Sleep without any condition */
 int wait_on(struct waitqueue_head *wqh)
 {
+	unsigned long irqsave;
+
 	CREATE_WAITQUEUE_ON_STACK(wq, current);
-	spin_lock(&wqh->slock);
+	spin_lock_irq(&wqh->slock, &irqsave);
 	wqh->sleepers++;
 	list_insert_tail(&wq.task_list, &wqh->task_list);
 	task_set_wqh(current, wqh, &wq);
 	sched_prepare_sleep();
 	//printk("(%d) waiting on wqh at: 0x%p\n",
 	//       current->tid, wqh);
-	spin_unlock(&wqh->slock);
+	spin_unlock_irq(&wqh->slock, irqsave);
 	schedule();
 
 	/* Did we wake up normally or get interrupted */
@@ -110,7 +118,9 @@ int wait_on(struct waitqueue_head *wqh)
 /* Wake up all in the queue */
 void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 {
-	spin_lock(&wqh->slock);
+	unsigned long irqsave;
+
+	spin_lock_irq(&wqh->slock, &irqsave);
 	BUG_ON(wqh->sleepers < 0);
 	while (wqh->sleepers > 0) {
 		struct waitqueue *wq = link_to_struct(wqh->task_list.next,
@@ -124,16 +134,16 @@ void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
 		// printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
-		spin_unlock(&wqh->slock);
+		spin_unlock_irq(&wqh->slock, irqsave);
 
 		if (flags & WAKEUP_SYNC)
 			sched_resume_sync(sleeper);
 		else
 			sched_resume_async(sleeper);
 
-		spin_lock(&wqh->slock);
+		spin_lock_irq(&wqh->slock, &irqsave);
 	}
-	spin_unlock(&wqh->slock);
+	spin_unlock_irq(&wqh->slock, irqsave);
 }
 
 /* Wake up single waiter */
@@ -143,15 +153,11 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 
 	BUG_ON(wqh->sleepers < 0);
 
-	/* Irq version */
-	if (flags & WAKEUP_IRQ)
-		spin_lock_irq(&wqh->slock, &irqflags);
-	else
-		spin_lock(&wqh->slock);
+	spin_lock_irq(&wqh->slock, &irqflags);
 	if (wqh->sleepers > 0) {
 		struct waitqueue *wq = link_to_struct(wqh->task_list.next,
-						  struct waitqueue,
-						  task_list);
+						      struct waitqueue,
+						      task_list);
 		struct ktcb *sleeper = wq->task;
 		BUG_ON(list_empty(&wqh->task_list));
 		list_remove_init(&wq->task_list);
@@ -160,10 +166,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
 		//printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
-		if (flags & WAKEUP_IRQ)
-			spin_unlock_irq(&wqh->slock, irqflags);
-		else
-			spin_unlock(&wqh->slock);
+		spin_unlock_irq(&wqh->slock, irqflags);
 
 		if (flags & WAKEUP_SYNC)
 			sched_resume_sync(sleeper);
@@ -171,10 +174,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 			sched_resume_async(sleeper);
 		return;
 	}
-	if (flags & WAKEUP_IRQ)
-		spin_unlock_irq(&wqh->slock, irqflags);
-	else
-		spin_unlock(&wqh->slock);
+	spin_unlock_irq(&wqh->slock, irqflags);
 }
 
 /*
@@ -184,15 +184,13 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
  */
 int wake_up_task(struct ktcb *task, unsigned int flags)
 {
+	unsigned long irqflags[2];
 	struct waitqueue_head *wqh;
 	struct waitqueue *wq;
 
-	/* Not yet handled. need spin_lock_irqs */
-	BUG_ON(flags & WAKEUP_IRQ);
-
-	spin_lock(&task->waitlock);
+	spin_lock_irq(&task->waitlock, &irqflags[0]);
 	if (!task->waiting_on) {
-		spin_unlock(&task->waitlock);
+		spin_unlock_irq(&task->waitlock, irqflags[0]);
 		return -1;
 	}
 	wqh = task->waiting_on;
@@ -200,25 +198,29 @@ int wake_up_task(struct ktcb *task, unsigned int flags)
 
 	/*
 	 * We have found the waitqueue head.
+	 *
 	 * That needs to be locked first to conform with
 	 * lock order and avoid deadlocks. Release task's
 	 * waitlock and take the wqh's one.
 	 */
-	spin_unlock(&task->waitlock);
+	spin_unlock_irq(&task->waitlock, irqflags[0]);
 
-	/* -- Task can be woken up by someone else here -- */
+	/*
+	 * Task can be woken up by someone else here.
+	 */
 
-	spin_lock(&wqh->slock);
+	spin_lock_irq(&wqh->slock, &irqflags[0]);
 
 	/*
 	 * Now lets check if the task is still
-	 * waiting and in the same queue
+	 * waiting and in the same queue. Not irq version
+	 * as we called that once already (so irqs are disabled)
 	 */
-	spin_lock(&task->waitlock);
+	spin_lock_irq(&task->waitlock, &irqflags[1]);
 	if (task->waiting_on != wqh) {
 		/* No, task has been woken by someone else */
-		spin_unlock(&wqh->slock);
-		spin_unlock(&task->waitlock);
+		spin_unlock_irq(&wqh->slock, irqflags[0]);
+		spin_unlock_irq(&task->waitlock, irqflags[1]);
 		return -1;
 	}
 
@@ -229,8 +231,8 @@ int wake_up_task(struct ktcb *task, unsigned int flags)
 	task->wq = 0;
 	if (flags & WAKEUP_INTERRUPT)
 		task->flags |= TASK_INTERRUPTED;
-	spin_unlock(&wqh->slock);
-	spin_unlock(&task->waitlock);
+	spin_unlock_irq(&wqh->slock, irqflags[0]);
+	spin_unlock_irq(&task->waitlock, irqflags[1]);
 
 	/*
 	 * Task is removed from its waitqueue. Now we can
