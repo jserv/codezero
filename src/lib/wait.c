@@ -139,8 +139,15 @@ void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 /* Wake up single waiter */
 void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 {
+	unsigned int irqflags;
+
 	BUG_ON(wqh->sleepers < 0);
-	spin_lock(&wqh->slock);
+
+	/* Irq version */
+	if (flags & WAKEUP_IRQ)
+		spin_lock_irq(&wqh->lock, &irqflags);
+	else
+		spin_lock(&wqh->slock);
 	if (wqh->sleepers > 0) {
 		struct waitqueue *wq = link_to_struct(wqh->task_list.next,
 						  struct waitqueue,
@@ -153,7 +160,10 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
 		//printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
-		spin_unlock(&wqh->slock);
+		if (flags & WAKEUP_IRQ)
+			spin_unlock_irqrestore(&wqh->slock, irqflags);
+		else
+			spin_unlock(&wqh->slock);
 
 		if (flags & WAKEUP_SYNC)
 			sched_resume_sync(sleeper);
@@ -161,7 +171,10 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 			sched_resume_async(sleeper);
 		return;
 	}
-	spin_unlock(&wqh->slock);
+	if (flags & WAKEUP_IRQ)
+		spin_unlock_irqrestore(&wqh->slock, irqflags);
+	else
+		spin_unlock(&wqh->slock);
 }
 
 /*
@@ -173,6 +186,9 @@ int wake_up_task(struct ktcb *task, unsigned int flags)
 {
 	struct waitqueue_head *wqh;
 	struct waitqueue *wq;
+
+	/* Not yet handled. need spin_lock_irqs */
+	BUG_ON(flags & WAKEUP_IRQ);
 
 	spin_lock(&task->waitlock);
 	if (!task->waiting_on) {

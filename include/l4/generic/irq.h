@@ -40,10 +40,16 @@ struct irq_desc {
 	struct irq_chip *chip;
 
 	/* Thread registered for this irq */
-	struct ktcb *irq_thread;
+	struct ktcb *task;
 
 	/* Notification slot for this irq */
 	int task_notify_slot;
+
+	/* Device virtual address */
+	unsigned long device_virtual;
+
+	/* Device capability */
+	struct capability *devcap;
 
 	/* NOTE: This could be a list for multiple handlers for shared irqs */
 	irq_handler_t handler;
@@ -68,8 +74,8 @@ static inline void irq_disable(int irq_index)
 	this_chip->ops.ack_and_mask(irq_index - this_chip->start);
 }
 
-int irq_register(struct ktcb *task, int notify_slot,
-		 l4id_t irq_index, irq_handler_t handler);
+void irq_generic_map_device(struct irq_desc *desc);
+int irq_register(struct ktcb *task, int notify_slot, l4id_t irq_index);
 
 void do_irq(void);
 void irq_controllers_init(void);

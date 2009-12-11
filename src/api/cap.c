@@ -367,6 +367,16 @@ int cap_destroy(struct capability *cap)
 	if (!(cap_generic_perms(orig) & CAP_CHANGEABLE))
 		return -ENOCAP;
 
+	/*
+	 * Check that it is not a device.
+	 *
+	 * We don't allow devices for now. To do this
+	 * correctly, we need to check if device irq
+	 * is not currently registered.
+	 */
+	if (cap_is_devmem(orig))
+		return -ENOCAP;
+
 	cap_list_remove(orig, clist);
 	free_capability(orig);
 	return 0;

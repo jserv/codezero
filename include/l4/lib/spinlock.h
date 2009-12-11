@@ -40,9 +40,9 @@ static inline void spin_unlock(struct spinlock *s)
  *   on other cpus.
  */
 static inline void spin_lock_irq(struct spinlock *s,
-				 unsigned long state)
+				 unsigned long *state)
 {
-	irq_local_disable_save(&state);
+	irq_local_disable_save(state);
 #if defined(CONFIG_SMP)
 	__spin_lock(&s->lock);
 #endif

@@ -416,6 +416,19 @@ int free_boot_memory(struct kernel_resources *kres)
 	return 0;
 }
 
+void kernel_address_pool_init(struct kernel_resources *kres)
+{
+	/* Initialize id pool spinlock */
+	spin_lock_init(&kres->kernel_address_pool.idpool.lock);
+
+	/* Initialize id pool number of words */
+	kres->kernel_address_pool.idpool.nwords = SYSTEM_IDS_MAX;
+
+	/* Initialize address pool start and end ranges */
+	kres->kernel_address_pool.start = page_align_up(_end);
+	kres->kernel_address_pool.end = KERNEL_AREA_END;
+}
+
 /*
  * Initializes kernel caplists, and sets up total of physical
  * and virtual memory as single capabilities of the kernel.
@@ -434,6 +447,9 @@ void init_kernel_resources(struct kernel_resources *kres)
 	kres->container_ids.nwords = SYSTEM_IDS_MAX;
 	kres->mutex_ids.nwords = SYSTEM_IDS_MAX;
 	kres->capability_ids.nwords = SYSTEM_IDS_MAX;
+
+	/* Initialize kernel's virtual address pool */
+	kernel_address_pool_init(kres);
 
 	/* Initialize container head */
 	container_head_init(&kres->containers);

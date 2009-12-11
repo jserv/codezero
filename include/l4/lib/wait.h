@@ -13,8 +13,9 @@ struct waitqueue {
 #define WAKEUP_ASYNC			0
 
 enum wakeup_flags {
-	WAKEUP_INTERRUPT = (1 << 0),
-	WAKEUP_SYNC	 = (1 << 1)
+	WAKEUP_INTERRUPT = (1 << 0),	/* Set interrupt flag for task */
+	WAKEUP_SYNC	 = (1 << 1),	/* Wake it up synchronously */
+	WAKEUP_IRQ	 = (1 << 2)	/* Disable irqs on spinlocks */
 };
 
 #define CREATE_WAITQUEUE_ON_STACK(wq, tsk)		\
