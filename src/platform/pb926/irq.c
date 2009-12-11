@@ -54,13 +54,10 @@ static int platform_timer_handler(struct irq_desc *desc)
 /*
  * Timer handler for userspace
  */
-static int platform_user_timer_irq_handler(struct irq_desc *desc)
+static int platform_timer_user_handler(struct irq_desc *desc)
 {
-	/* Lazily map the device to process kernel tables */
-	irq_generic_map_device(desc);
-
 	/* Ack the device irq */
-	sp804_irq_handler(desc->device_virtual);
+	sp804_irq_handler(PLATFORM_TIMER1_VIRTUAL);
 
 	/* Notify the userspace */
 	irq_thread_notify(desc);
@@ -82,7 +79,8 @@ struct irq_desc irq_desc_array[IRQS_MAX] = {
 	[IRQ_TIMER1] = {
 		.name = "Timer1",
 		.chip = &irq_chip_array[0],
-		.handler = platform_user_timer_handler
+		.handler = platform_timer_user_handler,
+	},
 };
 
 

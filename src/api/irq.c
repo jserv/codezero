@@ -69,9 +69,7 @@ int irq_thread_notify(struct irq_desc *desc)
  * Register the given globally unique irq number with the
  * current thread with given flags
  */
-int irq_control_register(struct ktcb *task, int slot, l4id_t irqnum,
-			 unsigned long device_virtual,
-			 struct capability *devcap)
+int irq_control_register(struct ktcb *task, int slot, l4id_t irqnum)
 {
 	int err;
 
@@ -87,11 +85,17 @@ int irq_control_register(struct ktcb *task, int slot, l4id_t irqnum,
 		return err;
 
 	/* Register the irq for thread notification */
-	if ((err = irq_register(current, slot, irqnum, devcap)) < 0)
+	if ((err = irq_register(current, slot, irqnum)) < 0)
 		return err;
 
 	return 0;
 }
+
+int irq_wait()
+{
+	return 0;
+}
+
 
 /*
  * Register/deregister device irqs. Optional synchronous and
@@ -101,17 +105,19 @@ int sys_irq_control(unsigned int req, unsigned int flags, l4id_t irqno)
 {
 	/* Currently a task is allowed to register only for itself */
 	struct ktcb *task = current;
-	struct capability *devcap;
 	int err;
 
-	if ((err = cap_irq_check(task, req, flags, irqno, &devcap)) < 0)
+	if ((err = cap_irq_check(task, req, flags, irqno)) < 0)
 		return err;
 
 	switch (req) {
 	case IRQ_CONTROL_REGISTER:
-		if ((err = irq_control_register(task, slot, flags,
-						irqno, devcap)) < 0)
+		if ((err = irq_control_register(task, flags, irqno)) < 0)
 			return err;
+		break;
+	case IRQ_CONTROL_WAIT:
+		irq_wait();
+		break;
 	default:
 			return -EINVAL;
 	}

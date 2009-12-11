@@ -16,34 +16,6 @@
 #include INC_ARCH(exception.h)
 
 /*
- * Checks that a device was validly registered for the irq,
- * and lazily maps it to currently interrupted process.
- */
-void irq_generic_map_device(struct irq_desc *desc)
-{
-	/*
-	 * Check that irq is registered with a
-	 * valid device capability and virtual address
-	 */
-	if (!desc->devcap || !KERN_ADDR(devcap->device_virtual)) {
-		printk("Spurious irq. %s irq occured but "
-		       "no device capability or valid virtual device "
-		       "address associated with the irq.\n",
-		       desc->name);
-		BUG();
-	}
-
-	/* Check and lazy map device */
-	if (check_access(desc->device_virtual,
-			 desc->devcap->end - desc->devcap->start,
-			 MAP_SVC_RW_FLAGS, 0) < 0) {
-		add_mapping(__pfn_to_addr(devcap->start),
-			    desc->device_virtual, MAP_SVC_RW_FLAGS,
-			    desc->devcap->end - desc->devcap->start);
-	}
-}
-
-/*
  * Registers a userspace thread as an irq handler.
  *
  * A userspace irq thread should have a low-level, device-specific
@@ -54,8 +26,7 @@ void irq_generic_map_device(struct irq_desc *desc)
  * If the irq does not have these set up, we cannot allow
  * the irq registry.
  */
-int irq_register(struct ktcb *task, int notify_slot,
-		 l4id_t irq_index, struct capability *device)
+int irq_register(struct ktcb *task, int notify_slot, l4id_t irq_index)
 {
 	struct irq_desc *this_desc = irq_desc_array + irq_index;
 
@@ -66,17 +37,6 @@ int irq_register(struct ktcb *task, int notify_slot,
 	/* Setup the task and notify slot */
 	this_desc->task = task;
 	this_desc->task_notify_slot = notify_slot;
-
-	/*
-	 * Setup capability and allocate virtual kernel address.
-	 *
-	 * This is required so that the irq handler may reach
-	 * the device from the kernel at any runnable process.
-	 */
-	this_desc->devcap = device;
-	if (!(this_desc->device_virtual =
-	      kernel_new_address(device->end - device->start)))
-		return -ENOMEM;
 
 	/* Enable the irq */
 	irq_enable(irq_index);

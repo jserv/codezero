@@ -139,13 +139,13 @@ void wake_up_all(struct waitqueue_head *wqh, unsigned int flags)
 /* Wake up single waiter */
 void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 {
-	unsigned int irqflags;
+	unsigned long irqflags;
 
 	BUG_ON(wqh->sleepers < 0);
 
 	/* Irq version */
 	if (flags & WAKEUP_IRQ)
-		spin_lock_irq(&wqh->lock, &irqflags);
+		spin_lock_irq(&wqh->slock, &irqflags);
 	else
 		spin_lock(&wqh->slock);
 	if (wqh->sleepers > 0) {
@@ -161,7 +161,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 			sleeper->flags |= TASK_INTERRUPTED;
 		//printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		if (flags & WAKEUP_IRQ)
-			spin_unlock_irqrestore(&wqh->slock, irqflags);
+			spin_unlock_irq(&wqh->slock, irqflags);
 		else
 			spin_unlock(&wqh->slock);
 
@@ -172,7 +172,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 		return;
 	}
 	if (flags & WAKEUP_IRQ)
-		spin_unlock_irqrestore(&wqh->slock, irqflags);
+		spin_unlock_irq(&wqh->slock, irqflags);
 	else
 		spin_unlock(&wqh->slock);
 }

@@ -877,8 +877,7 @@ int cap_thread_check(struct ktcb *task,
 
 
 int cap_irq_check(struct ktcb *registrant, unsigned int req,
-		  unsigned int flags, l4id_t irq,
-		  struct capability **device_cap)
+		  unsigned int flags, l4id_t irq)
 {
 	struct sys_irqctrl_args args = {
 		.registrant = registrant,
@@ -896,8 +895,8 @@ int cap_irq_check(struct ktcb *registrant, unsigned int req,
 	 * Find the device capability and
 	 * check that it allows irq registration
 	 */
-	if (!(*device_cap = cap_find(current, cap_match_devmem,
-				 &args, CAP_TYPE_MAP_PHYSMEM)))
+	if (!cap_find(current, cap_match_devmem,
+		      &args, CAP_TYPE_MAP_PHYSMEM))
 		return -ENOCAP;
 
 	return 0;
@@ -940,7 +939,7 @@ int cap_thread_check(struct ktcb *task,
 }
 
 int cap_irq_check(struct ktcb *registrant, unsigned int req,
-		  unsigned int flags, l4id_t irq, struct capability **cap)
+		  unsigned int flags, l4id_t irq)
 {
 	return 0;
 }

@@ -121,10 +121,18 @@ void init_platform_irq_controller()
 	irq_controllers_init();
 }
 
+void init_platform_devices()
+{
+	/* Add userspace devices here as you develop their irq handlers */
+	add_boot_mapping(PB926_TIMER23_BASE, PLATFORM_TIMER1_VIRTUAL,
+			 PAGE_SIZE, MAP_IO_DEFAULT_FLAGS);
+}
+
 void platform_init(void)
 {
 	init_platform_console();
 	init_platform_timer();
 	init_platform_irq_controller();
+	init_platform_devices();
 }
 
