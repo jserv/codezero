@@ -11,7 +11,7 @@
  * Reads the irq notification slot. Destructive atomic read ensures that
  * an irq may write to the slot in sync.
  */
-int l4_irq_read_blocking(int slot, int irqnum)
+int l4_irq_wait(int slot, int irqnum)
 {
 	int irqval = l4_atomic_dest_readb(&l4_get_utcb()->notify[slot]);
 

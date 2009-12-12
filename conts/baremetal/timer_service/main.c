@@ -5,8 +5,10 @@
 #include <l4lib/arch/syscalls.h>
 #include <l4lib/addr.h>
 #include <l4lib/exregs.h>
+#include <l4lib/irq.h>
 #include <l4lib/ipcdefs.h>
 #include <l4/api/errno.h>
+#include <l4/api/irq.h>
 
 #include <l4/api/space.h>
 #include <malloc/malloc.h>
@@ -15,6 +17,7 @@
 #include "sp804_timer.h"
 #include <linker.h>
 #include <timer.h>
+#include <thread.h>
 
 /* Frequency of timer in MHz */
 #define TIMER_FREQUENCY		1
@@ -25,7 +28,6 @@ static struct capability caparray[32];
 static int total_caps = 0;
 
 static struct timer timer[TIMERS_TOTAL];
-static int notify_slot = 0;
 
 int cap_read_all()
 {
@@ -81,9 +83,11 @@ int timer_probe_devices(void)
 	return 0;
 }
 
-void timer_irq_handler(void *arg)
+int timer_irq_handler(void *arg)
 {
+	int err;
 	struct timer *timer = (struct timer *)arg;
+	const int slot = 0;
 
 	/* Initialise timer */
 	sp804_init(timer->base, SP804_TIMER_RUNMODE_PERIODIC,
@@ -91,8 +95,8 @@ void timer_irq_handler(void *arg)
 		   SP804_TIMER_WIDTH32BIT, SP804_TIMER_IRQENABLE);
 
 	/* Register self for timer irq, using notify slot 0 */
-	if ((err = l4_irq_control(IRQ_CONTROL_REGISTER, 0,
-				  timer->cap.irqnum)) < 0) {
+	if ((err = l4_irq_control(IRQ_CONTROL_REGISTER, slot,
+				  timer->cap.irq)) < 0) {
 		printf("%s: FATAL: Timer irq could not be registered. "
 		       "err=%d\n", __FUNCTION__, err);
 		BUG();
@@ -106,7 +110,7 @@ void timer_irq_handler(void *arg)
 		int count;
 
 		/* Block on irq */
-		count = l4_irq_wait(timer->cap.irqnum);
+		count = l4_irq_wait(slot, timer->cap.irq);
 
 		/* Update timer count */
 		timer->count += count;
@@ -120,12 +124,13 @@ void timer_irq_handler(void *arg)
 int timer_setup_devices(void)
 {
 	struct task_ids irq_tids;
+	int err;
 
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* Get one page from address pool */
 		timer[i].base = (unsigned long)l4_new_virtual(1);
 		timer[i].count = 0;
-		link_init(&timer[i].tasklist);
+		link_init(&timer[i].task_list);
 		l4_mutex_init(&timer[i].lock);
 
 		/* Map timer to a virtual address region */
@@ -136,7 +141,7 @@ int timer_setup_devices(void)
 			printf("%s: FATAL: Failed to map TIMER device "
 			       "%d to a virtual address\n",
 			       __CONTAINER_NAME__,
-			       cap_devnum(&timer_cap[i]));
+			       cap_devnum(&timer[i].cap));
 			BUG();
 		}
 
@@ -148,7 +153,7 @@ int timer_setup_devices(void)
 		 * wait on irqs.
 		 */
 		if ((err = thread_create(timer_irq_handler, &timer[i],
-					 TC_SHARED_SPACE,
+					 TC_SHARE_SPACE,
 					 &irq_tids)) < 0) {
 			printf("FATAL: Creation of irq handler "
 			       "thread failed.\n");

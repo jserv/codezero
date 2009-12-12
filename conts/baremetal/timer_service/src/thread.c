@@ -14,8 +14,8 @@ char *__utcb_ptr = &utcb[1][0];
 
 extern void local_setup_new_thread(void);
 
-l4id_t thread_create(int (*func)(void *), void *args, unsigned int flags,
-		     struct task_ids *new_ids)
+int thread_create(int (*func)(void *), void *args, unsigned int flags,
+		  struct task_ids *new_ids)
 {
 	struct task_ids ids;
 	struct exregs_data exregs;
@@ -44,10 +44,10 @@ l4id_t thread_create(int (*func)(void *), void *args, unsigned int flags,
 		return -ENOMEM;
 
 	/* First word of new stack is arg */
-	*(((unsigned long *)__stack_ptr)[-1]) = (unsigned long)args;
+	((unsigned long *)__stack_ptr)[-1] = (unsigned long)args;
 
 	/* Second word of new stack is function address */
-	*(((unsigned long *)__stack_ptr)[-2]) = (unsigned long)func;
+	((unsigned long *)__stack_ptr)[-2] = (unsigned long)func;
 
 	/* Setup new thread pc, sp, utcb */
 	memset(&exregs, 0, sizeof(exregs));
@@ -63,9 +63,8 @@ l4id_t thread_create(int (*func)(void *), void *args, unsigned int flags,
 	__utcb_ptr += UTCB_SIZE;
 
 	/* Start the new thread */
-	if (flags & THREAD_RUN)
-		if ((err = l4_thread_control(THREAD_RUN, &ids)) < 0)
-			return err;
+	if ((err = l4_thread_control(THREAD_RUN, &ids)) < 0)
+		return err;
 
 	memcpy(new_ids, &ids, sizeof(ids));
 
