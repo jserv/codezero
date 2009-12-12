@@ -17,14 +17,15 @@
 #include <timer.h>
 
 /* Frequency of timer in MHz */
-#define TIMER_FREQUENCY	1
+#define TIMER_FREQUENCY		1
 
 #define TIMERS_TOTAL		1
 
 static struct capability caparray[32];
 static int total_caps = 0;
 
-struct capability timer_cap[TIMERS_TOTAL];
+static struct timer timer[TIMERS_TOTAL];
+static int notify_slot = 0;
 
 int cap_read_all()
 {
@@ -66,8 +67,8 @@ int timer_probe_devices(void)
 		/* Match device type */
 		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_TIMER) {
 			/* Copy to correct device index */
-			memcpy(&timer_cap[cap_devnum(&caparray[i]) - 1],
-			       &caparray[i], sizeof(timer_cap[0]));
+			memcpy(&timer[cap_devnum(&caparray[i]) - 1].cap,
+			       &caparray[i], sizeof(timer[0].cap));
 			timers++;
 		}
 	}
@@ -80,27 +81,46 @@ int timer_probe_devices(void)
 	return 0;
 }
 
-static struct sp804_timer timer[TIMERS_TOTAL];
-
-struct timer_task *get_timer_task(l4id_t tgid)
+void timer_irq_handler(void *arg)
 {
-	/* May be we can prepare a cache for timer_task structs */
-	struct timer_task *task = (struct timer_task *)kzalloc(sizeof(struct timer_task));
+	struct timer *timer = (struct timer *)arg;
 
-	link_init(&task->list);
-	task->tgid = tgid;
-	task->wait_count = timer[0].count;
+	/* Initialise timer */
+	sp804_init(timer->base, SP804_TIMER_RUNMODE_PERIODIC,
+		   SP804_TIMER_WRAPMODE_WRAPPING,
+		   SP804_TIMER_WIDTH32BIT, SP804_TIMER_IRQENABLE);
 
-	return task;
-}
+	/* Register self for timer irq, using notify slot 0 */
+	if ((err = l4_irq_control(IRQ_CONTROL_REGISTER, 0,
+				  timer->cap.irqnum)) < 0) {
+		printf("%s: FATAL: Timer irq could not be registered. "
+		       "err=%d\n", __FUNCTION__, err);
+		BUG();
+	}
 
-void free_timer_task(struct timer_task *task)
-{
-	kfree(task);
+	/* Enable Timer */
+	sp804_enable(timer->base, 1);
+
+	/* Handle irqs forever */
+	while (1) {
+		int count;
+
+		/* Block on irq */
+		count = l4_irq_wait(timer->cap.irqnum);
+
+		/* Update timer count */
+		timer->count += count;
+
+		/* Print both counter and number of updates on count */
+		printf("Timer count: %lld, current update: %d\n",
+		       timer->count, count);
+	}
 }
 
 int timer_setup_devices(void)
 {
+	struct task_ids irq_tids;
+
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* Get one page from address pool */
 		timer[i].base = (unsigned long)l4_new_virtual(1);
@@ -108,9 +128,9 @@ int timer_setup_devices(void)
 		link_init(&timer[i].tasklist);
 		l4_mutex_init(&timer[i].lock);
 
-		/* Map timers to a virtual address region */
-		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer_cap[i].start),
-				  (void *)timer[i].base, timer_cap[i].size,
+		/* Map timer to a virtual address region */
+		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer[i].cap.start),
+				  (void *)timer[i].base, timer[i].cap.size,
 				  MAP_USR_IO_FLAGS,
 				  self_tid()))) {
 			printf("%s: FATAL: Failed to map TIMER device "
@@ -120,14 +140,22 @@ int timer_setup_devices(void)
 			BUG();
 		}
 
-		/* Initialise timer */
-		sp804_init(timer[i].base, SP804_TIMER_RUNMODE_PERIODIC, \
-			SP804_TIMER_WRAPMODE_WRAPPING, SP804_TIMER_WIDTH32BIT, \
-			SP804_TIMER_IRQDISABLE);
-
-		/* Enable Timer */
-		sp804_enable(timer[i].base, 1);
+		/*
+		 * Create new timer irq handler thread.
+		 *
+		 * This will initialize its timer argument, register
+		 * itself as its irq handler, initiate the timer and
+		 * wait on irqs.
+		 */
+		if ((err = thread_create(timer_irq_handler, &timer[i],
+					 TC_SHARED_SPACE,
+					 &irq_tids)) < 0) {
+			printf("FATAL: Creation of irq handler "
+			       "thread failed.\n");
+			BUG();
+		}
 	}
+
 	return 0;
 }
 
@@ -141,8 +169,8 @@ void init_vaddr_pool(void)
 {
 	for (int i = 0; i < total_caps; i++) {
 		/* Find the virtual memory region for this process */
-		if (cap_type(&caparray[i]) == CAP_TYPE_MAP_VIRTMEM &&
-		    __pfn_to_addr(caparray[i].start) ==
+		if (cap_type(&caparray[i]) == CAP_TYPE_MAP_VIRTMEM
+		    && __pfn_to_addr(caparray[i].start) ==
 		    (unsigned long)vma_start) {
 
 			/*
@@ -159,8 +187,10 @@ void init_vaddr_pool(void)
 				 * We may allocate virtual memory
 				 * addresses from this pool.
 				 */
-				address_pool_init(&device_vaddr_pool, page_align_up(__end),
-					__pfn_to_addr(caparray[i].end), TIMERS_TOTAL);
+				address_pool_init(&device_vaddr_pool,
+						  page_align_up(__end),
+						  __pfn_to_addr(caparray[i].end),
+						  TIMERS_TOTAL);
 				return;
 			} else
 				goto out_err;
@@ -177,6 +207,24 @@ out_err:
 void *l4_new_virtual(int npages)
 {
 	return address_new(&device_vaddr_pool, npages, PAGE_SIZE);
+}
+
+#if 0
+struct timer_task *get_timer_task(l4id_t tgid)
+{
+	/* May be we can prepare a cache for timer_task structs */
+	struct timer_task *task = (struct timer_task *)kzalloc(sizeof(struct timer_task));
+
+	link_init(&task->list);
+	task->tgid = tgid;
+	task->wait_count = timer[0].count;
+
+	return task;
+}
+
+void free_timer_task(struct timer_task *task)
+{
+	kfree(task);
 }
 
 void timer_irq_handler(void)
@@ -221,6 +269,8 @@ void timer_sleep(l4id_t tgid, int sec)
 	l4_mutex_unlock(&timer[0].lock);
 }
 
+#endif
+
 void handle_requests(void)
 {
 	u32 mr[MR_UNUSED_TOTAL];
@@ -256,11 +306,11 @@ void handle_requests(void)
 	 */
 	switch (tag) {
 	case L4_IPC_TAG_TIMER_GETTIME:
-		mr[0] = timer_gettime();
+		//mr[0] = timer_gettime();
 		break;
 
 	case L4_IPC_TAG_TIMER_SLEEP:
-		timer_sleep(senderid, mr[0]);
+		//timer_sleep(senderid, mr[0]);
 		/* TODO: Halt the caller for mr[0] seconds */
 		break;
 
@@ -326,15 +376,15 @@ void main(void)
 	/* Initialize virtual address pool for timers */
 	init_vaddr_pool();
 
-	/* Map and initialize timer devices */
-	timer_setup_devices();
-
-	/* Setup own utcb */
+	/* Setup own static utcb */
 	if ((err = l4_utcb_setup(&utcb)) < 0) {
 		printf("FATAL: Could not set up own utcb. "
 		       "err=%d\n", err);
 		BUG();
 	}
+
+	/* Map and initialize timer devices */
+	timer_setup_devices();
 
 	/* Listen for timer requests */
 	while (1)
