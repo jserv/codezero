@@ -512,6 +512,10 @@ CONT%(cn)d_CAP_CAPCTRL_USE				'Enable this Capability'
 CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER 	'Capability Targets Current Container'
 CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
 
+CONT%(cn)d_CAP_IRQCTRL_USE				'Enable this Capability'
+CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_CONTAINER 	'Capability Targets Current Container'
+CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
+
 CONT%(cn)d_CAP_UMUTEX_USE				'Enable this Capability'
 CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER 		'Capability Targets Current Container'
 CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE 	'Capability Targets Current Pager`s Space'
@@ -539,6 +543,7 @@ cont%(cn)d_cap_tctrl		'Container %(cn)d Thread Control Capability'
 cont%(cn)d_cap_exregs		'Container %(cn)d Exchange Registers Capability'
 cont%(cn)d_cap_ipc		'Container %(cn)d IPC Capability'
 cont%(cn)d_cap_capctrl		'Container %(cn)d Capability Control Capability'
+cont%(cn)d_cap_irqctrl		'Container %(cn)d IRQ Control Capability'
 cont%(cn)d_cap_umutex		'Container %(cn)d Userspace Mutex Control Capability'
 cont%(cn)d_cap_custom0 		'Container %(cn)d Custom Capability 0 Parameters'
 cont%(cn)d_cap_custom1 		'Container %(cn)d Custom Capability 1 Parameters'
@@ -589,6 +594,10 @@ when CONT%(cn)d_CAP_CAPCTRL_USE == n
 	suppress CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER
 		 CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
 
+when CONT%(cn)d_CAP_IRQCTRL_USE == n
+	suppress CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_CONTAINER
+		 CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_PAGER_SPACE
+
 when CONT%(cn)d_CAP_UMUTEX_USE == n
 	suppress CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER
 		 CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE
@@ -615,6 +624,10 @@ choicegroup CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER
 	    CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_PAGER_SPACE
 	    default CONT%(cn)d_CAP_CAPCTRL_TARGET_CURRENT_CONTAINER from y
 
+choicegroup CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_CONTAINER
+	    CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_PAGER_SPACE
+	    default CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_CONTAINER from y
+
 choicegroup CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER
 	    CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE
 	    default CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER from y
@@ -623,6 +636,7 @@ default CONT%(cn)d_CAP_TCTRL_USE	from y
 default CONT%(cn)d_CAP_EXREGS_USE	from y
 default CONT%(cn)d_CAP_IPC_USE		from y
 default CONT%(cn)d_CAP_CAPCTRL_USE	from y
+default CONT%(cn)d_CAP_IRQCTRL_USE	from y
 default CONT%(cn)d_CAP_UMUTEX_USE	from y
 
 default CONT%(cn)d_CAP_IPC_TARGET	from 0
@@ -647,6 +661,11 @@ menu cont%(cn)d_cap_umutex
 	CONT%(cn)d_CAP_UMUTEX_USE
 	CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_CONTAINER
 	CONT%(cn)d_CAP_UMUTEX_TARGET_CURRENT_PAGER_SPACE
+
+menu cont%(cn)d_cap_irqctrl
+	CONT%(cn)d_CAP_IRQCTRL_USE
+	CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_CONTAINER
+	CONT%(cn)d_CAP_IRQCTRL_TARGET_CURRENT_PAGER_SPACE
 
 menu cont%(cn)d_cap_ipc
 	CONT%(cn)d_CAP_IPC_USE
@@ -687,6 +706,7 @@ menu cont%(cn)d_capability_list
 	cont%(cn)d_cap_ipc
 	cont%(cn)d_cap_capctrl
 	cont%(cn)d_cap_umutex
+	cont%(cn)d_cap_irqctrl
 	cont%(cn)d_cap_custom0
 	cont%(cn)d_cap_custom1
 	cont%(cn)d_cap_custom2

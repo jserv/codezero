@@ -61,7 +61,7 @@ do {								\
 		(wqh)->sleepers++;				\
 		list_insert_tail(&wq.task_list, 		\
 				 &(wqh)->task_list);		\
-		/* printk("(%d) waiting...\n", current->tid); */\
+		printk("(%d) waiting...\n", current->tid); 	\
 		sched_prepare_sleep();				\
 		spin_unlock_irq(&(wqh)->slock, irqsave);	\
 		schedule();					\

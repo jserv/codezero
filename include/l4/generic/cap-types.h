@@ -104,11 +104,16 @@
 
 /*
  * IRQ Control capability
- *
+ */
+#define CAP_IRQCTRL_WAIT	(1 << 8)
+
+/*
  * This is a common one and it applies to both
  * CAP_TYPE_IRQCTRL and CAP_TYPE_MAP_PHYSMEM
  */
 #define CAP_IRQCTRL_REGISTER	(1 << 7)
+
+
 
 /* Ipc capability */
 #define CAP_IPC_SEND		(1 << 0)

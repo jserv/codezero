@@ -55,7 +55,12 @@ static inline void cap_list_remove(struct capability *cap,
 static inline struct capability *
 cap_list_detach(struct cap_list *clist)
 {
-	struct link *list = list_detach(&clist->caps);
+	struct link *list;
+
+	if (!clist->ncaps)
+		return 0;
+
+	list = list_detach(&clist->caps);
 	clist->ncaps = 0;
 	return link_to_struct(list, struct capability, list);
 }
@@ -75,6 +80,9 @@ static inline void cap_list_attach(struct capability *cap,
 static inline void cap_list_move(struct cap_list *to,
 				 struct cap_list *from)
 {
+	if (!from->ncaps)
+		return;
+
 	struct capability *cap_head = cap_list_detach(from);
 	cap_list_attach(cap_head, to);
 }

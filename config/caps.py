@@ -36,7 +36,7 @@ cap_strings = { 'ipc' : \
 \t\t\t[${idx}] = {
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_IRQCTRL | ${target_rtype},
-\t\t\t\t.access = CAP_IRQCTRL_REGISTER
+\t\t\t\t.access = CAP_IRQCTRL_REGISTER | CAP_IRQCTRL_WAIT
 \t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE
 \t\t\t\t          | CAP_TRANSFERABLE,
 \t\t\t\t.start = 0, .end = 0, .size = 0,
@@ -146,7 +146,8 @@ cap_strings = { 'ipc' : \
 \t\t\t\t.target = ${cid},
 \t\t\t\t.type = CAP_TYPE_MAP_PHYSMEM | CAP_RTYPE_CONTAINER,
 \t\t\t\t.access = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_EXEC |
-\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP,
+\t\t\t\t\tCAP_MAP_CACHED | CAP_MAP_UNCACHED | CAP_MAP_UNMAP |
+\t\t\t\t\tCAP_IRQCTRL_REGISTER,
 \t\t\t\t.start = __pfn(PLATFORM_${devname}_BASE),
 \t\t\t\t.end = __pfn(PLATFORM_${devname}_BASE + PLATFORM_${devname}_SIZE),
 \t\t\t\t.size = 1,

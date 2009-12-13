@@ -3,6 +3,7 @@
 /* Capability printing generic routines */
 
 #include <l4lib/capability/cap_print.h>
+#include <stdio.h>
 
 void cap_dev_print(struct capability *cap)
 {
@@ -58,8 +59,12 @@ void cap_print(struct capability *cap)
 	case CAP_TYPE_QUANTITY:
 		printf("Capability type:\t\t%s\n", "Quantitative");
 		break;
+	case CAP_TYPE_CAP:
+		printf("Capability type:\t\t%s\n", "Capability Control");
+		break;
 	default:
-		printf("Capability type:\t\t%s\n", "Unknown");
+		printf("Capability type:\t\t%s, cap_type=0x%x\n",
+		       "Unknown", cap_type(cap));
 		break;
 	}
 
@@ -92,7 +97,8 @@ void cap_print(struct capability *cap)
 		printf("Capability resource type:\t%s\n", "Capability Pool");
 		break;
 	default:
-		printf("Capability resource type:\t%s\n", "Unknown");
+		printf("Capability resource type:\t%s, id=0x%x\n", "Unknown",
+		       cap_rtype(cap));
 		break;
 	}
 	printf("\n");
