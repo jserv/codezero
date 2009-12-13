@@ -63,6 +63,9 @@ BEGIN_PROC(__l4_mutex_unlock)
 	mov	pc, lr
 END_PROC(__l4_mutex_unlock)
 
+/*
+ * r0 = byte address to read from.
+ */
 BEGIN_PROC(l4_atomic_dest_readb)
 	mov	r1, r0		@ Move byte address to r1
 	mov	r2, #0		@ Move 0 to r2

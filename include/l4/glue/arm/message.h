@@ -73,7 +73,8 @@
 #define MR0_REGISTER		r3
 #define MR_RETURN_REGISTER	r3
 
-#define TASK_NOTIFY_MAX		8
+#define TASK_NOTIFY_SLOTS	8
+#define TASK_NOTIFY_MAXVALUE	255
 
 /* Primaries aren't used for memcopy. Those ops use this as a parameter */
 #define L4_UTCB_FULL_BUFFER_SIZE	(MR_REST * sizeof(int))
@@ -85,7 +86,7 @@ struct utcb {
 	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
 	u32 saved_tag;		/* Saved tag field for stacked ipcs */
 	u32 saved_sender;	/* Saved sender field for stacked ipcs */
-	u8  notify[TASK_NOTIFY_MAX]; /* Irq notification slots */
+	u8  notify[TASK_NOTIFY_SLOTS]; /* Irq notification slots */
 	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
 };
 #endif

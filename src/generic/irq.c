@@ -42,6 +42,9 @@ int irq_register(struct ktcb *task, int notify_slot, l4id_t irq_index)
 	this_desc->task = task;
 	this_desc->task_notify_slot = notify_slot;
 
+	/* Setup irq desc waitqueue */
+	waitqueue_head_init(&this_desc->wqh_irq);
+
 	/* Enable the irq */
 	irq_enable(irq_index);
 

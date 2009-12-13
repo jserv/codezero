@@ -12,6 +12,7 @@
 #include <l4/generic/tcb.h>
 #include INC_GLUE(message.h)
 #include <l4/lib/wait.h>
+#include INC_SUBARCH(irq.h)
 
 /*
  * Default function that handles userspace
@@ -57,12 +58,13 @@ int irq_thread_notify(struct irq_desc *desc)
 	utcb = (struct utcb *)desc->task->utcb_address;
 
 	/* Atomic increment (See above comments) with no wraparound */
-	if (utcb->notify[desc->task_notify_slot] != TASK_NOTIFY_MAX)
+	if (utcb->notify[desc->task_notify_slot] != TASK_NOTIFY_MAXVALUE)
 		utcb->notify[desc->task_notify_slot]++;
 
 	/* Async wake up any waiter irq threads */
-	wake_up(&desc->task->wqh_notify, WAKEUP_ASYNC);
+	wake_up(&desc->wqh_irq, WAKEUP_ASYNC);
 
+	BUG_ON(!irqs_enabled());
 	return 0;
 }
 
@@ -111,10 +113,13 @@ int irq_wait(l4id_t irq_index)
 
 	/* Wait until the irq changes slot value */
 	WAIT_EVENT(&desc->wqh_irq,
-		   !utcb->notify[desc->task_notify_slot],
+		   utcb->notify[desc->task_notify_slot] != 0,
 		   ret);
-
-	return ret;
+	printk("Didn't sleep. utcb->notify[%d]=%d\n", desc->task_notify_slot, utcb->notify[desc->task_notify_slot]);
+	if (ret < 0)
+		return ret;
+	else
+		return l4_atomic_dest_readb(&utcb->notify[desc->task_notify_slot]);
 }
 
 

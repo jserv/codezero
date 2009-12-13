@@ -38,6 +38,7 @@ void sched_lock_runqueues(unsigned long *irqflags)
 {
 	spin_lock_irq(&scheduler.sched_rq[0].lock, irqflags);
 	spin_lock(&scheduler.sched_rq[1].lock);
+	BUG_ON(irqs_enabled());
 }
 
 void sched_unlock_runqueues(unsigned long irqflags)
