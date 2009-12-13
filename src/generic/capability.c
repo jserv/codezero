@@ -726,6 +726,10 @@ struct capability *cap_match_irqctrl(struct capability *cap,
 		if (!(cap->access & CAP_IRQCTRL_REGISTER))
 			return 0;
 		break;
+	case IRQ_CONTROL_WAIT:
+		if (!(cap->access & CAP_IRQCTRL_WAIT))
+			return 0;
+		break;
 	default:
 		/* We refuse to accept anything else */
 		return 0;
@@ -892,13 +896,13 @@ int cap_irq_check(struct ktcb *registrant, unsigned int req,
 		return -ENOCAP;
 
 	/*
-	 * Find the device capability and
-	 * check that it allows irq registration
+	 * If it is an irq registration, find the device
+	 * capability and check that it allows irq registration.
 	 */
-	if (!cap_find(current, cap_match_devmem,
-		      &args, CAP_TYPE_MAP_PHYSMEM))
-		return -ENOCAP;
-
+	if (req == IRQ_CONTROL_REGISTER)
+		if (!cap_find(current, cap_match_devmem,
+			      &args, CAP_TYPE_MAP_PHYSMEM))
+			return -ENOCAP;
 	return 0;
 }
 

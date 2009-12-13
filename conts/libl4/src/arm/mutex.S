@@ -63,4 +63,10 @@ BEGIN_PROC(__l4_mutex_unlock)
 	mov	pc, lr
 END_PROC(__l4_mutex_unlock)
 
+BEGIN_PROC(l4_atomic_dest_readb)
+	mov	r1, r0		@ Move byte address to r1
+	mov	r2, #0		@ Move 0 to r2
+	swpb	r0, r2, [r1]	@ Write 0 to byte location, while reading its value to r0
+	mov	pc, lr		@ Return byte location value
+END_PROC(l4_atomic_dest_readb)
 
