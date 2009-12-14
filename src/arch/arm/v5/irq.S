@@ -16,6 +16,14 @@ BEGIN_PROC(irq_local_disable_save)
 END_PROC(irq_local_disable_save)
 
 /*
+ * r0 = last cpsr state
+ */
+BEGIN_PROC(irq_local_restore)
+	msr	cpsr_fc, r0	@ Write r0 to cpsr
+	mov	pc, lr
+END_PROC(irq_local_restore)
+
+/*
  * r0 = byte address to read from.
  */
 BEGIN_PROC(l4_atomic_dest_readb)
@@ -24,4 +32,12 @@ BEGIN_PROC(l4_atomic_dest_readb)
 	swpb	r0, r2, [r1]	@ Write 0 to byte location, while reading its value to r0
 	mov	pc, lr		@ Return byte location value
 END_PROC(l4_atomic_dest_readb)
+
+BEGIN_PROC(irqs_enabled)
+	mrs	r1, cpsr_fc
+	tst	r1, #0x80
+	moveq	r0, #1
+	movne   r0, #0
+	mov	pc, lr
+END_PROC(irqs_enabled)
 

@@ -52,7 +52,24 @@ int cap_read_all()
 		       "complete CAP_CONTROL_READ_CAPS request.\n");
 		BUG();
 	}
-	//cap_array_print(total_caps, caparray);
+	cap_array_print(total_caps, caparray);
+
+	return 0;
+}
+
+int cap_share_all_with_space()
+{
+	int err;
+
+	/* Share all capabilities */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
+					 CAP_SHARE_ALL_SPACE, 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request. err=%d\n",
+		       err);
+		BUG();
+	}
 
 	return 0;
 }
@@ -374,6 +391,9 @@ void main(void)
 
 	/* Read all capabilities */
 	cap_read_all();
+
+	/* Share all with space */
+	cap_share_all_with_space();
 
 	/* Scan for timer devices in capabilities */
 	timer_probe_devices();

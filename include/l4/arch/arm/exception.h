@@ -18,17 +18,6 @@ static inline void enable_irqs()
 	);
 }
 
-static inline int irqs_enabled()
-{
-	register unsigned int enabled asm("r1");
-	__asm__ __volatile__(
-		"mrs	r0, cpsr_fc\n"
-		"tst	r0, #0x80\n" /* ARM_IRQ_BIT. See asm.h for TST inst. */
-		"moveq	r1, #1\n"
-		"movne  r1, #0\n"
-	);
-	return enabled;
-}
 
 static inline void disable_irqs()
 {
@@ -38,6 +27,8 @@ static inline void disable_irqs()
 		"msr	cpsr_fc, r0\n"
 	);
 }
+
+int irqs_enabled();
 
 /* Disable the irqs unconditionally, but also keep the previous state such that
  * if it was already disabled before the call, the restore call would retain
@@ -58,13 +49,7 @@ void irq_local_disable_save(unsigned long *state);
 
 /* Simply change it back to original state supplied in @flags. This might enable
  * or retain disabled state of the irqs for example. Useful for nested calls. */
-static inline void irq_local_restore(unsigned long state)
-{
-	__asm__ __volatile__ (
-		"msr	cpsr_fc, %0\n"
-		:: "r" (state)
-	);
-}
+void irq_local_restore(unsigned long state);
 
 static inline void irq_local_enable()
 {

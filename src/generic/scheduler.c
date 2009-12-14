@@ -33,7 +33,6 @@ extern unsigned int current_irq_nest_count;
 /* This ensures no scheduling occurs after voluntary preempt_disable() */
 static int voluntary_preempt = 0;
 
-
 void sched_lock_runqueues(unsigned long *irqflags)
 {
 	spin_lock_irq(&scheduler.sched_rq[0].lock, irqflags);
@@ -359,14 +358,16 @@ void schedule()
 {
 	struct ktcb *next;
 
-	/* Should not schedule with preemption disabled or in nested irq */
+	/* Should not schedule with preemption
+	 * disabled or in nested irq */
 	BUG_ON(voluntary_preempt);
 	BUG_ON(in_nested_irq_context());
 
 	/* Should not have more ticks than SCHED_TICKS */
 	BUG_ON(current->ticks_left > SCHED_TICKS);
 
-	/* Cannot have any irqs that schedule after this */
+	/* If coming from process path, cannot have
+	 * any irqs that schedule after this */
 	preempt_disable();
 
 	/* Reset schedule flag */
@@ -410,6 +411,7 @@ void schedule()
 	}
 
 	/* Determine the next task to be run */
+get_runnable_task:
 	if (scheduler.rq_runnable->total > 0) {
 		next = link_to_struct(scheduler.rq_runnable->task_list.next,
 		       struct ktcb, rq_list);
@@ -420,7 +422,20 @@ void schedule()
 			       scheduler.rq_runnable->task_list.next,
 			       struct ktcb, rq_list);
 		} else {
-			idle_task();
+			//printk("Idle task.\n");
+			/* Poll forever for new tasks */
+			if (in_task_context()) {
+				goto get_runnable_task;
+			} else {
+				/*
+				 * If irq, return to current context without
+				 * putting into runqueue. We want the task to
+				 * get into the get_runnable_task loop in
+				 * process context.
+				 */
+				next = current;
+				goto switch_out;
+			}
 		}
 	}
 
@@ -443,6 +458,7 @@ void schedule()
 	next->sched_granule = SCHED_GRANULARITY;
 
 	/* Finish */
+switch_out:
 	disable_irqs();
 	preempt_enable();
 	context_switch(next);

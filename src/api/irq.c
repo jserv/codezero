@@ -115,7 +115,7 @@ int irq_wait(l4id_t irq_index)
 	WAIT_EVENT(&desc->wqh_irq,
 		   utcb->notify[desc->task_notify_slot] != 0,
 		   ret);
-	printk("Didn't sleep. utcb->notify[%d]=%d\n", desc->task_notify_slot, utcb->notify[desc->task_notify_slot]);
+
 	if (ret < 0)
 		return ret;
 	else
