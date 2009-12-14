@@ -411,24 +411,26 @@ void schedule()
 	}
 
 	/* Determine the next task to be run */
-get_runnable_task:
-	if (scheduler.rq_runnable->total > 0) {
-		next = link_to_struct(scheduler.rq_runnable->task_list.next,
-		       struct ktcb, rq_list);
-	} else {
-		if (scheduler.rq_expired->total > 0) {
-			sched_rq_swap_runqueues();
-			next = link_to_struct(
-			       scheduler.rq_runnable->task_list.next,
+	do {
+		if (scheduler.rq_runnable->total > 0) {
+			next = link_to_struct(scheduler.rq_runnable->task_list.next,
 			       struct ktcb, rq_list);
 		} else {
-			/* If process, poll forever for new tasks */
-			if (in_process_context())
-				goto get_runnable_task;
-			else /* If irq, resume current context */
+			if (scheduler.rq_expired->total > 0) {
+				sched_rq_swap_runqueues();
+				next = link_to_struct(
+				       scheduler.rq_runnable->task_list.next,
+				       struct ktcb, rq_list);
+			} else {
+				/* Irq preemptions return to current task
+				 * if no runnable tasks are available */
 				next = current;
+			}
 		}
-	}
+	/* If process context, poll forever for new tasks */
+	} while (scheduler.rq_runnable->total == 0 &&
+		 scheduler.rq_expired->total == 0 &&
+		 in_process_context());
 
 	/* New tasks affect runqueue total priority. */
 	if (next->flags & TASK_RESUMING)
