@@ -85,7 +85,7 @@ int in_nested_irq_context(void)
 	return (current_irq_nest_count - voluntary_preempt) > 1;
 }
 
-int in_task_context(void)
+int in_process_context(void)
 {
 	return !in_irq_context();
 }
@@ -422,20 +422,11 @@ get_runnable_task:
 			       scheduler.rq_runnable->task_list.next,
 			       struct ktcb, rq_list);
 		} else {
-			//printk("Idle task.\n");
-			/* Poll forever for new tasks */
-			if (in_task_context()) {
+			/* If process, poll forever for new tasks */
+			if (in_process_context())
 				goto get_runnable_task;
-			} else {
-				/*
-				 * If irq, return to current context without
-				 * putting into runqueue. We want the task to
-				 * get into the get_runnable_task loop in
-				 * process context.
-				 */
+			else /* If irq, resume current context */
 				next = current;
-				goto switch_out;
-			}
 		}
 	}
 
@@ -458,7 +449,6 @@ get_runnable_task:
 	next->sched_granule = SCHED_GRANULARITY;
 
 	/* Finish */
-switch_out:
 	disable_irqs();
 	preempt_enable();
 	context_switch(next);
