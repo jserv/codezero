@@ -1,8 +1,8 @@
 target remote localhost:1234
-load final.axf
+load final.elf
 stepi
-sym final.axf
+sym final.elf
 break break_virtual
 continue
 stepi
-sym /opt/codezero/tasks/mm0/mm0.axf
+sym /opt/codezero/build/kernel.elf
