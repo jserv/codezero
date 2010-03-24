@@ -1,6 +1,6 @@
 #include <capability.h>
-#include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
+#include L4LIB_INC_ARCH(syslib.h)
 
 int cap_request_pager(struct capability *cap)
 {

@@ -1,17 +1,12 @@
 /*
  * Page fault handling.
  *
- * Copyright (C) 2007, 2008 Bahadir Balban
+ * Copyright (C) 2007, 2008-2010 Bahadir Bilgehan Balban
  */
 #include <vm_area.h>
 #include <task.h>
 #include <mm/alloc_page.h>
 #include <malloc/malloc.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
-#include INC_GLUE(memory.h)
-#include INC_SUBARCH(mm.h)
-#include <arch/mm.h>
 #include <l4/generic/space.h>
 #include <l4/api/errno.h>
 #include <string.h>
@@ -20,6 +15,12 @@
 #include <file.h>
 #include <test.h>
 
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
+#include INC_GLUE(memory.h)
+#include INC_SUBARCH(mm.h)
+#include __INC_ARCH(mm.h)
+#include __INC_ARCH(debug.h)
 
 /* Given a page and the vma it is in, returns that page's virtual address */
 unsigned long vma_page_to_virtual(struct vm_area *vma, struct page *page)
@@ -245,27 +246,15 @@ struct vm_obj_link *vma_create_shadow(void)
 /* Allocates a new page, copies the original onto it and returns. */
 struct page *copy_to_new_page(struct page *orig)
 {
-	void *new_vaddr, *vaddr, *paddr;
-	struct page *new;
+	void *paddr = alloc_page(1);
 
-	BUG_ON(!(paddr = alloc_page(1)));
-
-	new = phys_to_page(paddr);
-
-	/* Map the new and orig page to self */
-	new_vaddr = l4_map_helper(paddr, 1);
-	vaddr = l4_map_helper((void *)page_to_phys(orig), 1);
+	BUG_ON(!paddr);
 
 	/* Copy the page into new page */
-	memcpy(new_vaddr, vaddr, PAGE_SIZE);
+	memcpy(phys_to_virt(paddr), page_to_virt(orig), PAGE_SIZE);
 
-	/* Unmap both pages from current task. */
-	l4_unmap_helper(vaddr, 1);
-	l4_unmap_helper(new_vaddr, 1);
-
-	return new;
+	return phys_to_page(paddr);
 }
-
 
 /* Copy all mapped object link stack from vma to new vma */
 int vma_copy_links(struct vm_area *new_vma, struct vm_area *vma)
@@ -649,96 +638,140 @@ struct page *copy_on_write(struct fault_data *fault)
  * FIXME: Add VM_DIRTY bit for every page that has write-faulted.
  */
 
-struct page *__do_page_fault(struct fault_data *fault)
+/* Handle read faults */
+struct page *page_read_fault(struct fault_data *fault)
 {
-	unsigned int reason = fault->reason;
-	unsigned int vma_flags = fault->vma->flags;
-	unsigned int pte_flags = fault->pte_flags;
 	struct vm_area *vma = fault->vma;
 	struct vm_obj_link *vmo_link;
 	unsigned long file_offset;
-	struct page *page;
+	struct page *page = 0;
 
-	/* Handle read */
-	if ((reason & VM_READ) && (pte_flags & VM_NONE)) {
-		file_offset = fault_to_file_offset(fault);
+	file_offset = fault_to_file_offset(fault);
 
-		/* Get the first object, either original file or a shadow */
-		if (!(vmo_link = vma_next_link(&vma->vm_obj_list, &vma->vm_obj_list))) {
-			printf("%s:%s: No vm object in vma!\n",
-			       __TASKNAME__, __FUNCTION__);
+	/* Get the first object, either original file or a shadow */
+	if (!(vmo_link = vma_next_link(&vma->vm_obj_list, &vma->vm_obj_list))) {
+		printf("%s:%s: No vm object in vma!\n",
+		       __TASKNAME__, __FUNCTION__);
+		BUG();
+	}
+
+	/* Traverse the list of read-only vm objects and search for the page */
+	while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+							       file_offset))) {
+		if (!(vmo_link = vma_next_link(&vmo_link->list,
+					       &vma->vm_obj_list))) {
+			printf("%s:%s: Traversed all shadows and the original "
+			       "file's vm_object, but could not find the "
+			       "faulty page in this vma.\n",__TASKNAME__,
+			       __FUNCTION__);
 			BUG();
 		}
+	}
+	BUG_ON(!page);
 
-		/* Traverse the list of read-only vm objects and search for the page */
-		while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
-								       file_offset))) {
-			if (!(vmo_link = vma_next_link(&vmo_link->list,
-						       &vma->vm_obj_list))) {
-				printf("%s:%s: Traversed all shadows and the original "
-				       "file's vm_object, but could not find the "
-				       "faulty page in this vma.\n",__TASKNAME__,
-				       __FUNCTION__);
+	return page;
+}
+
+struct page *page_write_fault(struct fault_data *fault)
+{
+	unsigned int vma_flags = fault->vma->flags;
+	struct vm_area *vma = fault->vma;
+	struct vm_obj_link *vmo_link;
+	unsigned long file_offset;
+	struct page *page = 0;
+
+	/* Copy-on-write. All private vmas are always COW */
+	if (vma_flags & VMA_PRIVATE) {
+		BUG_ON(IS_ERR(page = copy_on_write(fault)));
+
+	/*
+	 * This handles shared pages that are both anon and non-anon.
+	 */
+	} else if ((vma_flags & VMA_SHARED)) {
+		file_offset = fault_to_file_offset(fault);
+
+		/* Don't traverse, just take the first object */
+		BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
+						  &vma->vm_obj_list)));
+
+		/* Get the page from its pager */
+		if (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+								    file_offset))) {
+			/*
+			 * Writable page does not exist,
+			 * if it is anonymous, it needs to be COW'ed,
+			 * otherwise the file must have paged-in this
+			 * page, so its a bug.
+			 */
+			if (vma_flags & VMA_ANONYMOUS) {
+				BUG_ON(IS_ERR(page = copy_on_write(fault)));
+				return page;
+			} else {
+				printf("%s: Could not obtain faulty "
+				       "page from regular file.\n",
+				       __TASKNAME__);
 				BUG();
 			}
 		}
-		BUG_ON(!page);
-	}
-
-	/* Handle write */
-	if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
-		/* Copy-on-write. All private vmas are always COW */
-		if (vma_flags & VMA_PRIVATE) {
-			BUG_ON(IS_ERR(page = copy_on_write(fault)));
 
 		/*
-		 * This handles shared pages that are both anon and non-anon.
+		 * Page and object are now dirty. Currently it's
+		 * only relevant for file-backed shared objects.
 		 */
-		} else if ((vma_flags & VMA_SHARED)) {
-			file_offset = fault_to_file_offset(fault);
+		page->flags |= VM_DIRTY;
+		page->owner->flags |= VM_DIRTY;
+	} else
+		BUG();
 
-			/* Don't traverse, just take the first object */
-			BUG_ON(!(vmo_link = vma_next_link(&vma->vm_obj_list,
-							  &vma->vm_obj_list)));
+	return page;
+}
 
-			/* Get the page from its pager */
-			if (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
-									    file_offset))) {
-				/*
-				 * Writable page does not exist,
-				 * if it is anonymous, it needs to be COW'ed,
-				 * otherwise the file must have paged-in this
-				 * page, so its a bug.
-				 */
-				if (vma_flags & VMA_ANONYMOUS) {
-					BUG_ON(IS_ERR(page = copy_on_write(fault)));
-					goto out_success;
-				} else {
-					printf("%s: Could not obtain faulty "
-					       "page from regular file.\n",
-					       __TASKNAME__);
-					BUG();
-				}
-			}
+struct page *__do_page_fault(struct fault_data *fault)
+{
+	unsigned int reason = fault->reason;
+	unsigned int pte_flags = fault->pte_flags;
+	unsigned int map_flags = 0;
+	struct page *page = 0;
 
-			/*
-			 * Page and object are now dirty. Currently it's
-			 * only relevant for file-backed shared objects.
-			 */
-			page->flags |= VM_DIRTY;
-			page->owner->flags |= VM_DIRTY;
-		} else
-			BUG();
+	if ((reason & VM_READ) && (pte_flags & VM_NONE)) {
+		page = page_read_fault(fault);
+		map_flags = MAP_USR_RO;
+
+	} else if ((reason & VM_WRITE) && (pte_flags & VM_NONE)) {
+		page = page_read_fault(fault);
+		page = page_write_fault(fault);
+		map_flags = MAP_USR_RW;
+
+	} else if ((reason & VM_EXEC) && (pte_flags & VM_NONE)) {
+		page = page_read_fault(fault);
+		map_flags = MAP_USR_RX;
+
+	} else if ((reason & VM_EXEC) && (pte_flags & VM_READ)) {
+		/* Retrieve already paged in file */
+		page = page_read_fault(fault);
+		if (pte_flags & VM_WRITE)
+			map_flags = MAP_USR_RWX;
+		else
+			map_flags = MAP_USR_RX;
+
+	} else if ((reason & VM_WRITE) && (pte_flags & VM_READ)) {
+		page = page_write_fault(fault);
+		if (pte_flags & VM_EXEC)
+			map_flags = MAP_USR_RWX;
+		else
+			map_flags = MAP_USR_RW;
+
+	} else {
+		printf("mm0: Unhandled page fault.\n");
+		BUG();
 	}
 
-out_success:
+	BUG_ON(!page);
+
 	/* Map the new page to faulty task */
 	l4_map((void *)page_to_phys(page),
 	       (void *)page_align(fault->address), 1,
-	       (reason & VM_READ) ? MAP_USR_RO_FLAGS : MAP_USR_RW_FLAGS,
-	       fault->task->tid);
-	dprintf("%s: Mapped 0x%x as writable to tid %d.\n", __TASKNAME__,
-		page_align(fault->address), fault->task->tid);
+	       map_flags, fault->task->tid);
 	// vm_object_print(page->owner);
 
 	return page;
@@ -796,7 +829,7 @@ int vm_freeze_shadows(struct tcb *task)
 			/* Map the page as read-only */
 			l4_map((void *)page_to_phys(p),
 			       (void *)virtual, 1,
-			       MAP_USR_RO_FLAGS, task->tid);
+			       MAP_USR_RO, task->tid);
 		}
 	}
 
@@ -860,11 +893,6 @@ struct page *do_page_fault(struct fault_data *fault)
 		fault_handle_error(fault);
 	}
 
-	if ((reason & VM_EXEC) && (vma_flags & VM_EXEC)) {
-		printf("Exec faults unsupported yet.\n");
-		fault_handle_error(fault);
-	}
-
 	/* Handle legitimate faults */
 	return __do_page_fault(fault);
 }
@@ -890,20 +918,145 @@ struct page *page_fault_handler(struct tcb *sender, fault_kdata_t *fkdata)
 	return do_page_fault(&fault);
 }
 
-int vm_compare_prot_flags(unsigned int current, unsigned int needed)
+static inline unsigned int pte_to_map_flags(unsigned int pte_flags)
 {
-	current &= VM_PROT_MASK;
-	needed &= VM_PROT_MASK;
+	unsigned int map_flags;
 
-	if (needed & VM_READ)
-		if (current & (VM_READ | VM_WRITE))
-			return 1;
+	switch(pte_flags) {
+	case VM_READ:
+		map_flags = MAP_USR_RO;
+		break;
+	case (VM_READ | VM_WRITE):
+		map_flags = MAP_USR_RW;
+		break;
+	case (VM_READ | VM_WRITE | VM_EXEC):
+		map_flags = MAP_USR_RWX;
+		break;
+	case (VM_READ | VM_EXEC):
+		map_flags = MAP_USR_RX;
+		break;
+	default:
+		BUG();
+	}
 
-	if (needed & VM_WRITE &&
-	    (current & VM_WRITE))
-		return 1;
+	return map_flags;
+}
 
-	return 0;
+/*
+ * Prefaults a page of a task. The catch is that the page may already
+ * have been faulted with even more progress than the desired
+ * flags would progress in the fault (e.g. read-faulting a
+ * copy-on-write'd page).
+ *
+ * This function detects whether progress is necessary or not by
+ * inspecting the vma's vm_object chain state.
+ *
+ * Generally both read-fault and write-fault paths are repeatable, in
+ * the sense that an already faulted page may be safely re-faulted again
+ * and again, be it a read-only or copy-on-write'd page.
+ *
+ * The retrieval of the same page in a repetitive fashion is safe,
+ * but while it also seems to appear safe, it is unnecessary to downgrade
+ * or change mapping permissions of a page. E.g. make a copy-on-write'd
+ * page read-only by doing a blind read-fault on it.
+ *
+ * Hence this function checks whether a fault is necessary and simply
+ * returns if it isn't.
+ *
+ * FIXME: Escalate any page fault errors like a civilized function!
+ */
+struct page *task_prefault_smart(struct tcb *task, unsigned long address,
+				 unsigned int wanted_flags)
+{
+	struct vm_obj_link *vmo_link;
+	unsigned long file_offset;
+	unsigned int vma_flags, pte_flags;
+	struct vm_area *vma;
+	struct page *page;
+	int err;
+
+	struct fault_data fault = {
+		.task = task,
+		.address = address,
+	};
+
+	/* Find the vma */
+	if (!(fault.vma = find_vma(fault.address,
+				   &fault.task->vm_area_head->list))) {
+		dprintf("%s: Invalid: No vma for given address. %d\n",
+			__FUNCTION__, -EINVAL);
+		return PTR_ERR(-EINVAL);
+	}
+
+	/* Read fault, repetitive safe */
+	if (wanted_flags & VM_READ)
+		if (IS_ERR(page = page_read_fault(&fault)))
+			return page;
+
+	/* Write fault, repetitive safe */
+	if (wanted_flags & VM_WRITE)
+		if (IS_ERR(page = page_write_fault(&fault)))
+			return page;
+
+	/*
+	 * If we came this far, it means we have more
+	 * permissions than VM_NONE.
+	 *
+	 * Now we _must_ find out what those page
+	 * protection flags were, and do this without
+	 * needing to inspect any ptes.
+	 *
+	 * We don't want to downgrade a RW page to RO again.
+	 */
+	file_offset = fault_to_file_offset(&fault);
+	vma_flags = fault.vma->flags;
+	vma = fault.vma;
+
+	/* Get the topmost vm_object */
+	if (!(vmo_link = vma_next_link(&vma->vm_obj_list,
+				       &vma->vm_obj_list))) {
+		printf("%s:%s: No vm object in vma!\n",
+		       __TASKNAME__, __FUNCTION__);
+		BUG();
+	}
+
+	/* Traverse the list of vm objects and search for the page */
+	while (IS_ERR(page = vmo_link->obj->pager->ops.page_in(vmo_link->obj,
+							       file_offset))) {
+		if (!(vmo_link = vma_next_link(&vmo_link->list,
+					       &vma->vm_obj_list))) {
+			printf("%s:%s: Traversed all shadows and the original "
+			       "file's vm_object, but could not find the "
+			       "faulty page in this vma.\n",__TASKNAME__,
+			       __FUNCTION__);
+			BUG();
+		}
+	}
+
+	/* Use flags for the vm_object containing the page */
+	if (vmo_link->obj->flags & VM_WRITE)
+		pte_flags = VM_WRITE | VM_READ;
+	else
+		pte_flags = VM_READ;
+
+	/*
+	 * Now check vma flags for adding the VM_EXEC
+	 * The real pte may not have this flag yet, but
+	 * it is allowed to have it and it doesn't harm.
+	 */
+	if (vma_flags & VM_EXEC)
+		pte_flags |= VM_EXEC;
+
+	/* Map the page to task using these flags */
+	if ((err = l4_map((void *)page_to_phys(page),
+			  (void *)page_align(fault.address), 1,
+			  pte_to_map_flags(pte_flags),
+			  fault.task->tid)) < 0) {
+		printf("l4_map() failed. err=%d\n", err);
+		BUG();
+	}
+
+	return page;
 }
 
 /*
@@ -914,6 +1067,16 @@ int vm_compare_prot_flags(unsigned int current, unsigned int needed)
 struct page *task_prefault_page(struct tcb *task, unsigned long address,
 				unsigned int vmflags)
 {
+	struct page *ret;
+
+	perfmon_reset_start_cyccnt();
+	ret = task_prefault_smart(task, address, vmflags);
+
+	debug_record_cycles("task_prefault_smart");
+
+	return ret;
+
+#if 0
 	struct page *p;
 	struct fault_data fault = {
 		.task = task,
@@ -949,6 +1112,23 @@ struct page *task_prefault_page(struct tcb *task, unsigned long address,
 	BUG_ON(vmflags & ~(VM_READ | VM_WRITE));
 
 	return p;
+#endif
 }
 
+
+int vm_compare_prot_flags(unsigned int current, unsigned int needed)
+{
+	current &= VM_PROT_MASK;
+	needed &= VM_PROT_MASK;
+
+	if (needed & VM_READ)
+		if (current & (VM_READ | VM_WRITE))
+			return 1;
+
+	if (needed & VM_WRITE &&
+	    (current & VM_WRITE))
+		return 1;
+
+	return 0;
+}
 

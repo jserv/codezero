@@ -8,11 +8,11 @@
 #define __LIBPOSIX_SHPAGE_H__
 
 #include <l4/macros.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/utcb.h>
 #include INC_GLUE(memory.h)
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
 
 extern void *shared_page;
 

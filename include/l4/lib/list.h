@@ -68,6 +68,7 @@ static inline void list_remove_init(struct link *link)
 	struct link *prev = link->prev;
 	struct link *next = link->next;
 
+	//BUG_ON(prev == NULL || next == NULL || link == NULL);
 	prev->next = next;
 	next->prev = prev;
 
@@ -86,6 +87,26 @@ static inline struct link *list_detach(struct link *head)
 	/* Return detached list */
 	return next;
 }
+
+/* append new_list to list given by head/end pair */
+static inline void list_attach(struct link *new_list, struct link *head, struct link *end)
+{
+	/* attach new list at the end of original list */
+	end->next = new_list;
+	new_list->prev = end;
+
+	/* go to the end of list to be attached */
+	while (new_list->next != end->next)
+		new_list = new_list->next;
+
+	/* set end nodes properly */
+	new_list->next = head;
+	head->prev = new_list;
+
+	/* set end to new end */
+	end = new_list;
+}
+
 
 static inline int list_empty(struct link *list)
 {

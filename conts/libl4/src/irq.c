@@ -3,8 +3,8 @@
  *
  * Copyright (C) 2009 B Labs Ltd.
  */
-#include <l4lib/arch/irq.h>
-#include <l4lib/arch/syscalls.h>
+#include L4LIB_INC_ARCH(irq.h)
+#include L4LIB_INC_ARCH(syscalls.h)
 #include <l4/api/irq.h>
 
 /*
@@ -13,7 +13,7 @@
  */
 int l4_irq_wait(int slot, int irqnum)
 {
-	int irqval = l4_atomic_dest_readb(&l4_get_utcb()->notify[slot]);
+	int irqval = l4_atomic_dest_readb(&(l4_get_utcb()->notify[slot]));
 
 	if (!irqval)
 		return l4_irq_control(IRQ_CONTROL_WAIT, 0, irqnum);

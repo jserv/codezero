@@ -3,7 +3,6 @@
  *
  * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
-#include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/mutex.h>
 #include <errno.h>

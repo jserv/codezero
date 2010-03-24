@@ -181,7 +181,8 @@ int vsprintf(char *, const char *format, va_list arg);
 int vsscanf(const char *s, const char *format, va_list arg);
 
 /* 7.19.7 Character i/o functions */
-int fgetc(FILE *);
+char fgetc(FILE *);
+char *fgetline(FILE *);
 char *fgets(char *, int, FILE *);
 int fputc(int, FILE *);
 int fputs(const char *, FILE *);

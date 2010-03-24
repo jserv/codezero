@@ -19,8 +19,8 @@
 
 typedef void (*irq_op_t)(l4id_t irq);
 struct irq_chip_ops {
-	void (*init)(void);
-	l4id_t (*read_irq)(void);
+	void (*init)();
+	l4id_t (*read_irq)(void *data);
 	irq_op_t ack_and_mask;
 	irq_op_t unmask;
 };
@@ -31,6 +31,7 @@ struct irq_chip {
 	int cascade;		/* The irq that lower chip uses on this chip */
 	int start;		/* The global irq offset for this chip */
 	int end;		/* End of this chip's irqs */
+	void *data;		/* Anything that a of interest to a driver */
 	struct irq_chip_ops ops;
 };
 

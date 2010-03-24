@@ -16,20 +16,21 @@ enables a thread to read and manipulate the list of capabilities that it possess
 .fi
 .I req
 denotes the type of request. See below for a full list.
+
 .TP
 .fi
 .I flags
 denotes additional flags for the given request. See below for a list of flags.
+
 .TP
 .fi
-
 .I buf
 almost always contains a capability structure that describes the request with regard to given
 .IR "req"
 and
 .IR "flags."
-.TP
 
+.TP
 .BR CAP_CONTROL_NCAPS
 Get capability count. This is the sum of thread-private capabilities, address space capabilities and container capabilities.
 .TP

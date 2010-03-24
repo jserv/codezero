@@ -4,15 +4,12 @@
 
 #include <stdarg.h>
 
-#if defined(ARCH_TEST)
-/* For host tests all printks mean printf using the host C library */
-#include <stdio.h>
-#define printk		printf
-#elif !defined(__KERNEL__)
+#if !defined(__KERNEL__)
 #define	printk 		printf
 #else
 int printk(char *format, ...) __attribute__((format (printf, 1, 2)));
 extern void putc(char c);
+void init_printk_lock(void);
 #endif
 
 #endif /* __PRINTK_H__ */

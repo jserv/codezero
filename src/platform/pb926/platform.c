@@ -8,16 +8,20 @@
 #include <l4/generic/irq.h>
 #include <l4/generic/bootmem.h>
 #include INC_ARCH(linker.h)
-#include INC_PLAT(printascii.h)
 #include INC_SUBARCH(mm.h)
 #include INC_SUBARCH(mmu_ops.h)
 #include INC_GLUE(memory.h)
+#include INC_GLUE(mapping.h)
 #include INC_GLUE(memlayout.h)
 #include INC_PLAT(offsets.h)
 #include INC_PLAT(platform.h)
 #include INC_PLAT(uart.h)
+#include INC_PLAT(timer.h)
 #include INC_PLAT(irq.h)
 #include INC_ARCH(asm.h)
+#include INC_ARCH(io.h)
+#include <l4/generic/capability.h>
+#include <l4/generic/cap-types.h>
 
 /*
  * The devices that are used by the kernel are mapped
@@ -26,11 +30,11 @@
  */
 int platform_setup_device_caps(struct kernel_resources *kres)
 {
-	struct capability *uart[4], *timer[4], *clcd[1];
+	struct capability *uart[4], *timer[2];
 
 	/* Setup capabilities for userspace uarts and timers */
 	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
-	uart[1]->start = __pfn(PB926_UART1_BASE);
+	uart[1]->start = __pfn(PLATFORM_UART1_BASE);
 	uart[1]->end = uart[1]->start + 1;
 	uart[1]->size = uart[1]->end - uart[1]->start;
 	cap_set_devtype(uart[1], CAP_DEVTYPE_UART);
@@ -39,7 +43,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	cap_list_insert(uart[1], &kres->devmem_free);
 
 	uart[2] =  alloc_bootmem(sizeof(*uart[2]), 0);
-	uart[2]->start = __pfn(PB926_UART2_BASE);
+	uart[2]->start = __pfn(PLATFORM_UART2_BASE);
 	uart[2]->end = uart[2]->start + 1;
 	uart[2]->size = uart[2]->end - uart[2]->start;
 	cap_set_devtype(uart[2], CAP_DEVTYPE_UART);
@@ -48,7 +52,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	cap_list_insert(uart[2], &kres->devmem_free);
 
 	uart[3] =  alloc_bootmem(sizeof(*uart[3]), 0);
-	uart[3]->start = __pfn(PB926_UART3_BASE);
+	uart[3]->start = __pfn(PLATFORM_UART3_BASE);
 	uart[3]->end = uart[3]->start + 1;
 	uart[3]->size = uart[3]->end - uart[3]->start;
 	cap_set_devtype(uart[3], CAP_DEVTYPE_UART);
@@ -58,7 +62,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 
 	/* Setup timer1 capability as free */
 	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
-	timer[1]->start = __pfn(PB926_TIMER23_BASE);
+	timer[1]->start = __pfn(PLATFORM_TIMER1_BASE);
 	timer[1]->end = timer[1]->start + 1;
 	timer[1]->size = timer[1]->end - timer[1]->start;
 	cap_set_devtype(timer[1], CAP_DEVTYPE_TIMER);
@@ -66,34 +70,27 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	link_init(&timer[1]->list);
 	cap_list_insert(timer[1], &kres->devmem_free);
 
-	/* Setup clcd capability as free */
-	clcd[0] =  alloc_bootmem(sizeof(*clcd[0]), 0);
-	clcd[0]->start = __pfn(PB926_CLCD_BASE);
-	clcd[0]->end = clcd[0]->start + 1;
-	clcd[0]->size = clcd[0]->end - clcd[0]->start;
-	cap_set_devtype(clcd[0], CAP_DEVTYPE_CLCD);
-	cap_set_devnum(clcd[0], 0);
-	link_init(&clcd[0]->list);
-	cap_list_insert(clcd[0], &kres->devmem_free);
-
 	return 0;
 }
 
-/* We will use UART0 for kernel as well as user tasks, so map it to kernel and user space */
+/*
+ * We will use UART0 for kernel as well as user tasks,
+ * so map it to kernel and user space
+ */
 void init_platform_console(void)
 {
-	add_boot_mapping(PB926_UART0_BASE, PLATFORM_CONSOLE_VIRTUAL, PAGE_SIZE,
-			 MAP_IO_DEFAULT_FLAGS);
+	add_boot_mapping(PLATFORM_UART0_BASE, PLATFORM_CONSOLE_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
 
 	/*
 	 * Map same UART IO area to userspace so that primitive uart-based
 	 * userspace printf can work. Note, this raw mapping is to be
 	 * removed in the future, when file-based io is implemented.
 	 */
-	add_boot_mapping(PB926_UART0_BASE, USERSPACE_CONSOLE_VIRTUAL, PAGE_SIZE,
-			 MAP_USR_IO_FLAGS);
+	add_boot_mapping(PLATFORM_UART0_BASE, USERSPACE_CONSOLE_VBASE,
+			 PAGE_SIZE, MAP_USR_IO);
 
-	uart_init();
+	uart_init(PLATFORM_CONSOLE_VBASE);
 }
 
 /*
@@ -103,33 +100,62 @@ void init_platform_console(void)
  */
 void init_platform_timer(void)
 {
-	add_boot_mapping(PB926_TIMER01_BASE, PLATFORM_TIMER0_VIRTUAL, PAGE_SIZE,
-			 MAP_IO_DEFAULT_FLAGS);
+	add_boot_mapping(PLATFORM_TIMER0_BASE, PLATFORM_TIMER0_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
 
-	add_boot_mapping(PB926_SYSCTRL_BASE, PLATFORM_SYSCTRL_VIRTUAL, PAGE_SIZE,
-			 MAP_IO_DEFAULT_FLAGS);
-
-	timer_init();
+	/* 1 Mhz means can tick up to 1,000,000 times a second */
+	timer_init(PLATFORM_TIMER0_VBASE, 1000000 / CONFIG_SCHED_TICKS);
 }
 
 void init_platform_irq_controller()
 {
-	add_boot_mapping(PB926_VIC_BASE, PLATFORM_IRQCTRL0_VIRTUAL, PAGE_SIZE,
-			 MAP_IO_DEFAULT_FLAGS);
-	add_boot_mapping(PB926_SIC_BASE, PLATFORM_IRQCTRL1_VIRTUAL, PAGE_SIZE,
-			 MAP_IO_DEFAULT_FLAGS);
+	add_boot_mapping(PLATFORM_VIC_BASE, PLATFORM_IRQCTRL0_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+	add_boot_mapping(PLATFORM_SIC_BASE, PLATFORM_IRQCTRL1_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
 	irq_controllers_init();
 }
 
 void init_platform_devices()
 {
 	/* Add userspace devices here as you develop their irq handlers */
-	add_boot_mapping(PB926_TIMER23_BASE, PLATFORM_TIMER1_VIRTUAL,
-			 PAGE_SIZE, MAP_IO_DEFAULT_FLAGS);
+	add_boot_mapping(PLATFORM_TIMER1_BASE, PLATFORM_TIMER1_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+}
+
+/* If these bits are off, 32Khz OSC source is used */
+#define TIMER3_SCTRL_1MHZ	(1 << 21)
+#define TIMER2_SCTRL_1MHZ	(1 << 19)
+#define TIMER1_SCTRL_1MHZ	(1 << 17)
+#define TIMER0_SCTRL_1MHZ	(1 << 15)
+
+/* Set all timers to use 1Mhz OSC clock */
+void init_timer_osc(void)
+{
+	volatile u32 reg;
+
+	add_boot_mapping(PLATFORM_SYSCTRL_BASE, PLATFORM_SYSCTRL_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+
+	reg = read(SP810_SCCTRL);
+
+	write(reg | TIMER0_SCTRL_1MHZ | TIMER1_SCTRL_1MHZ
+	      | TIMER2_SCTRL_1MHZ | TIMER3_SCTRL_1MHZ,
+	      SP810_SCCTRL);
+}
+
+void platform_timer_start(void)
+{
+	/* Enable irq line for TIMER0 */
+	irq_enable(IRQ_TIMER0);
+
+	/* Enable timer */
+	timer_start(PLATFORM_TIMER0_VBASE);
 }
 
 void platform_init(void)
 {
+	init_timer_osc();
 	init_platform_console();
 	init_platform_timer();
 	init_platform_irq_controller();

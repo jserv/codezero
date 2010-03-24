@@ -42,12 +42,8 @@ argument specifies the userspace virtual address for the lock. See below for a u
 .SH L4 USERSPACE LIBRARY
 
 .nf
-.br
-.in 7
 .B struct l4_mutex {
-.in 15
-.BI	"unsigned int " "lock" ";"
-.in 7
+.BI "	   unsigned int " "lock" ";"
 .B } __attribute__((aligned(sizeof(int))));
 
 .BI "void l4_mutex_init(struct l4_mutex " "*m" ");"

@@ -5,7 +5,7 @@
 #include <l4/macros.h>
 #include <bootdesc.h>
 #include <memfs/memfs.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 
 void *vfs_rootdev_open(void)
 {

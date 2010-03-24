@@ -21,6 +21,12 @@ containers_menu = \
 '''
 menu containers_menu
 	CAPABILITIES
+    CONTAINERS%
+'''
+
+default_number_of_containers = \
+'''
+default CONTAINERS from 1
 '''
 
 containers_constraint = \
@@ -86,6 +92,8 @@ def generate_container_cml(arch, ncont):
     fbody += containers_menu
     for cont in range(ncont):
         fbody += '\tcont%d_menu\n' % cont
+
+    fbody += default_number_of_containers
 
     # Generate inter-container suppression rules for as many rules as containers
     fbody += generate_container_suppress_rules(ncont)

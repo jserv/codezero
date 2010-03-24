@@ -12,8 +12,6 @@
 #include <alloca.h>
 #include <l4lib/ipcdefs.h>
 
-#define PAGE_SIZE	0x1000
-
 extern char _start_test_exec[];
 extern char _end_test_exec[];
 

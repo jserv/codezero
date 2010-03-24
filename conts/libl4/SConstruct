@@ -14,23 +14,35 @@ from config.projpaths import *
 from config.configuration import *
 
 config = configuration_retrieve()
+gcc_arch_flag = config.gcc_arch_flag
 arch = config.arch
+subarch = config.subarch
 
 LIBMEM_RELDIR = 'conts/libmem'
 LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 
-env = Environment(CC = config.user_toolchain + 'gcc',
-		  CCFLAGS = ['-std=gnu99', '-g', '-nostdlib', '-ffreestanding', '-Werror'],
+LIBC_RELDIR = 'conts/libc'
+LIBC_DIR = join(PROJROOT, LIBC_RELDIR)
+LIBC_INC = join(LIBC_DIR, 'include')
+
+env = Environment(CC = config.toolchain + 'gcc',
+		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', \
+                     '-nostdinc', '-Wall', '-Werror', '-march=' + gcc_arch_flag],
 		  LINKFLAGS = ['-nostdlib'],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = 'gcc',
-		  CPPPATH = ['#include', '#include/l4lib/arch', join(PROJROOT,'include'), \
-                     LIBMEM_DIR])
+		  CPPPATH = ['include', 'include/l4lib/arch', LIBC_INC, \
+                     join(PROJROOT,'include'), LIBMEM_DIR],
+          CPPFLAGS = ' -include l4lib/macros.h ')
 
-#  TODO:  There are errors in this code that -Werror gives problems with.
+objects = env.StaticObject(Glob('src/*.c') + \
+    Glob('src/lib/*.c') + \
+    Glob('src/arch/' + arch + '/exregs.c') + \
+    Glob('src/arch/' + arch + '/*.[cS]') + \
+    Glob('src/arch/' + arch + '/' + subarch + '/*.[cS]') + \
+    Glob('src/lib/cap/*.c')) + \
+    Glob('src/lib/thread/*.c')
 
-objects = env.StaticObject(Glob('src/*.c') + Glob('src/thread/*.c') + Glob('src/' + arch + '/*.[cS]'))
+
 library = env.StaticLibrary('l4', objects)
 
-#Return('library')

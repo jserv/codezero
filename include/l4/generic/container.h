@@ -106,8 +106,7 @@ void kres_insert_container(struct container *c,
 
 struct container *container_create(void);
 
-int container_init_pagers(struct kernel_resources *kres,
-			  pgd_table_t *current_pgd);
+int container_init_pagers(struct kernel_resources *kres);
 
 int init_containers(struct kernel_resources *kres);
 struct container *container_find(struct kernel_resources *kres, l4id_t cid);

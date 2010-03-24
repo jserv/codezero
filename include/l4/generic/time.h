@@ -4,8 +4,8 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 
-#ifndef __GENERIC_TIMER_H__
-#define __GENERIC_TIMER_H__
+#ifndef __GENERIC_TIME_H__
+#define __GENERIC_TIME_H__
 
 /* Used by posix systems */
 struct timeval {
@@ -17,4 +17,4 @@ extern volatile u32 jiffies;
 
 int do_timer_irq(void);
 
-#endif /* __GENERIC_TIMER_H__ */
+#endif /* __GENERIC_TIME_H__ */

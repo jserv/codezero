@@ -58,7 +58,7 @@ void update_system_time(void)
 	 * TODO: Investigate: how do we make sure timer_irq is
 	 * called SCHED_TICKS times per second?
 	 */
-	if (systime.thz == SCHED_TICKS) {
+	if (systime.thz == CONFIG_SCHED_TICKS) {
 		systime.thz = 0;
 		systime.sec++;
 	}
@@ -71,7 +71,7 @@ int sys_time(struct timeval *tv, int set)
 	int err;
 
 	if ((err = check_access((unsigned long)tv, sizeof(*tv),
-				MAP_USR_RW_FLAGS, 1)) < 0)
+				MAP_USR_RW, 1)) < 0)
 		return err;
 
 	/* Get time */
@@ -79,7 +79,7 @@ int sys_time(struct timeval *tv, int set)
 		while(retries > 0) {
 			systime.reader = 1;
 			tv->tv_sec = systime.sec;
-			tv->tv_usec = 1000000 * systime.thz / SCHED_TICKS;
+			tv->tv_usec = 1000000 * systime.thz / CONFIG_SCHED_TICKS;
 
 			retries--;
 			if (systime.reader)

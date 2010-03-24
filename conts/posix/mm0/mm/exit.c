@@ -11,12 +11,12 @@
 #include <utcb.h>
 #include <vm_area.h>
 #include <syscalls.h>
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/syscalls.h>
 #include <l4lib/exregs.h>
 #include <l4lib/ipcdefs.h>
 #include <malloc/malloc.h>
 #include <l4/api/space.h>
+#include L4LIB_INC_ARCH(syslib.h)
+#include L4LIB_INC_ARCH(syscalls.h)
 
 
 /* Closes all file descriptors of a task */

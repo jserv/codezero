@@ -79,7 +79,7 @@ class AllContainerPacker:
     def pack_all(self, config):
         self.generate_container_lds(self.containers_lds_out)
         self.generate_container_S(self.containers_S_out)
-        os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
+        os.system(config.toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
                   % (self.containers_elf_out, self.containers_lds_out, \
                      self.containers_S_out))
 

@@ -2,7 +2,7 @@
 #define __TEST0_CAP_H__
 
 
-#include <l4lib/capability.h>
+#include <l4lib/lib/cap.h>
 #include <l4/generic/cap-types.h>
 #include <l4/api/capability.h>
 

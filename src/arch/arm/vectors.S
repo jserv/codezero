@@ -5,6 +5,7 @@
  */
 
 #include INC_ARCH(asm.h)
+#include INC_ARCH(asm-macros.S)
 
 .balign 4096
 .section .data.vectors
@@ -39,30 +40,8 @@ END_PROC(arm_high_vector)
 BEGIN_PROC(arm_reset_exception)
 END_PROC(arm_reset_exception)
 
-/*
- * vect_undef
- *
- * Upon Entry:
- * - R14:	Address of next instruction after undefined instruction
- * - PC:	0x00000004
- * - IRQs are disabled (CPSR[7] = 1)
- *
- *
- * PURPOSE:
- * A co-processor instruction not supported by the core can be
- * emulated here. Also unrecognised/invalid instructions are handled.
- */
-BEGIN_PROC(arm_undef_exception)
-	sub	lr, lr, #4
-	mov	r0, lr		@ Get undefined abort address
-	mrs	r1, spsr	@ Get previous abort state
-	mov	r5, lr		@ Save it in r5 in case r0 is trashed
-	mov	lr, pc		@ Save return address
-	ldr	pc, =undef_handler
-1:
-	b	1b
-END_PROC(arm_undef_exception)
 
+#if defined(CONFIG_SUBARCH_V5)
 	.macro disable_irqs rx
 		mrs	\rx, cpsr_fc
 		orr	\rx, #ARM_IRQ_BIT
@@ -73,6 +52,26 @@ END_PROC(arm_undef_exception)
 		bic	\rx, #ARM_IRQ_BIT
 		msr	cpsr_fc, \rx
 	.endm
+#endif
+
+#if defined (CONFIG_SUBARCH_V7) || defined(CONFIG_SUBARCH_V6)
+	.macro disable_irqs rx
+		cpsid	ia
+	.endm
+	.macro enable_irqs rx
+		cpsie	ia
+	.endm
+#endif
+
+#if defined (CONFIG_SUBARCH_V7)
+	.macro clear_exclusive
+		clrex
+	.endm
+#else
+	.macro clear_exclusive
+	.endm
+#endif
+
 	/* Only works in SVC MODE. Know what you are doing! */
 	.macro get_current rx
 		bic	\rx, sp, #0xFF0
@@ -114,14 +113,61 @@ END_PROC(arm_undef_exception)
 		cmp	\rx, #ARM_MODE_USR
 	.endm
 
+/* These really both read the same unified FSR and FAR registers */
+#if defined (CONFIG_SUBARCH_V5)
+	.macro	cp15_read_ifsr rx
+		mrc	p15, 0, \rx, c5, c0, 0	@ Read FSR (Tells why the fault occured)
+
+	.endm
+	.macro cp15_read_ifar rx
+		mrc	p15, 0, \rx, c6, c0, 0	@ Read FAR (Contains the faulted data address)
+	.endm
+	.macro	cp15_read_dfsr rx
+		mrc	p15, 0, \rx, c5, c0, 0	@ Read FSR (Tells why the fault occured)
+
+	.endm
+	.macro cp15_read_dfar rx
+		mrc	p15, 0, \rx, c6, c0, 0	@ Read FAR (Contains the faulted data address)
+	.endm
+#endif
+
+/* These read the distinguished IFSR, IFAR, DFSR and DFAR registers */
+#if defined (CONFIG_SUBARCH_V6) || defined (CONFIG_SUBARCH_V7)
+	.macro	cp15_read_ifsr rx
+		mrc	p15, 0, \rx, c5, c0, 1	@ Read IFSR (Tells why the fault occured)
+
+	.endm
+	.macro cp15_read_ifar rx
+		mrc	p15, 0, \rx, c6, c0, 2	@ Read IFAR (Contains the faulted data address)
+	.endm
+	.macro	cp15_read_dfsr rx
+		mrc	p15, 0, \rx, c5, c0, 0	@ Read DFSR (Tells why the fault occured)
+
+	.endm
+	.macro cp15_read_dfar rx
+		mrc	p15, 0, \rx, c6, c0, 0	@ Read DFAR (Contains the faulted data address)
+	.endm
+#endif
 
 #define	UNDEF_R0	0
 #define UNDEF_SPSR	-4
 #define UNDEF_R14	-8
 
+/*
+ * vect_undef
+ *
+ * Upon Entry:
+ * - R14:	Address of next instruction after undefined instruction
+ * - PC:	0x00000004
+ * - IRQs are disabled (CPSR[7] = 1)
+ *
+ *
+ * PURPOSE:
+ * A co-processor instruction not supported by the core can be
+ * emulated here. Also unrecognised/invalid instructions are handled.
+ */
 BEGIN_PROC(arm_undef_exception_reentrant)
-	@ lr contains address of instruction following the one caused undef
-	@ sub	lr, lr, #4
+	clear_exclusive
 	str	lr, [sp, #UNDEF_R14]	@ Store undef address
 	mrs	lr, spsr		@ Get SPSR
 	str	lr, [sp, #UNDEF_SPSR]	@ Store SPSR
@@ -142,8 +188,9 @@ BEGIN_PROC(arm_undef_exception_reentrant)
 	ldr	r0, [r0, #UNDEF_R0]
 	stmfd	sp!, {r0-r3,r12,lr}
 	@ Stack state:  |R0<-|R1|R2|R3|R12|UNDEF_SPSR|LR_SVC|LR_DUNDEF|{original SP_SVC}|
-	push_user_sp_lr sp
-    
+	push_user_sp_lr sp	@ NOTE: These must be pushed to avoid trashing them if preempted
+	@ Stack state: |SP_USR<-|LR_USR|R0<-|R1|R2|R3|R12|UNDEF_SPSR|LR_SVC|LR_DUNDEF|{original SP_SVC}|
+
 	@ All undef state saved. Can safely enable irqs here, if need be.
 	ldr	r3, [sp, #28]		@ Load UNDEF_SPSR
 	can_abort_enable_irqs r0, r3	@ Judge if irqs can be enabled depending on prev state.
@@ -151,7 +198,7 @@ BEGIN_PROC(arm_undef_exception_reentrant)
 	enable_irqs r3
 1:
 	/* Now check in what mode exception occured, and return that mode's LR in R4
-	 * Also poplulate r0,r1,r2 parameters for undef_handler
+	 * Also poplulate r0,r1,r2 parameters for undefined_instr_handler
 	*/
 	ldr	r1, [sp, #28]		@ Load UNDEF_SPSR
 	is_psr_usr r0			@ Test if UNDEF_SPSR was user mode.
@@ -159,7 +206,7 @@ BEGIN_PROC(arm_undef_exception_reentrant)
 	ldreq	r2, [sp, #4]		@ Abort occured in user, load LR_USR
 	ldr	r0, [sp, #36]		@ Load LR_UNDEF saved previously.
 	mov	lr, pc
-	ldr	pc, =undef_handler 	@ Jump to function outside this page.
+	ldr	pc, =undefined_instr_handler 	@ Jump to function outside this page.
 	disable_irqs r0			@ Disable irqs to avoid corrupting spsr.
 					@ (i.e. an interrupt could overwrite spsr with current psr)
 	ldmfd	sp, {sp, lr}^		@ Restore user sp and lr which might have been corrupt on preemption
@@ -173,7 +220,6 @@ BEGIN_PROC(arm_undef_exception_reentrant)
 					@ down from where svc stack had left.
 END_PROC(arm_undef_exception_reentrant)
 
-    
 /*
  * vect_swi
  *
@@ -210,6 +256,7 @@ END_PROC(arm_undef_exception_reentrant)
  * determine the correct system call, rather than [7:0] bits of the SWI.
  */
 BEGIN_PROC(arm_swi_exception)
+	clear_exclusive
 	sub	lr, lr, #4	@ Get address of swi instruction user executed.
 	stmfd	sp, {r0-r12,sp,lr}^ @ Push arguments, LR_USR and SP_USR to stack.
 	nop
@@ -278,7 +325,7 @@ END_PROC(arm_swi_exception)
  * vect_pabt
  *
  * Upon Entry:
- * - R14_svc:	Address of next instruction after aborted instruction
+ * - R14_abt:	Address of next instruction after aborted instruction
  * - R14_usr:	Address of return instruction in last function call**
  * - PC:	0x0000000c
  * - IRQs are disabled (CPSR[7] = 1)
@@ -300,6 +347,7 @@ END_PROC(arm_swi_exception)
  * where this call came from.
  */
 BEGIN_PROC(arm_prefetch_abort_exception_reentrant)
+	clear_exclusive
 	sub	lr, lr, #4		@ lr-4 points at aborted instruction
 	str	lr, [r13, #ABT_R14]	@ Store abort address.
 	mrs	lr, spsr		@ Get SPSR
@@ -320,23 +368,19 @@ transfer_pabt_state_to_svc: 	@ Move data saved on PABT stack to SVC stack.
 	ldr	r0, [r0, #ABT_R0]
 	stmfd	sp!, {r0-r3,r12,lr}
 	@ Stack state:  |R0<-|R1|R2|R3|R12|PABT_SPSR|LR_SVC|LR_PABT|{original SP_SVC}|
-	push_user_sp_lr sp
+	push_user_sp_lr sp	@ NOTE: These must be pushed to avoid trashing if preempted
 	@ Stack state:  |SP_USR<-|LR_USR|R0|R1|R2|R3|R12|PABT_SPSR|LR_SVC|LR_PABT|{original SP_SVC}|
 read_pabt_state:
-	mrc	p15, 0, r1, c5, c0, 0	@ Read FSR (Tells why the fault occured) FIXME: Do we need this in pabt?
-	mrc	p15, 0, r2, c6, c0, 0	@ Read FAR (Contains the faulted data address)  Do we need this in pabt?
+	cp15_read_ifsr r1	@ Reads FSR on ARMv5, IFSR on ARMv6-v7. Fault status information
+	cp15_read_ifar r2	@ Reads FAR on ARMv5, IFAR on ARMv6-v7. Fault address information
 	@ All abort state and (FAR/FSR) saved. Can safely enable irqs here, if need be.
 	ldr	r3, [sp, #28]		@ Load PABT_SPSR
 	can_abort_enable_irqs r0, r3	@ Judge if irqs can be enabled depending on prev state.
 	bne	1f			@ Branch here based on previous irq judgement.
 	enable_irqs r3
 1:
-	/* Now check in what mode abort occured, and return that mode's LR in R4 */
-	ldr	r0, [sp, #28]		@ Load PABT_SPSR
-	is_psr_usr r0			@ Test if PABT_SPSR was user mode.
-	ldrne	r3, [sp, #32]		@ Abort occured in kernel, load LR_SVC
-	ldreq	r3, [sp, #4]		@ Abort occured in user, load LR_USR
-	ldr	r0, [sp, #36]		@ Load LR_PABT saved previously.
+	ldr	r3, [sp, #28]		@ Load PABT_SPSR to r3, the spsr for the aborted mode
+	ldr	r0, [sp, #36]		@ Load LR_PABT - 4 saved previously. (Address that aborted)
 	mov	lr, pc
 	ldr	pc, =prefetch_abort_handler @ Jump to function outside this page.
 	disable_irqs r0			@ Disable irqs to avoid corrupting spsr.
@@ -381,12 +425,14 @@ BEGIN_PROC(arm_data_abort_exception)
 1:
 	b	1b
 END_PROC(arm_data_abort_exception)
+
 /*
  * The method of saving abort state to svc stack is identical with that of
  * reentrant irq vector. Natural to this, Restoring of the previous state
  * is also identical.
  */
 BEGIN_PROC(arm_data_abort_exception_reentrant)
+	clear_exclusive
 	sub	lr, lr, #8		@ Get abort address
 	str	lr, [r13, #ABT_R14]	@ Store abort address
 	mrs	lr, spsr		@ Get SPSR
@@ -411,8 +457,8 @@ transfer_dabt_state_to_svc:
 	push_user_sp_lr sp
 	@ Stack state:  |SP_USR<-|LR_USR|R0|R1|R2|R3|R12|DABT_SPSR|LR_SVC|LR_DABT|{original SP_SVC}|
 read_dabt_state:
-	mrc	p15, 0, r1, c5, c0, 0	@ Read FSR (Tells why the fault occured)
-	mrc	p15, 0, r2, c6, c0, 0	@ Read FAR (Contains the faulted data address)
+	cp15_read_dfsr r1	@ Read DFSR (Tells why the fault occured)
+	cp15_read_dfar r2	@ Read DFAR (Contains the faulted data address)
 	@ All abort state and (FAR/FSR) saved. Can safely enable irqs here, if need be.
 	ldr	r3, [sp, #28]		@ Load DABT_SPSR
 	can_abort_enable_irqs r0, r3	@ Judge if irqs can be enabled depending on prev state.
@@ -493,12 +539,6 @@ BEGIN_PROC(arm_irq_exception_reentrant)
 					@ down from where svc stack had left.
 END_PROC(arm_irq_exception_reentrant)
 
-	.macro	was_irq_mode rx
-	mrs	rx, spsr_fc
-	and	rx, rx, 0x1F
-	cmp	rx, #ARM_MODE_IRQ
-	.endm
-
 	.macro	need_resched rx, ry
 	get_current \rx
 	ldr	\ry, =need_resched_offset
@@ -514,20 +554,39 @@ END_PROC(arm_irq_exception_reentrant)
 .global preempted_psr;
 preempted_psr:
 .word	0
+.word	0
+.word	0
+.word	0
 
 /* Keeps track of how many nests of irqs have happened. */
 .global current_irq_nest_count;
 current_irq_nest_count:
 .word	0
+.word	0
+.word	0
+.word	0
+
+#if defined (CONFIG_SMP)
+	@ Rx contains the address of per cpu variable
+	.macro per_cpu adr, temp, varname
+		get_cpuid \temp
+		ldr \adr, =\varname
+		add \adr, \adr, \temp, lsl #2
+	.endm
+#else
+	.macro per_cpu adr, temp, varname
+		ldr \adr, =\varname
+	.endm
+#endif
 
 /*
  * FIXME: current_irq_nest_count also counts for any preempt_disable() calls.
  * However this nesting check assumes all nests come from real irqs.
  * We should make this check just the real ones.
  */
-#define IRQ_NESTING_MAX			15
+#define IRQ_NESTING_MAX			32
 	.macro	inc_irq_cnt_with_overnest_check rx, ry
-	ldr	\rx, =current_irq_nest_count	@ Load the irq nest status word.
+	per_cpu \rx, \ry, current_irq_nest_count @ Get per-cpu address of variable
 	ldr	\ry, [\rx]
 	add	\ry, \ry, #1			@ No need for atomic inc since irqs are disabled.
 	str	\ry, [\rx]
@@ -541,21 +600,37 @@ current_irq_nest_count:
 	@ it back to the original value as it was when we read it, before it returns. So effectively
 	@ anything that runs during the decrement does not affect the value of the count.
 	.macro	dec_irq_nest_cnt rx, ry
-	ldr	\ry, =current_irq_nest_count
+	per_cpu \ry, \rx, current_irq_nest_count
 	ldr	\rx, [\ry]
 	sub	\rx, \rx, #1
 	str	\rx, [\ry]
 	.endm
-	.macro in_process_context rx
-	ldr	\rx, =current_irq_nest_count
+	.macro in_process_context rx, ry
+	per_cpu	\rx, \ry, current_irq_nest_count
 	ldr	\rx, [\rx]
 	cmp	\rx, #0
 	.endm
 	/* If interrupted a process (as opposed to another irq), saves spsr value to preempted_psr */
-	.macro cmp_and_save_process_psr rx, process_psr
-	in_process_context \rx		@ If nest count is 0, a running process is preempted.
-	ldreq	\rx, =preempted_psr
-	streq	\process_psr, [\rx]
+	.macro cmp_and_save_process_psr rx, ry
+	in_process_context \rx, \ry		@ If nest count is 0, a running process is preempted.
+	bne 9999f				@ Branch ahead if not a process
+	per_cpu \rx, \ry, preempted_psr		@ Get per-cpu preempted psr
+	mrs	\ry, SPSR			@ Re-read spsr since register was trashed
+	str	\ry, [\rx]			@ Store it in per-cpu preempted psr
+	9999:
+	.endm
+
+	/*
+	 * Clear irq bits on register.
+	 *
+	 * If ARMv5, only I-bit is cleared, but if ARMv6-v7,
+	 * A-bit is also cleared.
+	 */
+	.macro clr_irq_bits_on_reg rx
+		bic	\rx, #ARM_IRQ_BIT
+#if defined (CONFIG_SUBARCH_V6) || defined (CONFIG_SUBARCH_V7)
+		bic	\rx, #ARM_A_BIT
+#endif
 	.endm
 
 #define	CONTEXT_PSR		0
@@ -576,7 +651,14 @@ current_irq_nest_count:
 #define CONTEXT_R14		60
 #define CONTEXT_PC		64
 
+/*
+ * TODO: Optimization:
+ * May use SRS/RFE on irq exception _only_. But not
+ * yet aware of its implications. Only irq handler can
+ * do it because RFE enables interrupts unconditionally.
+ */
 BEGIN_PROC(arm_irq_exception_reentrant_with_schedule)
+	clear_exclusive
 	sub	lr, lr, #4
 	str	lr, [r13, #IRQ_R14]	@ Save lr_irq
 	mrs	r14, spsr		@ Copy spsr
@@ -600,12 +682,22 @@ BEGIN_PROC(arm_irq_exception_reentrant_with_schedule)
 	mov	lr, pc
 	ldr	pc, =do_irq		@ Read irq number etc. Free to re-enable irqs here.
 	@ stack state: (Low) r0|r1|r2|r3|r12|SPSR|LR_SVC|LR_IRQ| (High)
-	ldr	r0, =current_irq_nest_count
+
+/*
+ * Decision point for taking the preemption path
+ */
+#if !defined(CONFIG_PREEMPT_DISABLE)
+	per_cpu	r0, r1, current_irq_nest_count
 	ldr	r0, [r0]
 	cmp	r0, #1			@ Expect 1 as lowest since each irq increase preempt cnt by 1.
 	bgt	return_to_prev_context	@ if (irq_nest > 1) return_to_prev_context();
 	need_resched r0, r1		@ if (irq_nest == 1 && need_resched) schedule();
 	beq	preemption_path		@ if (irq_nest == 1 && !need_resched) return_to_prev_context();
+#endif
+
+/*
+ * Return to previous context path
+ */
 return_to_prev_context:
 	dec_irq_nest_cnt r0, r1
 	disable_irqs r0			@ Disable irqs to avoid corrupting spsr.
@@ -615,6 +707,11 @@ return_to_prev_context:
 	ldmfd	r13!, {r14, pc}^	@ Return, restoring cpsr. Note r14 gets r14_svc,
 					@ and pc gets lr_irq. Saved at #4 and #8 offsets
 					@ down from where svc stack had left.
+
+/*
+ * Preemption path
+ */
+#if !defined(CONFIG_PREEMPT_DISABLE)
 preemption_path:
 	disable_irqs r0			@ Interrupts can corrupt stack state.
 	get_current r0			@ Get the interrupted process
@@ -661,6 +758,8 @@ prepare_schedule:
 	ldr pc, =schedule
 1:
 	b	1b	/* To catch if schedule returns in irq mode */
+#endif /* End of !CONFIG_PREEMPT_DISABLE */
+
 END_PROC(arm_irq_exception_reentrant_with_schedule)
 
 /*
@@ -688,8 +787,9 @@ END_PROC(arm_irq_exception_reentrant_with_schedule)
  *   Furthermore, irqs are also disabled shortly before calling switch_to() from both contexts.
  *   This happens at points where stack state would be irrecoverable if an irq occured.
  */
-BEGIN_PROC(arch_switch)
-	in_process_context r2		@ Note this depends on preempt count being 0.
+BEGIN_PROC(arch_context_switch)
+	clear_exclusive
+	in_process_context r2, r3	@ Note this depends on preempt count being 0.
 	beq	save_process_context	@ Voluntary switch needs explicit saving of current state.
 	dec_irq_nest_cnt r2, r3		@ Soon leaving irq context, so reduce preempt count here.
 	b 	load_next_context	@ Interrupted context already saved by irq handler.
@@ -702,7 +802,7 @@ load_next_context:
 	@ stack state: (Low) |..|..|..|..|..|..|..|..|..|->(Original)| (High)
 	mov	sp, r1
 	ldr	r0, [sp, #CONTEXT_PSR]	@ Load r0 with SPSR
-	bic	r0, r0, #ARM_IRQ_BIT	@ Enable irqs on will-be-restored context.
+	clr_irq_bits_on_reg r0		@ Enable irqs on will-be-restored context.
 	msr	spsr_fcxs, r0		@ Restore spsr from r0.
 	is_psr_usr r0
 	bne load_next_context_svc	@ Loading user context is different than svc.
@@ -715,7 +815,7 @@ load_next_context_usr:
 load_next_context_svc:
 	ldmib	sp, {r0-r15}^		@ Switch to svc context and jump, loading R13 and R14 from stack.
 					@ This is OK since the jump is to current context.
-END_PROC(arch_switch)
+END_PROC(arch_context_switch)
 
 
 /*
@@ -788,11 +888,13 @@ END_PROC(arm_fiq_exception)
  * (use a macro, e.g. ____arm_asm_cache_aligned)
  */
 .balign 4
-__stacks_end:	.space 256
-__abt_stack:	.space 256
-__irq_stack:	.space 256
-__fiq_stack:	.space 256
-__und_stack:	.space 256
+
+/* 16 bytes each per-cpu, up to 8 cpus */
+__stacks_end:	.space 128
+__abt_stack:	.space 128
+__irq_stack:	.space 128
+__fiq_stack:	.space 128
+__und_stack:	.space 128
 
 .balign 4096
 

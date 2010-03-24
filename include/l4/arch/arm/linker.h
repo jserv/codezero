@@ -16,9 +16,15 @@ extern unsigned long arm_high_vector[];
 extern unsigned long _end_vectors[];
 extern unsigned long _start_kip[];
 extern unsigned long _end_kip[];
+extern unsigned long _start_syscalls[];
+extern unsigned long _end_syscalls[];
 extern unsigned long _start_init[];
 extern unsigned long _end_init[];
-extern unsigned long _bootstack[];
+extern unsigned long _start_bootstack[];
+extern unsigned long _end_bootstack[];
+extern unsigned long _start_init_pgd[];
+extern unsigned long _end_init_pgd[];
+
 extern unsigned long _end_kernel[];
 extern unsigned long _end[];
 

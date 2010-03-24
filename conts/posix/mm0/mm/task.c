@@ -12,10 +12,10 @@
 #include <l4/api/kip.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
+#include L4LIB_INC_ARCH(utcb.h)
 
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
 
@@ -358,9 +358,7 @@ struct tcb *task_create(struct tcb *parent, struct task_ids *ids,
 	}
 
 	/* Create the thread structures and address space as the pager */
-	if ((err = l4_thread_control(THREAD_CREATE |
-				     TC_AS_PAGER |
-				     ctrl_flags, ids)) < 0) {
+	if ((err = l4_thread_control(THREAD_CREATE | ctrl_flags, ids)) < 0) {
 		printf("l4_thread_control failed with %d.\n", err);
 		return PTR_ERR(err);
 	}
@@ -464,6 +462,7 @@ int task_copy_args_to_user(char *user_stack,
 
 	/* Set beginning of envp */
 	envp_start = (char **)user_stack;
+
 	/* Forward by number of envp ptrs */
 	user_stack += sizeof(int) * env->argc;
 
@@ -508,6 +507,7 @@ int task_prefault_range(struct tcb *task, unsigned long start,
 			unsigned long size, unsigned int vm_flags)
 {
 	struct page *p;
+
 
 	for (unsigned long i = start;  i < start + size; i += PAGE_SIZE)
 		if (IS_ERR(p = task_prefault_page(task, i, vm_flags)))

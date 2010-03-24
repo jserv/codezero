@@ -4,7 +4,7 @@
 Import('env')
 
 # The set of source files associated with this SConscript file.
-src_local = ['mm.c', 'mmu_ops.S', 'mutex.S', 'irq.S']
+src_local = ['mapping.c', 'exception.c', 'mmu_ops.S', 'cache.c', 'mutex.c', 'irq.c', 'init.c']
 
 obj = env.Object(src_local)
 Return('obj')

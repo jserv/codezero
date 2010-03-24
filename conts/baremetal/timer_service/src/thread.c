@@ -10,6 +10,7 @@ char stack[THREADS_TOTAL][STACK_SIZE] ALIGN(8);
 char *__stack_ptr = &stack[1][0];
 
 char utcb[THREADS_TOTAL][UTCB_SIZE] ALIGN(8);
+//char utcb[THREADS_TOTAL][0x1000] ALIGN(0x1000);
 char *__utcb_ptr = &utcb[1][0];
 
 extern void local_setup_new_thread(void);
@@ -25,7 +26,7 @@ int thread_create(int (*func)(void *), void *args, unsigned int flags,
 
 	/* Shared space only */
 	if (!(TC_SHARE_SPACE & flags)) {
-		printf("%s: This function allows only "
+		printf("%s: Warning - This function allows only "
 		       "shared space thread creation.\n",
 		       __FUNCTION__);
 		return -EINVAL;
@@ -61,6 +62,7 @@ int thread_create(int (*func)(void *), void *args, unsigned int flags,
 	/* Update utcb, stack pointers */
 	__stack_ptr += STACK_SIZE;
 	__utcb_ptr += UTCB_SIZE;
+	//__utcb_ptr += 0x1000;
 
 	/* Start the new thread */
 	if ((err = l4_thread_control(THREAD_RUN, &ids)) < 0)

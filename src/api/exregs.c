@@ -71,7 +71,7 @@ flags:
 
 		/*
 		 * If task is the one currently runnable,
-		 * update kip utcb reference
+		 * update utcb reference
 		 */
 		if (task == current)
 			task_update_utcb(task);
@@ -161,7 +161,7 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 
 	if ((err = check_access((unsigned long)exregs,
 				sizeof(*exregs),
-				MAP_USR_RW_FLAGS, 1)) < 0)
+				MAP_USR_RW, 1)) < 0)
 		return err;
 
 	/* Find tcb from its list */

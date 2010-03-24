@@ -29,6 +29,8 @@
  ********************************************************************/
 #include <stdarg.h>	/* for va_list, ... comes with gcc */
 #include <l4/lib/printk.h>
+#include <l4/lib/mutex.h>
+
 /* FIXME: LICENSE LICENCE */
 typedef unsigned int word_t;
 
@@ -422,6 +424,8 @@ int do_printk(char* format_p, va_list args)
     return n;
 }
 
+DECLARE_SPINLOCK(printk_lock);
+
 /**
  *	Flexible print function
  *
@@ -435,9 +439,14 @@ int printk(char *format, ...)
 {
     va_list args;
     int i;
+    unsigned long irqstate;
 
     va_start(args, format);
+
+    spin_lock_irq(&printk_lock, &irqstate);
     i = do_printk(format, args);
+    spin_unlock_irq(&printk_lock, irqstate);
+
     va_end(args);
     return i;
 };

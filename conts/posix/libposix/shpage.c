@@ -4,17 +4,15 @@
  * Copyright (C) 2007-2009 Bahadir Balban
  */
 #include <l4lib/kip.h>
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/utcb.h>
 #include <l4lib/ipcdefs.h>
 #include <l4/macros.h>
-#include INC_GLUE(memlayout.h)
 #include <stdio.h>
 #include <shpage.h>
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <shpage.h>
 #include <libposix.h>
+#include INC_GLUE(memlayout.h)
 
 #if 0
 

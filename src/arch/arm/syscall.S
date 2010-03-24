@@ -31,5 +31,6 @@ BEGIN_PROC(arm_system_calls)
 	swi	0x14		@ kmem_control		/* 0x2C */
 	swi	0x14		@ time			/* 0x30 */
 	swi	0x14		@ mutex_control		/* 0x34 */
+	swi	0x14		@ cache_control		/* 0x38 */
 END_PROC(arm_system_calls)
 

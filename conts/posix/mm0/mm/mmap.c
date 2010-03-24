@@ -8,8 +8,8 @@
 #include <malloc/malloc.h>
 #include INC_API(errno.h)
 #include <posix/sys/types.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
 #include <memory.h>
 #include <task.h>
 #include <mmap.h>
@@ -401,16 +401,14 @@ void *sys_mmap(struct tcb *task, struct sys_mmap_args *args)
 	struct sys_mmap_args *mapped_args;
 	void *ret;
 
-	if (!(mapped_args = pager_validate_map_user_range(task, args,
-							  sizeof(*args),
-							  VM_READ | VM_WRITE)))
+	if (!(mapped_args = pager_get_user_page(task, args,
+						sizeof(*args),
+						VM_READ | VM_WRITE)))
 		return PTR_ERR(-EINVAL);
 
 	ret = __sys_mmap(task, mapped_args->start, mapped_args->length,
 			 mapped_args->prot, mapped_args->flags, mapped_args->fd,
 			 mapped_args->offset);
-
-	pager_unmap_user_range(mapped_args, sizeof(*args));
 
 	return ret;
 }

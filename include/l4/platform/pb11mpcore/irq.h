@@ -6,10 +6,10 @@
 #define IRQS_MAX			96
 
 /* IRQ indices. */
-#define IRQ_TIMER01			36
-#define IRQ_TIMER23			37
-#define IRQ_TIMER45                     73
-#define IRQ_TIMER67                     74
+#define IRQ_TIMER0			36
+#define IRQ_TIMER1			37
+#define IRQ_TIMER2                     73
+#define IRQ_TIMER3                     74
 #define IRQ_RTC				42
 #define IRQ_UART0			44
 #define IRQ_UART1			45

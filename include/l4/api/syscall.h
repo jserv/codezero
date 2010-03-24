@@ -26,7 +26,8 @@
 #define sys_container_control_offset		0x2C
 #define sys_time_offset				0x30
 #define sys_mutex_control_offset		0x34
-#define syscalls_end_offset			sys_mutex_control_offset
+#define sys_cache_control_offset		0x38
+#define syscalls_end_offset			sys_cache_control_offset
 #define SYSCALLS_TOTAL				((syscalls_end_offset >> 2) + 1)
 
 void print_syscall_context(struct ktcb *t);
@@ -46,5 +47,7 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *addr);
 int sys_container_control(unsigned int req, unsigned int flags, void *addr);
 int sys_time(struct timeval *tv, int set);
 int sys_mutex_control(unsigned long mutex_address, int mutex_op);
+int sys_cache_control(unsigned long start, unsigned long end,
+		      unsigned int flags);
 
 #endif /* __SYSCALL_H__ */

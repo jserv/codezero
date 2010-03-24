@@ -6,11 +6,11 @@ registers and write the IPC payload. This necessitates a convenient method
 of accessing the thread-specific utcb structure. Here are some of the
 possible methods of accessing a thread local storage in general:
 
-1.) Keep a global pointer to it. The scheduler updates the pointer to TLS
-upon every context switch.
-
-2.) Map the private physical TLS page to thread address space at same virtual
+1.) Map the private physical TLS page to thread address space at same virtual
 offset, everytime there is a context switch.
+
+2.) Keep a global pointer to it. The scheduler updates the pointer to TLS
+upon every context switch.
 
 3.) Manage everything by the run-time library in the application. This includes
 the following:
@@ -42,9 +42,9 @@ as new threads come to life, and map this when they run, without managing utcb
 table size. The downside is that a page is wasted per-thread.
 
 The solution Codezero uses includes a mixture of both (1) and (2). Upon a
-context switch, a private page is allocated and mapped by the pager, but also
+context switch, a page private to each context is mapped by the pager, but also
 the UTCB pointer is updated to point at an offset in this page. As an example,
 if a UTCB is sized 1/4th of a page, a single page is used by 4 UTCBs. This way,
 the pager needs to manage 4 entries per-private page, utcbs utilise page memory
-fully, and there is no need for a fixed table of utcbs per address space.
-
+fully, and there is no need for a fixed table of utcbs per address space. Of
+course, utcb pages are only shared by threads in the same address space.

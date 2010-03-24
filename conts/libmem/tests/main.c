@@ -10,7 +10,7 @@
 
 #include INC_SUBARCH(mm.h)
 #include INC_ARCH(linker.h)
-#include INC_PLAT(printascii.h)
+#include INC_PLAT(print-early.h)
 #include INC_PLAT(offsets.h)
 #include INC_GLUE(memlayout.h)
 

@@ -26,36 +26,36 @@ sys.path.append(PROJRELROOT)
 from config.projpaths import *
 from configure import *
 
-Import('arch')
+Import('env', 'arch', 'subarch')
 
 config = configuration_retrieve()
 
 LIBMEM_RELDIR = 'conts/libmem'
 LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 
-env = Environment(CC = config.user_toolchain + 'gcc',
-		  CCFLAGS = ['-g', '-std=gnu99', '-nostdlib', '-ffreestanding'],
-		  LINKFLAGS = ['-nostdlib'],
-		  ASFLAGS = ['-D__ASSEMBLY__'],
-		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = 'gcc',
-		  CPPPATH = ['include', 'include/l4lib/arch', join(PROJROOT, 'include')])
+e = env.Clone()
+e.Append(CPPPATH = ['include', 'include/l4lib/arch',
+                    LIBMEM_DIR],
+	 CPPFLAGS = ' -include l4lib/macros.h ')
 
-env.Append(CPPPATH = [LIBMEM_DIR])
+#Do we need to remove CPPFLAGS coming from top level env?
 
-def create_symlinks(arch):
-    print  os.getcwd()
-    prefix = 'conts/libl4/include/l4lib'
-    symlink = join(prefix, 'arch')
-    reallink = join(prefix, 'arch-' + arch)
+# Use os.path.walk(dirname, glob_by_walk, ['*.[cS]', filelist])
+# To collect all files in the tree.
 
-    if not os.path.exists(symlink):
-        cmd = "ln -s %s %s" % (reallink, symlink)
-        print cmd
-        os.system(cmd)
+def glob_by_walk(arg, dirname, names):
+    ext, imglist = arg
+    files = glob.glob(join(dirname, ext))
+    imglist.extend(files)
 
-#create_symlinks(arch)
-objects = env.StaticObject(Glob('src/*.c') + Glob('src/thread/*.c') + Glob('src/' + arch + '/*.[cS]') + Glob('src/capability/*c'))
-library = env.StaticLibrary('l4', objects)
+objects = e.StaticObject(Glob('src/*.c') + \
+                         Glob('src/lib/*.c') + \
+                         Glob('src/lib/cap/*.c')) + \
+                         Glob('src/lib/thread/*.c') + \
+                         Glob('src/arch/' + arch + '/exregs.c') + \
+                         Glob('src/arch/' + arch + '/*.S') + \
+			 Glob('src/arch/' + arch + '/' + subarch + '/*.[cS]')
+
+library = e.StaticLibrary('l4', objects)
 
 Return('library')

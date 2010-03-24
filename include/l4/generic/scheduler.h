@@ -7,8 +7,11 @@
 #define __SCHEDULER_H__
 
 #include <l4/generic/tcb.h>
+#include <l4/generic/smp.h>
+#include INC_SUBARCH(cpu.h)
 #include INC_SUBARCH(mm.h)
 #include INC_GLUE(memory.h)
+#include INC_GLUE(smp.h)
 
 /* Task priorities */
 #define TASK_PRIO_MAX		10
@@ -19,14 +22,16 @@
 #define TASK_PRIO_LOW		2
 #define TASK_PRIO_TOTAL		30
 
-/* Ticks per second, try ticks = 1000 + timeslice = 1 for regressed preemption test. */
-#define SCHED_TICKS				100
+/*
+ * CONFIG_SCHED_TICKS gives ticks per second.
+ * try ticks = 1000, and timeslice = 1 for regressed preemption test.
+ */
 
 /*
  * A task can run continuously at this granularity,
  * even if it has a greater total time slice.
  */
-#define SCHED_GRANULARITY			SCHED_TICKS/50
+#define SCHED_GRANULARITY			CONFIG_SCHED_TICKS/10
 
 static inline struct ktcb *current_task(void)
 {
@@ -37,13 +42,13 @@ static inline struct ktcb *current_task(void)
 #define current			current_task()
 #define need_resched		(current->ts_need_resched)
 
-#define SCHED_RQ_TOTAL					2
-
+#define SCHED_RQ_TOTAL			2
 
 /* A basic runqueue */
 struct runqueue {
+	struct scheduler *sched;
 	struct spinlock lock;		/* Lock */
-	struct link task_list;	/* List of tasks in rq */
+	struct link task_list;		/* List of tasks in rq */
 	unsigned int total;		/* Total tasks */
 };
 
@@ -52,22 +57,25 @@ struct scheduler {
 	struct runqueue sched_rq[SCHED_RQ_TOTAL];
 	struct runqueue *rq_runnable;
 	struct runqueue *rq_expired;
+	struct ktcb *idle_task;
 
 	/* Total priority of all tasks in container */
 	int prio_total;
 };
-extern struct scheduler scheduler;
 
-void sched_init_runqueue(struct runqueue *rq);
+DECLARE_PERCPU(extern struct scheduler, scheduler);
+
+void sched_init_runqueue(struct scheduler *sched, struct runqueue *rq);
 void sched_init_task(struct ktcb *task, int priority);
 void sched_prepare_sleep(void);
-void sched_exit_sync(void);
 void sched_suspend_sync(void);
 void sched_suspend_async(void);
 void sched_resume_sync(struct ktcb *task);
 void sched_resume_async(struct ktcb *task);
+void sched_enqueue_task(struct ktcb *first_time_runner, int sync);
 void scheduler_start(void);
 void schedule(void);
-void sched_init(struct scheduler *scheduler);
+void sched_init(void);
+void idle_task(void);
 
 #endif /* __SCHEDULER_H__ */

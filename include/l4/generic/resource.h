@@ -92,15 +92,20 @@ struct kernel_resources {
 	struct mem_cache *cont_cache;
 
 	/* Zombie thread list */
-	struct ktcb_list zombie_list;
+	DECLARE_PERCPU(struct ktcb_list, zombie_list);
+
+#if defined(CONFIG_SUBARCH_V7)
+	/* Global page tables on split page tables */
+	pgd_global_table_t *pgd_global;
+#endif
 };
 
 extern struct kernel_resources kernel_resources;
 
 void free_pgd(void *addr);
 void free_pmd(void *addr);
-void free_space(void *addr);
-void free_ktcb(void *addr);
+void free_space(void *addr, struct ktcb *task);
+void free_ktcb(void *addr, struct ktcb *task);
 void free_capability(void *addr);
 void free_container(void *addr);
 void free_user_mutex(void *addr);
@@ -117,5 +122,7 @@ struct mutex_queue *alloc_user_mutex(void);
 int free_boot_memory(struct kernel_resources *kres);
 
 int init_system_resources(struct kernel_resources *kres);
+
+void setup_idle_caps(); /*TODO: Delete this when done with it */
 
 #endif /* __RESOURCES_H__ */

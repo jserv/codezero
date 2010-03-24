@@ -1,64 +1,102 @@
 /*
  * EB platform-specific initialisation and setup
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2009-2010 B Labs Ltd.
+ * Author: Prem Mallappa <prem.mallappa@b-labs.co.uk>
+ *
  */
-
 #include <l4/generic/platform.h>
+#include <l4/generic/bootmem.h>
+#include INC_PLAT(offsets.h)
+#include INC_ARCH(io.h)
 #include <l4/generic/space.h>
 #include <l4/generic/irq.h>
-#include INC_ARCH(linker.h)
-#include INC_PLAT(printascii.h)
-#include INC_SUBARCH(mm.h)
-#include INC_SUBARCH(mmu_ops.h)
-#include INC_GLUE(memory.h)
-#include INC_GLUE(memlayout.h)
-#include INC_PLAT(offsets.h)
+#include <l4/generic/cap-types.h>
 #include INC_PLAT(platform.h)
-#include INC_PLAT(uart.h)
 #include INC_PLAT(irq.h)
-#include INC_ARCH(asm.h)
+#include INC_GLUE(mapping.h)
+#include INC_GLUE(smp.h)
 
-void init_platform_console(void)
+/*
+ * The devices that are used by the kernel are mapped
+ * independent of these capabilities, but these provide a
+ * concise description of what is used by the kernel.
+ */
+int platform_setup_device_caps(struct kernel_resources *kres)
 {
-	add_boot_mapping(EB_UART0_BASE, PLATFORM_CONSOLE0_BASE, PAGE_SIZE,
-		    MAP_IO_DEFAULT_FLAGS);
+	struct capability *uart[4], *timer[4];
 
-	/*
-	 * Map same UART IO area to userspace so that primitive uart-based
-	 * userspace printf can work. Note, this raw mapping is to be
-	 * removed in the future, when file-based io is implemented.
-	 */
-	add_boot_mapping(EB_UART0_BASE, USERSPACE_UART_BASE, PAGE_SIZE,
-		    MAP_USR_IO_FLAGS);
+	/* Setup capabilities for userspace uarts and timers */
+	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
+	uart[1]->start = __pfn(PLATFORM_UART1_BASE);
+	uart[1]->end = uart[1]->start + 1;
+	uart[1]->size = uart[1]->end - uart[1]->start;
+	cap_set_devtype(uart[1], CAP_DEVTYPE_UART);
+	cap_set_devnum(uart[1], 1);
+	link_init(&uart[1]->list);
+	cap_list_insert(uart[1], &kres->devmem_free);
 
-	uart_init();
-}
+	uart[2] =  alloc_bootmem(sizeof(*uart[2]), 0);
+	uart[2]->start = __pfn(PLATFORM_UART2_BASE);
+	uart[2]->end = uart[2]->start + 1;
+	uart[2]->size = uart[2]->end - uart[2]->start;
+	cap_set_devtype(uart[2], CAP_DEVTYPE_UART);
+	cap_set_devnum(uart[2], 2);
+	link_init(&uart[2]->list);
+	cap_list_insert(uart[2], &kres->devmem_free);
 
-void init_platform_timer(void)
-{
-	add_boot_mapping(EB_TIMER01_BASE, PLATFORM_TIMER0_BASE, PAGE_SIZE,
-		    MAP_IO_DEFAULT_FLAGS);
-	add_boot_mapping(EB_SYSCTRL_BASE, EB_SYSCTRL_VBASE, PAGE_SIZE,
-		    MAP_IO_DEFAULT_FLAGS);
-	timer_init();
+	uart[3] =  alloc_bootmem(sizeof(*uart[3]), 0);
+	uart[3]->start = __pfn(PLATFORM_UART3_BASE);
+	uart[3]->end = uart[3]->start + 1;
+	uart[3]->size = uart[3]->end - uart[3]->start;
+	cap_set_devtype(uart[3], CAP_DEVTYPE_UART);
+	cap_set_devnum(uart[3], 3);
+	link_init(&uart[3]->list);
+	cap_list_insert(uart[3], &kres->devmem_free);
+
+	/* Setup timer1 capability as free */
+	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
+	timer[1]->start = __pfn(PLATFORM_TIMER1_BASE);
+	timer[1]->end = timer[1]->start + 1;
+	timer[1]->size = timer[1]->end - timer[1]->start;
+	cap_set_devtype(timer[1], CAP_DEVTYPE_TIMER);
+	cap_set_devnum(timer[1], 1);
+	link_init(&timer[1]->list);
+	cap_list_insert(timer[1], &kres->devmem_free);
+
+	return 0;
 }
 
 void init_platform_irq_controller()
 {
-#if 0
-	add_boot_mapping(PB926_VIC_BASE, PLATFORM_IRQCTRL_BASE, PAGE_SIZE,
-		    MAP_IO_DEFAULT_FLAGS);
-	add_boot_mapping(PB926_SIC_BASE, PLATFORM_SIRQCTRL_BASE, PAGE_SIZE,
-		    MAP_IO_DEFAULT_FLAGS);
-	irq_controllers_init();
+
+	unsigned int sysctrl = PLATFORM_SYSCTRL_VBASE;
+	write(SYSCTRL_UNLOCK, sysctrl + SYS_LOCK);
+	write(PLD_CTRL1_INTMOD_WITHOUT_DCC, sysctrl + SYS_PLDCTL1);
+	write(SYSCTRL_LOCK, sysctrl + SYS_LOCK);	/* Lock again */
+
+#if defined (CONFIG_CPU_ARM11MPCORE) || defined (CONFIG_CPU_CORTEXA9)
+	/* TODO: we need to map 64KB ?*/
+	add_boot_mapping(MPCORE_PRIVATE_BASE, MPCORE_PRIVATE_VBASE,
+			 PAGE_SIZE * 2, MAP_IO_DEFAULT);
+
+	gic_dist_init(0, GIC0_DIST_VBASE);
+	gic_cpu_init(0, GIC0_CPU_VBASE);
+
+#else
+	add_boot_mapping(PLATFORM_GIC1_BASE, PLATFORM_GIC1_VBASE, PAGE_SIZE*2,
+			 MAP_IO_DEFAULT);
+
+	gic_dist_init(1, GIC1_DIST_VBASE);
 #endif
+
+#if !defined (CONFIG_CPU_ARM11MPCORE) && !defined (CONFIG_CPU_CORTEXA9)
+	gic_cpu_init(1, PLATFORM_GIC1_VBASE);
+#endif
+	irq_controllers_init();
 }
 
-void platform_init(void)
+void init_platform_devices()
 {
-	init_platform_console();
-	init_platform_timer();
-	init_platform_irq_controller();
-}
 
+}

@@ -154,6 +154,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 	BUG_ON(wqh->sleepers < 0);
 
 	spin_lock_irq(&wqh->slock, &irqflags);
+
 	if (wqh->sleepers > 0) {
 		struct waitqueue *wq = link_to_struct(wqh->task_list.next,
 						      struct waitqueue,
@@ -165,7 +166,7 @@ void wake_up(struct waitqueue_head *wqh, unsigned int flags)
 		task_unset_wqh(sleeper);
 		if (flags & WAKEUP_INTERRUPT)
 			sleeper->flags |= TASK_INTERRUPTED;
-		//printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
+		// printk("(%d) Waking up (%d)\n", current->tid, sleeper->tid);
 		spin_unlock_irq(&wqh->slock, irqflags);
 
 		if (flags & WAKEUP_SYNC)

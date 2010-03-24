@@ -1,35 +1,91 @@
 /*
  * Generic Interrupt Controller offsets
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2009 B Labs Ltd.
  *
  */
 
 #ifndef __ARM_GIC_H__
 #define __ARM_GIC_H__
 
+#include <l4/types.h>
 #include INC_PLAT(platform.h)
+#include INC_PLAT(offsets.h)
 
-/* GIC CPU register offsets */
-#define ARM_GIC_CPU_IC		0x00 /* Interface Control */
-#define ARM_GIC_CPUPM		0x04 /* Interrupt Priority Mask */
-#define ARM_GIC_CPU_BP		0x08 /* Binary Point */
-#define ARM_GIC_CPU_IA		0x0c /* Interrupt Acknowledge */
-#define ARM_GIC_CPU_EOI		0x10 /* End of Interrupt */
-#define ARM_GIC_CPU_RPI		0x14 /* Running Priority */
-#define ARM_GIC_CPU_HPI		0x18 /* Highest Priority Interrupt*/
+/* CPU registers */
+struct gic_cpu
+{
+	u32	  control;		/* Control Register */
+	u32	  prio_mask;		/* Priority Mask */
+	u32	  bin_point;		/* Binary Point Register */
+	u32	  ack;			/* Interrupt */
+	u32	  eoi;			/* End of Interrupt */
+	u32	  running;		/* Running Priority register */
+	u32	  high_pending;		/* Highest Pending Register */
+};
 
-/* Distributor register map */
-#define ARM_GIC_DIST_CNTRL	0x000 /* Control Register */
-#define ARM_GIC_DIST_ICT	0x004 /* Interface Controller Type */
-#define ARM_GIC_DIST_ISE	0x100 /* Interrupt Set Enable */
-#define ARM_GIC_DIST_ICE	0x180 /* Interrupt Clear Enable */
-#define ARM_GIC_DIST_ISP	0x200 /* Interrupt Set Pending */
-#define ARM_GIC_DIST_ICP	0x280 /* Interrupt Clear Pending*/
-#define ARM_GIC_DIST_AB		0x300 /* Active Bit */
-#define ARM_GIC_DIST_IP		0x400 /* Interrupt Priority */
-#define ARM_GIC_DIST_IPT	0x800 /* Interrupt Processor Target */
-#define ARM_GIC_DIST_IC		0xc00 /* Interrupt Configuration */
-#define ARM_GIC_DIST_SGI	0xf00 /* Software Generated Interrupt */
+#define NIRQ				1024
+#define NREGS_1_BIT_PER_INT		32	/* when 1 bit per interrupt  */
+#define NREGS_4_BIT_PER_INT		256
+#define NREGS_4_BIT_PER_INT		256
+#define NREGS_2_BIT_PER_INT		64
+#define NID		4
 
-#endif /* __ARM_GIC_H__ */
+/* Distributor registers */
+/* -r- -- reserved */
+struct	gic_dist{
+	u32	  control;				/* Control Register */
+	u32	  const	  type;				/* Type Register */
+	u32	  dummy1[62];				/* -r- */
+	u32	  set_en[NREGS_1_BIT_PER_INT];		/* Enable Set */
+	u32	  clr_en[NREGS_1_BIT_PER_INT];		/* Enable Clear */
+	u32	  set_pending[NREGS_1_BIT_PER_INT];	/* Set Pending */
+	u32	  clr_pending[NREGS_1_BIT_PER_INT];	/* Clear Pending */
+	u32	  active[NREGS_1_BIT_PER_INT];		/* Active Bit registers */
+	u32	  dummy2[32];				/* -r- */
+	u32	  priority[NREGS_4_BIT_PER_INT];	/* Interrupt Priority */
+	u32	  target[NREGS_4_BIT_PER_INT];		/* CPU Target Registers */
+	u32	  config[NREGS_2_BIT_PER_INT];		/* Interrupt Config */
+	u32	  level[NREGS_2_BIT_PER_INT];		/* Interrupt Line Level */
+	u32	  dummy3[64];				/* -r- */
+	u32	  soft_int;				/* Software Interrupts */
+	u32	  dummy4[55];				/* -r- */
+	u32	  id[NID];				/* Primecell ID registers */
+};
+
+
+struct gic_data {
+	struct gic_cpu *cpu;
+	struct gic_dist *dist;
+};
+
+
+l4id_t gic_read_irq(void *data);
+
+void gic_mask_irq(l4id_t irq);
+
+void gic_unmask_irq(l4id_t irq);
+
+void gic_ack_irq(l4id_t irq);
+
+void gic_ack_and_mask(l4id_t irq);
+
+void gic_clear_pending(l4id_t irq);
+
+void gic_cpu_init(int idx, unsigned long base);
+
+void gic_dist_init(int idx, unsigned long base);
+
+void gic_send_ipi(int cpu, int ipi_cmd);
+
+void gic_set_target(u32 irq, u32 cpu);
+
+u32 gic_get_target(u32 irq);
+
+void gic_set_priority(u32 irq, u32 prio);
+
+u32 gic_get_priority(u32 irq);
+
+void gic_dummy_init(void);
+
+#endif /* __GIC_H__ */

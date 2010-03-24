@@ -46,7 +46,6 @@
  */
 #define CAP_DEVTYPE_TIMER		1
 #define CAP_DEVTYPE_UART		2
-#define CAP_DEVTYPE_CLCD		3
 #define CAP_DEVTYPE_OTHER		0xF
 #define CAP_DEVTYPE_MASK		0xFFFF
 #define CAP_DEVNUM_MASK			0xFFFF0000
@@ -102,6 +101,10 @@
 #define CAP_MAP_UNMAP		(1 << 5)
 #define CAP_MAP_UTCB		(1 << 6)
 
+/* Cache operations, applicable to (virtual) memory regions */
+#define CAP_CACHE_INVALIDATE		(1 << 7)
+#define CAP_CACHE_CLEAN			(1 << 8)
+
 /*
  * IRQ Control capability
  */
@@ -137,4 +140,6 @@
 #define CAP_CAP_DESTROY		(1 << 6)
 #define CAP_CAP_MODIFY		(CAP_CAP_DEDUCE | CAP_CAP_SPLIT \
 				 | CAP_CAP_DESTROY)
+
+
 #endif /* __CAP_TYPES_H__ */

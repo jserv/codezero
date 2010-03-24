@@ -1,25 +1,28 @@
 /*
  * UART service for userspace
  */
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/addr.h>
+#include <l4lib/macros.h>
+#include L4LIB_INC_ARCH(syslib.h)
+#include L4LIB_INC_ARCH(syscalls.h)
 #include <l4lib/exregs.h>
+#include <l4lib/lib/addr.h>
 #include <l4lib/ipcdefs.h>
 #include <l4/api/errno.h>
-
+#include <l4/api/capability.h>
+#include <l4/generic/cap-types.h>
 #include <l4/api/space.h>
-#include <l4lib/capability/cap_print.h>
 #include <container.h>
-#include <pl011_uart.h>  /* FIXME: Its best if this is <libdev/uart/pl011.h> */
 #include <linker.h>
+#include <uart.h>
+#include <libdev/uart.h>
 
-#define UARTS_TOTAL		3
-
+/* Capabilities of this service */
 static struct capability caparray[32];
 static int total_caps = 0;
 
-struct capability uart_cap[UARTS_TOTAL];
+/* Number of UARTS to be managed by this service */
+#define UARTS_TOTAL             1
+static struct uart uart[UARTS_TOTAL];
 
 int cap_read_all()
 {
@@ -45,7 +48,21 @@ int cap_read_all()
 		BUG();
 	}
 
-	//cap_array_print(total_caps, caparray);
+	return 0;
+}
+
+int cap_share_all_with_space()
+{
+	int err;
+	/* Share all capabilities */
+	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
+					 CAP_SHARE_ALL_SPACE, 0)) < 0) {
+		printf("l4_capability_control() sharing of "
+		       "capabilities failed.\n Could not "
+		       "complete CAP_CONTROL_SHARE request. err=%d\n", err);
+		BUG();
+	}
+
 	return 0;
 }
 
@@ -61,8 +78,8 @@ int uart_probe_devices(void)
 		/* Match device type */
 		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_UART) {
 			/* Copy to correct device index */
-			memcpy(&uart_cap[cap_devnum(&caparray[i]) - 1],
-			       &caparray[i], sizeof(uart_cap[0]));
+			memcpy(&uart[cap_devnum(&caparray[i]) - 1].cap,
+			       &caparray[i], sizeof(uart[0].cap));
 			uarts++;
 		}
 	}
@@ -75,7 +92,7 @@ int uart_probe_devices(void)
 	return 0;
 }
 
-static struct pl011_uart uart[UARTS_TOTAL];
+static struct uart uart[UARTS_TOTAL];
 
 int uart_setup_devices(void)
 {
@@ -84,24 +101,32 @@ int uart_setup_devices(void)
 		uart[i].base = (unsigned long)l4_new_virtual(1);
 
 		/* Map uart to a virtual address region */
-		if (IS_ERR(l4_map((void *)__pfn_to_addr(uart_cap[i].start),
-				  (void *)uart[i].base, uart_cap[i].size,
-				  MAP_USR_IO_FLAGS,
-				  self_tid()))) {
+		if (IS_ERR(l4_map((void *)__pfn_to_addr(uart[i].cap.start),
+				  (void *)uart[i].base, uart[i].cap.size,
+				  MAP_USR_IO, self_tid()))) {
 			printf("%s: FATAL: Failed to map UART device "
 			       "%d to a virtual address\n",
 			       __CONTAINER_NAME__,
-			       cap_devnum(&uart_cap[i]));
+			       cap_devnum(&uart[i].cap));
 			BUG();
 		}
 
 		/* Initialize uart */
-		pl011_initialise(&uart[i]);
+		uart_init(uart[i].base);
 	}
 	return 0;
 }
 
+/*
+ * Declare a statically allocated char buffer
+ * with enough bitmap size to cover given size
+ */
+#define DECLARE_IDPOOL(name, size)      \
+	         char name[(sizeof(struct id_pool) + ((size >> 12) >> 3))]
+
+#define PAGE_POOL_SIZE                  SZ_1MB
 static struct address_pool device_vaddr_pool;
+DECLARE_IDPOOL(device_id_pool, PAGE_POOL_SIZE);
 
 /*
  * Initialize a virtual address pool
@@ -130,9 +155,9 @@ void init_vaddr_pool(void)
 				 * addresses from this pool.
 				 */
 				address_pool_init(&device_vaddr_pool,
+						  (struct id_pool *)&device_id_pool,
 						  page_align_up(__end),
-						  __pfn_to_addr(caparray[i].end),
-						  UARTS_TOTAL);
+						  __pfn_to_addr(caparray[i].end));
 				return;
 			} else
 				goto out_err;
@@ -153,16 +178,12 @@ void *l4_new_virtual(int npages)
 
 void uart_generic_tx(char c, int devno)
 {
-	pl011_tx_char(uart[devno].base, c);
+	uart_tx_char(uart[devno].base, c);
 }
 
 char uart_generic_rx(int devno)
 {
-	char c;
-
-	pl011_rx_char(uart[devno].base, &c);
-
-	return c;
+	return uart_rx_char(uart[devno].base);
 }
 
 void handle_requests(void)
@@ -267,6 +288,9 @@ void main(void)
 
 	/* Read all capabilities */
 	cap_read_all();
+
+	/* Share all with space */
+	cap_share_all_with_space();
 
 	/* Scan for uart devices in capabilities */
 	uart_probe_devices();

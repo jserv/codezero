@@ -9,7 +9,6 @@
  * source file, using gcc's -imacro command line option.  Only macro
  * definitions will be extracted.
  */
-
 #define INC_ARCH(x)             <l4/arch/__ARCH__/x>
 #define INC_SUBARCH(x)		<l4/arch/__ARCH__/__SUBARCH__/x>
 #define INC_CPU(x)		<l4/arch/__ARCH__/__SUBARCH__/__CPU__/x>
@@ -19,9 +18,16 @@
 
 #define __initdata	SECTION(".init.data")
 
+/*
+ * FIXME: Remove __CPP__
+ * This is defined in kernel linker.lds.in,
+ * find some better way.
+ */
+#if !defined(__CPP__)
 /* use this to place code/data in a certain section */
 #define SECTION(x) __attribute__((section(x)))
 #define ALIGN(x) __attribute__((aligned (x)))
+#endif
 
 /* Functions for critical path optimizations */
 #if (__GNUC__ >= 3)
@@ -40,11 +46,13 @@
 #endif
 /* Convenience functions for memory sizes. */
 #define SZ_1K			1024
+#define SZ_2K			2048
 #define SZ_4K			0x1000
 #define SZ_16K			0x4000
 #define SZ_32K			0x8000
 #define SZ_64K			0x10000
 #define SZ_1MB			0x100000
+#define SZ_2MB			0x200000
 #define SZ_4MB			(4*SZ_1MB)
 #define SZ_8MB			(8*SZ_1MB)
 #define SZ_16MB			(16*SZ_1MB)
@@ -52,6 +60,25 @@
 #define SZ_4K_BITS		12
 #define SZ_16K_BITS		14
 #define SZ_1MB_BITS		20
+
+/* Per-cpu variables */
+
+#if defined CONFIG_SMP
+#define DECLARE_PERCPU(type, name)	\
+type name[CONFIG_NCPU]
+
+#define per_cpu(val)	(val)[smp_get_cpuid()]
+#define per_cpu_byid(val, cpu)	(val)[(cpu)]
+
+#else /* Not CONFIG_SMP */
+
+#define DECLARE_PERCPU(type, name)	\
+type name
+
+#define per_cpu(val)	(val)
+#define per_cpu_byid(val, cpu)	val
+
+#endif /* End of Not CONFIG_SMP */
 
 #ifndef __ASSEMBLY__
 #include <stddef.h>	/* offsetof macro, defined in the `standard' way. */

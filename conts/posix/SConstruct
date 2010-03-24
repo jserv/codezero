@@ -18,6 +18,7 @@ from config.lib import *
 
 config = configuration_retrieve()
 arch = config.arch
+gcc_arch_flag = config.gcc_arch_flag
 
 LIBL4_RELDIR = 'conts/libl4'
 KERNEL_INCLUDE = join(PROJROOT, 'include')
@@ -48,25 +49,27 @@ LIBPOSIX_INCLUDE_SERVER = join(LIBPOSIX_DIR, 'include')
 LIBPOSIX_INCLUDE_USERSPACE = join(LIBPOSIX_DIR, 'include/posix')
 LIBPOSIX_LIBPATH = join(BUILDDIR, LIBPOSIX_RELDIR)
 
-env = Environment(CC = config.user_toolchain + 'gcc',
-           		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', \
-	    	      '-std=gnu99', '-Wall', '-Werror'],
-	              LINKFLAGS = ['-nostdlib'],
-           		  ASFLAGS = ['-D__ASSEMBLY__'],
-           		  PROGSUFFIX = '.elf',
-           		  ENV = {'PATH' : os.environ['PATH']},
-           		  LIBS = ['gcc', 'libl4', 'c-userspace','libdev-userspace', \
-                          'libmm', 'libmc', 'libmalloc', 'gcc'],
-                  CPPPATH = ['include', LIBDEV_INCLUDE, LIBC_INCLUDE, KERNEL_INCLUDE,
-                             LIBL4_INCLUDE, LIBMEM_INCLUDE],
-                  LIBPATH = [LIBDEV_LIBPATH, LIBC_LIBPATH, LIBL4_LIBPATH,
-                             LIBMEM_LIBPATH, LIBPOSIX_LIBPATH],
-          		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+env = Environment(CC = config.toolchain + 'gcc',
+		  AR = config.toolchain + 'ar',
+		  RANLIB = config.toolchain + 'ranlib',
+		  CCFLAGS = ['-g','-nostdinc', '-nostdlib', '-ffreestanding',
+		             '-march=' + gcc_arch_flag, '-std=gnu99', '-Wall', '-Werror'],
+		  LINKFLAGS = ['-nostdlib'],
+		  ASFLAGS = ['-D__ASSEMBLY__'],
+		  PROGSUFFIX = '.elf',
+		  ENV = {'PATH' : os.environ['PATH']},
+		  LIBS = ['libl4', 'libdev-userspace', 'gcc', 'c-userspace', \
+                  'gcc', 'libmm', 'libmc', 'libmalloc'],
+          CPPPATH = ['include', LIBDEV_INCLUDE, LIBC_INCLUDE, KERNEL_INCLUDE,
+                     LIBL4_INCLUDE, LIBMEM_INCLUDE, LIBPOSIX_INCLUDE_USERSPACE],
+          LIBPATH = [LIBDEV_LIBPATH, LIBC_LIBPATH, LIBL4_LIBPATH,
+                     LIBMEM_LIBPATH, LIBPOSIX_LIBPATH],
+          CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
 contid = ARGUMENTS.get('cont', '0')
 
 libposix_env = env.Clone()
-libposix_env.Replace(CPPPATH = [LIBPOSIX_INCLUDE_USERSPACE, 'include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
+libposix_env.Replace(CPPPATH = [LIBPOSIX_INCLUDE_USERSPACE, 'include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE, LIBC_INCLUDE])
 libposix = SConscript('libposix/SConscript', \
                       exports = { 'config' : config,  'env' : libposix_env, 'contid' : contid}, duplicate = 0, \
                       variant_dir = join(BUILDDIR, 'conts' + '/posix' + '/libposix'))
@@ -83,7 +86,7 @@ rootfs = SConscript('rootfs/SConscript', \
 
 # No libposix reference because it conflicts with the compiler C library + the cluncky libc we have.
 test0_env = env.Clone()
-test0_env.Replace(CPPPATH = ['include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE])
+test0_env.Replace(CPPPATH = ['include', KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE, LIBC_INCLUDE, LIBPOSIX_INCLUDE_USERSPACE])
 test0 = SConscript('test0/SConscript', \
                    exports = { 'config' : config,  'environment' : test0_env, 'contid' : contid, 'previmage' : rootfs }, duplicate = 0, \
                    variant_dir = join(BUILDDIR, 'cont' + str(contid) + '/posix' + '/test0'))

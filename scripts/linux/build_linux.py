@@ -40,12 +40,31 @@ class LinuxUpdateKernel:
             ['USB_SUPPORT', 'UNSET'],['SOUND', 'UNSET'],)
 
         # List of CPUIDs, to be used by linux based on codezero config
-        self.cpuid_list = (['ARM926', '0x41069265'],)
+        self.cpuid_list = (['ARM926', '0x41069265'],
+                           ['CORTEXA8', '0x410fc080'],
+                           ['ARM11MPCORE', '0x410fb022'],
+                           ['CORTEXA9', '0x410fc090'])
         # List of ARCHIDs, to be used by linux based on codezero config
         self.archid_list = (['PB926', '0x183'],
-                            ['PB1176', '0x5E0'],
                             ['EB', '0x33B'],
-                            ['PB11MPCORE', '0x3D4'],)
+                            ['PB11MPCORE', '0x3D4'],
+                            ['BEAGLE', '0x60A'],
+                            ['PBA9', '0x76D'],
+                            ['PBA8', '0x769'])
+
+        # Path of system_macros header file
+        self.system_macros_h_out = \
+            join(LINUX_KERNELDIR,
+                'arch/codezero/include/virtualization/system_macros.h')
+        self.system_macros_h_in = \
+            join(LINUX_KERNELDIR,
+                'arch/codezero/include/virtualization/system_macros.h.in')
+
+        #Path for kernel_param file
+        self.kernel_param_out = \
+            join(LINUX_KERNELDIR, 'arch/codezero/include/virtualization/kernel_param')
+        self.kernel_param_in = \
+                join(LINUX_KERNELDIR, 'arch/codezero/include/virtualization/kernel_param.in')
 
     # Replace line(having input_pattern) in filename with new_data
     def replace_line(self, filename, input_pattern, new_data, prev_line):
@@ -81,41 +100,20 @@ class LinuxUpdateKernel:
                     # Write back to file
                     f.write(l.replace(line, new_data))
 
-    def update_kernel_params(self, container):
-        # Update TEXT_START
-        file = join(LINUX_KERNELDIR, 'arch/arm/boot/compressed/Makefile')
-        param = str(conv_hex(container.linux_phys_offset))
-        new_data = ('ZTEXTADDR' + '\t' + ':= ' + param + '\n')
-        data_to_replace = "(ZTEXTADDR)(\t)(:= 0)"
-        prev_line = ''
-        self.replace_line(file, data_to_replace, new_data, prev_line)
-
-        # Update PHYS_OFFSET
-        file = join(LINUX_KERNELDIR, 'arch/arm/mach-versatile/include/mach/memory.h')
-        param = str(conv_hex(container.linux_phys_offset))
-        new_data = ('#define PHYS_OFFSET     UL(' + param + ')\n')
-        data_to_replace = "(#define PHYS_OFFSET)"
-        prev_line = ''
-        self.replace_line(file, data_to_replace, new_data, prev_line)
-
+    # Update kernel parameters
+    def update_kernel_params(self, config, container):
         # Update PAGE_OFFSET
-        file = join(LINUX_KERNELDIR, 'arch/arm/Kconfig')
+        # FIXME: Find a way to add this in system_macros.h or kernel_param
+        # issue is we have to update this in KCONFIG file which cannot
+        # have dependency on other files.
+        file = join(LINUX_KERNELDIR, 'arch/codezero/Kconfig')
         param = str(conv_hex(container.linux_page_offset))
         new_data = ('\t' + 'default ' + param + '\n')
         data_to_replace = "(\t)(default )"
         prev_line = ('\t'+'default 0x80000000 if VMSPLIT_2G' + '\n')
         self.replace_line(file, data_to_replace, new_data, prev_line)
 
-        # Update ZRELADDR
-        file = join(LINUX_KERNELDIR, 'arch/arm/mach-versatile/Makefile.boot')
-        param = str(conv_hex(container.linux_zreladdr))
-        new_data = ('   zreladdr-y' + '\t' + ':= ' + param + '\n')
-        data_to_replace = "(\s){3}(zreladdr-y)(\t)(:= )"
-        prev_line = ''
-        self.replace_line(file, data_to_replace, new_data, prev_line)
-
     # Update ARCHID, CPUID and ATAGS ADDRESS
-    def modify_register_values(self, config, container):
         for cpu_type, cpu_id in self.cpuid_list:
             if cpu_type == config.cpu.upper():
                 cpuid = cpu_id
@@ -125,23 +123,28 @@ class LinuxUpdateKernel:
                 archid = arch_id
                 break
 
-        file = join(LINUX_KERNELDIR, 'arch/arm/kernel/head.S')
-        prev_line = ''
-        new_data = ('cpuid:  .word   ' + cpuid + '\n')
-        data_to_replace = "(cpuid:)"
-        self.replace_line(file, data_to_replace, new_data, prev_line)
+        # Create system_macros header
+        with open(self.system_macros_h_out, 'w+') as output:
+            with open(self.system_macros_h_in, 'r') as input:
+                output.write(input.read() % \
+                    {'cpuid'        : cpuid, \
+                     'archid'       : archid, \
+                     'atags'        : str(conv_hex(container.linux_page_offset + 0x100)), \
+                     'ztextaddr'    : str(conv_hex(container.linux_phys_offset)), \
+                     'phys_offset'  : str(conv_hex(container.linux_phys_offset)), \
+                     'page_offset'  : str(conv_hex(container.linux_page_offset)), \
+                     'zreladdr'     : str(conv_hex(container.linux_zreladdr))})
 
-        new_data = ('archid: .word   ' + archid + '\n')
-        data_to_replace = "(archid:)"
-        self.replace_line(file, data_to_replace, new_data, prev_line)
-        # Atags will be present at PHYS_OFFSET + 0x100(=256)
-        new_data = ('atags:  .word   ' + \
-                    str(conv_hex(container.linux_phys_offset + 0x100)) + '\n')
-        data_to_replace = "(atags:)"
-        self.replace_line(file, data_to_replace, new_data, prev_line)
+        with open(self.kernel_param_out, 'w+') as output:
+            with open(self.kernel_param_in, 'r') as input:
+                output.write(input.read() % \
+                      {'ztextaddr'    : str(conv_hex(container.linux_phys_offset)), \
+                       'phys_offset'  : str(conv_hex(container.linux_phys_offset)), \
+                       'page_offset'  : str(conv_hex(container.linux_page_offset)), \
+                       'zreladdr'     : str(conv_hex(container.linux_zreladdr))})
 
-    def modify_kernel_config(self):
-        file = join(LINUX_KERNELDIR, 'arch/arm/configs/versatile_defconfig')
+    def modify_kernel_config(self, linux_builddir):
+        file = join(linux_builddir, '.config')
         for param_name, param_value in self.config_param_list:
             param = 'CONFIG_' + param_name
             prev_line = ''
@@ -152,7 +155,7 @@ class LinuxUpdateKernel:
                 data_to_replace = param
                 new_data = ('# ' + param + ' is not set' + '\n')
 
-            self.replace_line(file, data_to_replace, new_data, prev_line)
+        self.replace_line(file, data_to_replace, new_data, prev_line)
 
 class LinuxBuilder:
 
@@ -170,23 +173,36 @@ class LinuxBuilder:
         self.kernel_image = join(self.LINUX_KERNEL_BUILDDIR, "linux.elf")
         self.kernel_updater = LinuxUpdateKernel(self.container)
 
+        # Default configuration file to use based on selected platform
+        self.platform_config_file = (['PB926', 'versatile_defconfig'],
+                                     ['BEAGLE', 'omap3_beagle_defconfig'],
+                                     ['PBA8', 'realview_defconfig'],
+                                     ['PBA9', 'realview-smp_defconfig'],
+                                     ['PB11MPCORE', 'realview-smp_defconfig'],)
+
     def build_linux(self, config):
         print '\nBuilding the linux kernel...'
         os.chdir(self.LINUX_KERNELDIR)
         if not os.path.exists(self.LINUX_KERNEL_BUILDDIR):
             os.makedirs(self.LINUX_KERNEL_BUILDDIR)
 
-        self.kernel_updater.modify_kernel_config()
-        self.kernel_updater.update_kernel_params(self.container)
-        self.kernel_updater.modify_register_values(config, self.container)
+        for platform, config_file in self.platform_config_file:
+            if platform == config.platform.upper():
+                configuration_file = config_file
+        os.system("make ARCH=codezero CROSS_COMPILE=" + config.toolchain + \
+                  " O=" + self.LINUX_KERNEL_BUILDDIR + " " + configuration_file)
 
-        os.system("make defconfig ARCH=arm O=" + self.LINUX_KERNEL_BUILDDIR)
-        os.system("make ARCH=arm " + \
-                  "CROSS_COMPILE=" + config.user_toolchain + " O=" + \
+        self.kernel_updater.modify_kernel_config(self.LINUX_KERNEL_BUILDDIR)
+        self.kernel_updater.update_kernel_params(config, self.container)
+
+        os.system("make ARCH=codezero CROSS_COMPILE=" + config.toolchain + \
+                  " O=" + self.LINUX_KERNEL_BUILDDIR + " menuconfig")
+        os.system("make ARCH=codezero " + \
+                  "CROSS_COMPILE=" + config.toolchain + " O=" + \
                   self.LINUX_KERNEL_BUILDDIR)
 
         # Generate kernel_image, elf to be used by codezero
-        linux_elf_gen_cmd = ("arm-none-linux-gnueabi-objcopy -R .note \
+        linux_elf_gen_cmd = (config.toolchain + "objcopy -R .note \
             -R .note.gnu.build-id -R .comment -S --change-addresses " + \
             str(conv_hex(-self.container.linux_page_offset + self.container.linux_phys_offset)) + \
             " " + self.kernel_binary_image + " " + self.kernel_image)

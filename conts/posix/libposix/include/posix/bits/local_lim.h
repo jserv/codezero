@@ -33,7 +33,7 @@
 #endif
 
 /* The kernel sources contain a file with all the needed information.  */
-#include <linux/limits.h>
+//#include <linux/limits.h>
 
 /* Have to remove NR_OPEN?  */
 #ifdef __undef_NR_OPEN

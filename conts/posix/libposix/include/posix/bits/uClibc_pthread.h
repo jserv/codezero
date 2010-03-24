@@ -23,9 +23,9 @@
 #ifndef _UCLIBC_PTHREAD_H
 #define _UCLIBC_PTHREAD_H
 
-#ifndef _PTHREAD_H
-# error "Always include <pthread.h> rather than <bits/uClibc_pthread.h>"
-#endif
+//#ifndef _PTHREAD_H
+//# error "Always include <pthread.h> rather than <bits/uClibc_pthread.h>"
+//#endif
 
 #if defined _LIBC && (defined IS_IN_libc || defined NOT_IN_libc)
 /* Threading functions internal to uClibc.  Make these thread functions

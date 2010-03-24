@@ -26,14 +26,16 @@ int clonetest(void)
 	void *child_stack;
 
 	/* Parent loops and calls clone() to clone new threads. Children don't come back from the clone() call */
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 20; i++) {
 		if ((child_stack = mmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_GROWSDOWN, 0, 0)) == MAP_FAILED) {
 			test_printf("MMAP failed.\n");
 			goto out_err;
 		} else {
 			test_printf("Mapped area starting at %p\n", child_stack);
 		}
-		((int *)child_stack)[-1] = 5; /* Test mapped area */
+		// printf("mmap returned child stack: %p\n", child_stack);
+
+		// ((int *)child_stack)[-1] = 5; /* Test mapped area */
 
 		test_printf("Cloning...\n");
 

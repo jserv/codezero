@@ -7,12 +7,11 @@
 #include <init.h>
 #include <memory.h>
 #include <capability.h>
-#include <l4lib/capability/cap_print.h>
 #include <l4/api/errno.h>
 #include <l4/lib/list.h>
-#include <l4lib/arch/syscalls.h>
+#include L4LIB_INC_ARCH(syscalls.h)
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 #include <malloc/malloc.h>
 #include <user.h>
 
@@ -504,15 +503,14 @@ int sys_request_cap(struct tcb *task, struct capability *__cap_userptr)
 	struct capability *cap;
 	int ret;
 
-	if (!(cap = pager_validate_map_user_range(task, __cap_userptr,
-						  sizeof(*__cap_userptr),
-						  VM_READ | VM_WRITE)))
+	if (!(cap = pager_get_user_page(task, __cap_userptr,
+					sizeof(*__cap_userptr),
+					VM_READ | VM_WRITE)))
 		return -EFAULT;
 
 	/* Only support IPC requests for now */
 	if (cap_type(cap) != CAP_TYPE_IPC) {
 		ret = -EPERM;
-		goto out;
 	}
 
 	/* Validate rest of the fields */
@@ -560,7 +558,6 @@ int sys_request_cap(struct tcb *task, struct capability *__cap_userptr)
 	}
 
 out:
-	pager_unmap_user_range(cap, sizeof(*cap));
 	return ret;
 }
 

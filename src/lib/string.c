@@ -1,30 +1,18 @@
+/*
+ * Copyright 2008-2010 B Labs Ltd.
+ */
 
+void *_memset(void *p, int c, int size);
+void *_memcpy(void *d, void *s, int size);
 
 void *memset(void *p, int c, int size)
 {
-	char ch;
-	char *pp;
-
-	pp = (char *)p;
-	ch = (char)c;
-
-	for (int i = 0; i < size; i++) {
-		*pp++ = ch;
-	}
-	return p;
+	return _memset(p, c, size);
 }
 
 void *memcpy(void *d, void *s, int size)
 {
-	char *dst = (char *)d;
-	char *src = (char *)s;
-
-	for (int i = 0; i < size; i++) {
-		*dst = *src;
-		dst++;
-		src++;
-	}
-	return d;
+	return _memcpy(d, s, size);
 }
 
 

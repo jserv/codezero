@@ -5,10 +5,8 @@
 
 int pager_validate_user_range(struct tcb *user, void *userptr, unsigned long size,
 			      unsigned int vm_flags);
-void *pager_validate_map_user_range(struct tcb *user, void *userptr,
-				    unsigned long size, unsigned int vm_flags);
-void pager_unmap_user_range(void *mapped_ptr, unsigned long size);
-
+void *pager_get_user_page(struct tcb *user, void *userptr,
+			  unsigned long size, unsigned int vm_flags);
 int copy_user_args(struct tcb *task, struct args_struct *args,
 		   void *argv_user, int args_max);
 int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,

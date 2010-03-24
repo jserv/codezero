@@ -1,106 +1,222 @@
 /*
- * PL190 Vectored irq controller support.
+ * PLXXX Generic Interrupt Controller support.
  *
- * This is more pb926 specific as it also touches the SIC, a partial irq
- * controller.Normally, irq controller must be independent and singular. Later
- * other generic code should make thlongwork in cascaded setup.
- *
- * Copyright (C) 2007 Bahadir Balban
+ * This is more ARM Realview EB/PB
+ * Copyright (C) 2009-2010 B Labs Ltd.
+ * Author: Prem Mallappa <prem.mallappa@b-labs.co.uk>
  */
 
 #include <l4/lib/bit.h>
-#include <l4/drivers/irq/pl190/pl190_vic.h>
+#include <l4/lib/printk.h>
+#include <l4/generic/irq.h>
+#include INC_PLAT(irq.h)
+#include INC_SUBARCH(mmu_ops.h)  /* for dmb/dsb() */
+#include <l4/drivers/irq/gic/gic.h>
 
-/* FIXME: Fix the stupid uart driver and change to single definition of this! */
-#if defined(read)
-#undef read
-#endif
-#if defined(write)
-#undef write
-#endif
+volatile struct gic_data gic_data[IRQ_CHIPS_MAX];
 
-#define	read(a)				*((volatile unsigned int *)(a))
-#define	write(v, a)			(*((volatile unsigned int *)(a)) = v)
-#define	setbit(bitvect, a)		write(read(a) | (bitvect), a)
-#define	clrbit(bitvect, a)		write(read(a) & ~(bitvect), a)
-#define	devio(base, reg, bitvect, setclr)			\
-		((setclr) ? setbit(bitvect, (base + reg))	\
-		: clrbit(bitvect, (base + reg)))
+static inline struct gic_data *get_gic_data(l4id_t irq)
+{
+	struct irq_chip *chip = irq_desc_array[irq].chip;
+	if (chip)
+		return (struct gic_data *)irq_desc_array[irq].chip->data;
+	else
+		return 0;
+}
 
-#if 0
 /* Returns the irq number on this chip converting the irq bitvector */
-int pl190_read_irq(void)
+l4id_t gic_read_irq(void *data)
 {
-	/* This also correctly returns a negative value for a spurious irq. */
-	return 31 - __clz(read(PL190_VIC_IRQSTATUS));
+	int irq;
+	volatile struct gic_data *gic = (struct gic_data *)data;
+	irq = gic->cpu->ack & 0x1ff;
+
+	if (irq == 1023)
+		return -1023;			/* Spurious */
+
+	return irq;
 }
 
-void pl190_mask_irq(int irq)
+void gic_mask_irq(l4id_t irq)
 {
-	/* Reading WO registers blows QEMU/PB926.
-	 * setbit((1 << irq), PL190_VIC_INTENCLEAR); */
-	write(1 << irq, PL190_VIC_INTENCLEAR);
+	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	gic->dist->clr_en[offset] = 1 << (irq % 32);
 }
 
-/* Ack is same as mask */
-void pl190_ack_irq(int irq)
+void gic_unmask_irq(l4id_t irq)
 {
-	pl190_mask_irq(irq);
+	volatile struct gic_data *gic = get_gic_data(irq);
+
+	u32 offset = irq >> 5 ; /* offset = irq / 32 */
+	gic->dist->set_en[offset] = 1 << (irq % 32);
 }
 
-void pl190_unmask_irq(int irq)
+void gic_ack_irq(l4id_t irq)
 {
-	setbit(1 << irq, PL190_VIC_INTENABLE);
+	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	gic->dist->clr_en[offset] = 1 << (irq % 32);
+	gic->cpu->eoi = irq;
 }
 
-int pl190_sic_read_irq(void)
+void gic_ack_and_mask(l4id_t irq)
 {
-	return 32 - __clz(read(PL190_SIC_STATUS));
+	gic_ack_irq(irq);
+	gic_mask_irq(irq);
 }
 
-void pl190_sic_mask_irq(int irq)
+void gic_set_pending(l4id_t irq)
 {
-	write(1 << irq, PL190_SIC_ENCLR);
+	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	gic->dist->set_pending[offset] = 1 << (irq % 32);
 }
 
-void pl190_sic_ack_irq(int irq)
+void gic_clear_pending(l4id_t irq)
 {
-	pl190_sic_mask_irq(irq);
+	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	gic->dist->clr_pending[offset] = 1 << (irq % 32);
 }
 
-void pl190_sic_unmask_irq(int irq)
+
+void gic_cpu_init(int idx, unsigned long base)
 {
-	setbit(1 << irq, PL190_SIC_ENSET);
+	struct gic_cpu *cpu;
+	cpu = gic_data[idx].cpu = (struct gic_cpu *)base;
+
+	/* Disable */
+	cpu->control = 0;
+
+	cpu->prio_mask = 0xf0;
+	cpu->bin_point = 3;
+
+	cpu->control = 1;
 }
 
-/* Initialises the primary and secondary interrupt controllers */
-void pl190_vic_init(void)
+void gic_dist_init(int idx, unsigned long base)
 {
+	int i, irqs_per_word; 	/* Interrupts per word */
+	struct gic_dist *dist;
+	dist = gic_data[idx].dist = (struct gic_dist *)(base);
+
+	/* Surely disable GIC */
+	dist->control = 0;
+
+	/* 32*(N+1) interrupts supported */
+	int nirqs = 32 * ((dist->type & 0x1f) + 1);
+	if (nirqs > IRQS_MAX)
+		nirqs = IRQS_MAX;
+
 	/* Clear all interrupts */
-	write(0, PL190_VIC_INTENABLE);
-	write(0xFFFFFFFF, PL190_VIC_INTENCLEAR);
+	irqs_per_word = 32;
+	for(i = 0; i < nirqs ; i+=irqs_per_word) {
+		dist->clr_en[i/irqs_per_word] = 0xffffffff;
+	}
 
-	/* Set all irqs as normal IRQs (i.e. not FIQ) */
-	write(0, PL190_VIC_INTSELECT);
-	/* TODO: Is there a SIC_IRQ_SELECT for irq/fiq ??? */
+	/* Clear all pending interrupts */
+	for(i = 0; i < nirqs ; i+=irqs_per_word) {
+		dist->clr_pending[i/irqs_per_word] = 0xffffffff;
+	}
 
-	/* Disable user-mode access to VIC registers */
-	write(1, PL190_VIC_PROTECTION);
+	/* Set all irqs as normal priority, 8 bits per interrupt */
+	irqs_per_word = 4;
+	for(i = 32; i < nirqs ; i+=irqs_per_word) {
+		dist->priority[i/irqs_per_word] = 0xa0a0a0a0;
+	}
 
-	/* Clear software interrupts */
-	write(0xFFFFFFFF, PL190_VIC_SOFTINTCLEAR);
+	/* Set all target to cpu0, 8 bits per interrupt */
+	for(i = 32; i < nirqs ; i+=irqs_per_word) {
+		dist->target[i/irqs_per_word] = 0x01010101;
+	}
 
-	/* At this point, all interrupts are cleared and disabled.
-	 * the controllers are ready to receive interrupts, if enabled. */
-	return;
+	/* Configure all to be level-sensitive, 2 bits per interrupt */
+	irqs_per_word = 16;
+	for(i = 32; i < nirqs ; i+=irqs_per_word) {
+		dist->config[i/irqs_per_word] = 0x00000000;
+	}
+
+	/* Enable GIC Distributor */
+	dist->control = 1;
 }
 
-void pl190_sic_init(void)
+
+/* Some functions, may be helpful */
+void gic_set_target(u32 irq, u32 cpu)
 {
-	write(0, PL190_SIC_ENABLE);
-	write(0xFFFFFFFF, PL190_SIC_ENCLR);
-	/* Disable SIC-to-PIC direct routing of individual irq lines on SIC */
-	write(0xFFFFFFFF, PL190_SIC_PICENCLR);
+	/* cpu is a mask, not cpu number */
+	cpu &= 0xF;
+	irq &= 0xFF;
+	volatile struct gic_data *gic = get_gic_data(irq);
+	u32 offset = irq >> 2; /* offset = irq / 4 */
+	gic->dist->target[offset] |= (cpu << ((irq % 4) * 8));
 }
 
-#endif
+u32 gic_get_target(u32 irq)
+{
+	/* cpu is a mask, not cpu number */
+	unsigned int target;
+	irq &= 0xFF;
+	u32 offset = irq >> 2; /* offset = irq / 4 */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	target = gic->dist->target[offset];
+	target >>= ((irq % 4) * 8);
+
+	return target & 0xFF;
+}
+
+void gic_set_priority(u32 irq, u32 prio)
+{
+	/* cpu is a mask, not cpu number */
+	prio &= 0xF;
+	irq &= 0xFF;
+	u32 offset = irq >> 3; /* offset = irq / 8 */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	/* target = cpu << ((irq % 4) * 4) */
+	gic->dist->target[offset] |= (prio << (irq & 0x1C));
+}
+
+u32 gic_get_priority(u32 irq)
+{
+	/* cpu is a mask, not cpu number */
+	irq &= 0xFF;
+	u32 offset = irq >> 3; /* offset = irq / 8 */
+	volatile struct gic_data *gic = get_gic_data(irq);
+	return gic->dist->target[offset] & (irq & 0xFC);
+}
+
+#define TO_MANY		0	/* to all specified in a CPU mask */
+#define TO_OTHERS	1	/* all but me */
+#define TO_SELF		2	/* just to the requesting CPU */
+
+#define CPU_MASK_BIT  16
+#define TYPE_MASK_BIT 24
+
+void gic_send_ipi(int cpu, int ipi_cmd)
+{
+	/* if cpu is 0, then ipi is sent to self
+	 * if cpu has exactly 1 bit set, the ipi to just that core
+	 * if cpu has a mask, sent to all but current
+	 */
+	struct gic_dist *dist = gic_data[0].dist;
+
+	ipi_cmd &= 0xf;
+	cpu &= 0xff;
+
+	dsb();
+
+	if (cpu == 0)				/* Self */
+		dist->soft_int = (TO_SELF << 24) | ipi_cmd;
+	else if ((cpu & (cpu-1)) == 0)		/* Exactly to one CPU */
+		dist->soft_int = (TO_MANY << 24) | (cpu << 16) | ipi_cmd;
+	else				/* All but me */
+		dist->soft_int = (TO_OTHERS << 24) | (cpu << 16) | ipi_cmd;
+
+}
+
+/* Make the generic code happy :) */
+void gic_dummy_init()
+{
+
+}

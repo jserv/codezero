@@ -36,21 +36,20 @@ def cml2_header_to_symbols(cml2_header, config):
             if pair is not None:
                 name, value = pair
                 config.get_all(name, value)
+                config.get_cpu(name, value)
                 config.get_arch(name, value)
                 config.get_subarch(name, value)
                 config.get_platform(name, value)
-                config.get_cpu(name, value)
                 config.get_ncontainers(name, value)
                 config.get_container_parameters(name, value)
-                config.get_toolchain_kernel(name, value)
-                config.get_toolchain_user(name, value)
+                config.get_toolchain(name, value)
 
 def cml2_update_config_h(config_h_path, config):
     with open(config_h_path, "a") as config_h:
         config_h.write("#define __ARCH__ " + config.arch + '\n')
         config_h.write("#define __PLATFORM__ " + config.platform + '\n')
         config_h.write("#define __SUBARCH__ " + config.subarch + '\n')
-
+        config_h.write("#define __CPU__ " + config.cpu + '\n')
 
 def configure_kernel(cml_file):
     config = configuration()
@@ -91,6 +90,10 @@ def build_parse_options():
                       default = False, dest = "print_config",
                       help = "Prints out configuration settings"
                              "(Symbol values and container parameters are printed)")
+    parser.add_option("-q", "--quite", action="store_true", dest="quite", default = False,
+                      help = "Enable quite mode"
+                             "(will not be presented with a configuration screen)")
+
 
     (options, args) = parser.parse_args()
 
@@ -148,10 +151,17 @@ def configure_system(options, args):
         if os.path.exists(CML2_CONFIG_FILE) and options.backup_config:
             shutil.copy(CML2_CONFIG_FILE, CML2_CONFIG_FILE_SAVED)
 
-        # Create configuration from existing file
-        os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + \
-                  CML2_CONFIG_FILE + ' -i ' + cml2_config_file + \
-                  ' ' + CML2_COMPILED_RULES)
+        if options.quite:
+                # Create configuration from existing file
+                os.system(CML2TOOLSDIR + '/cmlconfigure.py -b -o ' + \
+                        CML2_CONFIG_FILE + ' -i ' + cml2_config_file + \
+                        ' ' + CML2_COMPILED_RULES)
+        else:
+                # Create configuration from existing file
+                os.system(CML2TOOLSDIR + '/cmlconfigure.py -c -o ' + \
+                        CML2_CONFIG_FILE + ' -i ' + cml2_config_file + \
+                        ' ' + CML2_COMPILED_RULES)
+
     else:
         rules_file = autogen_rules_file(options, args)
 

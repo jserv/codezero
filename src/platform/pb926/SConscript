@@ -4,7 +4,7 @@
 Import('env')
 
 # The set of source files associated with this SConscript file.
-src_local = ['printascii.S','platform.c', 'uart.c', 'timer.c', 'irq.c']
+src_local = ['print-early.c','platform.c', 'irq.c']
 
 obj = env.Object(src_local)
 Return('obj')

@@ -6,6 +6,7 @@
 #include <l4/config.h>
 #include <l4/macros.h>
 #include <l4/generic/scheduler.h>
+#include <l4/generic/debug.h>
 #include <l4/generic/platform.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/irq.h>
@@ -57,7 +58,8 @@ static inline void cascade_irq_chip(struct irq_chip *this_chip)
 {
 	if (this_chip->cascade >= 0) {
 		BUG_ON(IRQ_CHIPS_MAX == 1);
-		this_chip->ops.unmask(this_chip->cascade);
+		if(this_chip->ops.unmask)
+			this_chip->ops.unmask(this_chip->cascade);
 	}
 }
 
@@ -69,7 +71,8 @@ void irq_controllers_init(void)
 		this_chip = irq_chip_array + i;
 
 		/* Initialise the irq chip (e.g. reset all registers) */
-		this_chip->ops.init();
+		if (this_chip->ops.init)
+			this_chip->ops.init();
 
 		/* Enable cascaded irq on this chip if it exists */
 		cascade_irq_chip(this_chip);
@@ -98,8 +101,10 @@ l4id_t global_irq_index(void)
 		this_chip = irq_chip_array + i;
 
 		/* Find local irq that is triggered on this chip */
-		BUG_ON((irq_index =
-			this_chip->ops.read_irq()) == IRQ_NIL);
+		if (this_chip->ops.read_irq) {
+			irq_index = this_chip->ops.read_irq(this_chip->data);
+			BUG_ON(irq_index == IRQ_NIL);
+		}
 
 		/* See if this irq is a cascaded irq */
 		if (irq_index == this_chip->cascade)
@@ -126,6 +131,8 @@ void do_irq(void)
 {
 	l4id_t irq_index = global_irq_index();
 	struct irq_desc *this_irq = irq_desc_array + irq_index;
+
+	system_account_irq();
 
 	/*
 	 * Note, this can be easily done a few instructions

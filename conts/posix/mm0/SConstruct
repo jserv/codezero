@@ -30,7 +30,7 @@ LIBC_LIBPATH = join(BUILDDIR, LIBC_RELDIR)
 LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
                 join(LIBC_DIR, 'include/arch' + '/' + arch)]
 
-env = Environment(CC = config.user_toolchain + 'gcc',
+env = Environment(CC = config.toolchain + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', \
@@ -41,7 +41,7 @@ env = Environment(CC = config.user_toolchain + 'gcc',
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
 		  LIBS = ['gcc', 'libl4', 'libc', 'libmm', 'libmc'],
-          CPPPATH = ["#include", LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE, LIBMEM_INCLUDE],
+          CPPPATH = ["#include", LIBC_INCLUDE, KERNEL_INCLUDE, LIBL4_INCLUDE],
 		  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h -D__KERNEL__')
 
 

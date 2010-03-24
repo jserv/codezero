@@ -1,7 +1,7 @@
 #ifndef __DEBUG_H__
 #define __DEBUG_H__
 
-#include <kmalloc/kmalloc.h>
+//#include <kmalloc/kmalloc.h>
 #include <mm/alloc_page.h>
 #include <l4/lib/list.h>
 

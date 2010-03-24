@@ -8,34 +8,51 @@
 #include <l4/lib/printk.h>
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
+#include <l4/generic/platform.h>
 #include INC_SUBARCH(mm.h)
 #include INC_GLUE(memlayout.h)
 #include INC_GLUE(memory.h)
-#include INC_PLAT(printascii.h)
+#include INC_GLUE(mapping.h)
 #include INC_PLAT(offsets.h)
 #include INC_ARCH(linker.h)
+#include INC_ARCH(asm.h)
 
 /*
- * Conversion from generic protection flags to arch-specific
- * pte flags.
+ * Return arch-specific pte flags from generic space flags.
  */
 unsigned int space_flags_to_ptflags(unsigned int flags)
 {
 	switch (flags) {
-	case MAP_USR_RW_FLAGS:
-		return __MAP_USR_RW_FLAGS;
-	case MAP_USR_RO_FLAGS:
-		return __MAP_USR_RO_FLAGS;
-	case MAP_SVC_RW_FLAGS:
-		return __MAP_SVC_RW_FLAGS;
-	case MAP_USR_IO_FLAGS:
-		return __MAP_USR_IO_FLAGS;
-	case MAP_SVC_IO_FLAGS:
-		return __MAP_SVC_IO_FLAGS;
+	case MAP_FAULT:
+		return __MAP_FAULT;
+	case MAP_USR_RW:
+		return __MAP_USR_RW;
+	case MAP_USR_RO:
+		return __MAP_USR_RO;
+	case MAP_KERN_RW:
+		return __MAP_KERN_RW;
+	case MAP_USR_IO:
+		return __MAP_USR_IO;
+	case MAP_KERN_IO:
+		return __MAP_KERN_IO;
+	case MAP_USR_RWX:
+		return __MAP_USR_RWX;
+	case MAP_KERN_RWX:
+		return __MAP_KERN_RWX;
+	case MAP_USR_RX:
+		return __MAP_USR_RX;
+	case MAP_KERN_RX:
+		return __MAP_KERN_RX;
+	/*
+	 * Don't remove this, if a flag with
+	 * same value is introduced, compiler will warn us
+	 */
+	case MAP_INVALID_FLAGS:
 	default:
-		BUG();
+		return MAP_INVALID_FLAGS;
 	}
-	BUG(); return 0;
+
+	return 0;
 }
 
 void task_init_registers(struct ktcb *task, unsigned long pc)
@@ -46,45 +63,12 @@ void task_init_registers(struct ktcb *task, unsigned long pc)
 
 
 /*
- * Copies global kernel entries into another pgd. Even for sub-pmd ranges
- * the associated pmd entries are copied, assuming any pmds copied are
- * applicable to all tasks in the system.
+ * Copies all global kernel entries that a user process
+ * should have in its pgd. In split page table setups
+ * this is a noop.
  */
-void copy_pgd_kern_by_vrange(pgd_table_t *to, pgd_table_t *from,
-			     unsigned long start, unsigned long end)
+void copy_pgd_kernel_entries(pgd_table_t *to)
 {
-	/* Extend sub-pmd ranges to their respective pmd boundaries */
-	start = align(start, PMD_MAP_SIZE);
-
-	if (end < start)
-		end = 0;
-
-	/* Aligning would overflow if mapping the last virtual pmd */
-	if (end < align(~0, PMD_MAP_SIZE) ||
-	    start > end) /* end may have already overflown as input */
-		end = align_up(end, PMD_MAP_SIZE);
-	else
-		end = 0;
-
-	copy_pgds_by_vrange(to, from, start, end);
-}
-
-/* Copies all standard bits that a user process should have in its pgd */
-void copy_pgd_kern_all(pgd_table_t *to)
-{
-	pgd_table_t *from = TASK_PGD(current);
-
-	copy_pgd_kern_by_vrange(to, from, KERNEL_AREA_START, KERNEL_AREA_END);
-	copy_pgd_kern_by_vrange(to, from, IO_AREA_START, IO_AREA_END);
-	copy_pgd_kern_by_vrange(to, from, USER_KIP_PAGE,
-				USER_KIP_PAGE + PAGE_SIZE);
-	copy_pgd_kern_by_vrange(to, from, ARM_HIGH_VECTOR,
-				ARM_HIGH_VECTOR + PAGE_SIZE);
-	copy_pgd_kern_by_vrange(to, from, ARM_SYSCALL_VECTOR,
-				ARM_SYSCALL_VECTOR + PAGE_SIZE);
-
-	/* We temporarily map uart registers to every process */
-	copy_pgd_kern_by_vrange(to, from, USERSPACE_CONSOLE_VIRTUAL,
-				USERSPACE_CONSOLE_VIRTUAL + PAGE_SIZE);
+	arch_copy_pgd_kernel_entries(to);
 }
 

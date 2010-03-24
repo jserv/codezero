@@ -10,9 +10,10 @@
 
 #include INC_PLAT(platform.h)
 #include INC_ARCH(types.h)
+#include INC_ARCH(io.h)
 
-#define PL190_BASE				PLATFORM_IRQCTRL0_VIRTUAL
-#define PL190_SIC_BASE				PLATFORM_IRQCTRL1_VIRTUAL
+#define PL190_BASE				PLATFORM_IRQCTRL0_VBASE
+#define PL190_SIC_BASE				PLATFORM_IRQCTRL1_VBASE
 
 #define PL190_IRQS_MAX				32
 
@@ -49,9 +50,9 @@ void pl190_vic_init(void);
 void pl190_ack_irq(l4id_t irq);
 void pl190_mask_irq(l4id_t irq);
 void pl190_unmask_irq(l4id_t irq);
-l4id_t pl190_read_irq(void);
+l4id_t pl190_read_irq(void *irq_chip_data);
 
-l4id_t pl190_sic_read_irq(void);
+l4id_t pl190_sic_read_irq(void *irq_chip_data);
 void pl190_sic_mask_irq(l4id_t irq);
 void pl190_sic_mask_irq(l4id_t irq);
 void pl190_sic_ack_irq(l4id_t irq);

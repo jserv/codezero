@@ -26,7 +26,7 @@
 	.section .text.head
 BEGIN_PROC(_start)
 	/* Setup status register for supervisor mode, interrupts disabled */
-	msr	cpsr_fc, #ARM_MODE_SVC
+	msr	cpsr_fcxs, #ARM_MODE_SVC
 
 	/* Disable mmu if it is enabled */
 	mrc	p15, 0, r0, c1, c0, 0
@@ -34,6 +34,7 @@ BEGIN_PROC(_start)
 	bic	r0, r0, #C15_C0_C	@ Disable (D) Cache
 	bic	r0, r0, #C15_C0_I	@ Disable I cache
 	bic	r0, r0, #C15_C0_W	@ Disable Write buffer
+	bic	r0, r0, #C15_C0_Z	@ Disable Branch prediction
 	mcr	p15, 0, r0, c1, c0, 0
 
 	/* Setup boot stack (physical address) */

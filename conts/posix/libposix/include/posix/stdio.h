@@ -328,16 +328,16 @@ extern int sprintf (char *__restrict __s,
 
    This function is a possible cancellation point and therefore not
    marked with __THROW.  */
-extern int vfprintf (FILE *__restrict __s, __const char *__restrict __format,
-		     __gnuc_va_list __arg);
+//extern int vfprintf (FILE *__restrict __s, __const char *__restrict __format,
+//		     __gnuc_va_list __arg);
 /* Write formatted output to stdout from argument list ARG.
 
    This function is a possible cancellation point and therefore not
    marked with __THROW.  */
-extern int vprintf (__const char *__restrict __format, __gnuc_va_list __arg);
+//extern int vprintf (__const char *__restrict __format, __gnuc_va_list __arg);
 /* Write formatted output to S from argument list ARG.  */
-extern int vsprintf (char *__restrict __s, __const char *__restrict __format,
-		     __gnuc_va_list __arg) __THROW;
+//extern int vsprintf (char *__restrict __s, __const char *__restrict __format,
+//		     __gnuc_va_list __arg) __THROW;
 __END_NAMESPACE_STD
 
 #if defined __USE_BSD || defined __USE_ISOC99 || defined __USE_UNIX98
@@ -347,18 +347,18 @@ extern int snprintf (char *__restrict __s, size_t __maxlen,
 		     __const char *__restrict __format, ...)
      __THROW __attribute__ ((__format__ (__printf__, 3, 4)));
 
-extern int vsnprintf (char *__restrict __s, size_t __maxlen,
-		      __const char *__restrict __format, __gnuc_va_list __arg)
-     __THROW __attribute__ ((__format__ (__printf__, 3, 0)));
+//extern int vsnprintf (char *__restrict __s, size_t __maxlen,
+//		      __const char *__restrict __format, __gnuc_va_list __arg)
+//     __THROW __attribute__ ((__format__ (__printf__, 3, 0)));
 __END_NAMESPACE_C99
 #endif
 
 #ifdef __USE_GNU
 /* Write formatted output to a string dynamically allocated with `malloc'.
    Store the address of the string in *PTR.  */
-extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
-		      __gnuc_va_list __arg)
-     __THROW __attribute__ ((__format__ (__printf__, 2, 0)));
+//extern int vasprintf (char **__restrict __ptr, __const char *__restrict __f,
+//		      __gnuc_va_list __arg)
+//     __THROW __attribute__ ((__format__ (__printf__, 2, 0)));
 #if 0 /* uClibc: disabled */
 extern int __asprintf (char **__restrict __ptr,
 		       __const char *__restrict __fmt, ...)
@@ -374,8 +374,8 @@ extern int asprintf (char **__restrict __ptr,
    cancellation point.  But due to similarity with an POSIX interface
    or due to the implementation they are cancellation points and
    therefore not marked with __THROW.  */
-extern int vdprintf (int __fd, __const char *__restrict __fmt,
-		     __gnuc_va_list __arg)
+//extern int vdprintf (int __fd, __const char *__restrict __fmt,
+//		     __gnuc_va_list __arg)
      __attribute__ ((__format__ (__printf__, 2, 0)));
 extern int dprintf (int __fd, __const char *__restrict __fmt, ...)
      __attribute__ ((__format__ (__printf__, 2, 3)));
@@ -405,21 +405,21 @@ __BEGIN_NAMESPACE_C99
 
    This function is a possible cancellation point and therefore not
    marked with __THROW.  */
-extern int vfscanf (FILE *__restrict __s, __const char *__restrict __format,
-		    __gnuc_va_list __arg)
-     __attribute__ ((__format__ (__scanf__, 2, 0)));
+//extern int vfscanf (FILE *__restrict __s, __const char *__restrict __format,
+//		    __gnuc_va_list __arg)
+//     __attribute__ ((__format__ (__scanf__, 2, 0)));
 
 /* Read formatted input from stdin into argument list ARG.
 
    This function is a possible cancellation point and therefore not
    marked with __THROW.  */
-extern int vscanf (__const char *__restrict __format, __gnuc_va_list __arg)
-     __attribute__ ((__format__ (__scanf__, 1, 0)));
+//extern int vscanf (__const char *__restrict __format, __gnuc_va_list __arg)
+//     __attribute__ ((__format__ (__scanf__, 1, 0)));
 
 /* Read formatted input from S into argument list ARG.  */
-extern int vsscanf (__const char *__restrict __s,
-		    __const char *__restrict __format, __gnuc_va_list __arg)
-     __THROW __attribute__ ((__format__ (__scanf__, 2, 0)));
+//extern int vsscanf (__const char *__restrict __s,
+//		    __const char *__restrict __format, __gnuc_va_list __arg)
+//     __THROW __attribute__ ((__format__ (__scanf__, 2, 0)));
 __END_NAMESPACE_C99
 #endif /* Use ISO C9x.  */
 

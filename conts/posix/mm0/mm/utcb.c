@@ -3,9 +3,10 @@
  *
  * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
-#include <l4lib/arch/utcb.h>
+
 #include <l4/macros.h>
 #include INC_GLUE(memlayout.h)
+#include L4LIB_INC_ARCH(utcb.h)
 #include <mmap.h>
 #include <utcb.h>
 #include <malloc/malloc.h>

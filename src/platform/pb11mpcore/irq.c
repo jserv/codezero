@@ -9,8 +9,8 @@
 #include INC_PLAT(irq.h)
 #include INC_PLAT(platform.h)
 #include INC_ARCH(exception.h)
+#include INC_PLAT(timer.h)
 #include <l4/drivers/irq/pl190/pl190_vic.h>
-#include <l4/drivers/timer/sp804/sp804_timer.h>
 
 struct irq_chip irq_chip_array[IRQ_CHIPS_MAX];
 #if 0
@@ -41,20 +41,4 @@ struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
 	},
 };
 #endif
-
-static int platform_timer_handler(void)
-{
-	sp804_irq_handler(PLATFORM_TIMER0_BASE);
-	return do_timer_irq();
-}
-
-/* Built-in irq handlers initialised at compile time.
- * Else register with register_irq() */
-struct irq_desc irq_desc_array[IRQS_MAX] = {
-	[IRQ_TIMER01] = {
-		.name = "Timer01",
-		.chip = &irq_chip_array[0],
-		.handler = platform_timer_handler,
-	},
-};
 

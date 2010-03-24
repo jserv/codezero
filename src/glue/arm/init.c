@@ -1,7 +1,7 @@
 /*
  * Main initialisation code for the ARM kernel
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2007 - 2010 B Labs Ltd.
  */
 #include <l4/lib/mutex.h>
 #include <l4/lib/printk.h>
@@ -17,35 +17,22 @@
 #include INC_ARCH(linker.h)
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
+#include INC_SUBARCH(cpu.h)
 #include INC_SUBARCH(mmu_ops.h)
+#include INC_SUBARCH(perfmon.h)
 #include INC_GLUE(memlayout.h)
 #include INC_GLUE(memory.h)
+#include INC_GLUE(mapping.h)
 #include INC_GLUE(message.h)
 #include INC_GLUE(syscall.h)
 #include INC_GLUE(init.h)
+#include INC_GLUE(smp.h)
 #include INC_PLAT(platform.h)
-#include INC_PLAT(printascii.h)
 #include INC_API(syscall.h)
 #include INC_API(kip.h)
 #include INC_API(mutex.h)
 
 unsigned int kernel_mapping_end;
-
-/* Maps the early memory regions needed to bootstrap the system */
-void init_kernel_mappings(void)
-{
-	memset((void *)virt_to_phys(&init_pgd), 0, sizeof(pgd_table_t));
-
-	/* Map kernel area to its virtual region */
-	add_section_mapping_init(align(virt_to_phys(_start_text),SZ_1MB),
-				 align((unsigned int)_start_text, SZ_1MB), 1,
-				 cacheable | bufferable);
-
-	/* Map kernel one-to-one to its physical region */
-	add_section_mapping_init(align(virt_to_phys(_start_text),SZ_1MB),
-				 align(virt_to_phys(_start_text),SZ_1MB),
-				 1, 0);
-}
 
 void print_sections(void)
 {
@@ -59,87 +46,18 @@ void print_sections(void)
 	dprintk("_end_vectors: ",(unsigned int)_end_vectors);
 	dprintk("_start_kip: ", (unsigned int) _start_kip);
 	dprintk("_end_kip: ", (unsigned int) _end_kip);
-	dprintk("_bootstack: ",	(unsigned int)_bootstack);
+	dprintk("_start_syscalls: ", (unsigned int) _start_syscalls);
+	dprintk("_end_syscalls: ", (unsigned int) _end_syscalls);
+	dprintk("_start_bootstack: ", (unsigned int)_start_bootstack);
+	dprintk("_end_bootstack: ", (unsigned int)_end_bootstack);
+	dprintk("_start_bootstack: ", (unsigned int)_start_bootstack);
+	dprintk("_end_bootstack: ", (unsigned int)_end_bootstack);
+	dprintk("_start_init_pgd: ", (unsigned int)_start_init_pgd);
+	dprintk("_end_init_pgd: ", (unsigned int)_end_init_pgd);
 	dprintk("_end_kernel: ", (unsigned int)_end_kernel);
 	dprintk("_start_init: ", (unsigned int)_start_init);
 	dprintk("_end_init: ", (unsigned int)_end_init);
 	dprintk("_end: ", (unsigned int)_end);
-}
-
-/*
- * Enable virtual memory using kernel's pgd
- * and continue execution on virtual addresses.
- */
-void start_vm()
-{
-	/*
-	 * TTB must be 16K aligned. This is because first level tables are
-	 * sized 16K.
-	 */
-	if ((unsigned int)&init_pgd & 0x3FFF)
-		dprintk("kspace not properly aligned for ttb:",
-			(u32)&init_pgd);
-	// memset((void *)&kspace, 0, sizeof(pgd_table_t));
-	arm_set_ttb(virt_to_phys(&init_pgd));
-
-	/*
-	 * This sets all 16 domains to zero and  domain 0 to 1. The outcome
-	 * is that page table access permissions are in effect for domain 0.
-	 * All other domains have no access whatsoever.
-	 */
-	arm_set_domain(1);
-
-	/* Enable everything before mmu permissions are in place */
-	arm_enable_caches();
-	arm_enable_wbuffer();
-
-	/*
-	 * Leave the past behind. Tlbs are invalidated, write buffer is drained.
-	 * The whole of I + D caches are invalidated unconditionally. This is
-	 * important to ensure that the cache is free of previously loaded
-	 * values. Otherwise unpredictable data aborts may occur at arbitrary
-	 * times, each time a load/store operation hits one of the invalid
-	 * entries and those entries are cleaned to main memory.
-	 */
-	arm_invalidate_cache();
-	arm_drain_writebuffer();
-	arm_invalidate_tlb();
-	arm_enable_mmu();
-
-	/* Jump to virtual memory addresses */
-	__asm__ __volatile__ (
-		"add	sp, sp, %0	\n"	/* Update stack pointer */
-		"add	fp, fp, %0	\n"	/* Update frame pointer */
-		/* On the next instruction below, r0 gets
-		 * current PC + KOFFSET + 2 instructions after itself. */
-		"add	r0, pc, %0	\n"
-		/* Special symbol that is extracted and included in the loader.
-		 * Debuggers can break on it to load the virtual symbol table */
-		".global break_virtual;\n"
-		"break_virtual:\n"
-		"mov	pc, r0		\n" /* (r0 has next instruction) */
-		:
-		: "r" (KERNEL_OFFSET)
-		: "r0"
-	);
-
-	/* At this point, execution is on virtual addresses. */
-	remove_section_mapping(virt_to_phys(_start_kernel));
-
-	/*
-	 * Restore link register (LR) for this function.
-	 *
-	 * NOTE: LR values are pushed onto the stack at each function call,
-	 * which means the restored return values will be physical for all
-	 * functions in the call stack except this function. So the caller
-	 * of this function must never return but initiate scheduling etc.
-	 */
-	__asm__ __volatile__ (
-		"add	%0, %0, %1	\n"
-		"mov	pc, %0		\n"
-		:: "r" (__builtin_return_address(0)), "r" (KERNEL_OFFSET)
-	);
-	while(1);
 }
 
 /* This calculates what address the kip field would have in userspace. */
@@ -171,11 +89,10 @@ void kip_init()
 	utcb_ref = (struct utcb **)((unsigned long)&kip + UTCB_KIP_OFFSET);
 
 	add_boot_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,
-			 MAP_USR_RO_FLAGS);
+			 MAP_USR_RO);
 	printk("%s: Kernel built on %s, %s\n", __KERNELNAME__,
 	       kip.kdesc.date, kip.kdesc.time);
 }
-
 
 void vectors_init()
 {
@@ -183,116 +100,106 @@ void vectors_init()
 
 	/* Map the vectors in high vector page */
 	add_boot_mapping(virt_to_phys(arm_high_vector),
-			 ARM_HIGH_VECTOR, size, 0);
-	arm_enable_high_vectors();
+			 ARM_HIGH_VECTOR, size, MAP_KERN_RWX);
 
 	/* Kernel memory trapping is enabled at this point. */
 }
 
-void abort()
+
+#include <l4/generic/cap-types.h>
+#include <l4/api/capability.h>
+#include <l4/generic/capability.h>
+
+/* This is what an idle task needs */
+static DECLARE_PERCPU(struct capability, pmd_cap);
+
+/*
+ * FIXME: Add this when initializing kernel resources
+ * This is a hack.
+ */
+void setup_idle_caps()
 {
-	printk("Aborting on purpose to halt system.\n");
-#if 0
-	/* Prefetch abort */
-	__asm__ __volatile__ (
-		"mov	pc, #0x0\n"
-		::
-	);
-#endif
-	/* Data abort */
-	__asm__ __volatile__ (
-		"mov	r0, #0		\n"
-		"ldr	r0, [r0]	\n"
-		::
-	);
+	struct capability *cap = &per_cpu(pmd_cap);
+
+	cap_list_init(&current->cap_list);
+	cap->type = CAP_RTYPE_MAPPOOL | CAP_TYPE_QUANTITY;
+	cap->size = 50;
+
+	link_init(&cap->list);
+	cap_list_insert(cap, &current->cap_list);
 }
 
-void jump(struct ktcb *task)
+/*
+ * Set up current stack's beginning, and initial page tables
+ * as a valid task environment for idle task for current cpu
+ */
+void setup_idle_task()
 {
-	__asm__ __volatile__ (
-		"mov	lr,	%0\n"	/* Load pointer to context area */
-		"ldr	r0,	[lr]\n"	/* Load spsr value to r0 */
-		"msr	spsr,	r0\n"	/* Set SPSR as ARM_MODE_USR */
-		"add	sp, lr, %1\n"	/* Reset SVC stack */
-		"sub	sp, sp, %2\n"	/* Align to stack alignment */
-		"ldmib	lr, {r0-r14}^\n" /* Load all USR registers */
-
-		"nop		\n"	/* Spec says dont touch banked registers
-					 * right after LDM {no-pc}^ for one instruction */
-		"add	lr, lr, #64\n"	/* Manually move to PC location. */
-		"ldr	lr,	[lr]\n"	/* Load the PC_USR to LR */
-		"movs	pc,	lr\n"	/* Jump to userspace, also switching SPSR/CPSR */
-		:
-		: "r" (task), "r" (PAGE_SIZE), "r" (STACK_ALIGNMENT)
-	);
-}
-
-void switch_to_user(struct ktcb *task)
-{
-	arm_clean_invalidate_cache();
-	arm_invalidate_tlb();
-	arm_set_ttb(virt_to_phys(TASK_PGD(task)));
-	arm_invalidate_tlb();
-	jump(task);
-}
-
-void setup_dummy_current()
-{
-	/*
-	 * Temporarily iInitialize the beginning of
-	 * last page of stack as the current ktcb
-	 */
 	memset(current, 0, sizeof(struct ktcb));
 
 	current->space = &init_space;
 	TASK_PGD(current) = &init_pgd;
+
+	/* Initialize space caps list */
+	cap_list_init(&current->space->cap_list);
+
+#if 0
+	/*
+	 * Unneeded stuff
+	 */
+	/*
+	 * Set up idle context.
+	 */
+	current->context.spsr = ARM_MODE_SVC;
+	current->context.pc = (u32)idle_task;
+	current->context.sp = (u32)align((unsigned long)current + PAGE_SIZE,
+					 STACK_ALIGNMENT);
+#endif
+
+	/*
+	 * FIXME: This must go to kernel resources init.
+	 */
+
+	/*
+	 * If using split page tables, kernel
+	 * resources must point at the global pgd
+	 * TODO: We may need this for V6, in the future
+	 */
+#if defined(CONFIG_SUBARCH_V7)
+	kernel_resources.pgd_global = &init_global_pgd;
+#endif
 }
 
-void init_finalize(struct kernel_resources *kres)
+void remove_initial_mapping(void)
 {
-	volatile register unsigned int stack;
-	volatile register unsigned int newstack;
-	struct ktcb *first_task;
-	struct container *c;
+	/* At this point, execution is on virtual addresses. */
+	remove_section_mapping(virt_to_phys(_start_kernel));
+}
 
-	/* Get the first container */
-	c = link_to_struct(kres->containers.list.next,
-			   struct container, list);
+void init_finalize(void)
+{
+	/* Set up idle task capabilities */
+	setup_idle_caps();
 
-	/* Get the first pager in container */
-	first_task = link_to_struct(c->ktcb_list.list.next,
-				    struct ktcb, task_list);
+	platform_timer_start();
 
-	/* Calculate first stack address */
-	newstack = align((unsigned long)first_task + PAGE_SIZE - 1,
-			 STACK_ALIGNMENT);
+#if defined (CONFIG_SMP)
+	/* Tell other cores to continue */
+	secondary_run_signal = 1;
+	dmb();
+#endif
 
-	/* Switch to new stack */
-	stack = newstack;
-	asm("mov sp, %0\n\t"::"r"(stack));
-
-	/* -- Point of no stack unwinding -- */
-
-	/*
-	 * Unmap boot memory, and add it as
-	 * an unused kernel memcap
-	 */
-	free_boot_memory(&kernel_resources);
-
-	/*
-	 * Set up initial KIP UTCB ref
-	 */
-	kip.utcb = (u32)current->utcb_address;
-
-	/*
-	 * Start the scheduler, jumping to task
-	 */
-	scheduler_start();
+	idle_task();
 }
 
 void start_kernel(void)
 {
-	printascii("\n"__KERNELNAME__": start kernel...\n");
+	print_early("\n"__KERNELNAME__": start kernel...\n");
+
+	// print_sections();
+
+	/* Early cpu initialization */
+	cpu_startup();
 
 	/*
 	 * Initialise section mappings
@@ -300,17 +207,19 @@ void start_kernel(void)
 	 */
 	init_kernel_mappings();
 
+	print_early("\n"__KERNELNAME__": Init kernel mappings...\n");
+
 	/*
 	 * Enable virtual memory
 	 * and jump to virtual addresses
 	 */
-	start_vm();
+	start_virtual_memory();
 
 	/*
-	 * Set up a dummy current ktcb on
-	 * boot stack with initial pgd
+	 * Set up initial page tables and ktcb
+	 * as a valid environment for idle task
 	 */
-	setup_dummy_current();
+	setup_idle_task();
 
 	/*
 	 * Initialise platform-specific
@@ -321,6 +230,17 @@ void start_kernel(void)
 	/* Can only print when uart is mapped */
 	printk("%s: Virtual memory enabled.\n",
 	       __KERNELNAME__);
+
+	/* Identify CPUs and system */
+	system_identify();
+
+	sched_init();
+
+	/* Try to initialize secondary cores if there are any */
+	smp_start_cores();
+
+	/* Remove one-to-one kernel mapping */
+	remove_initial_mapping();
 
 	/*
 	 * Map and enable high vector page.
@@ -341,8 +261,8 @@ void start_kernel(void)
 	/* Initialise system call page */
 	syscall_init();
 
-	/* Init scheduler */
-	sched_init(&scheduler);
+	/* Init performance monitor, if enabled */
+	perfmon_init();
 
 	/*
 	 * Evaluate system resources
@@ -354,7 +274,7 @@ void start_kernel(void)
 	 * Free boot memory, switch to first
 	 * task's stack and start scheduler
 	 */
-	init_finalize(&kernel_resources);
+	init_finalize();
 
 	BUG();
 }

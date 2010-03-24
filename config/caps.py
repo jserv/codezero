@@ -150,7 +150,7 @@ cap_strings = { 'ipc' : \
 \t\t\t\t\tCAP_IRQCTRL_REGISTER,
 \t\t\t\t.start = __pfn(PLATFORM_${devname}_BASE),
 \t\t\t\t.end = __pfn(PLATFORM_${devname}_BASE + PLATFORM_${devname}_SIZE),
-\t\t\t\t.size = 1,
+\t\t\t\t.size = PLATFORM_${devname}_SIZE >> 12,
 \t\t\t\t.attr = (CAP_DEVTYPE_${devtype} & CAP_DEVTYPE_MASK)
 \t\t\t\t\t| ((${devnum} << CAP_DEVNUM_SHIFT) & CAP_DEVNUM_MASK),
 \t\t\t\t.irq = IRQ_${devname},

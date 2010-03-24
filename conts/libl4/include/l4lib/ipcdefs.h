@@ -10,6 +10,7 @@
 #define __IPCDEFS_H__
 
 #include <l4/api/ipc.h>
+#include <l4lib/types.h>
 
 /*** IPC Tags used between server tasks ***/
 
@@ -69,7 +70,8 @@ extern l4id_t pagerid;
 #define L4_IPC_TAG_UART_RECVBUF		54	/* Buffered recv */
 
 /* For ipc to timer service (TODO: Shared mapping buffers???) */
-#define L4_IPC_TAG_TIMER_GETTIME		55
-#define L4_IPC_TAG_TIMER_SLEEP		56
+#define L4_IPC_TAG_TIMER_GETTIME				55
+#define L4_IPC_TAG_TIMER_SLEEP				56
+#define L4_IPC_TAG_TIMER_WAKE_THREADS		57
 
 #endif /* __IPCDEFS_H__ */

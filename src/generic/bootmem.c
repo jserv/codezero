@@ -15,10 +15,8 @@
  * Increase this size if bootmem allocations fail.
  */
 #define BOOTMEM_SIZE		(SZ_4K * 4)
-
-SECTION(".init.pgd") pgd_table_t init_pgd;
 SECTION(".init.bootmem") char bootmem[BOOTMEM_SIZE];
-__initdata struct address_space init_space;
+struct address_space init_space;
 
 static unsigned long cursor = (unsigned long)&bootmem;
 

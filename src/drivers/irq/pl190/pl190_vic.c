@@ -12,24 +12,8 @@
 #include <l4/drivers/irq/pl190/pl190_vic.h>
 #include <l4/generic/irq.h>
 
-/* FIXME: Fix the stupid uart driver and change to single definition of this! */
-#if defined(read)
-#undef read
-#endif
-#if defined(write)
-#undef write
-#endif
-
-#define	read(a)				*((volatile unsigned int *)(a))
-#define	write(v, a)			(*((volatile unsigned int *)(a)) = v)
-#define	setbit(bitvect, a)		write(read(a) | (bitvect), a)
-#define	clrbit(bitvect, a)		write(read(a) & ~(bitvect), a)
-#define	devio(base, reg, bitvect, setclr)			\
-		((setclr) ? setbit(bitvect, (base + reg))	\
-		: clrbit(bitvect, (base + reg)))
-
 /* Returns the irq number on this chip converting the irq bitvector */
-l4id_t pl190_read_irq(void)
+l4id_t pl190_read_irq(void *nil)
 {
 	l4id_t irq;
 
@@ -54,10 +38,10 @@ void pl190_ack_irq(l4id_t irq)
 
 void pl190_unmask_irq(l4id_t irq)
 {
-	setbit(1 << irq, PL190_VIC_INTENABLE);
+	setbit((unsigned int *)PL190_VIC_INTENABLE, (1 << irq));
 }
 
-l4id_t pl190_sic_read_irq(void)
+l4id_t pl190_sic_read_irq(void *nil)
 {
 	l4id_t irq;
 
@@ -79,7 +63,7 @@ void pl190_sic_ack_irq(l4id_t irq)
 
 void pl190_sic_unmask_irq(l4id_t irq)
 {
-	setbit(1 << irq, PL190_SIC_ENSET);
+	setbit((unsigned int *)PL190_SIC_ENSET, (1 << irq));
 }
 
 /* Initialises the primary and secondary interrupt controllers */

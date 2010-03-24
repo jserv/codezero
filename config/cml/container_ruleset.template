@@ -4,6 +4,8 @@ CONT%(cn)d_TYPE_BAREMETAL	'Baremetal Container'
 CONT%(cn)d_TYPE_POSIX		'POSIX Container'
 CONT%(cn)d_OPT_NAME		'Container Name'
 
+CONTAINERS              'Number of containers'
+
 CONT%(cn)d_PHYSMEM_REGIONS	'Container %(cn)d Number of Physical Regions'
 CONT%(cn)d_PHYS0_START	'Container %(cn)d Physical Region 0 Start Address'
 CONT%(cn)d_PHYS0_END	'Container %(cn)d Physical Region 0 End Address'
@@ -58,7 +60,7 @@ default CONT%(cn)d_LINUX_PAGE_OFFSET 	from CONT%(cn)d_VIRT0_START
 default CONT%(cn)d_LINUX_PHYS_OFFSET 	from CONT%(cn)d_PHYS0_START
 default CONT%(cn)d_LINUX_ROOTFS_ADDRESS	from (CONT%(cn)d_LINUX_PHYS_OFFSET + 0x500000)
 
-default CONT%(cn)d_VIRTMEM_REGIONS from 1
+default CONT%(cn)d_VIRTMEM_REGIONS from (CONT%(cn)d_TYPE_POSIX==y ? 4 : 1)
 default CONT%(cn)d_PHYSMEM_REGIONS from 1
 
 # Define limits on virtual and physical memory regions of a _single_ container 0. Too much code!
@@ -106,7 +108,7 @@ require CONT%(cn)d_PHYS3_START >= 0x40000
 require CONT%(cn)d_LINUX_ZRELADDR > CONT%(cn)d_LINUX_PHYS_OFFSET + 0x8000
 
 # TODO: Do we want to check if PAGER_LMA/VMA lies in allocated memory regions
-default CONT%(cn)d_PHYS0_START	from (%(cn)d == 0 ? 0x100000 : (0x100000 + %(cn)d * 0x1000000))
+default CONT%(cn)d_PHYS0_START from ((%(cn)d == 0 ? 0x100000 : (0x100000 + %(cn)d * 0x1000000)) + RAM_BASE_PLAT)
 default	CONT%(cn)d_PHYS0_END	from (CONT%(cn)d_PHYS0_START + 0xD00000)
 default CONT%(cn)d_PHYS1_START	from CONT%(cn)d_PHYS0_END
 default CONT%(cn)d_PHYS1_END	from (CONT%(cn)d_PHYS1_START + 0x100000)
@@ -128,16 +130,14 @@ default CONT%(cn)d_VIRT4_END	from (CONT%(cn)d_VIRT4_START + 0x10000000)
 default CONT%(cn)d_VIRT5_START	from 0xe0000000
 default CONT%(cn)d_VIRT5_END	from 0xf0000000
 
-derive baremetal%(cn)d from
-(CONT%(cn)d_BAREMETAL_PROJ_EMPTY==y) ? "empty%(cn)d" :
+default CONT%(cn)d_OPT_NAME from
+(CONT%(cn)d_TYPE_LINUX==y) ? "linux%(cn)d" :
+((CONT%(cn)d_TYPE_POSIX==y) ? "posix%(cn)d" :
 ((CONT%(cn)d_BAREMETAL_PROJ_HELLO_WORLD==y) ? "hello_world%(cn)d" :
 ((CONT%(cn)d_BAREMETAL_PROJ_THREADS_DEMO==y) ? "thread_demo%(cn)d" :
-((CONT%(cn)d_BAREMETAL_PROJ_TEST==y) ? "test%(cn)d" :
+((CONT%(cn)d_BAREMETAL_PROJ_TEST_SUITE==y) ? "test_suite%(cn)d" :
 ((CONT%(cn)d_BAREMETAL_PROJ_UART_SERVICE==y) ? "uart_service%(cn)d" :
-((CONT%(cn)d_BAREMETAL_PROJ_CLCD_SERVICE==y) ? "clcd_service%(cn)d" :
-((CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE==y) ? "timer_service%(cn)d" : "baremetal_noname%(cn)d" ))))))
-
-default CONT%(cn)d_OPT_NAME from (CONT%(cn)d_TYPE_LINUX==y) ? "linux%(cn)d" : ((CONT%(cn)d_TYPE_BAREMETAL==y) ? baremetal%(cn)d : "posix%(cn)d")
+((CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE==y) ? "timer_service%(cn)d" : "empty%(cn)d"))))))
 
 when CONT%(cn)d_TYPE_LINUX==y suppress cont%(cn)d_default_pager_params
 unless CONT%(cn)d_TYPE_POSIX==y suppress cont%(cn)d_posix_pager_params
@@ -165,19 +165,17 @@ cont%(cn)d_baremetal_params		'Baremetal Project'
 CONT%(cn)d_BAREMETAL_PROJ_EMPTY		'Empty Project'
 CONT%(cn)d_BAREMETAL_PROJ_HELLO_WORLD	'Hello World'
 CONT%(cn)d_BAREMETAL_PROJ_THREADS_DEMO	'Thread Library Demo'
-CONT%(cn)d_BAREMETAL_PROJ_TEST      	'Test Project'
+CONT%(cn)d_BAREMETAL_PROJ_TEST_SUITE   	'Microkernel Tests'
 CONT%(cn)d_BAREMETAL_PROJ_UART_SERVICE	'UART Service'
 CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE 'Timer Service'
-CONT%(cn)d_BAREMETAL_PROJ_CLCD_SERVICE 	'CLCD Service'
 
 choices cont%(cn)d_baremetal_params
 	CONT%(cn)d_BAREMETAL_PROJ_EMPTY
 	CONT%(cn)d_BAREMETAL_PROJ_HELLO_WORLD
 	CONT%(cn)d_BAREMETAL_PROJ_THREADS_DEMO
-	CONT%(cn)d_BAREMETAL_PROJ_TEST
+	CONT%(cn)d_BAREMETAL_PROJ_TEST_SUITE
 	CONT%(cn)d_BAREMETAL_PROJ_UART_SERVICE
 	CONT%(cn)d_BAREMETAL_PROJ_TIMER_SERVICE
-	CONT%(cn)d_BAREMETAL_PROJ_CLCD_SERVICE
 	default CONT%(cn)d_BAREMETAL_PROJ_EMPTY
 
 menu cont%(cn)d_default_pager_params
@@ -234,19 +232,16 @@ cont%(cn)d_cap_device_uart1		'Container %(cn)d UART1 Menu'
 cont%(cn)d_cap_device_uart2             'Container %(cn)d UART2 Menu'
 cont%(cn)d_cap_device_uart3             'Container %(cn)d UART3 Menu'
 cont%(cn)d_cap_device_timer1            'Container %(cn)d TIMER23 Menu'
-cont%(cn)d_cap_device_clcd            	'Container %(cn)d CLCD Menu'
 
 CONT%(cn)d_CAP_DEVICE_UART1_USE		'Container %(cn)d UART1 Enable'
 CONT%(cn)d_CAP_DEVICE_UART2_USE         'Container %(cn)d UART2 Enable'
 CONT%(cn)d_CAP_DEVICE_UART3_USE         'Container %(cn)d UART3 Enable'
 CONT%(cn)d_CAP_DEVICE_TIMER1_USE        'Container %(cn)d TIMER23 Enable'
-CONT%(cn)d_CAP_DEVICE_CLCD0_USE        	'Container %(cn)d CLCD Enable'
 
 default CONT%(cn)d_CAP_DEVICE_UART1_USE		from n
 default CONT%(cn)d_CAP_DEVICE_UART2_USE 	from n
 default CONT%(cn)d_CAP_DEVICE_UART3_USE 	from n
 default CONT%(cn)d_CAP_DEVICE_TIMER1_USE	from n
-default CONT%(cn)d_CAP_DEVICE_CLCD0_USE        	from n
 
 menu cont%(cn)d_cap_device_uart1
 	CONT%(cn)d_CAP_DEVICE_UART1_USE
@@ -260,15 +255,11 @@ menu cont%(cn)d_cap_device_uart3
 menu cont%(cn)d_cap_device_timer1
 	CONT%(cn)d_CAP_DEVICE_TIMER1_USE
 
-menu cont%(cn)d_cap_device_clcd
-	CONT%(cn)d_CAP_DEVICE_CLCD0_USE
-
 menu cont%(cn)d_device_list
 	cont%(cn)d_cap_device_uart1
 	cont%(cn)d_cap_device_uart2
 	cont%(cn)d_cap_device_uart3
 	cont%(cn)d_cap_device_timer1
-	cont%(cn)d_cap_device_clcd
 
 #
 # Settings for Custom Capabilities

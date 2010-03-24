@@ -179,11 +179,12 @@ struct mem_cache *mem_cache_init(void *start,
 		unsigned int diff = addr_aligned - addr;
 
 		BUG_ON(diff >= struct_size);
-		if (diff)
-			total--;
 		cache_size -= diff;
 		area_start = addr_aligned;
 	}
+
+	/* Now recalculate total over cache bytes left */
+	total = cache_size / struct_size;
 
 	link_init(&cache->list);
 	cache->start = area_start;

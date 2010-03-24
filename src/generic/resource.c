@@ -8,9 +8,11 @@
 #include <l4/generic/container.h>
 #include <l4/generic/resource.h>
 #include <l4/generic/bootmem.h>
+#include <l4/generic/platform.h>
 #include <l4/lib/math.h>
 #include <l4/lib/memcache.h>
 #include INC_GLUE(memory.h)
+#include INC_GLUE(mapping.h)
 #include INC_ARCH(linker.h)
 #include INC_PLAT(platform.h)
 #include <l4/api/errno.h>
@@ -132,22 +134,28 @@ void free_pmd(void *addr)
 	BUG_ON(mem_cache_free(kernel_resources.pmd_cache, addr) < 0);
 }
 
-void free_space(void *addr)
+void free_space(void *addr, struct ktcb *task)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current,
+	BUG_ON(!(cap = capability_find_by_rtype(task,
 						CAP_RTYPE_SPACEPOOL)));
 	capability_free(cap, 1);
 
 	BUG_ON(mem_cache_free(kernel_resources.space_cache, addr) < 0);
 }
 
-void free_ktcb(void *addr)
+
+/*
+ * Account it to pager, but if it doesn't exist,
+ * to current idle task
+ */
+void free_ktcb(void *addr, struct ktcb *acc_task)
 {
 	struct capability *cap;
 
-	BUG_ON(!(cap = capability_find_by_rtype(current,
+	/* Account it to task's pager if it exists */
+	BUG_ON(!(cap = capability_find_by_rtype(acc_task,
 						CAP_RTYPE_THREADPOOL)));
 	capability_free(cap, 1);
 
@@ -449,8 +457,8 @@ void init_kernel_resources(struct kernel_resources *kres)
 
 	/* Set up total physical memory as single capability */
 	physmem = alloc_bootmem(sizeof(*physmem), 0);
-	physmem->start = __pfn(PHYS_MEM_START);
-	physmem->end = __pfn(PHYS_MEM_END);
+	physmem->start = __pfn(PLATFORM_PHYS_MEM_START);
+	physmem->end = __pfn(PLATFORM_PHYS_MEM_END);
 	link_init(&physmem->list);
 	cap_list_insert(physmem, &kres->physmem_free);
 
@@ -599,14 +607,7 @@ void setup_kernel_resources(struct boot_resources *bootres,
 {
 	struct capability *cap;
 	struct container *container;
-	pgd_table_t *current_pgd;
-
-	/*
-	 * See how many containers we have. Assign next
-	 * unused container id for kernel resources
-	 */
-	kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
-	// kres->cid = id_get(&kres->container_ids, 0); // Gets id 0
+	//pgd_table_t *current_pgd;
 
 	/* First initialize the list of non-memory capabilities */
 	cap = boot_capability_create();
@@ -646,10 +647,33 @@ void setup_kernel_resources(struct boot_resources *bootres,
 	 * since we want to avoid allocating an uncertain
 	 * amount of memory from the boot allocators.
 	 */
-	current_pgd = realloc_page_tables();
+	// current_pgd = arch_realloc_page_tables();
 
 	/* Move it back */
 	cap_list_move(&kres->non_memory_caps, &current->cap_list);
+
+
+	/*
+	 * Setting up ids used internally.
+	 *
+	 * See how many containers we have. Assign next
+	 * unused container id for kernel resources
+	 */
+	kres->cid = id_get(&kres->container_ids, bootres->nconts + 1);
+	// kres->cid = id_get(&kres->container_ids, 0); // Gets id 0
+
+	/*
+	 * Assign thread and space ids to current which will later
+	 * become the idle task
+	 */
+	current->tid = id_new(&kres->ktcb_ids);
+	current->space->spid = id_new(&kres->space_ids);
+
+	/*
+	 * Init per-cpu zombie lists
+	 */
+	for (int i = 0; i < CONFIG_NCPU; i++)
+		init_ktcb_list(&per_cpu_byid(kres->zombie_list, i));
 
 	/*
 	 * Create real containers from compile-time created
@@ -667,8 +691,7 @@ void setup_kernel_resources(struct boot_resources *bootres,
 	}
 
 	/* Initialize pagers */
-	container_init_pagers(kres, current_pgd);
-
+	container_init_pagers(kres);
 }
 
 /*
@@ -703,11 +726,11 @@ struct mem_cache *init_resource_cache(int nstruct, int struct_size,
 				add_boot_mapping(__pfn_to_addr(cap->start),
 						 virtual,
 						 page_align_up(bufsize),
-						 MAP_SVC_RW_FLAGS);
+						 MAP_KERN_RW);
 			} else {
 				add_mapping_pgd(__pfn_to_addr(cap->start),
 						virtual, page_align_up(bufsize),
-						MAP_SVC_RW_FLAGS, &init_pgd);
+						MAP_KERN_RW, &init_pgd);
 			}
 			/* Unmap area from memcap */
 			memcap_unmap_range(cap, &kres->physmem_free,
@@ -791,12 +814,11 @@ void init_resource_allocators(struct boot_resources *bootres,
 				    kres, 0);
 
 	/* Count boot pmds used so far and add them */
-	bootres->nkpmds += pgd_count_pmds(&init_pgd);
+	bootres->nkpmds += pgd_count_boot_pmds();
 
 	/*
-	 * Calculate maximum possible pmds
-	 * that may be used during this pmd
-	 * cache init and add them.
+	 * Calculate maximum possible pmds that may be used
+	 * during this pmd cache initialization and add them.
 	 */
 	bootres->nkpmds += ((bootres->npmds * PMD_SIZE) / PMD_MAP_SIZE);
 	if (!is_aligned(bootres->npmds * PMD_SIZE,

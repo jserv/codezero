@@ -6,7 +6,7 @@
 #ifndef __MM0_CAPABILITY_H__
 #define __MM0_CAPABILITY_H__
 
-#include <l4lib/capability.h>
+#include <l4lib/lib/cap.h>
 #include <task.h>
 
 extern struct cap_list capability_list;

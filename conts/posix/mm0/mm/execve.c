@@ -3,8 +3,8 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/syscalls.h>
+#include L4LIB_INC_ARCH(syslib.h)
+#include L4LIB_INC_ARCH(syscalls.h)
 #include <l4lib/ipcdefs.h>
 #include <l4lib/types.h>
 #include <l4/macros.h>

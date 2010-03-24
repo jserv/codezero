@@ -27,19 +27,24 @@
 /* ARM-specific offset in KIP that tells the address of UTCB page */
 #define UTCB_KIP_OFFSET		0x50
 
-#define IO_AREA0_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*0))
-#define IO_AREA1_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*1))
-#define IO_AREA2_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*2))
-#define IO_AREA3_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*3))
-#define IO_AREA4_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*4))
-#define IO_AREA5_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*5))
-#define IO_AREA6_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*6))
-#define IO_AREA7_VADDR		(IO_AREA_START + (ARM_SECTION_SIZE*7))
+#define IO_AREA0_VADDR		IO_AREA_START
+#define IO_AREA1_VADDR		(IO_AREA_START + (SZ_1MB*1))
+#define IO_AREA2_VADDR		(IO_AREA_START + (SZ_1MB*2))
+#define IO_AREA3_VADDR		(IO_AREA_START + (SZ_1MB*3))
+#define IO_AREA4_VADDR		(IO_AREA_START + (SZ_1MB*4))
+#define IO_AREA5_VADDR		(IO_AREA_START + (SZ_1MB*5))
+#define IO_AREA6_VADDR		(IO_AREA_START + (SZ_1MB*6))
+#define IO_AREA7_VADDR		(IO_AREA_START + (SZ_1MB*7))
+
+/*
+ * IO_AREA8_VADDR
+ * The beginning page in this slot is used for userspace uart mapping
+ */
 
 #define ARM_HIGH_VECTOR		0xFFFF0000
 #define ARM_SYSCALL_VECTOR	0xFFFFFF00
 
-#define KERNEL_OFFSET		(KERNEL_AREA_START - PHYS_MEM_START)
+#define KERNEL_OFFSET		(KERNEL_AREA_START - PLATFORM_PHYS_MEM_START)
 
 /* User tasks define them differently */
 #if defined (__KERNEL__)
@@ -49,7 +54,7 @@
 
 #define KERN_ADDR(x)		((x >= KERNEL_AREA_START) && (x < KERNEL_AREA_END))
 #define UTCB_ADDR(x)		((x >= UTCB_AREA_START) && (x < UTCB_AREA_END))
-#define PRIVILEGED_ADDR(x)	(KERN_ADDR(x) || (x >= ARM_HIGH_VECTOR) || \
+#define is_kernel_address(x)	(KERN_ADDR(x) || (x >= ARM_HIGH_VECTOR) || \
 				 (x >= IO_AREA_START && x < IO_AREA_END))
 
 #endif /* __MEMLAYOUT_H__ */

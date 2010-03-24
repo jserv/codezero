@@ -9,12 +9,13 @@
 #include <l4/macros.h>
 #include <l4/types.h>
 #include <l4/lib/list.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
 #include "alloc_page.h"
 #include INC_GLUE(memory.h)
 #include INC_SUBARCH(mm.h)
 #include INC_GLUE(memlayout.h)
+#include <l4lib/macros.h>
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
 
 struct page_allocator allocator;
 
@@ -95,7 +96,7 @@ void init_page_allocator(unsigned long start, unsigned long end)
 	link_init(&allocator.pga_cache_list);
 
 	/* Initialise the first page area cache */
-	cache = mem_cache_init(l4_map_helper((void *)start, 1), PAGE_SIZE,
+	cache = mem_cache_init(phys_to_virt((void *)start), PAGE_SIZE,
 			       sizeof(struct page_area), 0);
 	list_insert(&cache->list, &allocator.pga_cache_list);
 
@@ -134,7 +135,6 @@ int check_page_areas(struct page_allocator *p)
 {
 	struct page_area *new;
 	struct mem_cache *newcache;
-	void *newpage;
 
 	/* If only one free area left */
 	if (p->pga_free == 1) {
@@ -146,12 +146,9 @@ int check_page_areas(struct page_allocator *p)
 		/* Free page areas must now be reduced to 0 */
 		BUG_ON(p->pga_free != 0);
 
-		/* Map the new page into virtual memory */
-		newpage = l4_map_helper((void *)__pfn_to_addr(new->pfn), 1);
-
 		/* Initialise it as a new source of page area structures */
-		newcache = mem_cache_init(newpage, PAGE_SIZE,
-					  sizeof(struct page_area), 0);
+		newcache = mem_cache_init(phys_to_virt((void *)__pfn_to_addr(new->pfn)),
+					  PAGE_SIZE, sizeof(struct page_area), 0);
 
 		/*
 		 * Update the free page area counter
@@ -209,7 +206,12 @@ struct page_area *merge_free_areas(struct page_area *before,
 	/* Recursively free the cache page */
 	if (mem_cache_is_empty(c)) {
 		list_remove(&c->list);
-		BUG_ON(free_page(l4_unmap_helper(c, 1)) < 0)
+		if (free_page(virt_to_phys(c)) < 0) {
+			printf("Page ptr: 0x%lx, virt_to_phys = 0x%lx\n"
+			       "Page not found in cache.\n",
+			       (unsigned long)c, (unsigned long)virt_to_phys(c));
+			BUG();
+		}
 	}
 	return before;
 }

@@ -673,14 +673,14 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 	case CAP_CONTROL_NCAPS:
 		if ((err = check_access((unsigned long)userbuf,
 					sizeof(int),
-					MAP_USR_RW_FLAGS, 1)) < 0)
+					MAP_USR_RW, 1)) < 0)
 			return err;
 		break;
 	case CAP_CONTROL_READ:
 		if ((err = check_access((unsigned long)userbuf,
 					cap_count(current) *
 					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
+					MAP_USR_RW, 1)) < 0)
 			return err;
 		break;
 	case CAP_CONTROL_SHARE:
@@ -694,7 +694,7 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 	case CAP_CONTROL_DESTROY:
 		if ((err = check_access((unsigned long)userbuf,
 					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
+					MAP_USR_RW, 1)) < 0)
 			return err;
 		break;
 	default:

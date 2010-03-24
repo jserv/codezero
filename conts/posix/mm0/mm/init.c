@@ -3,8 +3,9 @@
  *
  * Copyright (C) 2007 - 2009 Bahadir Balban
  */
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
+#include __INC_ARCH(debug.h)
 #include <l4lib/utcb.h>
 #include <l4lib/exregs.h>
 #include <l4/lib/list.h>
@@ -229,6 +230,8 @@ void init_physmem_secondary(struct membank *membank)
 {
 	struct page_bitmap *pmap = initdata.page_map;
 	int npages = pmap->pfn_end - pmap->pfn_start;
+	void *virtual_start;
+	int err;
 
 	/*
 	 * Allocation marks for the struct
@@ -253,17 +256,6 @@ void init_physmem_secondary(struct membank *membank)
 	 */
 	pg_npages = __pfn(page_align_up((sizeof(struct page) * npages)));
 
-
-	/* These are relative pfn offsets
-	 * to the start of the memory bank
-	 *
-	 * FIXME:
-	 * 1.) These values were only right
-	 *     when membank started from pfn 0.
-	 *
-	 * 2.) Use set_page_map to set page map
-	 *     below instead of manually.
-	 */
 	pg_spfn = __pfn(membank[0].free);
 	pg_epfn = pg_spfn + pg_npages;
 
@@ -311,7 +303,34 @@ void init_physmem_secondary(struct membank *membank)
 
 	/* Test that page/phys macros work */
 	BUG_ON(phys_to_page(page_to_phys(&page_array[5]))
-			    != &page_array[5])
+			    != &page_array[5]);
+
+	/* Now map all physical pages to virtual correspondents */
+	virtual_start = (void *)PAGER_VIRTUAL_START;
+	if ((err = l4_map((void *)membank[0].start,
+			  virtual_start,
+			  __pfn(membank[0].end - membank[0].start),
+			  MAP_USR_RW, self_tid())) < 0) {
+		printk("FATAL: Could not map all physical pages to "
+		       "virtual. err=%d\n", err);
+		BUG();
+	}
+
+#if 0
+	printf("Virtual offset: %p\n", virtual_start);
+	printf("Physical page offset: 0x%lx\n", membank[0].start);
+	printf("page address: 0x%lx\n", (unsigned long)&page_array[5]);
+	printf("page_to_virt: %p\n", page_to_virt(&page_array[5]));
+	printf("virt_to_phys, virtual_start: %p\n", virt_to_phys(virtual_start));
+	printf("page_to_virt_to_phys: %p\n", virt_to_phys(page_to_virt(&page_array[5])));
+	printf("page_to_phys: 0x%lx\n", page_to_phys(&page_array[5]));
+#endif
+
+	/* Now test that virt/phys macros work */
+	BUG_ON(virt_to_phys(page_to_virt(&page_array[5]))
+	       != (void *)page_to_phys(&page_array[5]));
+	BUG_ON(virt_to_page(page_to_virt(&page_array[5]))
+	       != &page_array[5]);
 }
 
 
@@ -354,6 +373,7 @@ void init_physmem_primary()
 	physmem.numpages = physmem.end - physmem.start;
 }
 
+
 void init_physmem(void)
 {
 	init_physmem_primary();
@@ -377,12 +397,17 @@ void copy_init_process(void)
 	void *mapped;
 	int err;
 
+	/* Measure performance, if enabled */
+	perfmon_reset_start_cyccnt();
+
 	if ((fd = sys_open(self, "/test0", O_TRUNC |
 			   O_RDWR | O_CREAT, 0)) < 0) {
 		printf("FATAL: Could not open file "
 		       "to write initial task.\n");
 		BUG();
 	}
+
+	debug_record_cycles("sys_open");
 
 	init_img = bootdesc_get_image_byname("test0");
 	img_size = page_align_up(init_img->phys_end) -
@@ -407,6 +432,8 @@ void copy_init_process(void)
 		BUG();
 	}
 
+	debug_record_cycles("Until after do_mmap");
+
 	 /* Prefault it */
 	if ((err = task_prefault_range(self, (unsigned long)mapped,
 				       img_size, VM_READ | VM_WRITE))
@@ -415,14 +442,24 @@ void copy_init_process(void)
 		BUG();
 	}
 
+
 	/* Copy the raw image to anon region */
 	memcpy(mapped, init_img_start, img_size);
+
+
+	debug_record_cycles("memcpy image");
+
 
 	/* Write it to real file from anon region */
 	sys_write(find_task(self_tid()), fd, mapped, img_size);
 
+	debug_record_cycles("sys_write");
+
 	/* Close file */
 	sys_close(find_task(self_tid()), fd);
+
+
+	debug_record_cycles("sys_close");
 
 	/* Unmap anon region */
 	do_munmap(self, (unsigned long)mapped, __pfn(img_size));
@@ -430,11 +467,13 @@ void copy_init_process(void)
 	/* Unmap raw virtual range for image memory */
 	l4_unmap_helper(init_img_start,__pfn(img_size));
 
+	debug_record_cycles("Final do_munmap/l4_unmap");
+
 }
 
 void start_init_process(void)
 {
-	/* Copy raw test0 elf image from memory to memfs first */
+
 	copy_init_process();
 
 	init_execve("/test0");

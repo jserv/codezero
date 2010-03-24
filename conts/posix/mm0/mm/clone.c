@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 #include <l4lib/ipcdefs.h>
 #include <l4lib/exregs.h>
 #include <l4/api/errno.h>
@@ -111,6 +111,7 @@ int sys_clone(struct tcb *parent,
 
 	if (!child_stack)
 		return -EINVAL;
+	BUG_ON((unsigned long)child_stack < 0x10000);
 
 	if (clone_flags & CLONE_VM) {
 		flags |= TCB_SHARED_VM;
