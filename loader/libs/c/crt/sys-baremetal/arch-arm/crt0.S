@@ -76,12 +76,35 @@
  * The construction, validity and performance of this licence is governed
  * by the laws in force in New South Wales, Australia.
  */
+#include INC_PLAT(offsets.h)
+#include INC_ARCH(scu.h)
+#include INC_ARCH(asm.h)
+#include INC_ARCH(asm-macros.S)
+
+
 	.section .text
 	.code 32
 	.global _start;
 	.align;
 _start:
 	ldr	sp, 1f
+
+#if defined(CONFIG_SMP)
+	/* In case all cores start executing at _start */
+	get_cpuid	r0
+	teq	r0, #0
+	beq	core0
+wfiloop:				/* Secondary cores wait here */
+	mov	r0, #0x10000000		/* System Controller base */
+	orr	r0, r0, #0x30
+	ldr	r1, [r0]
+	teq	r1, #0
+	wfeeq
+	beq	wfiloop
+	mov	pc, r1			/* Jump to the address specified */
+#endif
+
+core0:	
 	bl	platform_init
 	bl	main
 1:	.word	_stack_top

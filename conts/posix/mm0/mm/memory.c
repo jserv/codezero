@@ -10,7 +10,7 @@
 #include <l4/types.h>
 #include <l4/api/errno.h>
 #include <l4/generic/space.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 #include INC_GLUE(memory.h)
 #include INC_SUBARCH(mm.h)
 #include <memory.h>
@@ -29,6 +29,8 @@ struct address_pool pager_vaddr_pool;
 
 /* Bitmap size to represent an address pool of 256 MB. */
 #define ADDRESS_POOL_256MB		2048
+
+unsigned long free_virtual_address_start;
 
 /* Same as a regular id pool except that its bitmap size is fixed */
 static struct pager_virtual_address_id_pool {
@@ -60,8 +62,8 @@ int pager_address_pool_init(void)
 	address_pool_init_with_idpool(&pager_vaddr_pool,
 		  	      	      (struct id_pool *)
 			      	      &pager_virtual_address_id_pool,
-				      PAGER_MMAP_END,
-				      __pfn_to_addr(cont_mem_regions.pager->end));
+				      PAGER_EXT_VIRTUAL_START,
+				      PAGER_EXT_VIRTUAL_END);
 	return 0;
 }
 
@@ -126,7 +128,7 @@ void *pager_map_pages(struct vm_file *f, unsigned long page_offset, unsigned lon
 	/* Map pages contiguously one by one */
 	for (unsigned long pfn = page_offset; pfn < page_offset + npages; pfn++) {
 		BUG_ON(!(p = find_page(&f->vm_obj, pfn)))
-			l4_map((void *)page_to_phys(p), addr, 1, MAP_USR_RW_FLAGS, self_tid());
+			l4_map((void *)page_to_phys(p), addr, 1, MAP_USR_RW, self_tid());
 			addr += PAGE_SIZE;
 	}
 
@@ -192,7 +194,7 @@ void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 		}
 
 		l4_map((void *)page_to_phys(p),
-		       virt, 1, MAP_USR_RW_FLAGS, self_tid());
+		       virt, 1, MAP_USR_RW, self_tid());
 		virt += PAGE_SIZE;
 	}
 
@@ -206,4 +208,26 @@ void *pager_validate_map_user_range2(struct tcb *user, void *userptr,
 	return mapped;
 }
 
+
+/*
+ * Find the page's offset from membank physical start,
+ * simply add the same offset to virtual start
+ */
+void *phys_to_virt(void *p)
+{
+	unsigned long paddr = (unsigned long)p;
+
+	return (void *)(paddr - membank[0].start + PAGER_VIRTUAL_START);
+}
+
+/*
+ * Find the page's offset from virtual start, add it to membank
+ * physical start offset
+ */
+void *virt_to_phys(void *v)
+{
+	unsigned long vaddr = (unsigned long)v;
+
+	return (void *)(vaddr - PAGER_VIRTUAL_START + membank[0].start);
+}
 

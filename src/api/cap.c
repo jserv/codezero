@@ -69,24 +69,43 @@ int cap_share_single(struct capability *user)
 	return 0;
 }
 
-#if 0
-/* Shares the whole list */
-int cap_share_all(void)
+/*
+ * Shares the whole capability list.
+ *
+ * FIXME: Make sure each and every capability has its
+ * share right set!
+ */
+int cap_share_all(unsigned int flags)
 {
-	cap_list_move(&curcont->cap_list,
-		      &current->space->cap_list);
+	if (flags == CAP_SHARE_ALL_CONTAINER) {
+
+		/* Move all private caps to container */
+		cap_list_move(&curcont->cap_list,
+			      &current->cap_list);
+
+		/*
+		 * Move all space caps to container, also.
+		 *
+		 * FIXME: Make sure all space capabilities
+		 * are owned by the sharer!!!
+		 */
+		cap_list_move(&curcont->cap_list,
+			      &current->space->cap_list);
+	} else if (flags == CAP_SHARE_ALL_SPACE) {
+
+		/* Move all private caps to space */
+		cap_list_move(&current->space->cap_list,
+			      &current->cap_list);
+	}
 	return 0;
 }
-#endif
 
 int cap_share(struct capability *cap, unsigned int flags)
 {
-	if (flags & CAP_SHARE_SINGLE)
-		cap_share_single(cap);
+	if (flags == CAP_SHARE_SINGLE)
+		return cap_share_single(cap);
 	else
-		return -EINVAL;
-
-	return 0;
+		return cap_share_all(flags);
 }
 
 #if 0
@@ -367,6 +386,16 @@ int cap_destroy(struct capability *cap)
 	if (!(cap_generic_perms(orig) & CAP_CHANGEABLE))
 		return -ENOCAP;
 
+	/*
+	 * Check that it is not a device.
+	 *
+	 * We don't allow devices for now. To do this
+	 * correctly, we need to check if device irq
+	 * is not currently registered.
+	 */
+	if (cap_is_devmem(orig))
+		return -ENOCAP;
+
 	cap_list_remove(orig, clist);
 	free_capability(orig);
 	return 0;
@@ -644,17 +673,20 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 	case CAP_CONTROL_NCAPS:
 		if ((err = check_access((unsigned long)userbuf,
 					sizeof(int),
-					MAP_USR_RW_FLAGS, 1)) < 0)
+					MAP_USR_RW, 1)) < 0)
 			return err;
 		break;
 	case CAP_CONTROL_READ:
 		if ((err = check_access((unsigned long)userbuf,
 					cap_count(current) *
 					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
+					MAP_USR_RW, 1)) < 0)
 			return err;
 		break;
 	case CAP_CONTROL_SHARE:
+		if (flags == CAP_SHARE_ALL_CONTAINER ||
+		    flags == CAP_SHARE_ALL_SPACE)
+			break;
 	case CAP_CONTROL_GRANT:
 	case CAP_CONTROL_SPLIT:
 	case CAP_CONTROL_REPLICATE:
@@ -662,7 +694,7 @@ int sys_capability_control(unsigned int req, unsigned int flags, void *userbuf)
 	case CAP_CONTROL_DESTROY:
 		if ((err = check_access((unsigned long)userbuf,
 					sizeof(struct capability),
-					MAP_USR_RW_FLAGS, 1)) < 0)
+					MAP_USR_RW, 1)) < 0)
 			return err;
 		break;
 	default:

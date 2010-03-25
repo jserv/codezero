@@ -6,9 +6,8 @@
 #ifndef __API_CAPABILITY_H__
 #define __API_CAPABILITY_H__
 
-#if defined(__KERNEL__)
 #include <l4/lib/list.h>
-#endif
+#include INC_ARCH(types.h)
 
 /* Capability syscall request types */
 #define CAP_CONTROL_NCAPS		0x00000000
@@ -20,8 +19,10 @@
 #define CAP_CONTROL_DEDUCE		0x00000006
 #define CAP_CONTROL_DESTROY		0x00000007
 
-#define CAP_SHARE_MASK			0x00000003
+#define CAP_SHARE_MASK			0x0000000F
 #define CAP_SHARE_SINGLE		0x00000001
+#define CAP_SHARE_ALL_CONTAINER		0x00000002
+#define CAP_SHARE_ALL_SPACE		0x00000003
 
 #define CAP_GRANT_MASK			0x0000000F
 #define CAP_GRANT_SINGLE		0x00000001

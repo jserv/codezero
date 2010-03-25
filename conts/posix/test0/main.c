@@ -6,7 +6,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
-#include <l4lib/arch/syslib.h>
 #include <l4lib/kip.h>
 #include <l4lib/utcb.h>
 #include <l4lib/ipcdefs.h>
@@ -15,6 +14,7 @@
 #include <sys/types.h>
 #include <atoi.h>
 #include <stdlib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 
 void wait_pager(l4id_t partner)
 {
@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
 
 	shmtest();
 
-	forktest();
-
 	fileio();
+
+	forktest();
 
 	clonetest();
 

@@ -11,9 +11,10 @@
 #include <l4/config.h>
 #include <l4/types.h>
 #include <task.h>
-#include <arch/mm.h>
 #include <lib/spinlock.h>
 #include <physmem.h>
+#include <linker.h>
+#include __INC_ARCH(mm.h)
 
 // #define DEBUG_FAULT_HANDLING
 #ifdef DEBUG_FAULT_HANDLING
@@ -21,6 +22,14 @@
 #else
 #define dprintf(...)
 #endif
+
+/* Some task segment marks for mm0 */
+#define PAGER_MMAP_SEGMENT		SZ_1MB
+#define PAGER_MMAP_START		(page_align_up(__stack))
+#define PAGER_MMAP_END			(PAGER_MMAP_START + PAGER_MMAP_SEGMENT)
+#define PAGER_EXT_VIRTUAL_START		PAGER_MMAP_END
+#define PAGER_EXT_VIRTUAL_END		(unsigned long)(PAGER_MMAP_END + SZ_2MB)
+#define PAGER_VIRTUAL_START		PAGER_EXT_VIRTUAL_END
 
 /* Protection flags */
 #define VM_NONE				(1 << 0)
@@ -74,6 +83,10 @@ extern struct page *page_array;
 						(void *)page_array) / \
 					       sizeof(struct page)) + \
 					       membank[0].start)
+
+/* Multiple conversions together */
+#define virt_to_page(x)	(phys_to_page(virt_to_phys(x)))
+#define page_to_virt(x)	(phys_to_virt((void *)page_to_phys(x)))
 
 /* Fault data specific to this task + ptr to kernel's data */
 struct fault_data {
@@ -226,9 +239,12 @@ void vm_object_print(struct vm_object *vmo);
 void vm_print_objects(struct link *vmo_list);
 void vm_print_files(struct link *file_list);
 
-/* Used for pre-faulting a page from mm0 */
+/* Buggy version. Used for pre-faulting a page from mm0 */
 struct page *task_prefault_page(struct tcb *task, unsigned long address,
 				unsigned int vmflags);
+/* New version */
+struct page *task_prefault_smart(struct tcb *task, unsigned long address,
+				 unsigned int vmflags);
 struct page *page_init(struct page *page);
 struct page *find_page(struct vm_object *vmo, unsigned long page_offset);
 void *pager_map_page(struct vm_file *f, unsigned long page_offset);

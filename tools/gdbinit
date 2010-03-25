@@ -4,5 +4,6 @@ stepi
 sym final.elf
 break break_virtual
 continue
+sym kernel.elf
 stepi
-sym /opt/codezero/build/kernel.elf
+

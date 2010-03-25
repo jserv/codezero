@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 Bahadir Balban
  */
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 #include <vm_area.h>
 #include <task.h>
 #include <user.h>
@@ -46,8 +46,8 @@ int pager_validate_user_range(struct tcb *user, void *userptr, unsigned long siz
  * FIXME: There's no logic here to make non-contiguous physical pages
  * to get mapped virtually contiguous.
  */
-void *pager_validate_map_user_range(struct tcb *user, void *userptr,
-				    unsigned long size, unsigned int vm_flags)
+void *pager_get_user_page(struct tcb *user, void *userptr,
+			  unsigned long size, unsigned int vm_flags)
 {
 	unsigned long start = page_align(userptr);
 	unsigned long end = page_align_up(userptr + size);
@@ -58,24 +58,15 @@ void *pager_validate_map_user_range(struct tcb *user, void *userptr,
 		return 0;
 
 	/* Map first page and calculate the mapped address of pointer */
-	mapped = l4_map_helper((void *)page_to_phys(task_prefault_page(user, start,
-								       vm_flags)), 1);
+	mapped = page_to_virt(task_prefault_page(user, start, vm_flags));
 	mapped = (void *)(((unsigned long)mapped) |
 			  ((unsigned long)(PAGE_MASK & (unsigned long)userptr)));
 
 	/* Map the rest of the pages, if any */
 	for (unsigned long i = start + PAGE_SIZE; i < end; i += PAGE_SIZE)
-		l4_map_helper((void *)
-			page_to_phys(task_prefault_page(user, start + i,
-							vm_flags)), 1);
+		BUG();
 
 	return mapped;
-}
-
-void pager_unmap_user_range(void *mapped_ptr, unsigned long size)
-{
-	l4_unmap_helper((void *)page_align(mapped_ptr),
-			__pfn(page_align_up(size)));
 }
 
 /*
@@ -164,27 +155,22 @@ int copy_from_user(struct tcb *task, void *buf, char *user, int size)
 	int count = size;
 	void *mapped = 0;
 
-	if (!(mapped = pager_validate_map_user_range(task, user,
-						     TILL_PAGE_ENDS(user),
-						     VM_READ)))
+	if (!(mapped = pager_get_user_page(task, user, TILL_PAGE_ENDS(user),
+					   VM_READ)))
 		return -EINVAL;
 
 	while ((ret = memcpy_page(buf + copied, mapped, count, 0)) < 0) {
-		pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 		copied += TILL_PAGE_ENDS(mapped);
 		count -= TILL_PAGE_ENDS(mapped);
 		if (!(mapped =
-		      pager_validate_map_user_range(task, user + copied,
-						    TILL_PAGE_ENDS(user + copied),
-						    VM_READ)))
+		      pager_get_user_page(task, user + copied,
+					  TILL_PAGE_ENDS(user + copied),
+					  VM_READ)))
 			return -EINVAL;
 	}
 
 	/* Note copied is always in bytes */
 	total = copied + ret;
-
-	/* Unmap the final page */
-	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 
 	return total;
 }
@@ -196,27 +182,22 @@ int copy_to_user(struct tcb *task, char *user, void *buf, int size)
 	void *mapped = 0;
 
 	/* Map the user page */
-	if (!(mapped = pager_validate_map_user_range(task, user,
-						     TILL_PAGE_ENDS(user),
-						     VM_READ)))
+	if (!(mapped = pager_get_user_page(task, user,
+					   TILL_PAGE_ENDS(user),
+					   VM_READ | VM_WRITE)))
 		return -EINVAL;
 
 	while ((ret = memcpy_page(mapped, buf + copied, count, 1)) < 0) {
-		pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 		copied += TILL_PAGE_ENDS(mapped);
 		count -= TILL_PAGE_ENDS(mapped);
-		if (!(mapped =
-		      pager_validate_map_user_range(task, user + copied,
-						    TILL_PAGE_ENDS(user + copied),
-						    VM_READ)))
+		if (!(mapped = pager_get_user_page(task, user + copied,
+						   TILL_PAGE_ENDS(user + copied),
+						   VM_READ | VM_WRITE)))
 			return -EINVAL;
 	}
 
 	/* Note copied is always in bytes */
 	total = copied + ret;
-
-	/* Unmap the final page */
-	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 
 	return total;
 }
@@ -243,9 +224,8 @@ int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,
 		return -EINVAL;
 
 	/* Map the first page the user buffer is in */
-	if (!(mapped = pager_validate_map_user_range(task, user,
-						     TILL_PAGE_ENDS(user),
-						     VM_READ)))
+	if (!(mapped = pager_get_user_page(task, user, TILL_PAGE_ENDS(user),
+					   VM_READ)))
 		return -EINVAL;
 
 	while ((ret = copy_func(buf + copied, mapped, count)) < 0) {
@@ -257,22 +237,18 @@ int copy_user_buf(struct tcb *task, void *buf, char *user, int maxlength,
 			 * because we know we hit a page boundary and we increase
 			 * by the page boundary bytes
 			 */
-			pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 			copied += TILL_PAGE_ENDS(mapped);
 			count -= TILL_PAGE_ENDS(mapped);
 			if (!(mapped =
-			      pager_validate_map_user_range(task, user + copied,
-							    TILL_PAGE_ENDS(user + copied),
-							    VM_READ)))
+			      pager_get_user_page(task, user + copied,
+						  TILL_PAGE_ENDS(user + copied),
+						  VM_READ)))
 				return -EINVAL;
 		}
 	}
 
 	/* Note copied is always in bytes */
 	total = (copied / elem_size) + ret;
-
-	/* Unmap the final page */
-	pager_unmap_user_range(mapped, TILL_PAGE_ENDS(mapped));
 
 	return total;
 }

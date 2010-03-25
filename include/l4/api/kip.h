@@ -61,7 +61,8 @@ struct kip {
 	u32 schedule;
 	u32 getid;
 	u32 mutex_control;
-
+	u32 cache_control;
+	
 	u32 arch_syscall0;
 	u32 arch_syscall1;
 	u32 arch_syscall2;

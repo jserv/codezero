@@ -10,8 +10,8 @@
 #include <l4/macros.h>
 #include <l4/api/errno.h>
 #include <l4lib/types.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
 #include <l4lib/ipcdefs.h>
 #include <l4/api/kip.h>
 #include <posix/sys/types.h>
@@ -43,8 +43,8 @@ int page_copy(struct page *dst, struct page *src,
 	BUG_ON(dst_offset + size > PAGE_SIZE);
 	BUG_ON(src_offset + size > PAGE_SIZE);
 
-	dstvaddr = l4_map_helper((void *)page_to_phys(dst), 1);
-	srcvaddr = l4_map_helper((void *)page_to_phys(src), 1);
+	dstvaddr = page_to_virt(dst);
+	srcvaddr = page_to_virt(src);
 /*
 	printf("%s: Copying from page with offset %lx to page with offset %lx\n"
 	       "src copy offset: 0x%lx, dst copy offset: 0x%lx, copy size: %lx\n",
@@ -55,9 +55,6 @@ int page_copy(struct page *dst, struct page *src,
 //		       (char *)(srcvaddr + src_offset), (unsigned long)srcvaddr+src_offset);
 
 	memcpy(dstvaddr + dst_offset, srcvaddr + src_offset, size);
-
-	l4_unmap_helper(dstvaddr, 1);
-	l4_unmap_helper(srcvaddr, 1);
 
 	return 0;
 }
@@ -552,16 +549,16 @@ int copy_cache_pages(struct vm_file *vmfile, struct tcb *task, void *buf,
 		     	copysize = min(copysize, PAGE_SIZE - page_offset(task_offset));
 
 			if (read)
-				page_copy(task_prefault_page(task, task_offset,
-							     VM_READ | VM_WRITE),
+				page_copy(task_prefault_smart(task, task_offset,
+							      VM_READ | VM_WRITE),
 					  file_page,
 					  page_offset(task_offset),
 					  page_offset(file_offset),
 					  copysize);
 			else
 				page_copy(file_page,
-					  task_prefault_page(task, task_offset,
-							     VM_READ),
+					  task_prefault_smart(task, task_offset,
+							      VM_READ),
 					  page_offset(file_offset),
 					  page_offset(task_offset),
 					  copysize);

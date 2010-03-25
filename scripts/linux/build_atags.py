@@ -64,7 +64,7 @@ class AtagsBuilder:
             with open(self.atags_h_in, 'r') as input:
                 output.write(input.read() % {'cn' : self.cont_id})
 
-        os.system(config.user_toolchain + "cpp -I%s -P %s > %s" % \
+        os.system(config.toolchain + "cpp -I%s -P %s > %s" % \
                   (self.LINUX_ATAGS_BUILDDIR, self.atags_lds_in, \
                    self.atags_lds_out))
 
@@ -72,7 +72,7 @@ class AtagsBuilder:
             with open(self.atags_c_in, 'r') as input:
                 output.write(input.read() % {'cn' : self.cont_id})
 
-        os.system(config.user_toolchain + "gcc " + \
+        os.system(config.toolchain + "gcc " + \
                   "-g -ffreestanding -std=gnu99 -Wall -Werror " + \
                   "-nostdlib -o %s -T%s %s" % \
                     (self.atags_elf_out, self.atags_lds_out, self.atags_c_out))

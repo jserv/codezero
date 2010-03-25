@@ -16,20 +16,21 @@ enables a thread to read and manipulate the list of capabilities that it possess
 .fi
 .I req
 denotes the type of request. See below for a full list.
+
 .TP
 .fi
 .I flags
 denotes additional flags for the given request. See below for a list of flags.
+
 .TP
 .fi
-
 .I buf
 almost always contains a capability structure that describes the request with regard to given
 .IR "req"
 and
 .IR "flags."
-.TP
 
+.TP
 .BR CAP_CONTROL_NCAPS
 Get capability count. This is the sum of thread-private capabilities, address space capabilities and container capabilities.
 .TP
@@ -47,9 +48,9 @@ Shares a single capability or list of capabilities with a collection entity such
 .B CAP_SHARE_SINGLE
 is specified in
 .IR "flag",
-a single capability is shared. Currently no method has been defined for sharing a larger entity than a single capability at a time, i.e. a list of capabilities. To achieve this, a
-.B CAP_SHARE_ALL
-flag is planned for a future release.
+a single capability is shared.
+.BR "CAP_SHARE_ALL_CONTAINER " "makes the caller thread share all of its thread-level and address space-level capability lists with its container. The caller must also be the owner of all of the capabilities, in case of the address space.
+.BR "CAP_SHARE_ALL_SPACE " "makes the caller thread share all of its thread-level capabilities with its address space."
 
 The sharing must be made with a thread collection entity that contains the capability owner. For example, a capability possessed by a thread may be shared with the thread's address space, or the thread's container. However it is not possible to share a capability in one container with another container. See
 .B CAP_CONTROL_REPLICATE

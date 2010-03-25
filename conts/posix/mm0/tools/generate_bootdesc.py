@@ -12,7 +12,7 @@ linkoutput_file_suffix = "-linkinfo.txt"
 linkoutput_file = image_name + linkoutput_file_suffix
 
 def generate_bootdesc():
-	command = config.user_toolchain + objdump + " -t " + image_name + " > " + linkoutput_file
+	command = config.toolchain + objdump + " -t " + image_name + " > " + linkoutput_file
 	print command
 	os.system(command)
 	f = open(linkoutput_file, "r")

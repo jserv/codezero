@@ -3,12 +3,11 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
-
 #include INC_PLAT(uart.h)
 
 void putc(char c)
 {
 	if (c == '\n')
-		uart_putc('\r');
-	uart_putc(c);
+		uart_tx_char(PLATFORM_CONSOLE_VBASE, '\r');
+	uart_tx_char(PLATFORM_CONSOLE_VBASE, c);
 }

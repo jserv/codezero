@@ -1,41 +1,53 @@
 /*
- * Kernel irq handling (core irqs like timer).
- * Also thread-level irq handling.
+ * Generic kernel irq handling.
  *
  * Copyright (C) 2007 - 2009 Bahadir Balban
  */
 #include <l4/config.h>
 #include <l4/macros.h>
 #include <l4/generic/scheduler.h>
+#include <l4/generic/debug.h>
 #include <l4/generic/platform.h>
 #include <l4/generic/tcb.h>
 #include <l4/generic/irq.h>
 #include <l4/lib/mutex.h>
 #include <l4/lib/printk.h>
+#include <l4/api/errno.h>
 #include INC_PLAT(irq.h)
 #include INC_ARCH(exception.h)
 
 /*
  * Registers a userspace thread as an irq handler.
+ *
+ * A userspace irq thread should have a low-level, device-specific
+ * irq handler as an in-kernel counterpart. This and its irq chip
+ * must have been set up at compile-time. These handlers should
+ * also know how to notify their userspace threads.
+ *
+ * If the irq does not have these set up, we cannot allow
+ * the irq registry.
  */
-int irq_register(struct ktcb *task, int notify_slot,
-		  l4id_t irq_index, irq_handler_t handler)
+int irq_register(struct ktcb *task, int notify_slot, l4id_t irq_index)
 {
 	struct irq_desc *this_desc = irq_desc_array + irq_index;
-	struct irq_chip *current_chip = irq_chip_array;
 
-	for (int i = 0; i < IRQ_CHIPS_MAX; i++) {
-		if (irq_index >= current_chip->start &&
-		    irq_index < current_chip->end) {
-			this_desc->chip = current_chip;
-			break;
-		}
-	}
-	/* Setup the handler */
-	this_desc->handler = handler;
+	/* Kernel counterpart not set up, don't allow */
+	if (!this_desc->handler || !this_desc->chip)
+		return -ENOIRQ;
 
-	/* Setup the slot to notify the task */
+	/* Index must be valid */
+	if (irq_index > IRQS_MAX || irq_index < 0)
+		return -ENOIRQ;
+
+	/* Setup the task and notify slot */
+	this_desc->task = task;
 	this_desc->task_notify_slot = notify_slot;
+
+	/* Setup irq desc waitqueue */
+	waitqueue_head_init(&this_desc->wqh_irq);
+
+	/* Enable the irq */
+	irq_enable(irq_index);
 
 	return 0;
 }
@@ -46,7 +58,8 @@ static inline void cascade_irq_chip(struct irq_chip *this_chip)
 {
 	if (this_chip->cascade >= 0) {
 		BUG_ON(IRQ_CHIPS_MAX == 1);
-		this_chip->ops.unmask(this_chip->cascade);
+		if(this_chip->ops.unmask)
+			this_chip->ops.unmask(this_chip->cascade);
 	}
 }
 
@@ -58,7 +71,8 @@ void irq_controllers_init(void)
 		this_chip = irq_chip_array + i;
 
 		/* Initialise the irq chip (e.g. reset all registers) */
-		this_chip->ops.init();
+		if (this_chip->ops.init)
+			this_chip->ops.init();
 
 		/* Enable cascaded irq on this chip if it exists */
 		cascade_irq_chip(this_chip);
@@ -87,8 +101,10 @@ l4id_t global_irq_index(void)
 		this_chip = irq_chip_array + i;
 
 		/* Find local irq that is triggered on this chip */
-		BUG_ON((irq_index =
-			this_chip->ops.read_irq()) == IRQ_NIL);
+		if (this_chip->ops.read_irq) {
+			irq_index = this_chip->ops.read_irq(this_chip->data);
+			BUG_ON(irq_index == IRQ_NIL);
+		}
 
 		/* See if this irq is a cascaded irq */
 		if (irq_index == this_chip->cascade)
@@ -115,6 +131,8 @@ void do_irq(void)
 {
 	l4id_t irq_index = global_irq_index();
 	struct irq_desc *this_irq = irq_desc_array + irq_index;
+
+	system_account_irq();
 
 	/*
 	 * Note, this can be easily done a few instructions

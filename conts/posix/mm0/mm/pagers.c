@@ -3,8 +3,8 @@
  */
 #include <l4/macros.h>
 #include <l4/lib/list.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
 #include <malloc/malloc.h>
 #include <mm/alloc_page.h>
 #include <vm_area.h>
@@ -66,7 +66,7 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
 	struct page *page;
-	void *vaddr, *paddr;
+	void *paddr;
 	int err;
 
 	/* Check first if the file has such a page at all */
@@ -86,46 +86,26 @@ int file_page_out(struct vm_object *vm_obj, unsigned long page_offset)
 		return 0;
 
 	paddr = (void *)page_to_phys(page);
-	vaddr = l4_new_virtual(1);
-
-	/* FIXME:
-	 * Are we sure that pages need
-	 * to be mapped to self one-by-one?
-	 *
-	 * This needs fixing.
-	 */
-
-	/* Map the page to self */
-	l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
 
 	//printf("%s/%s: Writing to vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
 	//	__TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
 
 	/* Syscall to vfs to write page back to file. */
-	if ((err = vfs_write(f->vnode, page_offset, 1, vaddr)) < 0)
-		goto out_err;
-
-	/* Unmap it from self */
-	l4_unmap(vaddr, 1, self_tid());
-	l4_del_virtual(vaddr, 1);
+	if ((err = vfs_write(f->vnode, page_offset, 1,
+			     phys_to_virt(paddr))) < 0)
+		return err;
 
 	/* Clear dirty flag */
 	page->flags &= ~VM_DIRTY;
 
 	return 0;
-
-out_err:
-	l4_unmap(vaddr, 1, self_tid());
-	l4_del_virtual(vaddr, 1);
-
-	return err;
 }
 
 struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 {
 	struct vm_file *f = vm_object_to_file(vm_obj);
 	struct page *page;
-	void *vaddr, *paddr;
+	void *paddr;
 	int err;
 
 	/* Check first if the file has such a page at all */
@@ -140,23 +120,18 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 	if (!(page = find_page(vm_obj, page_offset))) {
 		/* Allocate a new page */
 		paddr = alloc_page(1);
-		vaddr = l4_new_virtual(1);
 		page = phys_to_page(paddr);
 
-		/* Map the page to vfs task */
-		l4_map(paddr, vaddr, 1, MAP_USR_RW_FLAGS, self_tid());
-
-		/* Syscall to vfs to read into the page. */
+		/* Call to vfs to read into the page. */
 		if ((err = vfs_read(f->vnode, page_offset,
-				    1, vaddr)) < 0)
-			goto out_err;
+				    1, phys_to_virt(paddr))) < 0) {
+
+			free_page(paddr);
+			return PTR_ERR(err);
+		}
 
 	//	printf("%s/%s: Reading into vnode %lu, at pgoff 0x%lu, %d pages, buf at %p\n",
 	//	       __TASKNAME__, __FUNCTION__, f->vnode->vnum, page_offset, 1, vaddr);
-
-		/* Unmap it from vfs */
-		l4_unmap(vaddr, 1, self_tid());
-		l4_del_virtual(vaddr, 1);
 
 		/* Update vm object details */
 		vm_obj->npages++;
@@ -174,12 +149,6 @@ struct page *file_page_in(struct vm_object *vm_obj, unsigned long page_offset)
 	}
 
 	return page;
-
-out_err:
-	l4_unmap(vaddr, 1, self_tid());
-	l4_del_virtual(vaddr, 1);
-	free_page(paddr);
-	return PTR_ERR(err);
 }
 
 /*
@@ -392,9 +361,13 @@ int init_devzero(void)
 	/* Allocate and initialise the zero page */
 	zphys = alloc_page(1);
 	zpage = phys_to_page(zphys);
-	zvirt = l4_map_helper(zphys, 1);
+	zvirt = (void *)phys_to_virt(zphys);
 	memset(zvirt, 0, PAGE_SIZE);
-	l4_unmap_helper(zvirt, 1);
+
+	/*
+	 * FIXME:
+	 * Flush the dcache if virtual data cache
+	 */
 
 	/* Allocate and initialise devzero file */
 	devzero = vm_file_create();

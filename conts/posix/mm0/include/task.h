@@ -10,8 +10,8 @@
 #include <l4/types.h>
 #include INC_GLUE(memlayout.h)
 #include <l4/lib/list.h>
-#include <l4lib/arch/types.h>
-#include <l4lib/arch/syscalls.h>
+#include L4LIB_INC_ARCH(types.h)
+#include L4LIB_INC_ARCH(syscalls.h)
 #include <l4lib/utcb.h>
 #include <lib/addr.h>
 #include <l4/api/kip.h>

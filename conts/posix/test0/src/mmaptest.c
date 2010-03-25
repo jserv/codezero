@@ -15,8 +15,6 @@
 #include <tests.h>
 #include <errno.h>
 
-#define PAGE_SIZE		0x1000
-
 int mmaptest(void)
 {
 	int fd;

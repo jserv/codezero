@@ -1,9 +1,10 @@
 #include <thread.h>
-#include <capability.h>
 #include <container.h>
+#include <capability.h>
 #include <tests.h>
 #include <l4/api/errno.h>
 #include <l4lib/arch/syslib.h>
+#include <l4/api/capability.h>
 
 int simple_pager_thread(void *arg)
 {
@@ -14,8 +15,8 @@ int simple_pager_thread(void *arg)
 
 	l4_getid(&ids);
 
-	//printf("Thread spawned from pager, "
-	//       "trying to create new thread.\n");
+	printf("Thread spawned from pager, \
+	       trying to create new thread.\n");
 	err = l4_thread_control(THREAD_CREATE |
 				TC_SHARE_SPACE |
 				TC_AS_PAGER, &ids);
@@ -23,8 +24,8 @@ int simple_pager_thread(void *arg)
 	if (res == 0)
 		if (err == -ENOCAP ||
 		    err == -ENOMEM) {
-			//printf("Creation failed with %d "
-			//       "as expected.\n", err);
+			printf("Creation failed with %d "
+			       "as expected.\n", err);
 			testres = 0;
 		} else {
 			printf("Creation was supposed to fail "
@@ -58,7 +59,7 @@ int wait_check_test(struct task_ids *ids)
 	int result;
 
 	/* Wait for thread to finish */
-	//result = l4_thread_control(THREAD_WAIT, ids);
+	result = l4_thread_control(THREAD_WAIT, ids);
 	if (result < 0) {
 		printf("Waiting on (%d)'s exit failed.\n", ids->tid);
 		return -1;
@@ -66,6 +67,7 @@ int wait_check_test(struct task_ids *ids)
 		printf("Top-level test has failed\n");
 	}
 	/* Else it is a success */
+
 	return 0;
 }
 
@@ -74,7 +76,7 @@ int capability_test(void)
 	int err;
 	struct task_ids ids;
 	int TEST_MUST_FAIL = 0;
-	int TEST_MUST_SUCCEED = 1;
+	//int TEST_MUST_SUCCEED = 1;
 
 	/* Read pager capabilities */
 	caps_read_all();
@@ -90,17 +92,17 @@ int capability_test(void)
 		goto out_err;
 	}
 
+	printf("waititng for result\n");
 	/* Wait for test to finish and check result */
 	if (wait_check_test(&ids) < 0)
 		goto out_err;
-
 #if 0
+
 	/* Destroy test thread */
 	if ((err = l4_thread_control(THREAD_DESTROY, &ids)) < 0) {
 		printf("Destruction of top-level simple_pager failed.\n");
 		BUG();
 	}
-#endif
 
 	/*
 	 * Share operations with the same thread
@@ -129,7 +131,6 @@ int capability_test(void)
 	if (wait_check_test(&ids) < 0)
 		goto out_err;
 
-#if 0
 	/* Destroy test thread */
 	if ((err = l4_thread_control(THREAD_DESTROY, &ids)) < 0) {
 		printf("Destruction of top-level simple_pager failed.\n");

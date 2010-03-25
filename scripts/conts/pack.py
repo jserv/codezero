@@ -96,7 +96,7 @@ class LinuxContainerPacker:
                                      self.atags_elf_in])
         self.generate_container_assembler([self.kernel_image_in, self.rootfs_elf_in, \
                                            self.atags_elf_in])
-        os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
+        os.system(config.toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
                   % (self.container_elf_out, self.container_lds_out, \
                      self.container_S_out))
         # Final file is returned so that the final packer needn't
@@ -155,7 +155,7 @@ class DefaultContainerPacker:
     def pack_container(self, config):
         self.generate_container_lds(self.images_in)
         self.generate_container_assembler(self.images_in)
-        os.system(config.user_toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
+        os.system(config.toolchain + "gcc " + "-nostdlib -o %s -T%s %s" \
                   % (self.container_elf_out, self.container_lds_out, \
                      self.container_S_out))
         # Final file is returned so that the final packer needn't

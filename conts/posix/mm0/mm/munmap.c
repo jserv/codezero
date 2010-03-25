@@ -7,7 +7,7 @@
 #include <file.h>
 #include <l4/api/errno.h>
 #include <l4/lib/math.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 #include <vm_area.h>
 #include <malloc/malloc.h>
 

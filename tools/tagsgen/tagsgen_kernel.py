@@ -28,6 +28,13 @@ def main():
         ['api', 'arch/'+ arch, 'arch/'+ arch + '/' + subarch, 'drivers', \
          'generic', 'glue/' + arch, 'lib', 'platform/' + platform]
 
+    # Check if we need realview directory based on platform selected
+    if platform == "eb" or \
+       platform == "pba8" or \
+       platform == "pba9" or \
+       platform == "pb11mpcore":
+        search_folder += ['platform/realview']
+
     # Put all sources into a file list.
     for extn in file_extn:
         for dir in search_folder:

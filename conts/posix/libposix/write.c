@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <libposix.h>
 

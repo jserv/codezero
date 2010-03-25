@@ -15,29 +15,32 @@ sys.path.append(PROJRELROOT)
 from config.configuration import *
 from config.projpaths import *
 
-Import('env', 'arch', 'platform', 'type')
+Import('env', 'platform', 'type')
 variant = type
 
-# Path for uart files
-LIBDEV_UART_PATH = join(PROJROOT, 'conts/libdev/uart')
+# To include setbit/clrbit functions
+LIBL4_RELDIR = 'conts/libl4'
+LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
+LIBL4_INC = join(LIBL4_DIR, 'include')
 
-# Path for timer files
-LIBDEV_TIEMR_PATH = join(PROJROOT, 'conts/libdev/timer/sp804')
-
-# Path for clcd files
-LIBDEV_CLCD_PATH = join(PROJROOT, 'conts/libdev/clcd/pl110')
+LIBC_RELDIR = 'conts/libc'
+LIBC_DIR = join(PROJROOT, LIBC_RELDIR)
+LIBC_INC = join(LIBC_DIR, 'include')
 
 e = env.Clone()
-e.Append(CPPPATH = [LIBDEV_UART_PATH + '/include', LIBDEV_TIEMR_PATH + '/include',
-                    LIBDEV_CLCD_PATH + '/include',],
-         CCFLAGS = ['-nostdinc', '-DVARIANT_' + variant.upper(),
-                    '-DPLATFORM_' + platform.upper()])
+e.Append(CPPPATH = ['#conts/libdev/include', LIBC_INC, LIBL4_INC],
+         CCFLAGS = ['-DVARIANT_' + variant.upper()])
 
-source = Glob('uart/src' + '/*.c') + \
-         Glob('timer/sp804/src' + '/*.c') + \
-        Glob('clcd/pl110/src' + '/*.c')
+objects = []
+objects += SConscript('uart/pl011/SConscript', duplicate=0, \
+                      exports = {'platform' : platform, 'env' : e})
+objects += SConscript('timer/sp804/SConscript', duplicate=0, \
+                      exports = {'platform' : platform, 'env' : e})
 
-objects = e.StaticObject(source)
+objects += SConscript('uart/omap/SConscript', duplicate=0, \
+                       exports = {'platform' : platform, 'env' : e})
+objects += SConscript('timer/omap/SConscript', duplicate=0, \
+                      exports = {'platform' : platform, 'env' : e})
+
 library = e.StaticLibrary('libdev-' + variant, objects)
-
 Return('library')

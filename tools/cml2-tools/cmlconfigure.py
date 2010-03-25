@@ -3248,6 +3248,8 @@ if __name__ == '__main__':
 	sys.exit(1)
 
     for (switch, val) in options:
+	if switch == "-b":
+	    force_batch = 1
         if switch == "-V":
             print "cmlconfigure", cml.version
             raise SystemExit
@@ -3268,7 +3270,7 @@ if __name__ == '__main__':
             raise SystemExit
 
     # Probe the environment to see if we can use X for the front end.
-    if not force_tty and not force_debugger and not force_curses and not force_x and not force_q:
+    if not force_tty and not force_debugger and not force_curses and not force_x and not force_q and not force_batch:
         force_x = force_q = is_under_X()
 
     # Do we see X capability?
@@ -3278,7 +3280,8 @@ if __name__ == '__main__':
             from Dialog import *
         except:
             print lang["NOTKINTER"]
-            time.sleep(5)
+	    if not force_batch:
+            	time.sleep(5)
             force_curses = 1
             force_x = force_q = 0
 

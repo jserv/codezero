@@ -58,7 +58,7 @@
  * Complicated for you? Suggest a simpler design and it shall be implemented!
  */
 
-#define MR_REST			((UTCB_SIZE >> 2) - MR_TOTAL - 2)	/* -2 is for fields on utcb */
+#define MR_REST			((UTCB_SIZE >> 2) - MR_TOTAL - 4)	/* -4 is for fields on utcb */
 #define MR_TOTAL		6
 #define MR_TAG			0	/* Contains the purpose of message */
 #define MR_SENDER		1	/* For anythread receivers to discover sender */
@@ -73,6 +73,9 @@
 #define MR0_REGISTER		r3
 #define MR_RETURN_REGISTER	r3
 
+#define TASK_NOTIFY_SLOTS	8
+#define TASK_NOTIFY_MAXVALUE	255
+
 /* Primaries aren't used for memcopy. Those ops use this as a parameter */
 #define L4_UTCB_FULL_BUFFER_SIZE	(MR_REST * sizeof(int))
 
@@ -83,6 +86,7 @@ struct utcb {
 	u32 mr[MR_TOTAL];	/* MRs that are mapped to real registers */
 	u32 saved_tag;		/* Saved tag field for stacked ipcs */
 	u32 saved_sender;	/* Saved sender field for stacked ipcs */
+	u8  notify[TASK_NOTIFY_SLOTS]; /* Irq notification slots */
 	u32 mr_rest[MR_REST];	/* Complete the utcb for up to 64 words */
 };
 #endif

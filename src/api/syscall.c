@@ -39,6 +39,12 @@ int sys_schedule(void)
 int sys_getid(struct task_ids *ids)
 {
 	struct ktcb *this = current;
+	int err;
+
+	if ((err = check_access((unsigned long)ids,
+				sizeof(struct task_ids),
+				MAP_USR_RW, 1)) < 0)
+		return err;
 
 	ids->tid = this->tid;
 	ids->spid = this->space->spid;

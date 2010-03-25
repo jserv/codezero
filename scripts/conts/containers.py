@@ -33,7 +33,7 @@ def build_linux_container(config, projpaths, container):
 
     # Calculate and store size of pager
     pager_binary = \
-        "cont" + str(container.id) + "/linux/linux-2.6.28.10/linux.elf"
+        "cont" + str(container.id) + "/linux/linux-2.6.33/linux.elf"
     config.containers[container.id].pager_size = \
             conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
 

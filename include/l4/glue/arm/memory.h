@@ -11,35 +11,32 @@
 #include INC_SUBARCH(mm.h)
 
 /* Generic definitions */
-#define PAGE_SIZE			ARM_PAGE_SIZE
-#define PAGE_MASK			ARM_PAGE_MASK
-#define PAGE_BITS			ARM_PAGE_BITS
-
-/*
- * This defines the largest size defined by this architecture that is
- * easily mappable. ARM supports 1MB mappings so it fits well. If it's
- * unsupported by the arch then a reasonable size could be 1MB.
- */
-#define SECTION_SIZE			ARM_SECTION_SIZE
-#define SECTION_MASK			ARM_SECTION_MASK
-#define SECTION_BITS			ARM_SECTION_BITS
+#define PFN_SHIFT			12
+#define PAGE_BITS			PFN_SHIFT
+#define PAGE_SIZE			SZ_4K
+#define PAGE_MASK			(PAGE_SIZE - 1)
 
 /* Aligns to the upper page (ceiling) FIXME: Must add a wraparound checker. */
-#define page_align_up(addr) 		((((unsigned int)(addr)) + \
-					  (PAGE_SIZE - 1)) & \
-					 (~PAGE_MASK))
-/* Aligns to the lower page (floor) */
-#define page_align(addr)		(((unsigned int)(addr)) &  \
+#define page_align_up(addr) 		((((unsigned long)(addr)) + PAGE_MASK) & \
 					 (~PAGE_MASK))
 
-#define is_aligned(val, size)		(!(((unsigned long)(val)) & ((size) - 1)))
+/* Aligns to the lower page (floor) */
+#define page_align(addr)		(((unsigned long)(addr)) &  \
+					 (~PAGE_MASK))
+
+#define is_aligned(val, size)		(!(((unsigned long)(val)) & (((unsigned long)size) - 1)))
 #define is_page_aligned(val)		(!(((unsigned long)(val)) & PAGE_MASK))
 #define page_boundary(x)		is_page_aligned(x)
 
-/* Align to given size */
-#define	align(addr, size)		(((unsigned int)(addr)) & (~(size-1)))
+/*
+ * Align to given size.
+ *
+ * Note it must be an alignable size i.e. one that is a power of two.
+ * E.g. 0x1000 would work but 0x1010 would not.
+ */
+#define	align(addr, size)		(((unsigned int)(addr)) & (~((unsigned long)size-1)))
 #define align_up(addr, size)		((((unsigned long)(addr)) + \
-					((size) - 1)) & (~((size) - 1)))
+					((size) - 1)) & (~(((unsigned long)size) - 1)))
 
 /* The bytes left until the end of the page that x is in */
 #define TILL_PAGE_ENDS(x)	(PAGE_SIZE - ((unsigned long)(x) & PAGE_MASK))
@@ -58,6 +55,8 @@
 #define BITWISE_GETWORD(x)	((x) >> WORD_BITS_LOG2) /* Divide by 32 */
 #define	BITWISE_GETBIT(x)	(1 << ((x) % WORD_BITS))
 
+/* Minimum stack alignment restriction across functions, exceptions */
+#define STACK_ALIGNMENT				8
 
 /* Endianness conversion */
 static inline void be32_to_cpu(unsigned int x)
@@ -74,31 +73,6 @@ static inline void be32_to_cpu(unsigned int x)
 	p[1] = p[2];
 	p[2] = tmp;
 }
-
-void paging_init(void);
-
-unsigned int space_flags_to_ptflags(unsigned int flags);
-
-void add_mapping_pgd(unsigned int paddr, unsigned int vaddr,
-		     unsigned int size, unsigned int flags,
-		     pgd_table_t *pgd);
-void add_mapping(unsigned int paddr, unsigned int vaddr,
-		 unsigned int size, unsigned int flags);
-int remove_mapping(unsigned long vaddr);
-int remove_mapping_pgd(unsigned long vaddr, pgd_table_t *pgd);
-int remove_mapping_pgd_all_user(pgd_table_t *pgd);
-void prealloc_phys_pagedesc(void);
-
-int check_mapping_pgd(unsigned long vaddr, unsigned long size,
-		      unsigned int flags, pgd_table_t *pgd);
-
-int check_mapping(unsigned long vaddr, unsigned long size,
-		  unsigned int flags);
-
-void copy_pgd_kern_all(pgd_table_t *);
-pte_t virt_to_pte(unsigned long virtual);
-pte_t virt_to_pte_from_pgd(unsigned long virtual, pgd_table_t *pgd);
-unsigned long virt_to_phys_by_pgd(unsigned long vaddr, pgd_table_t *pgd);
 
 struct ktcb;
 void task_init_registers(struct ktcb *task, unsigned long pc);

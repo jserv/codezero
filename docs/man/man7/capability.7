@@ -15,29 +15,26 @@ Each thread, address space and container is associated with its own capability l
 
 The capability structure is defined as follows:
 .nf
-.TP
-.BI "struct" " capability " "{"
-.in 16
-.BI "struct link " "list" ";"
+.B struct capability {
+.BI "	   struct link " "list" ";"
 .BI ""
-/* Capability identifiers */
-.BI "l4id_t " "capid" ";         /* Unique capability ID */"
-.BI "l4id_t "  "owner" ";         /* Capability owner ID */"
-.BI "l4id_t " "resid" ";         /* Targeted resource ID */"
-.BI "unsigned int " "type" ";    /* Capability and target resource type */"
+ 	   /* Capability identifiers */
+.BI "	   l4id_t " "capid" ";         /* Unique capability ID */"
+.BI "	   l4id_t "  "owner" ";         /* Capability owner ID */"
+.BI "	   l4id_t " "resid" ";         /* Targeted resource ID */"
+.BI "	   unsigned int " "type" ";    /* Capability and target resource type */"
 .BI ""
-/* Capability permissions */
-.BI "u32 " "access" ";           /* Permitted operations */"
+	   /* Capability permissions */
+.BI "	   u32 " "access" ";           /* Permitted operations */"
 .BI ""
-/* Other Limits/Attributes of the resource */
-.BI "unsigned long " "start" ";  /* Resource start value */"
-.BI "unsigned long " "end" ";    /* Resource end value */"
-.BI "unsigned long " "size" ";   /* Resource size */"
+	   /* Other Limits/Attributes of the resource */
+.BI "	   unsigned long " "start" ";  /* Resource start value */"
+.BI "	   unsigned long " "end" ";    /* Resource end value */"
+.BI "	   unsigned long " "size" ";   /* Resource size */"
 .BI ""
-.BI "unsigned long " "used" ";   /* Resource used size */"
-.BI "unsigned int " "attr" ";   /* User-defined attribute. (Device index and type on devices) */"
-.BI "l4id_t " "irq" ";   /* Device irq (Devices Only) */"
-.in 6
+.BI "	   unsigned long " "used" ";   /* Resource used size */"
+.BI "	   unsigned int " "attr" ";    /* User-defined attribute. (Device index and type on devices) */"
+.BI "	   l4id_t " "irq" ";	/* Device irq (Devices Only) */"
 .B };
 
 .TP

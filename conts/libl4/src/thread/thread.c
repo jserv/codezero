@@ -22,8 +22,6 @@ extern unsigned long lib_utcb_range_size;
 /* Static variable definitions */
 struct l4_mutex lib_mutex;
 
-extern void global_add_task(struct l4lib_tcb *task);
-
 /* Function definitions */
 int l4_thread_create(struct task_ids *ids, unsigned int flags,
 			int (*func)(void *), void *arg)

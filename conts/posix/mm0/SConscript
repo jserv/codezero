@@ -4,21 +4,12 @@ Import('config', 'env', 'contid')
 import os, sys
 
 arch = config.arch
+subarch = config.subarch
 
 sys.path.append('../../../../')
 from config.lib import *
 
 container = next((c for c in config.containers if int(c.id) == int(contid)), None)
-
-def create_symlinks(arch):
-	arch_path = "include/arch"
-	arch_path2 ="src/arch"
-	if os.path.exists(arch_path):
-		os.system("rm %s" % (arch_path))
-	os.system("ln -s %s %s" % ("arch-" + arch, arch_path))
-	if os.path.exists(arch_path2):
-		os.system("rm %s" % (arch_path2))
-	os.system("ln -s %s %s" % ("arch-" + arch, arch_path2))
 
 def generate_container_h(target, source, env):
     base_value_dict = {}
@@ -52,13 +43,15 @@ def generate_vma_lma_lds(target, source, env):
 lma_lds = Command('include/linker.lds', 'include/linker.lds.in', generate_vma_lma_lds)
 
 container_h = Command('include/container.h', 'include/container.h.in', generate_container_h)
-src = [Glob('*.c') + Glob('mm/*.c') + Glob('lib/*.c') + Glob('fs/*.c') + Glob('fs/memfs/*.c') + Glob('lib/elf/*.c') + Glob('mm/arch/*.[Sc]')]
+src = [Glob('*.c') + Glob('mm/*.c') + Glob('lib/*.c') + Glob('fs/*.c') + \
+       Glob('fs/memfs/*.c') + Glob('lib/elf/*.c') + Glob('mm/arch/' + arch + '/*.[Sc]') +
+       Glob('mm/arch/' + arch + '/' + subarch + '/*.[Sc]')]
 
 e = env.Clone()
 
 e.Append(LINKFLAGS = ['-T' + lma_lds[0].path, '-u_start'])
 e.Append(LIBS = 'posix')
-e.Append(CPPFLAGS = ' -include ' + container_h[0].path)
+e.Append(CPPFLAGS = ' -include ' + container_h[0].path + ' -include macros.h  -include l4lib/macros.h ')
 objs = e.Object(src)
 mm0 = e.Program('mm0.elf', objs)
 Depends(objs, container_h)

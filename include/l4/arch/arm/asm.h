@@ -20,9 +20,11 @@
 #define ARM_NOIRQ_FIQ	0xD1
 #define ARM_NOIRQ_USR	0xD0
 #define ARM_NOIRQ_SYS	0xDF
+
 /* For enabling *clear* these bits */
-#define ARM_IRQ_BIT	0x80
-#define ARM_FIQ_BIT	0x40
+#define ARM_IRQ_BIT	0x080
+#define ARM_FIQ_BIT	0x040
+#define ARM_A_BIT	0x100 /* Asynchronous abort */
 
 /* Notes about ARM instructions:
  *

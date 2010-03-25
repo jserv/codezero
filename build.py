@@ -12,6 +12,7 @@ from os.path import join
 from config.projpaths import *
 from config.configuration import *
 from config.config_check import *
+from scripts.qemu import qemu_cmdline
 from scripts.conts import containers
 from configure import *
 
@@ -31,7 +32,10 @@ def main():
     # Build userspace libraries
     #
     print "\nBuilding userspace libraries..."
-    os.system('scons -f SConstruct.userlibs')
+    ret = os.system('scons -f SConstruct.userlibs')
+    if(ret):
+	print "Build failed \n"
+	sys.exit(1)
 
     #
     # Build containers
@@ -49,17 +53,31 @@ def main():
     #
     print "\nBuilding the kernel..."
     os.chdir(PROJROOT)
-    os.system("scons")
+    ret = os.system("scons")
+    if(ret):
+	print "Build failed \n"
+	sys.exit(1)
 
     #
     # Build libs and loader
     #
     os.chdir(PROJROOT)
     print "\nBuilding the loader and packing..."
-    os.system("scons -f SConstruct.loader")
+    ret = os.system("scons -f SConstruct.loader")
+    if(ret):
+	print "Build failed \n"
+	sys.exit(1)
+
+    #
+    # Build qemu-insight-script
+    #
+    print "\nBuilding qemu-insight-script.."
+    qemu_cmdline.build_qemu_cmdline_script()
+    #build_qemu_cmdline_script()
 
     print "\nBuild complete."
 
+    print "\nRun qemu with following command: ./tools/run-qemu-insight\n"
 
 if __name__ == "__main__":
     main()

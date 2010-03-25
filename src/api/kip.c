@@ -5,5 +5,5 @@
  */
 #include INC_API(kip.h)
 
-SECTION(".data.kip") struct kip kip;
+SECTION(".data.kip") ALIGN(SZ_4K) struct kip kip;
 

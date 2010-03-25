@@ -5,7 +5,6 @@
  */
 #include <l4/api/errno.h>
 #include <container.h>
-#include <capability.h>
 #include <thread.h>
 #include <tests.h>
 #include <l4lib/arch/syslib.h>

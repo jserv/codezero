@@ -3,58 +3,61 @@
  *
  * Copyright (C) 2007 Bahadir Balban
  */
-#include <l4/generic/platform.h>
-#include <l4/generic/irq.h>
-#include <l4/generic/time.h>
+#include <l4/drivers/irq/gic/gic.h>
 #include INC_PLAT(irq.h)
-#include INC_PLAT(platform.h)
-#include INC_ARCH(exception.h)
-#include <l4/drivers/irq/pl190/pl190_vic.h>
-#include <l4/drivers/timer/sp804/sp804_timer.h>
+#include <l4/generic/irq.h>
 
-struct irq_chip irq_chip_array[IRQ_CHIPS_MAX];
-#if 0
+extern struct gic_data gic_data[IRQ_CHIPS_MAX];
+
+#if defined (CONFIG_CPU_ARM11MPCORE) || defined (CONFIG_CPU_CORTEXA9)
 struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
-	[0] = {
-		.name = "Vectored irq controller",
+    	[0] = {
+		.name = "CoreTile GIC",
 		.level = 0,
-		.cascade = IRQ_SIC,
-		.offset = 0,
+		.cascade = IRQ_NIL,
+		.start = 0,
+		.end = IRQS_MAX,
+		.data = &gic_data[0],
 		.ops = {
-			.init = pl190_vic_init,
-			.read_irq = pl190_read_irq,
-			.ack_and_mask = pl190_mask_irq,
-			.unmask = pl190_unmask_irq,
+			.init = gic_dummy_init,
+			.read_irq = gic_read_irq,
+			.ack_and_mask = gic_ack_and_mask,
+			.unmask = gic_unmask_irq
 		},
-	},
+        },
+#if 0
 	[1] = {
-		.name = "Secondary irq controller",
+		.name = "EB GIC",
 		.level = 1,
 		.cascade = IRQ_NIL,
-		.offset = SIRQ_CHIP_OFFSET,
+		.start = EB_GIC_IRQ_OFFSET,
+		.end = EB_GIC_IRQ_OFFSET + IRQS_MAX,
+		.data = &gic_data[1],
 		.ops = {
-			.init = pl190_sic_init,
-			.read_irq = pl190_sic_read_irq,
-			.ack_and_mask = pl190_sic_mask_irq,
-			.unmask = pl190_sic_unmask_irq,
+			.init = gic_dummy_init,
+			.read_irq = gic_read_irq,
+			.ack_and_mask = gic_ack_and_mask,
+			.unmask = gic_unmask_irq,
+		},
+	},
+#endif
+};
+#else
+struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
+	[0] = {
+		.name = "EB GIC",
+		.level = 0,
+		.cascade = IRQ_NIL,
+		.start = 0,
+		.end = EB_GIC_IRQ_OFFSET + IRQS_MAX,
+		.data = &gic_data[1],
+		.ops = {
+			.init = gic_dummy_init,
+			.read_irq = gic_read_irq,
+			.ack_and_mask = gic_ack_and_mask,
+			.unmask = gic_unmask_irq,
 		},
 	},
 };
 #endif
-
-static int platform_timer_handler(void)
-{
-	sp804_irq_handler(PLATFORM_TIMER0_BASE);
-	return do_timer_irq();
-}
-
-/* Built-in irq handlers initialised at compile time.
- * Else register with register_irq() */
-struct irq_desc irq_desc_array[IRQS_MAX] = {
-	[IRQ_TIMER01] = {
-		.name = "Timer01",
-		.chip = &irq_chip_array[0],
-		.handler = platform_timer_handler,
-	},
-};
 

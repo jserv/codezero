@@ -1,10 +1,11 @@
 /*
  * Main function for this container
  */
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/syscalls.h>
+#include <l4lib/macros.h>
+#include L4LIB_INC_ARCH(syslib.h)
+#include L4LIB_INC_ARCH(syscalls.h)
 #include <l4/api/space.h>
-#include <l4thread/thread.h>
+#include <l4lib/thread/thread.h>
 
 /* Symbolic constants */
 #define STACK_SIZE	0x1000

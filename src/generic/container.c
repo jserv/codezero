@@ -8,8 +8,10 @@
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
 #include <l4/generic/bootmem.h>
+#include <l4/generic/thread.h>
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
+#include INC_GLUE(mapping.h)
 #include INC_SUBARCH(mm.h)
 #include INC_ARCH(linker.h)
 
@@ -83,22 +85,16 @@ struct container *container_find(struct kernel_resources *kres, l4id_t cid)
  * This involves setting up pager's ktcb, space, utcb,
  * all ids, registers, and mapping its (perhaps) first
  * few pages in order to make it runnable.
- *
- * The first pager initialization is a special-case
- * since it uses the current kernel pgd.
  */
-int init_pager(struct pager *pager,
-	       struct container *cont,
-	       pgd_table_t *current_pgd)
+int init_pager(struct pager *pager, struct container *cont)
 {
 	struct ktcb *task;
 	struct address_space *space;
-	int first = !!current_pgd;
 
 	/*
 	 * Set up dummy current cap_list so that cap accounting
 	 * can be done to this pager. Note, that we're still on
-	 * bootstack.
+	 * idle task stack.
 	 */
 	cap_list_move(&current->cap_list, &pager->cap_list);
 
@@ -108,25 +104,8 @@ int init_pager(struct pager *pager,
 	/* New ktcb allocation is needed */
 	task = tcb_alloc_init(cont->cid);
 
-	/* If first, manually allocate/initalize space */
-	if (first) {
-		if (!(space = alloc_space()))
-			return -ENOMEM;
-
-		/* Set up space id */
-		space->spid = id_new(&kernel_resources.space_ids);
-
-		/* Initialize space structure */
-		link_init(&space->list);
-		mutex_init(&space->lock);
-		cap_list_init(&space->cap_list);
-		space->pgd = current_pgd;
-		address_space_attach(task, space);
-	} else {
-		/* Otherwise allocate conventionally */
-		space = address_space_create(0);
-		address_space_attach(task, space);
-	}
+	space = address_space_create(0);
+	address_space_attach(task, space);
 
 	/* Initialize ktcb */
 	task_init_registers(task, pager->start_address);
@@ -135,6 +114,9 @@ int init_pager(struct pager *pager,
 	task->pagerid = task->tid;
 	task->tgid = task->tid;
 	task->container = cont;
+
+	/* Set cpu affinity */
+	thread_setup_affinity(task);
 
 	/* Add the address space to container space list */
 	address_space_add(task->space);
@@ -148,7 +130,7 @@ int init_pager(struct pager *pager,
 	/* Map the task's space */
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
 			page_align_up(pager->memsize),
-			MAP_USR_DEFAULT_FLAGS, TASK_PGD(task));
+			MAP_USR_RWX, TASK_PGD(task));
 
 	/* Move capability list from dummy to task's space cap list */
 	cap_list_move(&task->space->cap_list, &current->cap_list);
@@ -162,6 +144,7 @@ int init_pager(struct pager *pager,
 
 	/* Container list that keeps all tasks */
 	tcb_add(task);
+
 	return 0;
 }
 
@@ -256,24 +239,15 @@ int update_dynamic_capids(struct kernel_resources *kres)
  * Initialize all containers with their initial set of tasks,
  * spaces, scheduler parameters such that they can be started.
  */
-int container_init_pagers(struct kernel_resources *kres,
-			  pgd_table_t *current_pgd)
+int container_init_pagers(struct kernel_resources *kres)
 {
 	struct container *cont;
 	struct pager *pager;
-	int first = 1;
 
 	list_foreach_struct(cont, &kres->containers.list, list) {
 		for (int i = 0; i < cont->npagers; i++) {
 			pager = &cont->pager[i];
-
-			/* First pager initializes specially */
-			if (first) {
-				init_pager(pager, cont, current_pgd);
-				first = 0;
-			} else {
-				init_pager(pager, cont, 0);
-			}
+			init_pager(pager, cont);
 		}
 	}
 

@@ -4,6 +4,7 @@
  * Copyright (C) 2008 Bahadir Balban
  */
 #include INC_GLUE(memory.h)
+#include INC_GLUE(mapping.h)
 #include INC_GLUE(memlayout.h)
 #include INC_ARCH(exception.h)
 #include INC_SUBARCH(mm.h)
@@ -14,7 +15,6 @@
 #include <l4/api/errno.h>
 #include <l4/api/kip.h>
 #include <l4/lib/idpool.h>
-
 
 void init_address_space_list(struct address_space_list *space_list)
 {
@@ -47,15 +47,16 @@ void address_space_add(struct address_space *space)
 	BUG_ON(!++curcont->space_list.count);
 }
 
-void address_space_remove(struct address_space *space)
+void address_space_remove(struct address_space *space, struct container *cont)
 {
 	BUG_ON(list_empty(&space->list));
-	BUG_ON(--curcont->space_list.count < 0);
+	BUG_ON(--cont->space_list.count < 0);
 	list_remove_init(&space->list);
 }
 
 /* Assumes address space reflock is already held */
-void address_space_delete(struct address_space *space)
+void address_space_delete(struct address_space *space,
+			  struct ktcb *task_accounted)
 {
 	BUG_ON(space->ktcb_refs);
 
@@ -66,7 +67,7 @@ void address_space_delete(struct address_space *space)
 	id_del(&kernel_resources.space_ids, space->spid);
 
 	/* Deallocate the space structure */
-	free_space(space);
+	free_space(space, task_accounted);
 }
 
 struct address_space *address_space_create(struct address_space *orig)
@@ -81,7 +82,7 @@ struct address_space *address_space_create(struct address_space *orig)
 
 	/* Allocate pgd */
 	if (!(pgd = alloc_pgd())) {
-		free_space(space);
+		free_space(space, current);
 		return PTR_ERR(-ENOMEM);
 	}
 
@@ -92,7 +93,7 @@ struct address_space *address_space_create(struct address_space *orig)
 	space->pgd = pgd;
 
 	/* Copy all kernel entries */
-	copy_pgd_kern_all(pgd);
+	arch_copy_pgd_kernel_entries(pgd);
 
 	/*
 	 * Set up space id: Always allocate a new one. Specifying a space id
@@ -106,7 +107,7 @@ struct address_space *address_space_create(struct address_space *orig)
 		/* Copy its user entries/tables */
 		if ((err = copy_user_tables(space, orig)) < 0) {
 			free_pgd(pgd);
-			free_space(space);
+			free_space(space, current);
 			return PTR_ERR(err);
 		}
 	}

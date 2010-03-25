@@ -16,6 +16,7 @@
 #include <l4/generic/capability.h>
 #include INC_ARCH(asm.h)
 #include INC_SUBARCH(mm.h)
+#include INC_GLUE(mapping.h)
 
 int sys_thread_switch(void)
 {
@@ -56,11 +57,10 @@ int thread_suspend(struct ktcb *task)
 
 int thread_exit(struct ktcb *task)
 {
-
-	return thread_signal(task, TASK_EXITING, TASK_DEAD);
+	return thread_signal(task, TASK_SUSPENDING, TASK_INACTIVE);
 }
 
-static inline int TASK_IS_CHILD(struct ktcb *task)
+static inline int task_is_child(struct ktcb *task)
 {
 	return (((task) != current) &&
 		((task)->pagerid == current->tid));
@@ -68,18 +68,26 @@ static inline int TASK_IS_CHILD(struct ktcb *task)
 
 int thread_destroy_child(struct ktcb *task)
 {
+	/* Wait until thread exits */
 	thread_exit(task);
 
+	/* Hint scheduler that an exit occured */
+	current->flags |= TASK_EXITED;
+
+	/* Now remove it atomically */
 	tcb_remove(task);
 
-	/* Wake up waiters */
+	/* Wake up waiters that arrived before removing */
 	wake_up_all(&task->wqh_send, WAKEUP_INTERRUPT);
 	wake_up_all(&task->wqh_recv, WAKEUP_INTERRUPT);
 
 	BUG_ON(task->wqh_pager.sleepers > 0);
-	BUG_ON(task->state != TASK_DEAD);
+	BUG_ON(task->state != TASK_INACTIVE);
 
-	tcb_delete(task);
+	/* Place the task on the zombie queue for its cpu */
+	ktcb_list_add(task, &per_cpu_byid(kernel_resources.zombie_list,
+					  task->affinity));
+
 	return 0;
 }
 
@@ -91,7 +99,7 @@ int thread_destroy_children(void)
 	list_foreach_removable_struct(task, n,
 				      &curcont->ktcb_list.list,
 				      task_list) {
-		if (TASK_IS_CHILD(task)) {
+		if (task_is_child(task)) {
 			spin_unlock(&curcont->ktcb_list.list_lock);
 			thread_destroy_child(task);
 			spin_lock(&curcont->ktcb_list.list_lock);
@@ -104,14 +112,37 @@ int thread_destroy_children(void)
 
 void thread_destroy_self(unsigned int exit_code)
 {
+	/* Destroy all children first */
 	thread_destroy_children();
 
-	/* Wake up waiters */
-	wake_up_all(&current->wqh_send, WAKEUP_INTERRUPT);
-	wake_up_all(&current->wqh_recv, WAKEUP_INTERRUPT);
+	/* If self-paged, finish everything except deletion */
+	if (current->tid == current->pagerid) {
+		/* Remove self safe against ipc */
+		tcb_remove(current);
 
+		/* Wake up any waiters queued up before removal */
+		wake_up_all(&current->wqh_send, WAKEUP_INTERRUPT);
+		wake_up_all(&current->wqh_recv, WAKEUP_INTERRUPT);
+
+		/* Move capabilities to current cpu idle task */
+		cap_list_move(&per_cpu(scheduler).idle_task->cap_list,
+			      &current->cap_list);
+
+		/* Place self on the per-cpu zombie queue */
+		ktcb_list_add(current, &per_cpu(kernel_resources.zombie_list));
+	}
+
+	/*
+	 * Both child and a self-paging would set exit
+	 * code and quit the scheduler
+	 */
 	current->exit_code = exit_code;
-	sched_exit_sync();
+
+	/*
+	 * Hint scheduler that an exit has occured
+	 */
+	current->flags |= TASK_EXITED;
+	sched_suspend_sync();
 }
 
 int thread_wait(struct ktcb *task)
@@ -119,27 +150,50 @@ int thread_wait(struct ktcb *task)
 	unsigned int exit_code;
 	int ret;
 
+	// printk("%s: (%d) for (%d)\n", __FUNCTION__, current->tid, task->tid);
+
 	/* Wait until task switches to desired state */
 	WAIT_EVENT(&task->wqh_pager,
-		   task->state == TASK_DEAD, ret);
+		   task->state == TASK_INACTIVE, ret);
+
+	/* Return if interrupted by async event */
 	if (ret < 0)
 		return ret;
-	else {
-		exit_code = (int)task->exit_code;
-		tcb_remove(task);
-		tcb_delete(task);
-		return exit_code;
-	}
+
+	/* Now remove it safe against ipc */
+	tcb_remove(task);
+
+	/* Wake up waiters that arrived before removing */
+	wake_up_all(&task->wqh_send, WAKEUP_INTERRUPT);
+	wake_up_all(&task->wqh_recv, WAKEUP_INTERRUPT);
+
+	BUG_ON(task->wqh_pager.sleepers > 0);
+	BUG_ON(task->state != TASK_INACTIVE);
+
+	/* Obtain exit code */
+	exit_code = (int)task->exit_code;
+
+	/* Place it on the zombie queue */
+	ktcb_list_add(task,
+		      &per_cpu_byid(kernel_resources.zombie_list,
+				    task->affinity));
+
+	return exit_code;
 }
 
 int thread_destroy(struct ktcb *task, unsigned int exit_code)
 {
+	// printk("%s: (%d) for (%d)\n", __FUNCTION__, current->tid, task->tid);
+
 	exit_code &= THREAD_EXIT_MASK;
 
-	if (TASK_IS_CHILD(task))
+	if (task_is_child(task))
 		return thread_destroy_child(task);
 	else if (task == current)
 		thread_destroy_self(exit_code);
+	else
+		BUG();
+
 	return 0;
 }
 
@@ -208,13 +262,12 @@ int thread_start(struct ktcb *task)
 	if (!mutex_trylock(&task->thread_control_lock))
 		return -EAGAIN;
 
-	/* FIXME: Refuse to run dead tasks */
-
 	/* Notify scheduler of task resume */
 	sched_resume_async(task);
 
 	/* Release lock and return */
 	mutex_unlock(&task->thread_control_lock);
+
 	return 0;
 }
 
@@ -229,10 +282,15 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 	}
 
 	BUG_ON(!orig);
+
+	/* If original has no syscall context yet, don't copy */
+	if (!orig->syscall_regs)
+		return 0;
+
 	/*
 	 * For duplicated threads pre-syscall context is saved on
 	 * the kernel stack. We copy this context of original
-	 * into the duplicate thread's current context structure
+	 * into the duplicate thread's current context structure,
 	 *
 	 * No locks needed as the thread is not known to the system yet.
 	 */
@@ -260,6 +318,24 @@ int arch_setup_new_thread(struct ktcb *new, struct ktcb *orig,
 		orig->ticks_left = 1;
 
 	return 0;
+}
+
+static DECLARE_SPINLOCK(task_select_affinity_lock);
+static unsigned int cpu_rr_affinity;
+
+/* Select which cpu to place the new task in round-robin fashion */
+void thread_setup_affinity(struct ktcb *task)
+{
+	spin_lock(&task_select_affinity_lock);
+	task->affinity = cpu_rr_affinity;
+
+	//printk("Set up thread %d affinity=%d\n",
+	//       task->tid, task->affinity);
+	cpu_rr_affinity++;
+	if (cpu_rr_affinity >= CONFIG_NCPU)
+		cpu_rr_affinity = 0;
+
+	spin_unlock(&task_select_affinity_lock);
 }
 
 static inline void
@@ -344,8 +420,8 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	     & TC_COPY_SPACE & TC_NEW_SPACE) || !flags)
 		return -EINVAL;
 
-	/* Can't have multiple pager specifiers */
-	if (flags & TC_SHARE_PAGER & TC_AS_PAGER)
+	/* Must have one space flag */
+	if ((flags & THREAD_SPACE_MASK) == 0)
 		return -EINVAL;
 
 	/* Can't request shared utcb or tgid without shared space */
@@ -371,29 +447,23 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 		}
 	}
 
-	/*
-	 * Note this is a kernel-level relationship
-	 * between the creator and the new thread.
-	 *
-	 * Any higher layer may define parent/child
-	 * relationships between orig and new separately.
-	 */
-	if (flags & TC_AS_PAGER)
-		new->pagerid = current->tid;
-	else if (flags & TC_SHARE_PAGER)
-		new->pagerid = current->pagerid;
-	else
-		new->pagerid = new->tid;
+	/* Set creator as pager */
+	new->pagerid = current->tid;
 
-	//printk("Thread (%d) pager set as (%d)\n", new->tid, new->pagerid);
-
-	/*
-	 * Setup container-generic fields from current task
-	 */
+	/* Setup container-generic fields from current task */
 	new->container = current->container;
+
+	/*
+	 * Set up cpu affinity.
+	 *
+	 * This is the default setting, it may be changed
+	 * by a subsequent exchange_registers call
+	 */
+	thread_setup_affinity(new);
 
 	/* Set up new thread context by using parent ids and flags */
 	thread_setup_new_ids(ids, flags, new, orig);
+
 	arch_setup_new_thread(new, orig, flags);
 
 	tcb_add(new);
@@ -406,7 +476,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 
 out_err:
 	/* Pre-mature tcb needs freeing by free_ktcb */
-	free_ktcb(new);
+	free_ktcb(new, current);
 	return err;
 }
 
@@ -421,12 +491,24 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 	int err, ret = 0;
 
 	if ((err = check_access((unsigned long)ids, sizeof(*ids),
-				MAP_USR_RW_FLAGS, 1)) < 0)
+				MAP_USR_RW, 1)) < 0)
 		return err;
 
-	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE)
+	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE) {
 		if (!(task = tcb_find(ids->tid)))
 			return -ESRCH;
+
+		/*
+		 * Tasks may only operate on their children. They may
+		 * also destroy themselves or any children.
+		 */
+		if ((flags & THREAD_ACTION_MASK) == THREAD_DESTROY &&
+		    !task_is_child(task) && task != current)
+			return -EPERM;
+		if ((flags & THREAD_ACTION_MASK) != THREAD_DESTROY
+		    && !task_is_child(task))
+			return -EPERM;
+	}
 
 	if ((err = cap_thread_check(task, flags, ids)) < 0)
 		return err;

@@ -88,7 +88,7 @@ END_PROC(arm_enable_high_vectors)
 
 BEGIN_PROC(arm_invalidate_cache)
 	mov	r0, #0			@ FIX THIS
-	mcr	p15, 0, r0, c7, c7	@ Flush I cache and D cache
+	mcr	p15, 0, r0, c7, c7, 0	@ Flush I cache and D cache
 	mov	pc, lr
 END_PROC(arm_invalidate_cache)
 
@@ -105,7 +105,7 @@ BEGIN_PROC(arm_invalidate_dcache)
 END_PROC(arm_invalidate_dcache)
 
 BEGIN_PROC(arm_clean_dcache)
-	mrc	p15, 0 , pc, c7, c10, 3 @ Test/clean dcache line
+	mrc	p15, 0 , r15, c7, c10, 3 @ Test/clean dcache line
 	bne	arm_clean_dcache
 	mcr	p15, 0, ip, c7, c10, 4	@ Drain WB
 	mov	pc, lr
@@ -113,7 +113,7 @@ END_PROC(arm_clean_dcache)
 
 BEGIN_PROC(arm_clean_invalidate_dcache)
 1:
-	mrc	p15, 0, pc, c7, c14, 3	@ Test/clean/flush dcache line
+	mrc	p15, 0, r15, c7, c14, 3	@ Test/clean/flush dcache line
 					@ COMMENT: Why use PC?
 	bne	1b
 	mcr	p15, 0, ip, c7, c10, 4	@ Drain WB

@@ -10,8 +10,6 @@
 #include <sys/shm.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <l4lib/utcb.h>
 #include <fcntl.h>

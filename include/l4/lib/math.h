@@ -1,6 +1,16 @@
 #ifndef __LIB_MATH_H__
 #define __LIB_MATH_H__
 
+/* Take the power */
+static inline int pow(int val, int exp)
+{
+	int res = 1;
+
+	for (int i = 0; i < exp; i++)
+		res *= val;
+	return res;
+}
+
 static inline int min(int x, int y)
 {
 	return x < y ? x : y;

@@ -15,6 +15,7 @@
 #include INC_API(syscall.h)
 #include INC_ARCH(exception.h)
 #include INC_GLUE(memory.h)
+#include INC_GLUE(mapping.h)
 
 void init_mutex_queue_head(struct mutex_queue_head *mqhead)
 {
@@ -206,6 +207,22 @@ int mutex_control_unlock(struct mutex_queue_head *mqhead,
 	}
 
 	/*
+	 * Note, the mutex in userspace was left free before the
+	 * syscall was entered.
+	 *
+	 * It is possible that a thread has acquired it, another
+	 * contended on it and the holder made it to the kernel
+	 * quicker than us. We detect this situation here.
+	 */
+	if (mutex_queue->wqh_holders.sleepers) {
+		/*
+		 * Let the first holder do all the waking up
+		 */
+		mutex_queue_head_unlock(mqhead);
+		return 0;
+	}
+
+	/*
 	 * Found it, if it exists, there are contenders,
 	 * now wake all of them up in FIFO order.
 	 * FIXME: Make sure this is FIFO order. It doesn't seem so.
@@ -225,6 +242,8 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 {
 	unsigned long mutex_physical;
 	int ret = 0;
+
+	// printk("%s: Thread %d enters.\n", __FUNCTION__, current->tid);
 
 	/* Check valid operation */
 	if (mutex_op != MUTEX_CONTROL_LOCK &&
@@ -249,8 +268,7 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 	 * capabilities of current task.
 	 */
 	if (!(mutex_physical =
-		virt_to_phys_by_pgd(mutex_address,
-				    TASK_PGD(current))))
+	      virt_to_phys_by_pgd(TASK_PGD(current), mutex_address)))
 		return -EINVAL;
 
 	switch (mutex_op) {

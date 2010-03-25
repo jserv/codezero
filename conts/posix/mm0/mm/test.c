@@ -53,6 +53,7 @@ int vm_object_test_shadow_count(struct vm_object *vmo)
  * Add checking that total open file descriptors are
  * equal to total opener count of all files
  */
+#if defined (DEBUG_FAULT_HANDLING)
 int mm0_test_global_vm_integrity(void)
 {
 	struct tcb *task;
@@ -123,6 +124,8 @@ int mm0_test_global_vm_integrity(void)
 	}
 	return 0;
 }
+#else /* End of DEBUG_FAULT_HANDLING */
 
+int mm0_test_global_vm_integrity(void) { return 0; }
 
-
+#endif /* End of !DEBUG_FAULT_HANDLING */

@@ -18,7 +18,7 @@ from configure import *
 config = configuration_retrieve()
 arch = config.arch
 platform = config.platform
-gcc_cpu_flag = config.gcc_cpu_flag
+gcc_arch_flag = config.gcc_arch_flag
 
 # Wrapper library for system calls
 LIBL4_RELDIR = 'conts/libl4'
@@ -37,20 +37,18 @@ LIBC_INCLUDE = [join(LIBC_DIR, 'include'), \
 LIBDEV_RELDIR = 'conts/libdev'
 LIBDEV_DIR = join(PROJROOT, LIBDEV_RELDIR)
 LIBDEV_LIBPATH = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-userspace')
-LIBDEV_INCLUDE = [join(LIBDEV_DIR, 'uart/include'),
-                  join(LIBDEV_DIR, 'timer/sp804/include')]
-LIBDEV_CCFLAGS = '-DPLATFORM_' + platform.upper()
+LIBDEV_INCLUDE = join(LIBDEV_DIR, 'include')
 
 LIBMEM_RELDIR = 'conts/libmem'
 LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
 LIBMEM_INCLUDE = LIBMEM_DIR
 
-env = Environment(CC = config.user_toolchain + 'gcc',
+env = Environment(CC = config.toolchain + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
-                     '-Werror', ('-mcpu=' + gcc_cpu_flag), LIBDEV_CCFLAGS], \
+                     '-Werror', '-march=' + gcc_arch_flag], \
 		  LINKFLAGS = ['-nostdlib', '-T' + "include/linker.lds", "-u_start"],\
 		  ASFLAGS = ['-D__ASSEMBLY__'], \
           PROGSUFFIX = '.elf', # The suffix to use for final executable
@@ -65,6 +63,7 @@ env = Environment(CC = config.user_toolchain + 'gcc',
 
 src = Glob('*.[cS]')
 src += Glob('src/*.[cS]')
+src += Glob('src/arch/*.[cS]')
 
 objs = env.Object(src)
 prog = env.Program('main.elf', objs)

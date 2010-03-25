@@ -8,8 +8,7 @@
 #include <bootm.h>
 #include <init.h>
 #include <linker.h>
-
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 
 extern unsigned long pager_offset;
 

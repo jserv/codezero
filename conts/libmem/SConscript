@@ -12,28 +12,20 @@ sys.path.append(PROJRELROOT)
 from config.projpaths import *
 from configure import *
 
-config = configuration_retrieve()
+Import('env')
 
-KERNEL_INCLUDE = join(PROJROOT, 'include')
 LIBL4_RELDIR = 'conts/libl4'
 LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
 LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
-LIBL4_LIBPATH = join(BUILDDIR, LIBL4_RELDIR)
 
-env = Environment(CC = config.user_toolchain + 'gcc',
-		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding'],
-		  LINKFLAGS = ['-nostdlib'],
-		  ASFLAGS = ['-D__ASSEMBLY__'],
-		  ENV = {'PATH' : os.environ['PATH']},
-		  LIBS = 'gcc',
-		  CPPPATH = ['.', KERNEL_INCLUDE, LIBL4_INCLUDE],
-          CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+e = env.Clone()
+e.Append(CPPPATH = ['include', '.', LIBL4_INCLUDE])
 
-objmm = env.StaticObject(Glob('mm/*.c'))
-objmc = env.StaticObject(Glob('memcache/*.[cS]'))
-objmalloc = env.StaticObject(Glob('malloc/*.[cS]'))
-libmm = env.StaticLibrary('mm', objmm)
-libmc = env.StaticLibrary('mc', objmc)
-libmalloc = env.StaticLibrary('malloc', objmalloc)
+objmm = e.StaticObject(Glob('mm/*.c'))
+objmc = e.StaticObject(Glob('memcache/*.[cS]'))
+objmalloc = e.StaticObject(Glob('malloc/*.[cS]'))
+libmm = e.StaticLibrary('mm', objmm)
+libmc = e.StaticLibrary('mc', objmc)
+libmalloc = e.StaticLibrary('malloc', objmalloc)
 
 Return('libmm', 'libmc', 'libmalloc')

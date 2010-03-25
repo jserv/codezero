@@ -55,19 +55,21 @@ class Container:
 class configuration:
 
     def __init__(self):
-        # Mapping between platform selected and gcc flags for it
-        self.cpu_to_gcc_flag = (['ARM926', 'arm926ej-s'],
-                                ['CORTEXA8', 'cortex-a8'],
-                                ['ARM11MPCORE', 'mpcore'],
-                                ['ARM1136', 'arm1136jf-s'],
-                                ['ARM1176', 'arm1176jz-s'],)
+        # Mapping between cpu and gcc flags for it.
+        # Optimized solution to derive gcc arch flag from cpu
+        # gcc flag here is "-march"
+        #                          cpu          -march flag
+        self.arch_to_gcc_flag = (['ARM926',       'armv5'],
+                                 ['ARM1136',      'armv6'],
+                                 ['ARM11MPCORE',  'armv6k'],
+                                 ['CORTEXA8',     'armv7-a'],
+                                 ['CORTEXA9',     'armv7-a'])
         self.arch = None
         self.subarch = None
         self.platform = None
         self.cpu = None
-        self.gcc_cpu_flag = None
-        self.user_toolchain = None
-        self.kernel_toolchain = None
+        self.gcc_arch_flag = None
+        self.toolchain = None
         self.all = []
         self.containers = []
         self.ncontainers = 0
@@ -102,26 +104,22 @@ class configuration:
             parts = name.split("_", 3)
             self.platform = parts[2].lower()
 
-    # Extract cpu and its gcc flag from a name value pair
+    # Extract cpu from a name value pair
     def get_cpu(self, name, val):
         if name[:len("CONFIG_CPU_")] == "CONFIG_CPU_":
             parts = name.split("_", 3)
             self.cpu = parts[2].lower()
-            for cputype, cpuflag in self.cpu_to_gcc_flag:
-                if parts[2] == cputype:
-                    self.gcc_cpu_flag = cpuflag
+
+            # derive gcc "-march" flag
+            for cputype, archflag in self.arch_to_gcc_flag:
+                if cputype == parts[2]:
+                    self.gcc_arch_flag = archflag
 
     # Extract kernel space toolchain from a name value pair
-    def get_toolchain_kernel(self, name, val):
-        if name[:len("CONFIG_TOOLCHAIN_KERNEL")] == "CONFIG_TOOLCHAIN_KERNEL":
-            parts = val.split("\"", 3)
-            self.kernel_toolchain = parts[1]
-
-    # Extract user space toolchain from a name value pair
-    def get_toolchain_user(self, name, val):
-        if name[:len("CONFIG_TOOLCHAIN_USER")] == "CONFIG_TOOLCHAIN_USER":
-            parts = val.split("\"", 3)
-            self.user_toolchain = parts[1]
+    def get_toolchain(self, name, val):
+        if name[:len("CONFIG_TOOLCHAIN")] == "CONFIG_TOOLCHAIN":
+            parts = val.split("\"", 2)
+            self.toolchain = parts[1]
 
     # Extract number of containers
     def get_ncontainers(self, name, val):

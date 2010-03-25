@@ -141,5 +141,8 @@
 #define ENOCAP		134	/* None or insufficient capability */
 #define ENOUTCB		135	/* Task has no utcb set up */
 #define ENOMAP		136	/* The memory area has unmapped regions */
+#define ENOIRQ		137	/* Irq cannot be registered */
+#define EABORT		138	/* Abort cannot be handled */
+#define ENOCHILD	139	/* Task is not paged by caller */
 
 #endif /* __ERRNO_H__ */

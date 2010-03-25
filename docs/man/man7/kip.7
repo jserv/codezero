@@ -13,41 +13,38 @@ The kernel interface page acts as a read-only identification structure for syste
 
 KIP also provides the address of the thread-local UTCB address, and the value of this field dynamically changes as each thread becomes runnable. The KIP structure is defined as follows:
 .nf
-.TP
-.BI "struct" " kip " "{"
-.in 16
-/* System descriptions */
-.BI "u32 " "magic" ";"
-.BI "u16 " "version_rsrv" ";"
-.BI "u8  " "api_subversion" ";"
-.BI "u8  " "api_version" ";"
-.BI "u32 " "api_flags" ";"
+.B struct kip {
+	   /* System descriptions */
+.BI "	   u32 " "magic" ";"
+.BI "	   u16 " "version_rsrv" ";"
+.BI "	   u8  " "api_subversion" ";"
+.BI "	   u8  " "api_version" ";"
+.BI "	   u32 " "api_flags" ";"
 .BI ""
-/* Addresses of various avaiable System calls */
-.BI "u32 " "container_control" ";"
-.BI "u32 " "time" ";"
-.BI "u32 " "irq_control" ";"
-.BI "u32 " "thread_control" ";"
-.BI "u32 " "ipc_control" ";"
-.BI "u32 " "map" ";"
-.BI "u32 " "ipc" ";"
-.BI "u32 " "capability_control" ";"
-.BI "u32 " "unmap" ";"
-.BI "u32 " "exchange_registers" ";"
-.BI "u32 " "thread_switch" ";"
-.BI "u32 " "schedule" ";"
-.BI "u32 " "getid" ";"
-.BI "u32 " "mutex_control" ";"
-.BI "u32 " "arch_syscall0" ";"
-.BI "u32 " "arch_syscall1" ";"
-.BI "u32 " "arch_syscall2" ";"
+	   /* Addresses of various avaiable System calls */
+.BI "	   u32 " "container_control" ";"
+.BI "	   u32 " "time" ";"
+.BI "	   u32 " "irq_control" ";"
+.BI "	   u32 " "thread_control" ";"
+.BI "	   u32 " "ipc_control" ";"
+.BI "	   u32 " "map" ";"
+.BI "	   u32 " "ipc" ";"
+.BI "	   u32 " "capability_control" ";"
+.BI "	   u32 " "unmap" ";"
+.BI "	   u32 " "exchange_registers" ";"
+.BI "	   u32 " "thread_switch" ";"
+.BI "	   u32 " "schedule" ";"
+.BI "	   u32 " "getid" ";"
+.BI "	   u32 " "mutex_control" ";"
+.BI "	   u32 " "arch_syscall0" ";"
+.BI "	   u32 " "arch_syscall1" ";"
+.BI "	   u32 " "arch_syscall2" ";"
 .BI ""
-/* UTCB address field */
-.BI "u32 " "utcb" ";"
+	   /* UTCB address field */
+.BI "	   u32 " "utcb" ";"
 .BI ""
-/* Brief Description of Kernel */
-.BI "struct " "kernel_descriptor kdesc" ";"
-.in 6
+	   /* Brief Description of Kernel */
+.BI "	   struct " "kernel_descriptor kdesc" ";"
 .B };
 
 .TP

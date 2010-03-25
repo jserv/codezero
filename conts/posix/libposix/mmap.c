@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <sys/types.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
 #include <l4lib/ipcdefs.h>
 #include <libposix.h>
 

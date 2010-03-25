@@ -11,8 +11,8 @@
 #include <vm_area.h>
 #include <globals.h>
 #include <malloc/malloc.h>
-#include <l4lib/arch/syscalls.h>
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syscalls.h)
+#include L4LIB_INC_ARCH(syslib.h)
 #include <lib/idpool.h>
 #include <lib/addr.h>
 #include <lib/spinlock.h>

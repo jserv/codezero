@@ -9,7 +9,7 @@
 
 /* Use the kernel header */
 #include <l4lib/types.h>
-#include <l4lib/arch/syscalls.h>
 #include <l4/api/kip.h>
+#include L4LIB_INC_ARCH(syscalls.h)
 
 #endif /* __KIP_H__ */

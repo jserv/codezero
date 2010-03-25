@@ -54,8 +54,7 @@ CONFIG_PLATFORM_PB926=y
 #
 # Toolchain Prefix
 #
-CONFIG_TOOLCHAIN_KERNEL="arm-none-eabi-"
-CONFIG_TOOLCHAIN_USER="arm-none-linux-gnueabi-"
+CONFIG_TOOLCHAIN="arm-none-eabi-"
 
 CONFIG_CONTAINERS=1
 

@@ -2,20 +2,15 @@
  * Ties up platform's uart driver functions with printf
  *
  * Copyright (C) 2009 B Labs Ltd.
- *
  */
 #include <stdio.h>
-#include <pl011_uart.h>
-
-extern struct pl011_uart uart;
+#include <l4/config.h>
+#include <libdev/uart.h>
 
 int __fputc(int c, FILE *stream)
 {
-	int res;
-	do {
-		res = pl011_tx_char(uart.base, c);
-	} while( res < 0);
+	uart_tx_char(uart_print_base, c);
 
-	return(0);
+	return 0;
 }
 

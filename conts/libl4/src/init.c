@@ -4,8 +4,8 @@
  * Copyright (C) 2007-2009 Bahadir Bilgehan Balban
  */
 #include <l4lib/kip.h>
-#include <l4lib/arch/syslib.h>
-#include <l4lib/arch/utcb.h>
+#include L4LIB_INC_ARCH(syslib.h)
+#include L4LIB_INC_ARCH(utcb.h)
 #include <l4lib/ipcdefs.h>
 #include <l4/macros.h>
 #include INC_GLUE(memlayout.h)
@@ -24,6 +24,7 @@ __l4_container_control_t __l4_container_control = 0;
 __l4_capability_control_t __l4_capability_control = 0;
 __l4_time_t __l4_time = 0;
 __l4_mutex_control_t __l4_mutex_control = 0;
+__l4_cache_control_t __l4_cache_control = 0;
 
 struct kip *kip;
 
@@ -60,5 +61,6 @@ void __l4_init(void)
 			(__l4_container_control_t)kip->container_control;
 	__l4_time =		(__l4_time_t)kip->time;
 	__l4_mutex_control =	(__l4_mutex_control_t)kip->mutex_control;
+	__l4_cache_control =	(__l4_cache_control_t)kip->cache_control;
 }
 

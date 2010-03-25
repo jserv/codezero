@@ -13,7 +13,7 @@
 #include <l4/api/errno.h>
 #include INC_GLUE(memory.h)
 
-#include <l4lib/arch/syslib.h>
+#include L4LIB_INC_ARCH(syslib.h)
 #include <stdio.h>
 #include <init.h>
 #include <physmem.h>

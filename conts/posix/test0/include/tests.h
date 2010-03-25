@@ -3,6 +3,8 @@
 
 #define __TASKNAME__			"test0"
 
+#include L4LIB_INC_ARCH(syslib.h)
+
 // #define TEST_VERBOSE_PRINT
 #if defined (TEST_VERBOSE_PRINT)
 #define test_printf(...)	printf(__VA_ARGS__)

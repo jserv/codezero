@@ -208,7 +208,7 @@ int ipc_send(l4id_t recv_tid, unsigned int flags)
 	struct waitqueue_head *wqhs, *wqhr;
 	int ret = 0;
 
-	if (!(receiver = tcb_find(recv_tid)))
+	if (!(receiver = tcb_find_lock(recv_tid)))
 		return -ESRCH;
 
 	wqhs = &receiver->wqh_send;
@@ -240,8 +240,11 @@ int ipc_send(l4id_t recv_tid, unsigned int flags)
 		// printk("%s: (%d) Waking up (%d)\n", __FUNCTION__,
 		//       current->tid, receiver->tid);
 
-		/* Wake it up, we can yield here. */
-		sched_resume_sync(receiver);
+		/* Wake it up async */
+		sched_resume_async(receiver);
+
+		/* Release thread lock (protects for delete) */
+		spin_unlock(&receiver->thread_lock);
 		return ret;
 	}
 
@@ -253,6 +256,7 @@ int ipc_send(l4id_t recv_tid, unsigned int flags)
 	sched_prepare_sleep();
 	spin_unlock(&wqhr->slock);
 	spin_unlock(&wqhs->slock);
+	spin_unlock(&receiver->thread_lock);
 	// printk("%s: (%d) waiting for (%d)\n", __FUNCTION__,
 	//       current->tid, recv_tid);
 	schedule();
@@ -405,7 +409,7 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 
 	/* Page fault user pages if needed */
 	if ((err = check_access(ipc_address, size,
-				MAP_USR_RW_FLAGS, 1)) < 0)
+				MAP_USR_RW, 1)) < 0)
 		return err;
 
 	/*
@@ -455,7 +459,7 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 
 	/* Page fault those pages on the current task if needed */
 	if ((err = check_access(ipc_address, size,
-				MAP_USR_RW_FLAGS, 1)) < 0)
+				MAP_USR_RW, 1)) < 0)
 		return err;
 
 	/*

@@ -13,7 +13,7 @@ from config.projpaths import *
 config = configuration_retrieve()
 arch = config.arch
 platform = config.platform
-gcc_cpu_flag = config.gcc_cpu_flag
+gcc_arch_flag = config.gcc_arch_flag
 
 variant = 'baremetal'
 
@@ -24,18 +24,19 @@ LIBC_INCPATH = ['#' + join(LIBC_PATH, 'include'), \
                 '#' + join(LIBC_PATH, 'include/arch/' + arch)]
 
 LIBDEV_PATH = 'conts/libdev'
-LIBDEV_LIBPATH = join(LIBDEV_PATH, 'uart')
-LIBDEV_INCPATH = ['#' + join(LIBDEV_PATH, 'uart/include'),]
+LIBDEV_INCPATH = ['#' + join(LIBDEV_PATH, 'include'),]
 
 LIBELF_PATH = 'loader/libs/elf'
 LIBELF_LIBPATH = LIBELF_PATH
 LIBELF_INCPATH = '#' + join(LIBELF_PATH, 'include')
 
-env = Environment(CC = config.kernel_toolchain + 'gcc',
+env = Environment(CC = config.toolchain + 'gcc',
+		  AR = config.toolchain + 'ar',
+		  RANLIB = config.toolchain + 'ranlib',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
-                     '-Werror', ('-mcpu=' + gcc_cpu_flag)],
+                     '-Werror', '-march=' + gcc_arch_flag],
 		  LINKFLAGS = ['-nostdlib', '-T' + join(BUILDDIR, 'loader/linker.lds'), "-u_start"],
 		  ASFLAGS = ['-D__ASSEMBLY__'],
 		  PROGSUFFIX = '.elf',
@@ -43,7 +44,8 @@ env = Environment(CC = config.kernel_toolchain + 'gcc',
 		  LIBS = ['gcc', 'elf', 'libdev-baremetal', 'c-baremetal', 'gcc'],
           LIBPATH = [join(join('build', LIBDEV_PATH), 'sys-' + variant), \
                      join('build', LIBELF_PATH), join('build', LIBC_PATH)],
-          CPPPATH = ['#include', LIBDEV_INCPATH, LIBC_INCPATH, LIBELF_INCPATH])
+          CPPPATH = ['#include', LIBDEV_INCPATH, LIBC_INCPATH, LIBELF_INCPATH],
+          CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h -D__KERNEL__')
 
 libdev = SConscript('conts/libdev/SConscript', \
                     exports = { 'env' : env, 'arch' : arch, 'platform' : platform, 'type' : variant}, \

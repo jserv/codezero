@@ -16,6 +16,7 @@
 #include <l4/api/exregs.h>
 #include <l4/api/ipc.h>
 #include <l4/api/irq.h>
+#include <l4/api/cache.h>
 #include INC_GLUE(message.h)
 #include INC_GLUE(ipc.h)
 
@@ -584,6 +585,7 @@ struct capability *cap_match_mem(struct capability *cap,
 {
 	struct sys_map_args *args = args_ptr;
 	struct ktcb *target = args->task;
+	unsigned long long start, end, pfn_point;
 	unsigned long pfn;
 	unsigned int perms;
 
@@ -593,25 +595,43 @@ struct capability *cap_match_mem(struct capability *cap,
 	else
 		pfn = __pfn(args->virt);
 
-	/* Check range */
-	if (cap->start > pfn || cap->end < pfn + args->npages)
+	/* Long long range check to avoid overflow */
+	start = cap->start;
+	end = cap->end;
+	pfn_point = pfn;
+	if (start > pfn_point || cap->end < pfn_point + args->npages)
 		return 0;
 
 	/* Check permissions */
 	switch (args->flags) {
-	case MAP_USR_RW_FLAGS:
+	case MAP_USR_RW:
 		perms = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_CACHED;
 		if ((cap->access & perms) != perms)
 			return 0;
 		break;
-	case MAP_USR_RO_FLAGS:
+	case MAP_USR_RWX:
+		perms = CAP_MAP_READ | CAP_MAP_WRITE |
+			CAP_MAP_EXEC | CAP_MAP_CACHED;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	case MAP_USR_RO:
 		perms = CAP_MAP_READ | CAP_MAP_CACHED;
 		if ((cap->access & perms) != perms)
 			return 0;
 		break;
-	case MAP_USR_IO_FLAGS:
+	case MAP_USR_RX:
+		perms = CAP_MAP_READ | CAP_MAP_EXEC | CAP_MAP_CACHED;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	case MAP_USR_IO:
 		perms = CAP_MAP_READ | CAP_MAP_WRITE | CAP_MAP_UNCACHED;
 		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+	case MAP_UNMAP:	/* Check for unmap syscall */
+		if (!(cap->access & CAP_MAP_UNMAP))
 			return 0;
 		break;
 	default:
@@ -726,6 +746,10 @@ struct capability *cap_match_irqctrl(struct capability *cap,
 		if (!(cap->access & CAP_IRQCTRL_REGISTER))
 			return 0;
 		break;
+	case IRQ_CONTROL_WAIT:
+		if (!(cap->access & CAP_IRQCTRL_WAIT))
+			return 0;
+		break;
 	default:
 		/* We refuse to accept anything else */
 		return 0;
@@ -751,6 +775,53 @@ struct capability *cap_match_irqctrl(struct capability *cap,
 		break;
 	default:
 		BUG(); /* Unknown cap type is a bug */
+	}
+
+	return cap;
+}
+
+
+struct sys_cache_args {
+	unsigned long start;
+	unsigned long npages;
+	unsigned int flags;
+};
+
+struct capability *cap_match_cache(struct capability *cap, void *args_ptr)
+{
+	struct sys_cache_args *args = args_ptr;
+	unsigned long pfn = __pfn(args->start);
+	unsigned long long start, end, pfn_point;
+	unsigned int perms;
+
+	/* Long long range check to avoid overflow */
+	start = cap->start;
+	end = cap->end;
+	pfn_point = pfn;
+	if (start > pfn_point || end < pfn_point + args->npages)
+		return 0;
+
+	/* Check permissions */
+	switch (args->flags) {
+	/* check for cache functionality flags */
+	case L4_INVALIDATE_DCACHE:
+	case L4_INVALIDATE_ICACHE:
+	case L4_INVALIDATE_TLB:
+		perms = CAP_CACHE_INVALIDATE;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+
+	case L4_CLEAN_DCACHE:
+	case L4_CLEAN_INVALIDATE_DCACHE:
+		perms = CAP_CACHE_CLEAN;
+		if ((cap->access & perms) != perms)
+			return 0;
+		break;
+
+	default:
+		/* Anything else is an invalid/unrecognised argument */
+		return 0;
 	}
 
 	return cap;
@@ -801,6 +872,26 @@ int cap_map_check(struct ktcb *target, unsigned long phys, unsigned long virt,
 	if (!(physmem =	cap_find(current, cap_match_mem,
 				 &args, CAP_TYPE_MAP_PHYSMEM)))
 		return -ENOCAP;
+
+	if (!(virtmem = cap_find(current, cap_match_mem,
+				 &args, CAP_TYPE_MAP_VIRTMEM)))
+		return -ENOCAP;
+
+	return 0;
+}
+
+int cap_unmap_check(struct ktcb *target, unsigned long virt,
+		    unsigned long npages)
+{
+	struct capability *virtmem;
+
+	/* Unmap check also uses identical struct as map check */
+	struct sys_map_args args = {
+		.task = target,
+		.virt = virt,
+		.npages = npages,
+		.flags = MAP_UNMAP,
+	};
 
 	if (!(virtmem = cap_find(current, cap_match_mem,
 				 &args, CAP_TYPE_MAP_VIRTMEM)))
@@ -892,16 +983,40 @@ int cap_irq_check(struct ktcb *registrant, unsigned int req,
 		return -ENOCAP;
 
 	/*
-	 * Find the device capability and
-	 * check that it allows irq registration
+	 * If it is an irq registration, find the device
+	 * capability and check that it allows irq registration.
 	 */
-	if (!(cap_find(current, cap_match_devmem,
-		       &args, CAP_TYPE_MAP_PHYSMEM)))
-		return -ENOCAP;
-
+	if (req == IRQ_CONTROL_REGISTER)
+		if (!cap_find(current, cap_match_devmem,
+			      &args, CAP_TYPE_MAP_PHYSMEM))
+			return -ENOCAP;
 	return 0;
 }
 
+/*
+ * This is just a wrapper call for l4_cache_control
+ * system call sanity check
+ */
+int cap_cache_check(unsigned long start, unsigned long end, unsigned int flags)
+{
+	struct capability *virtmem;
+	struct sys_cache_args args = {
+		.start = start,
+		.npages = __pfn(end) - __pfn(start),
+		.flags = flags,
+	};
+
+	/*
+	  * We just want to check if the virtual memory region
+	  * concerned here has
+	  *  appropriate permissions for cache calls
+	  */
+  	if (!(virtmem = cap_find(current, cap_match_cache,
+			 	 &args, CAP_TYPE_MAP_VIRTMEM)))
+	return -ENOCAP;
+
+	return 0;
+}
 
 #else /* Meaning !CONFIG_CAPABILITIES */
 int cap_mutex_check(unsigned long mutex_address, int mutex_op)
@@ -926,6 +1041,12 @@ int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
 	return 0;
 }
 
+int cap_unmap_check(struct ktcb *target, unsigned long virt,
+		    unsigned long npages)
+{
+	return 0;
+}
+
 int cap_exregs_check(struct ktcb *task, struct exregs_data *exregs)
 {
 	return 0;
@@ -944,4 +1065,9 @@ int cap_irq_check(struct ktcb *registrant, unsigned int req,
 	return 0;
 }
 
+int cap_cache_check(unsigned long start, unsigned long end,
+		    unsigned int flags)
+{
+	return 0;
+}
 #endif /* End of !CONFIG_CAPABILITIES */
