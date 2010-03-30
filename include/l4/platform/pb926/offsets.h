@@ -17,6 +17,8 @@
  * as we use these names for device capability
  */
 #define	PLATFORM_SYSTEM_REGISTERS		0x10000000 /* System registers */
+#define PLATFORM_KEYBOARD0_BASE            	0x10006000 /* Keyboard */
+#define PLATFORM_MOUSE0_BASE               	0x10007000 /* Mouse */
 #define	PLATFORM_SYSCTRL_BASE			0x101E0000 /* System controller */
 #define	PLATFORM_WATCHDOG_BASE			0x101E1000 /* Watchdog */
 #define	PLATFORM_TIMER0_BASE			0x101E2000 /* Timers 0 and 1 */
@@ -44,7 +46,9 @@
 #define PLATFORM_SYSCTRL_VBASE  (IO_AREA0_VADDR + (4 * DEVICE_PAGE))
 
 /* Add userspace devices here as they become necessary for irqs */
-#define PLATFORM_TIMER1_VBASE	(IO_AREA0_VADDR + (6 * DEVICE_PAGE))
+#define PLATFORM_TIMER1_VBASE		(IO_AREA0_VADDR + (6 * DEVICE_PAGE))
+#define PLATFORM_KEYBOARD0_VBASE   	(IO_AREA0_VADDR + (7 * DEVICE_PAGE))
+#define PLATFORM_MOUSE0_VBASE   	(IO_AREA0_VADDR + (8 * DEVICE_PAGE))
 
 /* The SP810 system controller offsets */
 #define SP810_BASE			PLATFORM_SYSCTRL_VBASE
@@ -55,6 +59,8 @@
 #define PLATFORM_UART2_SIZE		0x1000
 #define PLATFORM_UART3_SIZE		0x1000
 #define PLATFORM_TIMER1_SIZE		0x1000
+#define PLATFORM_KEYBOARD0_SIZE		0x1000
+#define PLATFORM_MOUSE0_SIZE         	0x1000
 
 #endif /* __PLATFORM_PB926_OFFSETS_H__ */
 

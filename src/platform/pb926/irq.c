@@ -65,6 +65,23 @@ static int platform_timer_user_handler(struct irq_desc *desc)
 	return 0;
 }
 
+/*
+ * Keyboard handler for userspace
+ */
+static int platform_keyboard_user_handler(struct irq_desc *desc)
+{
+	irq_thread_notify(desc);
+	return 0;
+}
+
+/*
+ * Mouse handler for userspace
+ */
+static int platform_mouse_user_handler(struct irq_desc *desc)
+{
+	irq_thread_notify(desc);
+	return 0;
+}
 
 /*
  * Built-in irq handlers initialised at compile time.
@@ -75,11 +92,25 @@ struct irq_desc irq_desc_array[IRQS_MAX] = {
 		.name = "Timer0",
 		.chip = &irq_chip_array[0],
 		.handler = platform_timer_handler,
+		.user_ack = 0,
 	},
 	[IRQ_TIMER1] = {
 		.name = "Timer1",
 		.chip = &irq_chip_array[0],
 		.handler = platform_timer_user_handler,
+                .user_ack = 0,
+        },
+	[IRQ_KEYBOARD0] = {
+		.name = "Keyboard",
+		.chip = &irq_chip_array[1],
+		.handler = platform_keyboard_user_handler,
+		.user_ack = 1,
+	},
+	[IRQ_MOUSE0] = {
+		.name = "Mouse",
+		.chip = &irq_chip_array[1],
+		.handler = platform_mouse_user_handler,
+		.user_ack = 1,
 	},
 };
 

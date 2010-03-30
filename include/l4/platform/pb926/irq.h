@@ -13,7 +13,7 @@
  * an irq on any irq chip.
  */
 #define VIC_CHIP_OFFSET			0
-#define SIC_CHIP_OFFSET			32
+#define SIC_CHIP_OFFSET			31
 
 /* Maximum irqs on VIC and SIC */
 #define VIC_IRQS_MAX			32
@@ -33,6 +33,8 @@
 
 /* Secondary Interrupt controller local IRQ numbers */
 #define SIC_IRQ_SWI			0
+#define SIC_IRQ_KEYBOARD                3
+#define SIC_IRQ_MOUSE                   4
 #define SIC_IRQ_UART3			6
 
 /* Global irq numbers, note these should reflect global device names */
@@ -47,6 +49,7 @@
 
 #define IRQ_SICSWI		(SIC_IRQ_SWI + SIC_CHIP_OFFSET)
 #define IRQ_UART3		(SIC_IRQ_UART3 + SIC_CHIP_OFFSET)
-
+#define IRQ_KEYBOARD0           (SIC_IRQ_KEYBOARD + SIC_CHIP_OFFSET)
+#define IRQ_MOUSE0              (SIC_IRQ_MOUSE + SIC_CHIP_OFFSET)
 
 #endif /* __PLATFORM_IRQ_H__ */

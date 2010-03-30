@@ -47,6 +47,9 @@ struct irq_desc {
 	/* Notification slot for this irq */
 	int task_notify_slot;
 
+	/* If user will ack this irq */
+	int user_ack;
+
 	/* Waitqueue head for this irq */
 	struct waitqueue_head wqh_irq;
 

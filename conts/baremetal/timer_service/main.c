@@ -372,9 +372,9 @@ void init_vaddr_pool(void)
 				 * addresses from this pool.
 				 */
 				address_pool_init(&device_vaddr_pool,
-								   (struct id_pool *)&device_id_pool,
-						  		   page_align_up(__end),
-						  		   __pfn_to_addr(caparray[i].end));
+						  (struct id_pool *)&device_id_pool,
+						  page_align_up(__end),
+						  __pfn_to_addr(caparray[i].end));
 				return;
 			} else
 				goto out_err;

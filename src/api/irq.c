@@ -111,6 +111,16 @@ int irq_wait(l4id_t irq_index)
 	if ((ret = tcb_check_and_lazy_map_utcb(current, 1)) < 0)
 		return ret;
 
+	/*
+	 * In case user has asked for unmasking the irq only after
+ 	 * user hanlder is done, unmask the irq
+	 *
+	 * FIXME: This is not the correct place for this call,
+	 * fix this.
+	 */
+	if (desc->user_ack)
+		irq_enable(irq_index);
+
 	/* Wait until the irq changes slot value */
 	WAIT_EVENT(&desc->wqh_irq,
 		   utcb->notify[desc->task_notify_slot] != 0,

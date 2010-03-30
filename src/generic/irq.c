@@ -152,7 +152,11 @@ void do_irq(void)
 		BUG();
 	}
 
-	irq_enable(irq_index);
+	/*
+	 * Do not enable irq if user wants to do it explicitely
+	 */
+	if (!this_irq->user_ack)
+		irq_enable(irq_index);
 }
 
 

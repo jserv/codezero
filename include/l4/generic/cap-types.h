@@ -46,6 +46,8 @@
  */
 #define CAP_DEVTYPE_TIMER		1
 #define CAP_DEVTYPE_UART		2
+#define CAP_DEVTYPE_KEYBOARD           3
+#define CAP_DEVTYPE_MOUSE              4
 #define CAP_DEVTYPE_OTHER		0xF
 #define CAP_DEVTYPE_MASK		0xFFFF
 #define CAP_DEVNUM_MASK			0xFFFF0000
