@@ -48,6 +48,8 @@ objects += SConscript('timer/sp804/SConscript', duplicate=0, \
                       exports = {'platform' : platform, 'env' : env})
 objects += SConscript('kmi/pl050/SConscript', duplicate=0, \
                       exports = {'platform' : platform, 'env' : env})
+objects += SConscript('clcd/pl110/SConscript', duplicate=0, \
+		      exports = {'platform' : platform, 'env' : env})
 
 objects += SConscript('uart/omap/SConscript', duplicate=0, \
                       exports = {'platform' : platform, 'env' : env})

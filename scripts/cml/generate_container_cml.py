@@ -50,7 +50,8 @@ device_suppress_sym = \
 '''\tcont${CONTID}_cap_device_${DEVNAME_LOWER}
 '''
 
-devices = ['UART1', 'UART2', 'UART3', 'TIMER1', 'KEYBOARD0', 'MOUSE0']
+devices = ['UART1', 'UART2', 'UART3', 'TIMER1',
+	   'KEYBOARD0', 'MOUSE0', 'CLCD0']
 
 #
 # When a symbol is used by a single container, sometimes it is

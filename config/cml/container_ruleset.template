@@ -237,6 +237,7 @@ cont%(cn)d_cap_device_uart3             'Container %(cn)d UART3 Menu'
 cont%(cn)d_cap_device_timer1            'Container %(cn)d TIMER23 Menu'
 cont%(cn)d_cap_device_keyboard0         'Container %(cn)d KEYBOARD0 Menu'
 cont%(cn)d_cap_device_mouse0            'Container %(cn)d MOUSE0 Menu'
+cont%(cn)d_cap_device_clcd0            	'Container %(cn)d CLCD0 Menu'
 
 CONT%(cn)d_CAP_DEVICE_UART1_USE		'Container %(cn)d UART1 Enable'
 CONT%(cn)d_CAP_DEVICE_UART2_USE         'Container %(cn)d UART2 Enable'
@@ -244,6 +245,7 @@ CONT%(cn)d_CAP_DEVICE_UART3_USE         'Container %(cn)d UART3 Enable'
 CONT%(cn)d_CAP_DEVICE_TIMER1_USE        'Container %(cn)d TIMER23 Enable'
 CONT%(cn)d_CAP_DEVICE_KEYBOARD0_USE     'Container %(cn)d KEYBOARD0 Enable'
 CONT%(cn)d_CAP_DEVICE_MOUSE0_USE        'Container %(cn)d MOUSE0 Enable'
+CONT%(cn)d_CAP_DEVICE_CLCD0_USE        	'Container %(cn)d CLCD0 Enable'
 
 default CONT%(cn)d_CAP_DEVICE_UART1_USE		from n
 default CONT%(cn)d_CAP_DEVICE_UART2_USE 	from n
@@ -251,6 +253,7 @@ default CONT%(cn)d_CAP_DEVICE_UART3_USE 	from n
 default CONT%(cn)d_CAP_DEVICE_TIMER1_USE	from n
 default CONT%(cn)d_CAP_DEVICE_KEYBOARD0_USE	from n
 default CONT%(cn)d_CAP_DEVICE_MOUSE0_USE	from n
+default CONT%(cn)d_CAP_DEVICE_CLCD0_USE		from n
 
 menu cont%(cn)d_cap_device_uart1
 	CONT%(cn)d_CAP_DEVICE_UART1_USE
@@ -270,10 +273,14 @@ menu cont%(cn)d_cap_device_keyboard0
 menu cont%(cn)d_cap_device_mouse0
 	CONT%(cn)d_CAP_DEVICE_MOUSE0_USE
 
+menu cont%(cn)d_cap_device_clcd0
+	CONT%(cn)d_CAP_DEVICE_CLCD0_USE
+
 menu cont%(cn)d_device_list
 	cont%(cn)d_cap_device_uart1
 	cont%(cn)d_cap_device_uart2
 	cont%(cn)d_cap_device_uart3
+	cont%(cn)d_cap_device_clcd0
 	cont%(cn)d_cap_device_timer1
 	cont%(cn)d_cap_device_keyboard0
 	cont%(cn)d_cap_device_mouse0
