@@ -155,9 +155,12 @@ struct mem_cache *mem_cache_init(void *start,
 	if (total & 0x1F) {	/* Remainder? */
 		bwords++;	/* Add one more word for remainder */
 	}
+
 	bsize = bwords * 4;
+
 	/* This many structures will be chucked from cache for bitmap space */
 	bwords_in_structs = ((bsize) / struct_size) + 1;
+
 	/* Total structs left after deducing bitmaps */
 	total = total - bwords_in_structs;
 	cache_size -= bsize;

@@ -46,6 +46,12 @@ objects += SConscript('uart/pl011/SConscript', duplicate=0, \
                       exports = {'platform' : platform, 'env' : env})
 objects += SConscript('timer/sp804/SConscript', duplicate=0, \
                       exports = {'platform' : platform, 'env' : env})
+objects += SConscript('kmi/pl050/SConscript', duplicate=0, \
+                      exports = {'platform' : platform, 'env' : env})
+
+objects += SConscript('uart/omap/SConscript', duplicate=0, \
+                      exports = {'platform' : platform, 'env' : env})
+objects += SConscript('timer/omap/SConscript', duplicate=0, \
+                      exports = {'platform' : platform, 'env' : env})
 
 library = env.StaticLibrary('libdev-' + variant, objects)
-

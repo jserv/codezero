@@ -2,6 +2,7 @@
  * Keyboard and Mouse service for userspace
  */
 #include <l4lib/lib/addr.h>
+#include <l4lib/lib/thread.h>
 #include <l4lib/irq.h>
 #include <l4lib/ipcdefs.h>
 #include <l4/api/errno.h>
@@ -14,7 +15,6 @@
 #include <linker.h>
 #include <keyboard.h>
 #include <mouse.h>
-#include <thread.h>
 
 #define KEYBOARDS_TOTAL		1
 #define MOUSE_TOTAL         	1
@@ -179,7 +179,8 @@ int mouse_irq_handler(void *arg)
 
 int kmi_setup_devices(void)
 {
-	struct task_ids irq_tids;
+	struct l4_thread thread;
+	struct l4_thread *tptr = &thread;
 	int err;
 
 	for (int i = 0; i < KEYBOARDS_TOTAL; i++) {
@@ -209,7 +210,7 @@ int kmi_setup_devices(void)
 		 */
 		if ((err = thread_create(keyboard_irq_handler, &kbd[i],
 					 TC_SHARE_SPACE,
-					 &irq_tids)) < 0) {
+					 &tptr)) < 0) {
 			printf("FATAL: Creation of irq handler "
 			       "thread failed.\n");
 			BUG();
@@ -238,7 +239,7 @@ int kmi_setup_devices(void)
 		 * wait on irqs.
 		 */
 		if ((err = thread_create(mouse_irq_handler, &mouse[i],
-					 TC_SHARE_SPACE, &irq_tids)) < 0) {
+					 TC_SHARE_SPACE, &tptr)) < 0) {
 			printf("FATAL: Creation of irq handler "
 			       "thread failed.\n");
 			BUG();

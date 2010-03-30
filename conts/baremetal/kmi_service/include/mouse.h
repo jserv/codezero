@@ -4,10 +4,6 @@
 #ifndef __MOUSE_H__
 #define	__MOUSE_H__
 
-#include <l4lib/mutex.h>
-#include <l4/lib/list.h>
-#include <l4lib/types.h>
-
 /*
  * Keyboard structure
  */

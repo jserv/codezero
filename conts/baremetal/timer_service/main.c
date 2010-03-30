@@ -3,6 +3,7 @@
  */
 #include <l4lib/lib/addr.h>
 #include <l4lib/irq.h>
+#include <l4lib/lib/thread.h>
 #include <l4lib/ipcdefs.h>
 #include <l4/api/errno.h>
 #include <l4/api/irq.h>
@@ -13,7 +14,6 @@
 #include <container.h>
 #include <linker.h>
 #include <timer.h>
-#include <thread.h>
 #include <libdev/timer.h>
 
 /* Capabilities of this service */
@@ -296,7 +296,8 @@ void task_wake(void)
 
 int timer_setup_devices(void)
 {
-	struct task_ids irq_tids;
+	struct l4_thread thread;
+	struct l4_thread *tptr = &thread;
 	int err;
 
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
@@ -324,7 +325,7 @@ int timer_setup_devices(void)
 		 */
 		if ((err = thread_create(timer_irq_handler, &timer[i],
 					 TC_SHARE_SPACE,
-					 &irq_tids)) < 0) {
+					 &tptr)) < 0) {
 			printf("FATAL: Creation of irq handler "
 			       "thread failed.\n");
 			BUG();
