@@ -69,7 +69,8 @@ class configuration:
         self.platform = None
         self.cpu = None
         self.gcc_arch_flag = None
-        self.toolchain = None
+        self.toolchain_userspace = None
+	self.toolchain_kernel = None
         self.all = []
         self.containers = []
         self.ncontainers = 0
@@ -117,9 +118,16 @@ class configuration:
 
     # Extract kernel space toolchain from a name value pair
     def get_toolchain(self, name, val):
-        if name[:len("CONFIG_TOOLCHAIN")] == "CONFIG_TOOLCHAIN":
+        if name[:len("CONFIG_TOOLCHAIN_USERSPACE")] == \
+			"CONFIG_TOOLCHAIN_USERSPACE":
             parts = val.split("\"", 2)
-            self.toolchain = parts[1]
+            self.toolchain_userspace = parts[1]
+
+	if name[:len("CONFIG_TOOLCHAIN_KERNEL")] == \
+			"CONFIG_TOOLCHAIN_KERNEL":
+		parts = val.split("\"", 2)
+		self.toolchain_kernel = parts[1]
+
 
     # Extract number of containers
     def get_ncontainers(self, name, val):

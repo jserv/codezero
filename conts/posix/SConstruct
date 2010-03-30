@@ -49,9 +49,9 @@ LIBPOSIX_INCLUDE_SERVER = join(LIBPOSIX_DIR, 'include')
 LIBPOSIX_INCLUDE_USERSPACE = join(LIBPOSIX_DIR, 'include/posix')
 LIBPOSIX_LIBPATH = join(BUILDDIR, LIBPOSIX_RELDIR)
 
-env = Environment(CC = config.toolchain + 'gcc',
-		  AR = config.toolchain + 'ar',
-		  RANLIB = config.toolchain + 'ranlib',
+env = Environment(CC = config.toolchain_userspace + 'gcc',
+		  AR = config.toolchain_userspace + 'ar',
+		  RANLIB = config.toolchain_userspace + 'ranlib',
 		  CCFLAGS = ['-g','-nostdinc', '-nostdlib', '-ffreestanding',
 		             '-march=' + gcc_arch_flag, '-std=gnu99', '-Wall', '-Werror'],
 		  LINKFLAGS = ['-nostdlib'],

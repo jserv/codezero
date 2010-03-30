@@ -21,7 +21,7 @@ LIBC_LIBPATH = LIBC_PATH
 LIBC_INCPATH = [join(LIBC_PATH, 'include'), \
                 join(LIBC_PATH, 'include/arch/' + arch)]
 
-env = Environment(CC = config.toolchain + 'gcc',
+env = Environment(CC = config.toolchain_kernel + 'gcc',
 		  CCFLAGS = ['-g', '-nostdinc', '-nostdlib', '-ffreestanding'],
 		  LINKFLAGS = ['-nostdlib'],
 		  ENV = {'PATH' : os.environ['PATH']},

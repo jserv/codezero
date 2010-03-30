@@ -43,7 +43,7 @@ LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
 LIBMEM_INCLUDE = LIBMEM_DIR
 
-env = Environment(CC = config.toolchain + 'gcc',
+env = Environment(CC = config.toolchain_userspace + 'gcc',
           # We don't use -nostdinc because sometimes we need standard headers,
           # such as stdarg.h e.g. for variable args, as in printk().
           CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \

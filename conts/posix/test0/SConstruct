@@ -58,7 +58,7 @@ def get_physical_base(source, target, env):
 		  prev_image + " >> " + physical_base_ld_script))
 
 # The kernel build environment
-env = Environment(CC = config.toolchain + 'gcc',
+env = Environment(CC = config.toolchain_userspace + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],
@@ -74,7 +74,7 @@ env = Environment(CC = config.toolchain + 'gcc',
 
 test_exec_ld_script = "include/test_exec_linker.lds"
 # The kernel build environment:
-test_exec_env = Environment(CC = config.toolchain + 'gcc',
+test_exec_env = Environment(CC = config.toolchain_userspace + 'gcc',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-O3', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', '-Werror'],

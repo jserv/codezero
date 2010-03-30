@@ -97,8 +97,10 @@ def relocate_bootdesc(target, source, env):
     images = source[1:]
     mm0 = images[0]
     start, end = image_lma_start_end(mm0.path)
-    print config.toolchain + "objcopy --adjust-section-vma .data=" + conv_hex(end) + " " + bootdesc_raw.path
-    os.system(config.toolchain + "objcopy --adjust-section-vma .data=" + conv_hex(end) + " " + bootdesc_raw.path)
+    print config.toolchain_userspace + "objcopy --adjust-section-vma .data=" \
+	  + conv_hex(end) + " " + bootdesc_raw.path
+    os.system(config.toolchain_userspace + "objcopy --adjust-section-vma .data=" \
+	      + conv_hex(end) + " " + bootdesc_raw.path)
     shutil.copyfile(bootdesc_raw.path, target[0].path)
 
 bootdesc_c = e.Command('bootdesc.c', images, generate_bootdesc)

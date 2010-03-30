@@ -189,20 +189,22 @@ class LinuxBuilder:
         for platform, config_file in self.platform_config_file:
             if platform == config.platform.upper():
                 configuration_file = config_file
-        os.system("make ARCH=codezero CROSS_COMPILE=" + config.toolchain + \
+        os.system("make ARCH=codezero CROSS_COMPILE=" + \
+		  config.toolchain_userspace + \
                   " O=" + self.LINUX_KERNEL_BUILDDIR + " " + configuration_file)
 
         self.kernel_updater.modify_kernel_config(self.LINUX_KERNEL_BUILDDIR)
         self.kernel_updater.update_kernel_params(config, self.container)
 
-        os.system("make ARCH=codezero CROSS_COMPILE=" + config.toolchain + \
+        os.system("make ARCH=codezero CROSS_COMPILE=" + \
+		  config.toolchain_userspace + \
                   " O=" + self.LINUX_KERNEL_BUILDDIR + " menuconfig")
         os.system("make ARCH=codezero " + \
-                  "CROSS_COMPILE=" + config.toolchain + " O=" + \
-                  self.LINUX_KERNEL_BUILDDIR)
+                  "CROSS_COMPILE=" + config.toolchain_userspace + \
+		  " O=" + self.LINUX_KERNEL_BUILDDIR)
 
         # Generate kernel_image, elf to be used by codezero
-        linux_elf_gen_cmd = (config.toolchain + "objcopy -R .note \
+        linux_elf_gen_cmd = (config.toolchain_userspace + "objcopy -R .note \
             -R .note.gnu.build-id -R .comment -S --change-addresses " + \
             str(conv_hex(-self.container.linux_page_offset + self.container.linux_phys_offset)) + \
             " " + self.kernel_binary_image + " " + self.kernel_image)

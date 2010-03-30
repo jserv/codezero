@@ -42,7 +42,8 @@ SCHED_TICKS		'Scheduler ticks per second'
 ICACHE_DISABLE		'Disable the L1 instruction cache'
 DCACHE_DISABLE		'Disable the L1 data cache'
 PREEMPT_DISABLE		'Disable Kernel Preemption'
-TOOLCHAIN		'Toolchain prefix for kernel'
+TOOLCHAIN_USERSPACE	'Toolchain prefix for userspace'
+TOOLCHAIN_KERNEL     	'Toolchain prefix for kernel'
 
 CAPABILITIES		'Enable capability checking'
 
@@ -100,7 +101,8 @@ menu kernel_generic_options
 	SCHED_TICKS%
 
 menu toolchain_menu
-	TOOLCHAIN$
+	TOOLCHAIN_USERSPACE$
+	TOOLCHAIN_KERNEL$
 
 menu main_menu
 	arch_type
@@ -194,7 +196,8 @@ require NCPU <= 4
 derive RAM_BASE_PLAT from  PLATFORM_BEAGLE ? 0x80000000 : 0x00000000
 
 # Toolchains:
-default TOOLCHAIN from 'arm-none-eabi-'
+default TOOLCHAIN_USERSPACE from 'arm-none-linux-gnueabi-'
+default TOOLCHAIN_KERNEL from 'arm-none-eabi-'
 
 prefix CONFIG_
 

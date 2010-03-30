@@ -30,9 +30,9 @@ LIBELF_PATH = 'loader/libs/elf'
 LIBELF_LIBPATH = LIBELF_PATH
 LIBELF_INCPATH = '#' + join(LIBELF_PATH, 'include')
 
-env = Environment(CC = config.toolchain + 'gcc',
-		  AR = config.toolchain + 'ar',
-		  RANLIB = config.toolchain + 'ranlib',
+env = Environment(CC = config.toolchain_kernel + 'gcc',
+		  AR = config.toolchain_kernel + 'ar',
+		  RANLIB = config.toolchain_kernel + 'ranlib',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \

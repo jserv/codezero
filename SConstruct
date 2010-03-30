@@ -22,7 +22,7 @@ def generate_kernel_linker_script(target, source, env):
     linker_in = source[0]
     linker_out = target[0]
 
-    cmd = config.toolchain + "cpp -D__CPP__ " + \
+    cmd = config.toolchain_kernel + "cpp -D__CPP__ " + \
           "-I%s -imacros l4/macros.h -imacros %s -imacros %s -C -P %s -o %s" % \
                 ('include', 'l4/platform/'+ platform + '/offsets.h', \
                  'l4/glue/' + arch + '/memlayout.h', linker_in, linker_out)
@@ -39,7 +39,7 @@ def generate_kernel_phys_linker_script(target, source, env):
     phys_linker_in = source[0]
     phys_linker_out = target[0]
 
-    cmd = config.toolchain + "cpp -D__CPP__ " + \
+    cmd = config.toolchain_kernel + "cpp -D__CPP__ " + \
           "-I%s -imacros l4/macros.h -imacros %s -imacros %s -C -P %s -o %s" % \
                 ('include', 'l4/platform/'+ platform + '/offsets.h', \
                  'l4/glue/' + arch + '/memlayout.h', phys_linker_in, phys_linker_out)
@@ -50,9 +50,9 @@ create_kernel_phys_linker = Command(join(builddir, 'include/physlink.lds'), \
                                join(PROJROOT, 'include/physlink.lds.in'), \
                                generate_kernel_phys_linker_script)
 '''
-env = Environment(CC = config.toolchain + 'gcc',
-		  AR = config.toolchain + 'ar',
-		  RANLIB = config.toolchain + 'ranlib',
+env = Environment(CC = config.toolchain_kernel + 'gcc',
+		  AR = config.toolchain_kernel + 'ar',
+		  RANLIB = config.toolchain_kernel + 'ranlib',
 		  # We don't use -nostdinc because sometimes we need standard headers,
 		  # such as stdarg.h e.g. for variable args, as in printk().
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \

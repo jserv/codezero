@@ -32,7 +32,7 @@ LIBL4_DIR = join(PROJROOT, LIBL4_RELDIR)
 LIBL4_INCLUDE = join(LIBL4_DIR, 'include')
 
 # This does not work, need to check
-test_env = Environment(CC = config.toolchain + 'gcc',
+test_env = Environment(CC = config.toolchain_userspace + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
                      '-nostdinc', '-Werror', '-march=' + gcc_arch_flag],
 		  ENV = {'PATH' : os.environ['PATH']},
@@ -40,7 +40,7 @@ test_env = Environment(CC = config.toolchain + 'gcc',
 		  LIBPATH = ['#'],
 		  CPPPATH = ['#include', join(PROJRELROOT, "include"), "#", LIBL4_INCLUDE])
 
-env = Environment(CC = config.toolchain + 'gcc',
+env = Environment(CC = config.toolchain_userspace + 'gcc',
             CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', \
                        '-Wall', '-Werror', '-march=' + gcc_arch_flag],
             LINKFLAGS = ['-nostdlib'],

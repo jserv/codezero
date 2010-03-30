@@ -16,9 +16,9 @@ platform = config.platform
 gcc_arch_flag = config.gcc_arch_flag
 all_syms = config.all
 
-env = Environment(CC = config.toolchain + 'gcc',
-		  AR = config.toolchain + 'ar',
-		  RANLIB = config.toolchain + 'ranlib',
+env = Environment(CC = config.toolchain_userspace + 'gcc',
+		  AR = config.toolchain_userspace + 'ar',
+		  RANLIB = config.toolchain_userspace + 'ranlib',
                   # We don't use -nostdinc because sometimes we need standard headers,
                   # such as stdarg.h e.g. for variable args, as in printk().
                   CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall',

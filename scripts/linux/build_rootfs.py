@@ -51,10 +51,10 @@ class RootfsBuilder:
             with open(self.rootfs_h_in, 'r') as input:
                 output.write(input.read() % {'cn' : self.cont_id})
 
-        os.system(config.toolchain + "cpp -I%s -P %s > %s" % \
+        os.system(config.toolchain_userspace + "cpp -I%s -P %s > %s" % \
                   (self.LINUX_ROOTFS_BUILDDIR, self.rootfs_lds_in, \
                    self.rootfs_lds_out))
-        os.system(config.toolchain + "gcc " + \
+        os.system(config.toolchain_userspace + "gcc " + \
                   "-nostdlib -o %s -T%s rootfs.S" % (self.rootfs_elf_out, \
                                                      self.rootfs_lds_out))
         print "Done..."

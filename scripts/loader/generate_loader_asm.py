@@ -53,7 +53,7 @@ def generate_ksym_to_loader(target_path, source_path):
         asm_file.write(ksym_header % (target_path, source_path, sys.argv[0]))
         for symbol in symbols:
             process = \
-                subprocess.Popen(config.toolchain + 'objdump -d ' + \
+                subprocess.Popen(config.toolchain_kernel + 'objdump -d ' + \
                                  source_path + ' | grep "<' + \
                                         symbol + '>"', shell=True, \
                                         stdout=subprocess.PIPE)
