@@ -24,6 +24,7 @@
 #define PLATFORM_TIMER2_BASE            0x10018000 /* Timers 4 and 5 */
 #define PLATFORM_TIMER3_BASE            0x10019000 /* Timers 6 and 7 */
 #define PLATFORM_SYSCTRL1_BASE          0x1001A000 /* System controller1 */
+#define PLATFORM_CLCD0_BASE		0x10020000 /* CLCD */
 #define PLATFORM_GIC1_BASE		0x1E000000 /* GIC 1 */
 #define PLATFORM_GIC2_BASE		0x1E010000 /* GIC 2 */
 #define PLATFORM_GIC3_BASE		0x1E020000 /* GIC 3 */

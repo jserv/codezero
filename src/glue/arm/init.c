@@ -143,22 +143,12 @@ void setup_idle_task()
 	/* Initialize space caps list */
 	cap_list_init(&current->space->cap_list);
 
-#if 0
-	/*
-	 * Unneeded stuff
-	 */
-	/*
-	 * Set up idle context.
-	 */
-	current->context.spsr = ARM_MODE_SVC;
-	current->context.pc = (u32)idle_task;
-	current->context.sp = (u32)align((unsigned long)current + PAGE_SIZE,
-					 STACK_ALIGNMENT);
-#endif
-
 	/*
 	 * FIXME: This must go to kernel resources init.
 	 */
+
+	/* Init scheduler structs */
+	sched_init_task(current, TASK_PRIO_NORMAL);
 
 	/*
 	 * If using split page tables, kernel
@@ -236,17 +226,17 @@ void start_kernel(void)
 
 	sched_init();
 
-	/* Try to initialize secondary cores if there are any */
-	smp_start_cores();
-
-	/* Remove one-to-one kernel mapping */
-	remove_initial_mapping();
-
 	/*
 	 * Map and enable high vector page.
 	 * Faults can be handled after here.
 	 */
 	vectors_init();
+
+	/* Try to initialize secondary cores if there are any */
+	smp_start_cores();
+
+	/* Remove one-to-one kernel mapping */
+	remove_initial_mapping();
 
 	/* Remap 1MB kernel sections as 4Kb pages. */
 	remap_as_pages((void *)page_align(_start_kernel),

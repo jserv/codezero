@@ -42,7 +42,7 @@ static inline struct ktcb *current_task(void)
 #define current			current_task()
 #define need_resched		(current->ts_need_resched)
 
-#define SCHED_RQ_TOTAL			2
+#define SCHED_RQ_TOTAL			4
 
 /* A basic runqueue */
 struct runqueue {
@@ -52,11 +52,28 @@ struct runqueue {
 	unsigned int total;		/* Total tasks */
 };
 
+/*
+ * Hints and flags to scheduler
+ */
+enum sched_flags {
+	/* Schedule idle at a convenient time */
+	SCHED_RUN_IDLE = (1 << 0),
+};
+
 /* Contains per-container scheduling structures */
 struct scheduler {
+	unsigned int flags;
+	unsigned int task_select_ctr;
 	struct runqueue sched_rq[SCHED_RQ_TOTAL];
+
+	/* Regular runqueues */
 	struct runqueue *rq_runnable;
 	struct runqueue *rq_expired;
+
+	/* Real-time runqueues */
+	struct runqueue *rq_rt_runnable;
+	struct runqueue *rq_rt_expired;
+
 	struct ktcb *idle_task;
 
 	/* Total priority of all tasks in container */

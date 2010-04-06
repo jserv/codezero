@@ -18,7 +18,7 @@
 #include <l4/drivers/irq/gic/gic.h>
 
 unsigned long secondary_run_signal;
-
+unsigned long secondary_ready_signal;
 
 void __smp_start(void);
 
@@ -35,14 +35,17 @@ void smp_start_cores(void)
 	arm_smp_inval_icache_entirely();
 
 	/* Start other cpus */
-	for (int i = 1; i < CONFIG_NCPU; i++) {
-		printk("%s: Bringing up CPU%d\n", __KERNELNAME__, i);
-		if ((platform_smp_start(i, smp_start_func)) < 0) {
+	for (int cpu = 1; cpu < CONFIG_NCPU; cpu++) {
+		printk("%s: Bringing up CPU%d\n", __KERNELNAME__, cpu);
+		if ((platform_smp_start(cpu, smp_start_func)) < 0) {
 			printk("FATAL: Could not start secondary cpu. "
-			       "cpu=%d\n", i);
+			       "cpu=%d\n", cpu);
 			BUG();
 		}
-		wfi();	/* wait for other cpu send IPI to core0 */
+
+		/* Wait for this particular secondary to become ready */
+		while(!(secondary_ready_signal & CPUID_TO_MASK(cpu)))
+			dmb();
 	}
 
 	scu_print_state();
@@ -50,12 +53,11 @@ void smp_start_cores(void)
 
 void init_smp(void)
 {
-        /* Start_secondary_cpus */
-        if (CONFIG_NCPU > 1) {
-
-                /* This sets IPI function pointer at bare minimum */
-                platform_smp_init(CONFIG_NCPU);
-        }
+	/* Start_secondary_cpus */
+	if (CONFIG_NCPU > 1) {
+		/* This sets IPI function pointer at bare minimum */
+		platform_smp_init(CONFIG_NCPU);
+	}
 }
 
 void secondary_setup_idle_task(void)
@@ -122,9 +124,9 @@ void smp_secondary_init(void)
 
 	sched_init();
 
-	dsb();
-
-	gic_send_ipi(CPUID_TO_MASK(0), 0);
+	/* Signal primary that we are ready */
+	dmb();
+	secondary_ready_signal |= cpu_mask_self();
 
 	/*
 	 * Wait for the first runnable task to become available

@@ -20,4 +20,31 @@
 #define smp_get_cpuid()		0
 #endif
 
+/* All cpus in the SMP system */
+static inline unsigned int cpu_mask_all(void)
+{
+	unsigned int mask = 0;
+
+	for (int i = 0; i < CONFIG_NCPU; i++)
+		mask |= (1 << i);
+	return mask;
+}
+
+/* All but not self */
+static inline unsigned int cpu_mask_others(void)
+{
+	unsigned int mask = 0;
+
+	for (int i = 0; i < CONFIG_NCPU; i++)
+		if (i != smp_get_cpuid())
+			mask |= (1 << i);
+	return mask;
+}
+
+/* Only self */
+static inline unsigned int cpu_mask_self(void)
+{
+	return 1 << smp_get_cpuid();
+}
+
 #endif	/* __GENERIC_SMP_H__ */

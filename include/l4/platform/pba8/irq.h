@@ -24,5 +24,8 @@
 #define IRQ_TIMER2	73
 #define IRQ_TIMER3	74
 
+#define IRQ_KEYBOARD0	52
+#define IRQ_MOUSE0      53
+
 #endif /* __PLATFORM_IRQ_H__ */
 

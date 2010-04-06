@@ -29,6 +29,7 @@
 #define TASK_SUSPENDING			(1 << 1)
 #define TASK_RESUMING			(1 << 2)
 #define TASK_PENDING_SIGNAL		(TASK_SUSPENDING)
+#define TASK_REALTIME			(1 << 5)
 
 /*
  * This is to indicate a task (either current or one of
@@ -109,7 +110,6 @@ struct ktcb {
 	enum task_state state;
 
 	struct link task_list; /* Global task list. */
-	struct ktcb_list child_exit_list;
 
 	/* UTCB related, see utcb.txt in docs */
 	unsigned long utcb_address;	/* Virtual ref to task's utcb area */

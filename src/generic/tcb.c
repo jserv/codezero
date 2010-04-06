@@ -34,7 +34,6 @@ void tcb_init(struct ktcb *new)
 
 	spin_lock_init(&new->thread_lock);
 
-	init_ktcb_list(&new->child_exit_list);
 	cap_list_init(&new->cap_list);
 
 	/* Initialise task's scheduling state and parameters. */

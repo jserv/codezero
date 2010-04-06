@@ -67,6 +67,10 @@ pager_start = \
 \t\t\t.pager_lma = __pfn(CONFIG_CONT%(cn)d_PAGER_LOAD_ADDR),
 \t\t\t.pager_vma = __pfn(CONFIG_CONT%(cn)d_PAGER_VIRT_ADDR),
 \t\t\t.pager_size = __pfn(page_align_up(CONT%(cn)d_PAGER_MAPSIZE)),
+\t\t\t.rw_sections_start = %(rw_sec_start)s,
+\t\t\t.rw_sections_end = %(rw_sec_end)s,
+\t\t\t.rx_sections_start = %(rx_sec_start)s,
+\t\t\t.rx_sections_end = %(rx_sec_end)s,
 \t\t\t.ncaps = %(caps)d,
 \t\t\t.caps = {
 '''
@@ -160,7 +164,12 @@ def generate_kernel_cinfo(config, cinfo_path):
             # Currently only these are considered as capabilities
             total_caps = c.virt_regions + c.phys_regions + len(c.caps)
             fbody += cinfo_start % (c.id, c.name)
-            fbody += pager_start % { 'cn' : c.id, 'caps' : total_caps}
+            fbody += pager_start % { 'cn' : c.id, 'caps' : total_caps,
+                                     'rw_sec_start' : hex(c.pager_rw_section_start),
+                                     'rw_sec_end' : hex(c.pager_rw_section_end),
+                                     'rx_sec_start' : hex(c.pager_rx_section_start),
+                                     'rx_sec_end' : hex(c.pager_rx_section_end),
+                                   }
             cap_index = 0
             for mem_index in range(c.virt_regions):
                 fbody += cap_virtmem % { 'capidx' : cap_index, 'cn' : c.id, 'vn' : mem_index }

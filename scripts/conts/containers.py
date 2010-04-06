@@ -8,6 +8,7 @@
 import os, sys, shelve, glob
 from os.path import join
 from tools.pyelf.elfsize import *
+from tools.pyelf.elf_section_info import *
 
 PROJRELROOT = '../../'
 
@@ -22,6 +23,11 @@ from scripts.linux.build_atags import *
 from pack import *
 from packall import *
 
+def fill_pager_section_markers(cont, pager_binary):
+    cont.pager_rw_section_start, cont.pager_rw_section_end, \
+    cont.pager_rx_section_start, cont.pager_rx_section_end = \
+        elf_loadable_section_info(join(PROJROOT, pager_binary))
+
 def build_linux_container(config, projpaths, container):
     linux_builder = LinuxBuilder(projpaths, container)
     linux_builder.build_linux(config)
@@ -33,9 +39,12 @@ def build_linux_container(config, projpaths, container):
 
     # Calculate and store size of pager
     pager_binary = \
-        "cont" + str(container.id) + "/linux/linux-2.6.33/linux.elf"
+        join(BUILDDIR, "cont" + str(container.id) +
+                        "/linux/linux-2.6.33/linux.elf")
     config.containers[container.id].pager_size = \
-            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
+            conv_hex(elf_binary_size(pager_binary))
+
+    fill_pager_section_markers(config.containers[container.id], pager_binary)
 
     linux_container_packer = \
         LinuxContainerPacker(container, linux_builder, \
@@ -70,9 +79,13 @@ def build_posix_container(config, projpaths, container):
     os.path.walk(builddir, glob_by_walk, ['*.elf', images])
 
     # Calculate and store size of pager
-    pager_binary = "cont" + str(container.id) + "/posix/mm0/mm0.elf"
+    pager_binary = join(BUILDDIR,
+                        "cont" + str(container.id) + "/posix/mm0/mm0.elf")
     config.containers[container.id].pager_size = \
-            conv_hex(elf_binary_size(join(BUILDDIR, pager_binary)))
+            conv_hex(elf_binary_size(pager_binary))
+
+    print 'Find markers for ' + pager_binary
+    fill_pager_section_markers(config.containers[container.id], pager_binary)
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container(config)
@@ -89,9 +102,11 @@ def build_default_container(config, projpaths, container):
     os.path.walk(projdir, glob_by_walk, ['*.elf', images])
 
     # Calculate and store size of pager
-    pager_binary = "conts/" + container.name + "/main.elf"
+    pager_binary = join(PROJROOT, "conts/" + container.name + "/main.elf")
     config.containers[container.id].pager_size = \
-            conv_hex(elf_binary_size(join(PROJROOT, pager_binary)))
+            conv_hex(elf_binary_size(pager_binary))
+
+    fill_pager_section_markers(config.containers[container.id], pager_binary)
 
     container_packer = DefaultContainerPacker(container, images)
     return container_packer.pack_container(config)

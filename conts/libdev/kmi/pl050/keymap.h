@@ -135,7 +135,7 @@ struct keyboard_key keymap_uk2[256] = {
 /*  40   */     {';',':',0,0},
 /*  41   */     {'\'','@',0,0},
 /*  42   */     {0,0,0,0},
-/*  43   */     {KEYCODE_RETURN,0,KEYCODE_ENTER,0},
+/*  43   */     {'\n','\n',KEYCODE_ENTER,0},
 /*  44   */     {KEYCODE_LSHIFT,0,0,0},
 /*  45   */     {'\\','|',0,0},
 /*  46   */     {'z','Z',0,0},

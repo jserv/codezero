@@ -6,4 +6,3 @@ break break_virtual
 continue
 sym kernel.elf
 stepi
-

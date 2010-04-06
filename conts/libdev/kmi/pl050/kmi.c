@@ -9,11 +9,10 @@
 #include "kmi.h"
 #include "keymap.h"
 
-/*
- * Reading Rx data automatically clears the RXITR
- */
-void kmi_irq_handler(unsigned long base)
+/* Enable Rx irq */
+void kmi_rx_irq_enable(unsigned long base)
 {
+	*(volatile unsigned long *)(base + PL050_KMICR) = KMI_RXINTR;
 }
 
 int kmi_data_read(unsigned long base)

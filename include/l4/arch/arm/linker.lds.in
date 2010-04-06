@@ -8,7 +8,11 @@
 #endif
 
 phys_ram_start		= PLATFORM_PHYS_MEM_START;
+
+#if !defined(kernel_offset)
 kernel_offset		= KERNEL_AREA_START - phys_ram_start;
+#endif
+
 kernel_physical		= 0x8000 + phys_ram_start;
 kernel_virtual		= kernel_physical + kernel_offset;
 
@@ -47,8 +51,8 @@ SECTIONS
 		. = ALIGN(16K);
 		_start_vectors = .;
 		*(.data.vectors)
-		_end_vectors = .;
 		. = ALIGN(4K);
+		_end_vectors = .;
 		_start_kip = .;
 		*(.data.kip)
 		. = ALIGN(4K);
@@ -71,9 +75,6 @@ SECTIONS
 		*(.bss)
 	}
 	. = ALIGN(4K);
-	. += PAGE_SIZE * 2;	/* This is required as the link counter does not seem
-				 * to increment for the bss section
-				 * TODO: Change this with PAGE_SIZE */
 
 	/* Below part is to be discarded after boot */
 	_start_init = .;

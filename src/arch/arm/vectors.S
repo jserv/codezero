@@ -7,7 +7,6 @@
 #include INC_ARCH(asm.h)
 #include INC_ARCH(asm-macros.S)
 
-.balign 4096
 .section .data.vectors
 __vector_vaddr:
 
@@ -896,5 +895,4 @@ __irq_stack:	.space 128
 __fiq_stack:	.space 128
 __und_stack:	.space 128
 
-.balign 4096
 

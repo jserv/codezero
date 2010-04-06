@@ -30,33 +30,6 @@ void irq_local_restore(unsigned long state)
 		);
 }
 
-u8 l4_atomic_dest_readb(unsigned long *location)
-{
-#if 0
-	unsigned int tmp;
-	__asm__ __volatile__ (
-		"swpb	r0, r2, [r1] \n"
-		: "=r"(tmp)
-		: "r"(location), "r"(0)
-		: "memory"
-		);
-
-	return (u8)tmp;
-#endif
-
-	unsigned int tmp;
-	unsigned long state;
-	irq_local_disable_save(&state);
-
-	tmp = *location;
-	*location = 0;
-	
-	irq_local_restore(state);
-
-	return (u8)tmp;
-
-}
-
 int irqs_enabled(void)
 {
 	int tmp;

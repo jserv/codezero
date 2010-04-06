@@ -19,7 +19,7 @@ struct sleeper_task {
 struct wake_task_list {
 	struct link head;
 	struct link *end; /* optimization */
-	struct l4_mutex lock; /* lock for sanity of head */
+	struct l4_mutex wake_list_lock; /* lock for sanity of head */
 };
 
 #define BUCKET_BASE_LEVEL_BITS		8
@@ -77,7 +77,7 @@ struct timer {
 	unsigned long base;	/* Virtual base address */
 	unsigned int count;		/* Counter/jiffies */
 	struct sleeper_task_bucket task_list;	/* List of sleeping tasks */
-	struct l4_mutex lock;	/* Lock for sleeper_task_bucket */
+	struct l4_mutex task_list_lock;	/* Lock for sleeper_task_bucket */
 	struct capability cap;  /* Capability describing timer */
 };
 

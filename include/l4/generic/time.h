@@ -16,5 +16,6 @@ struct timeval {
 extern volatile u32 jiffies;
 
 int do_timer_irq(void);
+int secondary_timer_irq(void);
 
 #endif /* __GENERIC_TIME_H__ */

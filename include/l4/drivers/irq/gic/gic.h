@@ -88,4 +88,8 @@ u32 gic_get_priority(u32 irq);
 
 void gic_dummy_init(void);
 
+void gic_eoi_irq(l4id_t irq);
+
+void gic_print_cpu(void);
+
 #endif /* __GIC_H__ */

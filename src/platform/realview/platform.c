@@ -4,13 +4,14 @@
  * Copyright (C) 2009 B Labs Ltd.
  */
 #include <l4/platform/realview/uart.h>
-#include <l4/platform/realview/timer.h>
+#include <l4/platform/realview/irq.h>
 #include INC_PLAT(offsets.h)
 #include INC_GLUE(mapping.h)
 #include INC_GLUE(smp.h)
 #include <l4/generic/irq.h>
 #include <l4/generic/space.h>
 #include <l4/generic/platform.h>
+#include <l4/generic/smp.h>
 #include INC_PLAT(platform.h)
 #include INC_ARCH(io.h)
 
@@ -35,6 +36,9 @@ void platform_timer_start(void)
 {
 	/* Enable irq line for TIMER0 */
 	irq_enable(IRQ_TIMER0);
+
+	/* Set cpu to all cpus for timer0 */
+	// irq_set_cpu(IRQ_TIMER0, cpu_all_mask());
 
 	/* Enable timer */
 	timer_start(PLATFORM_TIMER0_VBASE);

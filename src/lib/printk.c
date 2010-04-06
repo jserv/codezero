@@ -449,6 +449,6 @@ int printk(char *format, ...)
 
     va_end(args);
     return i;
-};
+}
 
 

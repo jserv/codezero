@@ -494,9 +494,21 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 				MAP_USR_RW, 1)) < 0)
 		return err;
 
-	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE)
+	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE) {
 		if (!(task = tcb_find(ids->tid)))
 			return -ESRCH;
+
+		/*
+		 * Tasks may only operate on their children. They may
+		 * also destroy themselves or any children.
+		 */
+		if ((flags & THREAD_ACTION_MASK) == THREAD_DESTROY &&
+		    !task_is_child(task) && task != current)
+			return -EPERM;
+		if ((flags & THREAD_ACTION_MASK) != THREAD_DESTROY
+		    && !task_is_child(task))
+			return -EPERM;
+	}
 
 	if ((err = cap_thread_check(task, flags, ids)) < 0)
 		return err;

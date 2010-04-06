@@ -15,6 +15,10 @@ class Container:
         self.pager_lma = 0
         self.pager_vma = 0
         self.pager_size = 0
+        self.pager_rw_section_start = 0
+        self.pager_rw_section_end = 0
+        self.pager_rx_section_start = 0
+        self.pager_rx_section_end = 0
         self.pager_task_region_start = 0
         self.pager_task_region_end = 0
         self.pager_shm_region_start = 0
@@ -72,6 +76,8 @@ class configuration:
         self.toolchain_userspace = None
 	self.toolchain_kernel = None
         self.all = []
+        self.smp = False
+        self.ncpu = 0
         self.containers = []
         self.ncontainers = 0
 
@@ -86,6 +92,13 @@ class configuration:
             if parts[0] == "#define":
                 return parts[1], parts[2]
         return None
+
+    # Check if SMP enable, and get NCPU if SMP
+    def get_ncpu(self, name, value):
+        if name[:len("CONFIG_SMP")] == "CONFIG_SMP":
+            self.smp = bool(value)
+        if name[:len("CONFIG_NCPU")] == "CONFIG_NCPU":
+            self.ncpu = int(value)
 
     # Extract architecture from a name value pair
     def get_arch(self, name, val):

@@ -19,7 +19,11 @@
 #define PLATFORM_GIC3_BASE		0x10060000 /* GIC 3 */
 #define PLATFORM_GIC4_BASE		0x10070000 /* GIC 4 */
 
-#define MPCORE_PRIVATE_VBASE		(IO_AREA0_VADDR + (13 * DEVICE_PAGE))
+/*
+ * Virtual device offsets for EB platform - starting from
+ * the last common realview virtual device offset
+ */
+#define MPCORE_PRIVATE_VBASE		(IO_AREA0_VADDR + (14 * DEVICE_PAGE))
 
 #if defined (CONFIG_CPU_CORTEXA9)
 #define	MPCORE_PRIVATE_BASE		0x1F000000

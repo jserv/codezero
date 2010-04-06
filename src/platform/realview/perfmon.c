@@ -5,7 +5,7 @@
  *
  * Author: Bahadir Balban
  */
-#include <l4/platform/realview/timer.h>
+#include <l4/platform/realview/irq.h>
 #include <l4/lib/printk.h>
 #include INC_PLAT(offsets.h)
 #include INC_SUBARCH(perfmon.h)

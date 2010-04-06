@@ -17,6 +17,7 @@ gcc_arch_flag = config.gcc_arch_flag
 all_syms = config.all
 builddir='build/codezero/'
 
+
 # Generate kernel linker script at runtime using template file.
 def generate_kernel_linker_script(target, source, env):
     linker_in = source[0]
@@ -43,13 +44,13 @@ def generate_kernel_phys_linker_script(target, source, env):
           "-I%s -imacros l4/macros.h -imacros %s -imacros %s -C -P %s -o %s" % \
                 ('include', 'l4/platform/'+ platform + '/offsets.h', \
                  'l4/glue/' + arch + '/memlayout.h', phys_linker_in, phys_linker_out)
-    print cmd
     os.system(cmd)
 
 create_kernel_phys_linker = Command(join(builddir, 'include/physlink.lds'), \
-                               join(PROJROOT, 'include/physlink.lds.in'), \
+                               join(PROJROOT, 'include/l4/arch/arm/linker.lds.in'), \
                                generate_kernel_phys_linker_script)
 '''
+
 env = Environment(CC = config.toolchain_kernel + 'gcc',
 		  AR = config.toolchain_kernel + 'ar',
 		  RANLIB = config.toolchain_kernel + 'ranlib',
@@ -58,7 +59,7 @@ env = Environment(CC = config.toolchain_kernel + 'gcc',
 		  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall', \
 		  	     '-Werror', '-march=' + gcc_arch_flag],
 		  LINKFLAGS = ['-nostdlib', '-T' + join(builddir, 'include/l4/arch/arm/linker.lds')],
-		  ASFLAGS = ['-D__ASSEMBLY__'],
+		  ASFLAGS = ['-D__ASSEMBLY__', '-march=' + gcc_arch_flag],
 		  PROGSUFFIX = '.elf',			# The suffix to use for final executable
 		  ENV = {'PATH' : os.environ['PATH']},	# Inherit shell path
 		  LIBS = 'gcc',				# libgcc.a - This is required for division routines.

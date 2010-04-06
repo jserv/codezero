@@ -1,25 +1,30 @@
 /*
- * PLXXX Generic Interrupt Controller support.
+ * Generic Interrupt Controller support.
  *
- * This is more ARM Realview EB/PB
  * Copyright (C) 2009-2010 B Labs Ltd.
- * Author: Prem Mallappa <prem.mallappa@b-labs.co.uk>
+ *
+ * Authors: Prem Mallappa, Bahadir Balban
  */
-
 #include <l4/lib/bit.h>
 #include <l4/lib/printk.h>
 #include <l4/generic/irq.h>
 #include INC_PLAT(irq.h)
-#include INC_SUBARCH(mmu_ops.h)  /* for dmb/dsb() */
+#include INC_SUBARCH(mmu_ops.h)
 #include <l4/drivers/irq/gic/gic.h>
+#include <l4/generic/smp.h>
+
+#define GIC_ACK_IRQ_MASK		0x1FF
+#define GIC_ACK_CPU_MASK		0xE00
+#define GIC_IRQ_SPURIOUS		0x3FF
 
 volatile struct gic_data gic_data[IRQ_CHIPS_MAX];
 
 static inline struct gic_data *get_gic_data(l4id_t irq)
 {
-	struct irq_chip *chip = irq_desc_array[irq].chip;
+	volatile struct irq_chip *chip = irq_desc_array[irq].chip;
+
 	if (chip)
-		return (struct gic_data *)irq_desc_array[irq].chip->data;
+		return (struct gic_data *)chip->data;
 	else
 		return 0;
 }
@@ -27,115 +32,129 @@ static inline struct gic_data *get_gic_data(l4id_t irq)
 /* Returns the irq number on this chip converting the irq bitvector */
 l4id_t gic_read_irq(void *data)
 {
-	int irq;
 	volatile struct gic_data *gic = (struct gic_data *)data;
-	irq = gic->cpu->ack & 0x1ff;
+	l4id_t irq = gic->cpu->ack;
 
-	if (irq == 1023)
-		return -1023;			/* Spurious */
+	/* This is an IPI - EOI it here, since it requires cpu field */
+	if ((irq & GIC_ACK_IRQ_MASK) < 16) {
+		gic_eoi_irq(irq);
+		/* Get the actual irq number */
+		irq &= GIC_ACK_IRQ_MASK;
+	}
 
+	/* Detect GIC spurious magic value and return generic one */
+	if (irq == GIC_IRQ_SPURIOUS)
+		return IRQ_SPURIOUS;
 	return irq;
 }
 
 void gic_mask_irq(l4id_t irq)
 {
-	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
 	volatile struct gic_data *gic = get_gic_data(irq);
+	u32 offset = irq >> 5; /* irq / 32 */
+
 	gic->dist->clr_en[offset] = 1 << (irq % 32);
 }
 
 void gic_unmask_irq(l4id_t irq)
 {
 	volatile struct gic_data *gic = get_gic_data(irq);
+	u32 offset = irq >> 5 ; /* irq / 32 */
 
-	u32 offset = irq >> 5 ; /* offset = irq / 32 */
 	gic->dist->set_en[offset] = 1 << (irq % 32);
 }
 
-void gic_ack_irq(l4id_t irq)
+void gic_eoi_irq(l4id_t irq)
 {
-	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
-	volatile struct gic_data *gic = get_gic_data(irq);
-	gic->dist->clr_en[offset] = 1 << (irq % 32);
+	/* Careful, irq may have cpu field encoded */
+	volatile struct gic_data *gic =
+		get_gic_data(irq & GIC_ACK_IRQ_MASK);
+
 	gic->cpu->eoi = irq;
 }
 
 void gic_ack_and_mask(l4id_t irq)
 {
-	gic_ack_irq(irq);
+	//printk("disable/eoi irq %d\n", irq);
 	gic_mask_irq(irq);
+	gic_eoi_irq(irq);
 }
 
 void gic_set_pending(l4id_t irq)
 {
-	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
 	volatile struct gic_data *gic = get_gic_data(irq);
+	u32 offset = irq >> 5; /* irq / 32 */
 	gic->dist->set_pending[offset] = 1 << (irq % 32);
 }
 
 void gic_clear_pending(l4id_t irq)
 {
-	u32 offset = irq >> 5; /* offset = irq / 32, avoiding division */
 	volatile struct gic_data *gic = get_gic_data(irq);
+	u32 offset = irq >> 5; /* irq / 32 */
+
 	gic->dist->clr_pending[offset] = 1 << (irq % 32);
 }
 
 
 void gic_cpu_init(int idx, unsigned long base)
 {
-	struct gic_cpu *cpu;
-	cpu = gic_data[idx].cpu = (struct gic_cpu *)base;
+	volatile struct gic_cpu *cpu;
+
+	gic_data[idx].cpu = (struct gic_cpu *)base;
+
+	cpu = gic_data[idx].cpu;
 
 	/* Disable */
 	cpu->control = 0;
 
+	/* Set */
 	cpu->prio_mask = 0xf0;
 	cpu->bin_point = 3;
 
+	/* Enable */
 	cpu->control = 1;
 }
 
 void gic_dist_init(int idx, unsigned long base)
 {
-	int i, irqs_per_word; 	/* Interrupts per word */
-	struct gic_dist *dist;
-	dist = gic_data[idx].dist = (struct gic_dist *)(base);
+	volatile struct gic_dist *dist;
+	int irqs_per_word;
+	int nirqs;
 
-	/* Surely disable GIC */
+	gic_data[idx].dist = (struct gic_dist *)(base);
+
+	dist = gic_data[idx].dist;
+
+	/* Disable gic */
 	dist->control = 0;
 
 	/* 32*(N+1) interrupts supported */
-	int nirqs = 32 * ((dist->type & 0x1f) + 1);
+	nirqs = 32 * ((dist->type & 0x1f) + 1);
 	if (nirqs > IRQS_MAX)
 		nirqs = IRQS_MAX;
 
-	/* Clear all interrupts */
+	/* Disable all interrupts */
 	irqs_per_word = 32;
-	for(i = 0; i < nirqs ; i+=irqs_per_word) {
+	for (int i = 0; i < nirqs; i += irqs_per_word)
 		dist->clr_en[i/irqs_per_word] = 0xffffffff;
-	}
 
 	/* Clear all pending interrupts */
-	for(i = 0; i < nirqs ; i+=irqs_per_word) {
+	for (int i = 0; i < nirqs; i += irqs_per_word)
 		dist->clr_pending[i/irqs_per_word] = 0xffffffff;
-	}
 
 	/* Set all irqs as normal priority, 8 bits per interrupt */
 	irqs_per_word = 4;
-	for(i = 32; i < nirqs ; i+=irqs_per_word) {
+	for (int i = 32; i < nirqs; i += irqs_per_word)
 		dist->priority[i/irqs_per_word] = 0xa0a0a0a0;
-	}
 
 	/* Set all target to cpu0, 8 bits per interrupt */
-	for(i = 32; i < nirqs ; i+=irqs_per_word) {
+	for (int i = 32; i < nirqs; i += irqs_per_word)
 		dist->target[i/irqs_per_word] = 0x01010101;
-	}
 
 	/* Configure all to be level-sensitive, 2 bits per interrupt */
 	irqs_per_word = 16;
-	for(i = 32; i < nirqs ; i+=irqs_per_word) {
+	for (int i = 32; i < nirqs; i += irqs_per_word)
 		dist->config[i/irqs_per_word] = 0x00000000;
-	}
 
 	/* Enable GIC Distributor */
 	dist->control = 1;
@@ -143,24 +162,28 @@ void gic_dist_init(int idx, unsigned long base)
 
 
 /* Some functions, may be helpful */
-void gic_set_target(u32 irq, u32 cpu)
+void gic_set_target(l4id_t irq, u32 cpu)
 {
-	/* cpu is a mask, not cpu number */
-	cpu &= 0xF;
-	irq &= 0xFF;
 	volatile struct gic_data *gic = get_gic_data(irq);
-	u32 offset = irq >> 2; /* offset = irq / 4 */
+	u32 offset = irq >> 2; /* irq / 4 */
+
+	if (cpu > 1) {
+		printk("Setting irqs to reach multiple cpu targets requires a"
+		       "lock on the irq controller\n"
+		       "GIC is a racy hardware in this respect\n");
+		BUG();
+	}
+
 	gic->dist->target[offset] |= (cpu << ((irq % 4) * 8));
 }
 
 u32 gic_get_target(u32 irq)
 {
-	/* cpu is a mask, not cpu number */
-	unsigned int target;
-	irq &= 0xFF;
-	u32 offset = irq >> 2; /* offset = irq / 4 */
 	volatile struct gic_data *gic = get_gic_data(irq);
-	target = gic->dist->target[offset];
+	u32 offset = irq >> 2; /* irq / 4 */
+	unsigned int target = gic->dist->target[offset];
+
+	BUG_ON(irq > 0xFF);
 	target >>= ((irq % 4) * 8);
 
 	return target & 0xFF;
@@ -168,54 +191,44 @@ u32 gic_get_target(u32 irq)
 
 void gic_set_priority(u32 irq, u32 prio)
 {
-	/* cpu is a mask, not cpu number */
-	prio &= 0xF;
-	irq &= 0xFF;
-	u32 offset = irq >> 3; /* offset = irq / 8 */
 	volatile struct gic_data *gic = get_gic_data(irq);
+	u32 offset = irq >> 3; /* irq / 8 */
+
+	BUG_ON(prio > 0xF);
+	BUG_ON(irq > 0xFF);
+
 	/* target = cpu << ((irq % 4) * 4) */
 	gic->dist->target[offset] |= (prio << (irq & 0x1C));
 }
 
 u32 gic_get_priority(u32 irq)
 {
-	/* cpu is a mask, not cpu number */
-	irq &= 0xFF;
-	u32 offset = irq >> 3; /* offset = irq / 8 */
 	volatile struct gic_data *gic = get_gic_data(irq);
-	return gic->dist->target[offset] & (irq & 0xFC);
+	u32 offset = irq >> 3; /* offset = irq / 8 */
+	u32 prio = gic->dist->target[offset] & (irq & 0xFC);
+
+	return prio;
 }
 
-#define TO_MANY		0	/* to all specified in a CPU mask */
-#define TO_OTHERS	1	/* all but me */
-#define TO_SELF		2	/* just to the requesting CPU */
+#define IPI_CPU_SHIFT	16
 
-#define CPU_MASK_BIT  16
-#define TYPE_MASK_BIT 24
-
-void gic_send_ipi(int cpu, int ipi_cmd)
+void gic_send_ipi(int cpumask, int ipi_cmd)
 {
-	/* if cpu is 0, then ipi is sent to self
-	 * if cpu has exactly 1 bit set, the ipi to just that core
-	 * if cpu has a mask, sent to all but current
-	 */
-	struct gic_dist *dist = gic_data[0].dist;
+	volatile struct gic_dist *dist = gic_data[0].dist;
+	unsigned int ipi_word = (cpumask << IPI_CPU_SHIFT) | ipi_cmd;
 
-	ipi_cmd &= 0xf;
-	cpu &= 0xff;
-
-	dsb();
-
-	if (cpu == 0)				/* Self */
-		dist->soft_int = (TO_SELF << 24) | ipi_cmd;
-	else if ((cpu & (cpu-1)) == 0)		/* Exactly to one CPU */
-		dist->soft_int = (TO_MANY << 24) | (cpu << 16) | ipi_cmd;
-	else				/* All but me */
-		dist->soft_int = (TO_OTHERS << 24) | (cpu << 16) | ipi_cmd;
-
+	dist->soft_int = ipi_word;
 }
 
-/* Make the generic code happy :) */
+void gic_print_cpu()
+{
+	volatile struct gic_cpu *cpu = gic_data[0].cpu;
+
+	printk("GIC CPU%d highest pending: %d\n", smp_get_cpuid(), cpu->high_pending);
+	printk("GIC CPU%d running: %d\n", smp_get_cpuid(), cpu->running);
+}
+
+/* Make the generic code happy */
 void gic_dummy_init()
 {
 

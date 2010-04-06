@@ -12,7 +12,7 @@ struct keyboard_state{
 };
 
 /* Common functions */
-void kmi_irq_handler(unsigned long base);
+void kmi_rx_irq_enable(unsigned long base);
 int kmi_data_read(unsigned long base);
 
 /* Keyboard specific calls */

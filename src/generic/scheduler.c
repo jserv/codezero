@@ -119,12 +119,14 @@ void sched_init()
 
 	sched->rq_runnable = &sched->sched_rq[0];
 	sched->rq_expired = &sched->sched_rq[1];
+	sched->rq_rt_runnable = &sched->sched_rq[2];
+	sched->rq_rt_expired = &sched->sched_rq[3];
 	sched->prio_total = TASK_PRIO_TOTAL;
 	sched->idle_task = current;
 }
 
 /* Swap runnable and expired runqueues. */
-static void sched_rq_swap_runqueues(void)
+static void sched_rq_swap_queues(void)
 {
 	struct runqueue *temp;
 
@@ -134,6 +136,18 @@ static void sched_rq_swap_runqueues(void)
 	temp = per_cpu(scheduler).rq_runnable;
 	per_cpu(scheduler).rq_runnable = per_cpu(scheduler).rq_expired;
 	per_cpu(scheduler).rq_expired = temp;
+}
+
+static void sched_rq_swap_rtqueues(void)
+{
+	struct runqueue *temp;
+
+	BUG_ON(list_empty(&per_cpu(scheduler).rq_rt_expired->task_list));
+
+	/* Queues are swapped and expired list becomes runnable */
+	temp = per_cpu(scheduler).rq_rt_runnable;
+	per_cpu(scheduler).rq_rt_runnable = per_cpu(scheduler).rq_rt_expired;
+	per_cpu(scheduler).rq_rt_expired = temp;
 }
 
 /* Set policy on where to add tasks in the runqueue */
@@ -185,6 +199,28 @@ static inline void sched_rq_remove_task(struct ktcb *task)
 	sched_unlock_runqueues(sched, irqflags);
 }
 
+static inline void
+sched_run_task(struct ktcb *task, struct scheduler *sched)
+{
+	if (task->flags & TASK_REALTIME)
+		sched_rq_add_task(task, sched->rq_rt_runnable,
+				  RQ_ADD_BEHIND);
+	else
+		sched_rq_add_task(task, sched->rq_runnable,
+				  RQ_ADD_BEHIND);
+}
+
+static inline void
+sched_expire_task(struct ktcb *task, struct scheduler *sched)
+{
+
+	if (task->flags & TASK_REALTIME)
+		sched_rq_add_task(current, sched->rq_rt_expired,
+				  RQ_ADD_BEHIND);
+	else
+		sched_rq_add_task(current, sched->rq_expired,
+				  RQ_ADD_BEHIND);
+}
 
 void sched_init_task(struct ktcb *task, int prio)
 {
@@ -194,6 +230,27 @@ void sched_init_task(struct ktcb *task, int prio)
 	task->state = TASK_INACTIVE;
 	task->ts_need_resched = 0;
 	task->flags |= TASK_RESUMING;
+}
+
+/* Synchronously resumes a task */
+void sched_resume_sync(struct ktcb *task)
+{
+	BUG_ON(task == current);
+	task->state = TASK_RUNNABLE;
+	sched_run_task(task, &per_cpu_byid(scheduler, task->affinity));
+	schedule();
+}
+
+/*
+ * Asynchronously resumes a task.
+ * The task will run in the future, but at
+ * the scheduler's discretion. It is possible that current
+ * task wakes itself up via this function in the scheduler().
+ */
+void sched_resume_async(struct ktcb *task)
+{
+	task->state = TASK_RUNNABLE;
+	sched_run_task(task, &per_cpu_byid(scheduler, task->affinity));
 }
 
 /*
@@ -210,37 +267,10 @@ void sched_prepare_sleep()
 	preempt_enable();
 }
 
-/* Synchronously resumes a task */
-void sched_resume_sync(struct ktcb *task)
-{
-	BUG_ON(task == current);
-	task->state = TASK_RUNNABLE;
-	sched_rq_add_task(task,
-			  per_cpu_byid(scheduler,
-				       task->affinity).rq_runnable,
-			  RQ_ADD_FRONT);
-	schedule();
-}
-
 /*
- * Asynchronously resumes a task.
- * The task will run in the future, but at
- * the scheduler's discretion. It is possible that current
- * task wakes itself up via this function in the scheduler().
- */
-void sched_resume_async(struct ktcb *task)
-{
-	task->state = TASK_RUNNABLE;
-	sched_rq_add_task(task,
-			  per_cpu_byid(scheduler,
-				       task->affinity).rq_runnable,
-			  RQ_ADD_FRONT);
-//	printk("CPU%d: Resuming task %d with affinity %d\n", smp_get_cpuid(), task->tid, task->affinity);
-}
-
-/*
- * NOTE: Could do these as sched_prepare_suspend()
- * + schedule() or need_resched = 1
+ * preempt_enable/disable()'s are for avoiding the
+ * entry to scheduler during this period - but this
+ * is only true for current cpu.
  */
 void sched_suspend_sync(void)
 {
@@ -282,6 +312,11 @@ static inline void context_switch(struct ktcb *next)
 	system_account_context_switch();
 
 	/* Flush caches and everything */
+	BUG_ON(!current);
+	BUG_ON(!current->space);
+	BUG_ON(!next);
+	BUG_ON(!next->space);
+	BUG_ON(!next->space);
 	if (current->space->spid != next->space->spid)
 		arch_space_switch(next);
 
@@ -306,6 +341,107 @@ static inline int sched_recalc_ticks(struct ktcb *task, int prio_total)
 		CONFIG_SCHED_TICKS * task->priority / prio_total;
 }
 
+/*
+ * Select a real-time task 1/8th of any one selection
+ */
+static inline int sched_select_rt(struct scheduler *sched)
+{
+	int ctr = sched->task_select_ctr++ & 0xF;
+
+	if (ctr == 0 || ctr == 8 || ctr == 15)
+		return 0;
+	else
+		return 1;
+}
+
+/*
+ * Selection happens as follows:
+ *
+ * A real-time task is chosen %87.5 of the time. This is evenly
+ * distributed to a given interval.
+ *
+ * Idle task is run once when it is explicitly suggested (e.g.
+ * for cleanup after a task exited) but only when no real-time
+ * tasks are in the queues.
+ *
+ * And idle task is otherwise run only when no other tasks are
+ * runnable.
+ */
+struct ktcb *sched_select_next(void)
+{
+	struct scheduler *sched = &per_cpu(scheduler);
+	int realtime = sched_select_rt(sched);
+	struct ktcb *next = 0;
+
+	for (;;) {
+
+		/* Decision to run an RT task? */
+		if (realtime && sched->rq_rt_runnable->total > 0) {
+			/* Get a real-time task, if available */
+			next = link_to_struct(sched->rq_rt_runnable->task_list.next,
+					      struct ktcb, rq_list);
+			break;
+		} else if (realtime && sched->rq_rt_expired->total > 0) {
+			/* Swap real-time queues */
+			sched_rq_swap_rtqueues();
+			/* Get a real-time task */
+			next = link_to_struct(sched->rq_rt_runnable->task_list.next,
+					      struct ktcb, rq_list);
+			break;
+		/* Idle flagged for run? */
+		} else if (sched->flags & SCHED_RUN_IDLE) {
+			/* Clear idle flag */
+			sched->flags &= ~SCHED_RUN_IDLE;
+			next = sched->idle_task;
+			break;
+		} else if (sched->rq_runnable->total > 0) {
+			/* Get a regular runnable task, if available */
+			next = link_to_struct(sched->rq_runnable->task_list.next,
+					      struct ktcb, rq_list);
+			break;
+		} else if (sched->rq_expired->total > 0) {
+			/* Swap queues and retry if not */
+			sched_rq_swap_queues();
+			next = link_to_struct(sched->rq_runnable->task_list.next,
+					      struct ktcb, rq_list);
+			break;
+		} else if (in_process_context()) {
+			/* No runnable task. Do idle if in process context */
+			next = sched->idle_task;
+			break;
+		} else {
+			/*
+			 * Nobody is runnable. Irq calls must return
+			 * to interrupted current process to run idle task
+			 */
+			next = current;
+			break;
+		}
+	}
+	return next;
+}
+
+/* Prepare next runnable task right before switching to it */
+void sched_prepare_next(struct ktcb *next)
+{
+	/* New tasks affect runqueue total priority. */
+	if (next->flags & TASK_RESUMING)
+		next->flags &= ~TASK_RESUMING;
+
+	/* Zero ticks indicates task hasn't ran since last rq swap */
+	if (next->ticks_left == 0) {
+		/*
+		 * Redistribute timeslice. We do this as each task
+		 * becomes runnable rather than all at once. It is done
+		 * every runqueue swap
+		 */
+		sched_recalc_ticks(next, per_cpu(scheduler).prio_total);
+		next->ticks_left = next->ticks_assigned;
+	}
+
+	/* Reinitialise task's schedule granularity boundary */
+	next->sched_granule = SCHED_GRANULARITY;
+}
 
 /*
  * Tasks come here, either by setting need_resched (via next irq),
@@ -359,13 +495,9 @@ void schedule()
 	if (current->state == TASK_RUNNABLE) {
 		sched_rq_remove_task(current);
 		if (current->ticks_left)
-			sched_rq_add_task(current,
-					  per_cpu(scheduler).rq_runnable,
-					  RQ_ADD_BEHIND);
+			sched_run_task(current, &per_cpu(scheduler));
 		else
-			sched_rq_add_task(current,
-					  per_cpu(scheduler).rq_expired,
-					  RQ_ADD_BEHIND);
+			sched_expire_task(current, &per_cpu(scheduler));
 	}
 
 	/*
@@ -391,52 +523,17 @@ void schedule()
 			sched_suspend_async();
 	}
 
-	/* Simpler task pick up loop. May put in sched_pick_next() */
-	for (;;) {
-		struct scheduler *sched = &per_cpu(scheduler);
-
-		/* If we or a child has just exited, run idle task once for clean up */
-		if (current->flags & TASK_EXITED) {
-			current->flags &= ~TASK_EXITED;
-			next = sched->idle_task;
-			break;
-		} else if (sched->rq_runnable->total > 0) {
-			/* Get a runnable task, if available */
-			next = link_to_struct(sched->rq_runnable->task_list.next,
-					      struct ktcb, rq_list);
-			break;
-		} else if (sched->rq_expired->total > 0) {
-			/* Swap queues and retry if not */
-			sched_rq_swap_runqueues();
-			continue;
-		} else if (in_process_context()) {
-			/* Do idle task if no runnable tasks and in process */
-			next = sched->idle_task;
-			break;
-		} else {
-			/* Irq calls must return to interrupted current process */
-			next = current;
-			break;
-		}
+	/* Hint scheduler to run idle asap to free task */
+	if (current->flags & TASK_EXITED) {
+		current->flags &= ~TASK_EXITED;
+		per_cpu(scheduler).flags |= SCHED_RUN_IDLE;
 	}
 
-	/* New tasks affect runqueue total priority. */
-	if (next->flags & TASK_RESUMING)
-		next->flags &= ~TASK_RESUMING;
+	/* Decide on next runnable task */
+	next = sched_select_next();
 
-	/* Zero ticks indicates task hasn't ran since last rq swap */
-	if (next->ticks_left == 0) {
-		/*
-		 * Redistribute timeslice. We do this as each task
-		 * becomes runnable rather than all at once. It is done
-		 * every runqueue swap
-		 */
-		sched_recalc_ticks(next, per_cpu(scheduler).prio_total);
-		next->ticks_left = next->ticks_assigned;
-	}
-
-	/* Reinitialise task's schedule granularity boundary */
-	next->sched_granule = SCHED_GRANULARITY;
+	/* Prepare next task for running */
+	sched_prepare_next(next);
 
 	/* Finish */
 	disable_irqs();

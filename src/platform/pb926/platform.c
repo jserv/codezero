@@ -103,18 +103,24 @@ void init_platform_irq_controller()
 	irq_controllers_init();
 }
 
-/*
- * Add userspace devices here as you develop
- * their irq handlers,
- * Only the devices to which kernel has to do
- * anything needs to be mapped, rest will be
- * mapped in userspace by user
- */
+/* Add userspace devices here as you develop their irq handlers */
 void init_platform_devices()
 {
 	/* TIMER23 */
 	add_boot_mapping(PLATFORM_TIMER1_BASE, PLATFORM_TIMER1_VBASE,
 			 PAGE_SIZE, MAP_IO_DEFAULT);
+
+	/* KEYBOARD - KMI0 */
+	add_boot_mapping(PLATFORM_KEYBOARD0_BASE, PLATFORM_KEYBOARD0_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+
+	/* MOUSE - KMI1 */
+	add_boot_mapping(PLATFORM_MOUSE0_BASE, PLATFORM_MOUSE0_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+
+	/* CLCD */
+	add_boot_mapping(PLATFORM_CLCD0_BASE, PLATFORM_CLCD0_VBASE,
+	                 PAGE_SIZE, MAP_IO_DEFAULT);
 }
 
 /* If these bits are off, 32Khz OSC source is used */

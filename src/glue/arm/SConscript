@@ -16,7 +16,7 @@ src_local = ['init.c', 'memory.c', 'systable.c', 'irq.c', 'cache.c', 'debug.c']
 
 for name, val in symbols:
     if 'CONFIG_SMP' == name:
-	src_local += ['smp.c', 'ipi.c', 'smp_test.c']
+	src_local += ['smp.c', 'ipi.c']
 
 obj = env.Object(src_local)
 Return('obj')

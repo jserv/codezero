@@ -36,7 +36,7 @@ void timer_stop(unsigned long timer_base)
 	write(0, timer_base + SP804_CTRL);
 }
 
-void timer_init_periodic(unsigned long timer_base)
+void timer_init_periodic(unsigned long timer_base, u32 load_value)
 {
 	volatile u32 reg = read(timer_base + SP804_CTRL);
 
@@ -44,8 +44,11 @@ void timer_init_periodic(unsigned long timer_base)
 
 	write(reg, timer_base + SP804_CTRL);
 
-	/* 1 tick per usec, 1 irq per msec */
-	timer_load(1000, timer_base);
+	if (load_value)
+		timer_load(load_value, timer_base);
+	else
+		/* 1 tick per usec, 1 irq per msec */
+		timer_load(1000, timer_base);
 }
 
 void timer_init_oneshot(unsigned long timer_base)
@@ -58,8 +61,8 @@ void timer_init_oneshot(unsigned long timer_base)
 	write(reg, timer_base + SP804_CTRL);
 }
 
-void timer_init(unsigned long timer_base)
+void timer_init(unsigned long timer_base, u32 load_value)
 {
 	timer_stop(timer_base);
-	timer_init_periodic(timer_base);
+	timer_init_periodic(timer_base, load_value);
 }

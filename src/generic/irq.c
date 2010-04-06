@@ -1,7 +1,7 @@
 /*
  * Generic kernel irq handling.
  *
- * Copyright (C) 2007 - 2009 Bahadir Balban
+ * Copyright (C) 2007 - 2010 Bahadir Balban
  */
 #include <l4/config.h>
 #include <l4/macros.h>
@@ -127,10 +127,21 @@ l4id_t global_irq_index(void)
 	return IRQ_NIL;
 }
 
+#include <l4/drivers/irq/gic/gic.h>
+
 void do_irq(void)
 {
 	l4id_t irq_index = global_irq_index();
-	struct irq_desc *this_irq = irq_desc_array + irq_index;
+	struct irq_desc *this_irq;
+
+	if (irq_index == IRQ_SPURIOUS) {
+		printk("CPU%d: FATAL: Spurious irq\n", smp_get_cpuid());
+		BUG();
+	}
+
+	// printk("CPU%d: Received irq %d\n", smp_get_cpuid(), irq_index);
+
+	this_irq = irq_desc_array + irq_index;
 
 	system_account_irq();
 
@@ -148,16 +159,10 @@ void do_irq(void)
 	/* Handle the irq */
 	BUG_ON(!this_irq->handler);
 	if (this_irq->handler(this_irq) != IRQ_HANDLED) {
-		printk("Spurious or broken irq\n");
+		printk("CPU%d: FATAL: Spurious or broken irq\n",
+		       smp_get_cpuid());
 		BUG();
 	}
 
-	/*
-	 * Do not enable irq if user wants to do it explicitely
-	 */
-	if (!this_irq->user_ack)
-		irq_enable(irq_index);
+	irq_enable(irq_index);
 }
-
-
-

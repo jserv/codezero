@@ -22,7 +22,7 @@ static int total_caps = 0;
 
 /* Total number of timer chips being handled by us */
 #define TIMERS_TOTAL		1
-static struct timer timer[TIMERS_TOTAL];
+static struct timer global_timer[TIMERS_TOTAL];
 
 /* Deafult timer to be used for sleep/wake etc purposes */
 #define SLEEP_WAKE_TIMER	0
@@ -85,7 +85,7 @@ void timer_struct_init(struct timer* timer, unsigned long base)
 	timer->base = base;
 	timer->count = 0;
 	timer->slot = 0;
-	l4_mutex_init(&timer->lock);
+	l4_mutex_init(&timer->task_list_lock);
 
 	for (int i = 0; i < BUCKET_BASE_LEVEL_SIZE ; ++i) {
 		link_init(&timer->task_list.bucket_level0[i]);
@@ -106,7 +106,7 @@ void wake_task_list_init(void)
 {
 	link_init(&wake_tasks.head);
 	wake_tasks.end = &wake_tasks.head;
-	l4_mutex_init(&wake_tasks.lock);
+	l4_mutex_init(&wake_tasks.wake_list_lock);
 }
 
 /*
@@ -140,7 +140,7 @@ struct link* find_bucket_list(unsigned long seconds)
 	struct link *vector;
 	struct sleeper_task_bucket *bucket;
 
-	bucket = &timer[SLEEP_WAKE_TIMER].task_list;
+	bucket = &global_timer[SLEEP_WAKE_TIMER].task_list;
 
 	/*
 	 * TODO: Check if we have already surpassed seconds
@@ -172,8 +172,8 @@ int timer_probe_devices(void)
 		/* Match device type */
 		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_TIMER) {
 			/* Copy to correct device index */
-			memcpy(&timer[cap_devnum(&caparray[i]) - 1].cap,
-			       &caparray[i], sizeof(timer[0].cap));
+			memcpy(&global_timer[cap_devnum(&caparray[i]) - 1].cap,
+			       &caparray[i], sizeof(global_timer[0].cap));
 			timers++;
 		}
 	}
@@ -196,8 +196,11 @@ int timer_irq_handler(void *arg)
 	struct link *vector;
 	const int slot = 0;
 
-	/* Initialise timer */
-	timer_init(timer->base);
+	/*
+	  * Initialise timer
+	  * 1 interrupt per second
+	  */
+	timer_init(timer->base, 1000000);
 
 	/* Register self for timer irq, using notify slot 0 */
 	if ((err = l4_irq_control(IRQ_CONTROL_REGISTER, slot,
@@ -221,34 +224,32 @@ int timer_irq_handler(void *arg)
 			BUG();
 		}
 
-		//printf("Got irq(count 0x%x)\n", timer->count);
 		/*
 		  * Update timer count
 		  * TODO: Overflow check, we have 1 interrupt/sec from timer
 		  * with 32bit count it will take 9years to overflow
 		  */
 		timer->count += count;
+		printf("Got timer irq, current count = 0x%x\n", timer->count);
 
 		/* find bucket list of taks to be woken for current count */
 		vector = find_bucket_list(timer->count);
 
 		if (!list_empty(vector)) {
 			/* Removing tasks from sleeper list */
-			l4_mutex_lock(&timer[SLEEP_WAKE_TIMER].lock);
+			l4_mutex_lock(&global_timer[SLEEP_WAKE_TIMER].task_list_lock);
 			task_list = list_detach(vector);
-			l4_mutex_unlock(&timer[SLEEP_WAKE_TIMER].lock);
+			l4_mutex_unlock(&global_timer[SLEEP_WAKE_TIMER].task_list_lock);
 
 			/* Add tasks to wake_task_list */
-			l4_mutex_lock(&wake_tasks.lock);
-			list_attach(task_list,
-				    &wake_tasks.head, wake_tasks.end);
-			l4_mutex_unlock(&wake_tasks.lock);
+			l4_mutex_lock(&wake_tasks.wake_list_lock);
+			list_attach(task_list, &wake_tasks.head, wake_tasks.end);
+			l4_mutex_unlock(&wake_tasks.wake_list_lock);
 
 			/*
 			 * Send ipc to handle_request
 			 * thread to send wake signals
 			 */
-			printf("sending ipc %d to thread %d\n", L4_IPC_TAG_TIMER_WAKE_THREADS, tid_ipc_handler);
 			l4_send(tid_ipc_handler,L4_IPC_TAG_TIMER_WAKE_THREADS);
 		}
 	}
@@ -266,17 +267,16 @@ void task_wake(void)
 		list_foreach_removable_struct(struct_ptr, temp_ptr,
 					      &wake_tasks.head, list) {
 			/* Remove task from wake list */
-			l4_mutex_lock(&wake_tasks.lock);
+			l4_mutex_lock(&wake_tasks.wake_list_lock);
 			list_remove(&struct_ptr->list);
-			l4_mutex_unlock(&wake_tasks.lock);
+			l4_mutex_unlock(&wake_tasks.wake_list_lock);
 
 			/* Set sender correctly */
 			l4_set_sender(struct_ptr->tid);
 
-#if 0
-			printf("waking thread at time %x\n",
-			       (unsigned int)timer[SLEEP_WAKE_TIMER].count);
-#endif
+			printf("%s : Waking thread 0x%x at time 0x%x\n", __CONTAINER_NAME__,
+				    struct_ptr->tid, global_timer[SLEEP_WAKE_TIMER].count);
+
 			/* send wake ipc */
 			if ((ret = l4_ipc_return(struct_ptr->retval)) < 0) {
 				printf("%s: IPC return error: %d.\n",
@@ -302,17 +302,17 @@ int timer_setup_devices(void)
 
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* initialize timer */
-		timer_struct_init(&timer[i],(unsigned long)l4_new_virtual(1) );
+		timer_struct_init(&global_timer[i],(unsigned long)l4_new_virtual(1) );
 
 		/* Map timer to a virtual address region */
-		if (IS_ERR(l4_map((void *)__pfn_to_addr(timer[i].cap.start),
-				  (void *)timer[i].base, timer[i].cap.size,
+		if (IS_ERR(l4_map((void *)__pfn_to_addr(global_timer[i].cap.start),
+				  (void *)global_timer[i].base, global_timer[i].cap.size,
 				  MAP_USR_IO,
 				  self_tid()))) {
 			printf("%s: FATAL: Failed to map TIMER device "
 			       "%d to a virtual address\n",
 			       __CONTAINER_NAME__,
-			       cap_devnum(&timer[i].cap));
+			       cap_devnum(&global_timer[i].cap));
 			BUG();
 		}
 
@@ -323,7 +323,7 @@ int timer_setup_devices(void)
 		 * itself as its irq handler, initiate the timer and
 		 * wait on irqs.
 		 */
-		if ((err = thread_create(timer_irq_handler, &timer[i],
+		if ((err = thread_create(timer_irq_handler, &global_timer[i],
 					 TC_SHARE_SPACE,
 					 &tptr)) < 0) {
 			printf("FATAL: Creation of irq handler "
@@ -404,13 +404,23 @@ void task_sleep(l4id_t tid, unsigned long seconds, int ret)
 	struct link *vector;
 
 	/* can overflow happen here?, timer is in 32bit mode */
-	seconds += timer[SLEEP_WAKE_TIMER].count;
+	seconds += global_timer[SLEEP_WAKE_TIMER].count;
+
+	printf("sleep wake timer lock is present at address %lx\n",
+		    ( (unsigned long)&global_timer[SLEEP_WAKE_TIMER].task_list_lock.lock));
 
 	vector = find_bucket_list(seconds);
 
-	l4_mutex_lock(&timer[SLEEP_WAKE_TIMER].lock);
+	printf("Acquiring lock for sleep wake timer\n");
+	l4_mutex_lock(&global_timer[SLEEP_WAKE_TIMER].task_list_lock);
+	printf("got lock for sleep wake timer\n");
+
 	list_insert(&task->list, vector);
-	l4_mutex_unlock(&timer[SLEEP_WAKE_TIMER].lock);
+
+	printf("Releasing lock for sleep wake timer\n");
+	l4_mutex_unlock(&global_timer[SLEEP_WAKE_TIMER].task_list_lock);
+	printf("released lock for sleep wake timer\n");
+
 }
 
 void handle_requests(void)
@@ -448,7 +458,11 @@ void handle_requests(void)
 	switch (tag) {
 	/* Return time in seconds, since the timer was started */
 	case L4_IPC_TAG_TIMER_GETTIME:
-		mr[0] = timer[SLEEP_WAKE_TIMER].count;
+		printf("%s: Got get time request from thread 0x%x "
+			    " at time = 0x%x\n", __CONTAINER_NAME__,
+			    senderid, global_timer[SLEEP_WAKE_TIMER].count);
+
+		write_mr(2, global_timer[SLEEP_WAKE_TIMER].count);
 
 		/* Reply */
 		if ((ret = l4_ipc_return(ret)) < 0) {
@@ -458,8 +472,11 @@ void handle_requests(void)
 		break;
 
 	case L4_IPC_TAG_TIMER_SLEEP:
-		printf("%s: Got sleep request from thread 0x%x, duration %d\n", __CONTAINER_NAME__,
-			    senderid, mr[0]);
+		printf("%s: Got sleep request from thread 0x%x "
+			    "for 0x%x seconds at 0x%x seconds\n",
+			    __CONTAINER_NAME__, senderid, mr[0],
+			    global_timer[SLEEP_WAKE_TIMER].count);
+
 		if (mr[0] > 0) {
 			task_sleep(senderid, mr[0], ret);
 		}

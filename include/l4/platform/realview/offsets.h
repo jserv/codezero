@@ -22,6 +22,8 @@
  */
 #define	PLATFORM_SYSTEM_REGISTERS	0x10000000 /* System registers */
 #define	PLATFORM_SYSCTRL_BASE		0x10001000 /* System controller0 */
+#define PLATFORM_KEYBOARD0_BASE         0x10006000 /* Keyboard */
+#define PLATFORM_MOUSE0_BASE            0x10007000 /* Mouse */
 #define PLATFORM_UART0_BASE		0x10009000 /* Console port (UART0) */
 #define PLATFORM_UART1_BASE		0x1000A000 /* Console port (UART1) */
 #define PLATFORM_UART2_BASE		0x1000B000 /* Console port (UART2) */
@@ -43,12 +45,15 @@
 #define PLATFORM_TIMER0_VBASE   (IO_AREA0_VADDR + (4 * DEVICE_PAGE))
 #define PLATFORM_GIC0_VBASE     (IO_AREA0_VADDR + (5 * DEVICE_PAGE))
 #define PLATFORM_GIC1_VBASE     (IO_AREA0_VADDR + (7 * DEVICE_PAGE))
-#define PLATFORM_GIC2_VBASE     (IO_AREA0_VADDR + (9 * DEVICE_PAGE))
-#define PLATFORM_GIC3_VBASE     (IO_AREA0_VADDR + (11 * DEVICE_PAGE))
+#define PLATFORM_GIC2_VBASE     (IO_AREA0_VADDR + (8 * DEVICE_PAGE))
+#define PLATFORM_GIC3_VBASE     (IO_AREA0_VADDR + (9 * DEVICE_PAGE))
 
-/* Add userspace devices here as they become necessary for irqs */
 
 /* Add size of various user space devices, to be used in capability generation */
+#define PLATFORM_TIMER1_VBASE        	(IO_AREA0_VADDR + (10 * DEVICE_PAGE))
+#define PLATFORM_KEYBOARD0_VBASE	(IO_AREA0_VADDR + (11 * DEVICE_PAGE))
+#define PLATFORM_MOUSE0_VBASE           (IO_AREA0_VADDR + (12 * DEVICE_PAGE))
+#define PLATFORM_CLCD0_VBASE            (IO_AREA0_VADDR + (13 * DEVICE_PAGE))
 
 /* The SP810 system controller offsets */
 #define SP810_BASE			PLATFORM_SYSCTRL_VBASE
@@ -59,6 +64,9 @@
 #define PLATFORM_UART2_SIZE		DEVICE_PAGE
 #define PLATFORM_UART3_SIZE		DEVICE_PAGE
 #define PLATFORM_TIMER1_SIZE		DEVICE_PAGE
+#define PLATFORM_KEYBOARD0_SIZE         DEVICE_PAGE
+#define PLATFORM_MOUSE0_SIZE            DEVICE_PAGE
+#define PLATFORM_CLCD0_SIZE            	DEVICE_PAGE
 
 #endif /* __PLATFORM_REALVIEW_OFFSETS_H__ */
 

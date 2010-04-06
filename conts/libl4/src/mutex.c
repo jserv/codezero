@@ -51,8 +51,8 @@
  * - Whether this is the best design - time will tell.
  */
 
-extern int __l4_mutex_lock(void *word, l4id_t tid);
-extern int __l4_mutex_unlock(void *word, l4id_t tid);
+extern int __l4_mutex_lock(void *word);
+extern int __l4_mutex_unlock(void *word);
 
 void l4_mutex_init(struct l4_mutex *m)
 {
@@ -61,10 +61,9 @@ void l4_mutex_init(struct l4_mutex *m)
 
 int l4_mutex_lock(struct l4_mutex *m)
 {
-	l4id_t tid = self_tid();
 	int err;
 
-	while(__l4_mutex_lock(m, tid) == L4_MUTEX_CONTENDED) {
+	while(__l4_mutex_lock(&m->lock) != L4_MUTEX_SUCCESS) {
 		if ((err = l4_mutex_control(&m->lock, L4_MUTEX_LOCK)) < 0) {
 			printf("%s: Error: %d\n", __FUNCTION__, err);
 			return err;
@@ -75,15 +74,14 @@ int l4_mutex_lock(struct l4_mutex *m)
 
 int l4_mutex_unlock(struct l4_mutex *m)
 {
-	l4id_t tid = self_tid();
-	int err;
+	int err, contended;
 
-	if (__l4_mutex_unlock(m, tid) == L4_MUTEX_CONTENDED) {
-		if ((err = l4_mutex_control(&m->lock, L4_MUTEX_UNLOCK)) < 0) {
+	if ((contended = __l4_mutex_unlock(m))) {
+		if ((err = l4_mutex_control(&m->lock,
+					    contended | L4_MUTEX_UNLOCK)) < 0) {
 			printf("%s: Error: %d\n", __FUNCTION__, err);
 			return err;
 		}
 	}
 	return 0;
 }
-

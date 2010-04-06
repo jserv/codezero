@@ -325,7 +325,7 @@ extern int current_irq_nest_count;
  */
 void irq_overnest_error(void)
 {
-	dprintk("Irqs nested beyond limit. Current count: ",
+	printk("Irqs nested beyond limit. Current count: %d",
 		current_irq_nest_count);
 	print_early("System halted...\n");
 	while(1)

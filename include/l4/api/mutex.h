@@ -7,11 +7,22 @@
 #define MUTEX_CONTROL_LOCK		L4_MUTEX_LOCK
 #define MUTEX_CONTROL_UNLOCK		L4_MUTEX_UNLOCK
 
+#define MUTEX_CONTROL_OPMASK		L4_MUTEX_OPMASK
+
+#define mutex_operation(x)	((x) & MUTEX_CONTROL_OPMASK)
+#define mutex_contenders(x)	((x) & ~MUTEX_CONTROL_OPMASK)
+
 #include <l4/lib/wait.h>
 #include <l4/lib/list.h>
 #include <l4/lib/mutex.h>
 
+/*
+ * Contender threashold is the total number of contenders
+ * who are expected to sleep on the mutex, and will be waited
+ * for a wakeup.
+ */
 struct mutex_queue {
+	int contenders;
 	unsigned long physical;
 	struct link list;
 	struct waitqueue_head wqh_contenders;
@@ -39,7 +50,8 @@ void init_mutex_queue_head(struct mutex_queue_head *mqhead);
 
 #endif
 
-#define L4_MUTEX_LOCK		0
-#define L4_MUTEX_UNLOCK		1
+#define L4_MUTEX_OPMASK		0xF0000000
+#define L4_MUTEX_LOCK		0x10000000
+#define L4_MUTEX_UNLOCK		0x20000000
 
 #endif /* __MUTEX_CONTROL_H__*/

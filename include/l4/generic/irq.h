@@ -1,18 +1,20 @@
 /*
  * Generic irq handling definitions.
  *
- * Copyright (C) 2007 Bahadir Balban
+ * Copyright (C) 2010 B Labs Ltd.
  */
 #ifndef __GENERIC_IRQ_H__
 #define __GENERIC_IRQ_H__
 
 #include <l4/lib/string.h>
 #include <l4/lib/wait.h>
+#include <l4/lib/printk.h>
 #include INC_PLAT(irq.h)
 #include INC_ARCH(types.h)
 
 /* Represents none or spurious irq */
-#define IRQ_NIL				0xFFFFFFFF
+#define IRQ_NIL				0xFFFFFFFF /* -1 */
+#define IRQ_SPURIOUS			0xFFFFFFFE /* -2 */
 
 /* Successful irq handling state */
 #define IRQ_HANDLED				0
@@ -23,6 +25,7 @@ struct irq_chip_ops {
 	l4id_t (*read_irq)(void *data);
 	irq_op_t ack_and_mask;
 	irq_op_t unmask;
+	void (*set_cpu)(l4id_t irq, unsigned int cpumask);
 };
 
 struct irq_chip {
@@ -47,9 +50,6 @@ struct irq_desc {
 	/* Notification slot for this irq */
 	int task_notify_slot;
 
-	/* If user will ack this irq */
-	int user_ack;
-
 	/* Waitqueue head for this irq */
 	struct waitqueue_head wqh_irq;
 
@@ -72,8 +72,15 @@ static inline void irq_disable(int irq_index)
 {
 	struct irq_desc *this_irq = irq_desc_array + irq_index;
 	struct irq_chip *this_chip = this_irq->chip;
-
 	this_chip->ops.ack_and_mask(irq_index - this_chip->start);
+}
+
+static inline void irq_set_cpu(int irq_index, unsigned int cpumask)
+{
+	struct irq_desc *this_irq = irq_desc_array + irq_index;
+	struct irq_chip *this_chip = this_irq->chip;
+
+	this_chip->ops.set_cpu(irq_index - this_chip->start, cpumask);
 }
 
 int irq_register(struct ktcb *task, int notify_slot, l4id_t irq_index);

@@ -121,6 +121,7 @@ int init_pager(struct pager *pager, struct container *cont)
 	/* Add the address space to container space list */
 	address_space_add(task->space);
 
+#if 0
 	printk("%s: Mapping 0x%lx bytes (%lu pages) "
 	       "from 0x%lx to 0x%lx for %s\n",
 	       __KERNELNAME__, pager->memsize,
@@ -131,6 +132,58 @@ int init_pager(struct pager *pager, struct container *cont)
 	add_mapping_pgd(pager->start_lma, pager->start_vma,
 			page_align_up(pager->memsize),
 			MAP_USR_RWX, TASK_PGD(task));
+#else
+        /*
+	 * Map pager with appropriate section flags
+	 * We do page_align_down() to do a page alignment for
+	 * various kinds of sections, this automatically
+	 * takes care of the case where we have different kinds of
+	 * data lying on same page, eg: RX, RO etc.
+	 * Here one assumption made is, starting of first
+	 * RW section will be already page aligned, if this is
+	 * not true then we have to take special care of this.
+	 */
+	if(pager->rx_sections_end >= pager->rw_sections_start) {
+		pager->rx_sections_end = page_align(pager->rx_sections_end);
+		pager->rw_sections_start = page_align(pager->rw_sections_start);
+	}
+
+	unsigned long size = 0;
+	if((size = page_align_up(pager->rx_sections_end) -
+	    page_align_up(pager->rx_sections_start))) {
+		add_mapping_pgd(page_align_up(pager->rx_sections_start -
+					      pager->start_vma +
+					      pager->start_lma),
+				page_align_up(pager->rx_sections_start),
+				size, MAP_USR_RX, TASK_PGD(task));
+
+		printk("%s: Mapping 0x%lx bytes as RX "
+		       "from 0x%lx to 0x%lx for %s\n",
+		       __KERNELNAME__, size,
+		       page_align_up(pager->rx_sections_start -
+		       pager->start_vma + pager->start_lma),
+		       page_align_up(pager->rx_sections_start),
+		       cont->name);
+	}
+
+	if((size = page_align_up(pager->rw_sections_end) -
+	    page_align_up(pager->rw_sections_start))) {
+		add_mapping_pgd(page_align_up(pager->rw_sections_start -
+					      pager->start_vma +
+					      pager->start_lma),
+				page_align_up(pager->rw_sections_start),
+				size, MAP_USR_RW, TASK_PGD(task));
+
+		printk("%s: Mapping 0x%lx bytes as RW "
+		       "from 0x%lx to 0x%lx for %s\n",
+		       __KERNELNAME__, size,
+		       page_align_up(pager->rw_sections_start -
+		       pager->start_vma + pager->start_lma),
+		       page_align_up(pager->rw_sections_start),
+		       cont->name);
+	}
+
+#endif
 
 	/* Move capability list from dummy to task's space cap list */
 	cap_list_move(&task->space->cap_list, &current->cap_list);

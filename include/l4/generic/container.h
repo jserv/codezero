@@ -32,6 +32,16 @@ struct pager {
 	unsigned long stack_address;
 	unsigned long memsize;
 	struct cap_list cap_list;
+
+	/*
+	 * Section markings,
+	 * We dont care for other types of sections,
+	 * RO will be included inside RX.
+	 */
+	unsigned long rw_sections_start;
+	unsigned long rw_sections_end;
+	unsigned long rx_sections_start;
+	unsigned long rx_sections_end;
 };
 
 
@@ -71,6 +81,16 @@ struct pager_info {
 	unsigned long pager_size;
 	unsigned long start_address;
 	unsigned long stack_address;
+
+	/*
+	 * Section markings,
+	 * We dont care for other types of sections,
+	 * RO will be included inside RX.
+	 */
+	unsigned long rw_sections_start;
+	unsigned long rw_sections_end;
+	unsigned long rx_sections_start;
+	unsigned long rx_sections_end;
 
 	/* Number of capabilities defined */
 	int ncaps;

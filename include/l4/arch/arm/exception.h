@@ -12,7 +12,7 @@
 #include INC_ARCH(asm.h)
 
 /* Abort debugging conditions */
-//#define DEBUG_ABORTS
+// #define DEBUG_ABORTS
 #if defined (DEBUG_ABORTS)
 #define dbg_abort(...)	printk(__VA_ARGS__)
 #else

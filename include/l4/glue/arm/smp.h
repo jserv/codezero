@@ -34,7 +34,7 @@ static inline void smp_start_cores(void) {}
 
 void init_smp(void);
 void arch_smp_spin(void);
-void arch_send_ipi(u32 cpu, int ipi);
+void smp_send_ipi(unsigned int cpumask, int ipi_num);
 void platform_smp_init(int ncpus);
 int  platform_smp_start(int cpu, void (*start)(int));
 void secondary_init_platform(void);

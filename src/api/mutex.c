@@ -102,16 +102,56 @@ void mutex_control_delete(struct mutex_queue *mq)
 }
 
 /*
- * A contended thread is expected to show up with the
- * contended mutex address here.
+ * Here's how this whole mutex implementation works:
  *
- * (1) The mutex is converted into its physical form and
- *     searched for in the existing mutex list. If it does not
- *     appear there, it gets added.
- * (2) The thread is put to sleep in the mutex wait queue
- *     until a wake up event occurs. If there is already an asleep
- *     lock holder (i.e. unlocker) that is woken up and we return.
+ * A thread who locked a user mutex learns how many
+ * contentions were on it as it unlocks it. It is obliged to
+ * go to the kernel to wake that many threads up.
+ *
+ * Each contender sleeps in the kernel, but the time
+ * of arrival in the kernel by both the unlocker or
+ * contenders is asynchronous.
+ *
+ * Mutex queue scenarios at any one time:
+ *
+ * 1) There may be multiple contenders waiting for
+ * an earlier lock holder:
+ *
+ * Lock holders waitqueue: Empty
+ * Contenders waitqueue:   C - C - C - C
+ * Contenders to wake up: 0
+ *
+ * The lock holder would wake up that many contenders that it counted
+ * earlier in userspace as it released the lock.
+ *
+ * 2) There may be one lock holder waiting for contenders to arrive:
+ *
+ * Lock holders waitqueue: LH
+ * Contenders waitqueue:   Empty
+ * Contenders to wake up: 5
+ *
+ * As each contender comes in, the contenders value is reduced, and
+ * when it becomes zero, the lock holder is woken up and mutex
+ * deleted.
+ *
+ * 3) Occasionally multiple lock holders who just released the lock
+ * make it to the kernel before any contenders:
+ *
+ * Contenders: Empty
+ * Lock holders: LH
+ * Contenders to wake up: 5
+ *
+ * -> New Lock holder arrives.
+ *
+ * As soon as the above occurs, the new LH wakes up the waiting one,
+ * increments the contenders by its own contender count and starts
+ * waiting. The scenario transitions to Scenario (2) in this case.
+ *
+ * The asynchronous nature of contender and lock holder arrivals make
+ * for many possibilities, but what matters is the same number of
+ * wake ups must occur as the number of contended waits.
  */
+
 int mutex_control_lock(struct mutex_queue_head *mqhead,
 		       unsigned long mutex_address)
 {
@@ -128,24 +168,27 @@ int mutex_control_lock(struct mutex_queue_head *mqhead,
 		}
 		/* Add the queue to mutex queue list */
 		mutex_control_add(mqhead, mutex_queue);
-	} else {
-		/* See if there is a lock holder */
-		if (mutex_queue->wqh_holders.sleepers) {
-			/*
-			 * If yes, wake it up async and we can *hope*
-		 	 * to acquire the lock before the lock holder
-		 	 */
+
+	} else if (mutex_queue->wqh_holders.sleepers) {
+		/*
+		 * There's a lock holder, so we can consume from
+		 * number of contenders since we are one of them.
+		 */
+		mutex_queue->contenders--;
+
+		/* No contenders left as far as current holder is concerned */
+		if (mutex_queue->contenders == 0) {
+			/* Wake up current holder */
 			wake_up(&mutex_queue->wqh_holders, WAKEUP_ASYNC);
 
-			/* Since noone is left, delete the mutex queue */
+			/* There must not be any contenders, delete the mutex */
 			mutex_control_remove(mqhead, mutex_queue);
 			mutex_control_delete(mutex_queue);
-
-			/* Release lock and return */
-			mutex_queue_head_unlock(mqhead);
-
-			return 0;
 		}
+
+		/* Release lock and return */
+		mutex_queue_head_unlock(mqhead);
+		return 0;
 	}
 
 	/* Prepare to wait on the contenders queue */
@@ -160,22 +203,8 @@ int mutex_control_lock(struct mutex_queue_head *mqhead,
 	return wait_on_prepared_wait();
 }
 
-/*
- * A thread that has detected a contention on a mutex that
- * it had locked but has just released is expected to show up with
- * that mutex here.
- *
- * (1) The mutex is converted into its physical form and
- *     searched for in the existing mutex list. If not found,
- *     a new one is created and the thread sleeps there as a lock
- *     holder.
- * (2) All the threads waiting on this mutex are woken up. This may
- *     cause a thundering herd, but user threads cannot be trusted
- *     to acquire the mutex, waking up all of them increases the
- *     chances that some thread may acquire it.
- */
 int mutex_control_unlock(struct mutex_queue_head *mqhead,
-			 unsigned long mutex_address)
+			 unsigned long mutex_address, int contenders)
 {
 	struct mutex_queue *mutex_queue;
 
@@ -189,6 +218,9 @@ int mutex_control_unlock(struct mutex_queue_head *mqhead,
 			mutex_queue_head_unlock(mqhead);
 			return -ENOMEM;
 		}
+
+		/* Set new or increment the contenders value */
+		mutex_queue->contenders = contenders;
 
 		/* Add the queue to mutex queue list */
 		mutex_control_add(mqhead, mutex_queue);
@@ -206,57 +238,77 @@ int mutex_control_unlock(struct mutex_queue_head *mqhead,
 		return wait_on_prepared_wait();
 	}
 
+	/* Set new or increment the contenders value */
+	mutex_queue->contenders += contenders;
+
+	/* Wake up holders if any, and take wake up responsibility */
+	if (mutex_queue->wqh_holders.sleepers)
+		wake_up(&mutex_queue->wqh_holders, WAKEUP_ASYNC);
+
 	/*
-	 * Note, the mutex in userspace was left free before the
-	 * syscall was entered.
-	 *
-	 * It is possible that a thread has acquired it, another
-	 * contended on it and the holder made it to the kernel
-	 * quicker than us. We detect this situation here.
+	 * Now wake up as many contenders as possible, otherwise
+	 * go to sleep on holders queue
 	 */
-	if (mutex_queue->wqh_holders.sleepers) {
-		/*
-		 * Let the first holder do all the waking up
-		 */
-		mutex_queue_head_unlock(mqhead);
-		return 0;
+	while (mutex_queue->contenders &&
+	       mutex_queue->wqh_contenders.sleepers) {
+		/* Reduce total contenders to be woken up */
+		mutex_queue->contenders--;
+
+		/* Wake up a contender who made it to kernel */
+		wake_up(&mutex_queue->wqh_contenders, WAKEUP_ASYNC);
 	}
 
 	/*
-	 * Found it, if it exists, there are contenders,
-	 * now wake all of them up in FIFO order.
-	 * FIXME: Make sure this is FIFO order. It doesn't seem so.
+	 * Are we done with all? Leave.
+	 *
+	 * Not enough contenders? Go to sleep and wait for a new
+	 * contender rendezvous.
 	 */
-	wake_up_all(&mutex_queue->wqh_contenders, WAKEUP_ASYNC);
+	if (mutex_queue->contenders == 0) {
+		/* Delete only if no more contenders */
+		if (mutex_queue->wqh_contenders.sleepers == 0) {
+			/* Since noone is left, delete the mutex queue */
+			mutex_control_remove(mqhead, mutex_queue);
+			mutex_control_delete(mutex_queue);
+		}
 
-	/* Since noone is left, delete the mutex queue */
-	mutex_control_remove(mqhead, mutex_queue);
-	mutex_control_delete(mutex_queue);
+		/* Release lock and return */
+		mutex_queue_head_unlock(mqhead);
+	} else {
+		/* Prepare to wait on the lock holders queue */
+		CREATE_WAITQUEUE_ON_STACK(wq, current);
 
-	/* Release lock and return */
-	mutex_queue_head_unlock(mqhead);
+		/* Prepare to wait */
+		wait_on_prepare(&mutex_queue->wqh_holders, &wq);
+
+		/* Release lock first */
+		mutex_queue_head_unlock(mqhead);
+
+		/* Initiate prepared wait */
+		return wait_on_prepared_wait();
+	}
+
 	return 0;
 }
 
-int sys_mutex_control(unsigned long mutex_address, int mutex_op)
+int sys_mutex_control(unsigned long mutex_address, int mutex_flags)
 {
 	unsigned long mutex_physical;
-	int ret = 0;
+	int mutex_op = mutex_operation(mutex_flags);
+	int contenders = mutex_contenders(mutex_flags);
+	int ret;
 
-	// printk("%s: Thread %d enters.\n", __FUNCTION__, current->tid);
-
-	/* Check valid operation */
-	if (mutex_op != MUTEX_CONTROL_LOCK &&
-	    mutex_op != MUTEX_CONTROL_UNLOCK) {
-		printk("Invalid args to %s.\n", __FUNCTION__);
-		return -EINVAL;
-	}
+	//printk("%s: Thread %d enters.\n", __FUNCTION__, current->tid);
 
 	/* Check valid user virtual address */
 	if (KERN_ADDR(mutex_address)) {
 		printk("Invalid args to %s.\n", __FUNCTION__);
 		return -EINVAL;
 	}
+
+	if (mutex_op != MUTEX_CONTROL_LOCK &&
+	    mutex_op != MUTEX_CONTROL_UNLOCK)
+		return -EPERM;
 
 	if ((ret = cap_mutex_check(mutex_address, mutex_op)) < 0)
 		return ret;
@@ -278,11 +330,8 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_op)
 		break;
 	case MUTEX_CONTROL_UNLOCK:
 		ret = mutex_control_unlock(&curcont->mutex_queue_head,
-					   mutex_physical);
+					   mutex_physical, contenders);
 		break;
-	default:
-		printk("%s: Invalid operands\n", __FUNCTION__);
-		ret = -EINVAL;
 	}
 
 	return ret;

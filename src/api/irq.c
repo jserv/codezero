@@ -91,6 +91,9 @@ int irq_control_register(struct ktcb *task, int slot, l4id_t irqnum)
 	if ((err = irq_register(current, slot, irqnum)) < 0)
 		return err;
 
+	/* Make thread a real-time task */
+	current->flags |= TASK_REALTIME;
+
 	return 0;
 }
 
@@ -110,16 +113,6 @@ int irq_wait(l4id_t irq_index)
 	/* UTCB must be mapped */
 	if ((ret = tcb_check_and_lazy_map_utcb(current, 1)) < 0)
 		return ret;
-
-	/*
-	 * In case user has asked for unmasking the irq only after
- 	 * user hanlder is done, unmask the irq
-	 *
-	 * FIXME: This is not the correct place for this call,
-	 * fix this.
-	 */
-	if (desc->user_ack)
-		irq_enable(irq_index);
 
 	/* Wait until the irq changes slot value */
 	WAIT_EVENT(&desc->wqh_irq,

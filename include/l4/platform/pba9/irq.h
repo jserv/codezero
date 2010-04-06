@@ -20,14 +20,16 @@
 #define IRQ_UART1		38
 #define IRQ_UART2		39
 #define IRQ_UART3		40
+
+#define IRQ_KEYBOARD0		44
+#define IRQ_MOUSE0		45
 #define IRQ_CLCD0		46
 
 /*
- * Interrupt Distribution:
- * 0-31: SI, provided by distributed interrupt controller
- * 32-63: Externel peripheral interrupts
- * 64-71: Tile site interrupt
- * 72-95: Externel peripheral interrupts
+ * Versatile Express A9 Interrupt Distribution:
+ * 0 - 31: SI, provided by distributed interrupt controller
+ * 32 - 74: Irqs from Motherboard (0 - 42)
+ * 75- 81: Test chip interrupts
  */
 
 #endif /* __PLATFORM_IRQ_H__ */

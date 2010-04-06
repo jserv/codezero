@@ -503,6 +503,10 @@ int copy_pager_info(struct pager *pager, struct pager_info *pinfo)
 	pager->start_lma = __pfn_to_addr(pinfo->pager_lma);
 	pager->start_vma = __pfn_to_addr(pinfo->pager_vma);
 	pager->memsize = __pfn_to_addr(pinfo->pager_size);
+	pager->rw_sections_start = pinfo->rw_sections_start;
+	pager->rw_sections_end = pinfo->rw_sections_end;
+	pager->rx_sections_start = pinfo->rx_sections_start;
+	pager->rx_sections_end = pinfo->rx_sections_end;
 
 	/* Copy all cinfo structures into real capabilities */
 	for (int i = 0; i < pinfo->ncaps; i++) {

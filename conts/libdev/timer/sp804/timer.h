@@ -56,8 +56,8 @@ void timer_start(unsigned long timer_base);
 void timer_load(u32 loadval, unsigned long timer_base);
 u32 timer_read(unsigned long timer_base);
 void timer_stop(unsigned long timer_base);
-void timer_init_periodic(unsigned long timer_base);
+void timer_init_periodic(unsigned long timer_base, u32 load_value);
 void timer_init_oneshot(unsigned long timer_base);
-void timer_init(unsigned long timer_base);
+void timer_init(unsigned long timer_base, u32 load_value);
 
 #endif /* __SP804_TIMER_H__ */

@@ -15,6 +15,7 @@
 #include INC_ARCH(exception.h)
 #include <l4/api/syscall.h>
 #include <l4/api/errno.h>
+#include INC_GLUE(ipi.h)	/*FIXME: Remove this */
 
 /* TODO:
  * 1) Add RTC support.
@@ -141,13 +142,23 @@ void update_process_times(void)
 		need_resched = 1;
 }
 
-
 int do_timer_irq(void)
 {
 	increase_jiffies();
 	update_process_times();
 	update_system_time();
 
+#if defined (CONFIG_SMP)
+	smp_send_ipi(cpu_mask_others(), IPI_TIMER_EVENT);
+#endif
+
+	return IRQ_HANDLED;
+}
+
+/* Secondary cpus call this */
+int secondary_timer_irq(void)
+{
+	update_process_times();
 	return IRQ_HANDLED;
 }
 

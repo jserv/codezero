@@ -58,59 +58,59 @@ int check_abort_type(u32 faulted_pc, u32 fsr, u32 far, u32 spsr)
 
 	/* Aborts that can't be handled by a pager yet: */
 	case DABT_TERMINAL:
-		dprintk("Terminal fault dabt %x", far);
+		dprintk("Terminal fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_VECTOR:
-		dprintk("Vector abort (obsolete!) %x", far);
+		dprintk("Vector abort (obsolete!) ", far);
 		ret = -EABORT;
 		break;
 	case DABT_ALIGN:
-		dprintk("Alignment fault dabt %x", far);
+		dprintk("Alignment fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_EXT_XLATE_LEVEL1:
-		dprintk("External LVL1 translation fault %x", far);
+		dprintk("External LVL1 translation fault ", far);
 		ret = -EABORT;
 		break;
 	case DABT_EXT_XLATE_LEVEL2:
-		dprintk("External LVL2 translation fault %x", far);
+		dprintk("External LVL2 translation fault ", far);
 		ret = -EABORT;
 		break;
 	case DABT_DOMAIN_SECT:
-		dprintk("Section domain fault dabt %x", far);
+		dprintk("Section domain fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_DOMAIN_PAGE:
-		dprintk("Page domain fault dabt %x", far);
+		dprintk("Page domain fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_PERM_SECT:
-		dprintk("Section permission fault dabt %x", far);
+		dprintk("Section permission fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_EXT_LFETCH_SECT:
 		dprintk("External section linefetch "
-			"fault dabt %x", far);
+			"fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_EXT_LFETCH_PAGE:
-		dprintk("Page perm fault dabt %x", far);
+		dprintk("Page perm fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_EXT_NON_LFETCH_SECT:
 		dprintk("External section non-linefetch "
-			"fault dabt %x ", far);
+			"fault dabt ", far);
 		ret = -EABORT;
 		break;
 	case DABT_EXT_NON_LFETCH_PAGE:
 		dprintk("External page non-linefetch "
-			"fault dabt %x ", far);
+			"fault dabt ", far);
 		ret = -EABORT;
 		break;
 	default:
 		dprintk("FATAL: Unrecognised/Unknown "
-			"data abort %x ", far);
+			"data abort ", far);
 		dprintk("FATAL: FSR code: ", fsr);
 		ret = -EABORT;
 	}
@@ -122,7 +122,7 @@ int check_abort_type(u32 faulted_pc, u32 fsr, u32 far, u32 spsr)
 	 */
 	if (is_kernel_address(faulted_pc)) {
 		dprintk("Unhandled kernel data "
-			"abort at address %x",
+			"abort at address ",
 			faulted_pc);
 		ret = -EABORT;
 	}

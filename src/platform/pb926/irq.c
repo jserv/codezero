@@ -10,6 +10,7 @@
 #include INC_PLAT(platform.h)
 #include INC_PLAT(timer.h)
 #include INC_ARCH(exception.h)
+#include <l4/lib/bit.h>
 #include <l4/drivers/irq/pl190/pl190_vic.h>
 
 struct irq_chip irq_chip_array[IRQ_CHIPS_MAX] = {
@@ -68,8 +69,18 @@ static int platform_timer_user_handler(struct irq_desc *desc)
 /*
  * Keyboard handler for userspace
  */
+#define PL050_KMICR		0x00
+#define PL050_KMI_RXINTR	(1 << 0x4)
+
 static int platform_keyboard_user_handler(struct irq_desc *desc)
 {
+	/*
+         * Disable rx keyboard interrupt.
+         * User will enable this
+         */
+	clrbit((unsigned int *)PLATFORM_KEYBOARD0_VBASE + PL050_KMICR,
+	       PL050_KMI_RXINTR);
+
 	irq_thread_notify(desc);
 	return 0;
 }
@@ -79,6 +90,13 @@ static int platform_keyboard_user_handler(struct irq_desc *desc)
  */
 static int platform_mouse_user_handler(struct irq_desc *desc)
 {
+	/*
+	 * Disable rx mouse interrupt.
+	 * User will enable this
+	 */
+	clrbit((unsigned int *)PLATFORM_MOUSE0_VBASE + PL050_KMICR,
+	       PL050_KMI_RXINTR);
+
 	irq_thread_notify(desc);
 	return 0;
 }
@@ -92,25 +110,21 @@ struct irq_desc irq_desc_array[IRQS_MAX] = {
 		.name = "Timer0",
 		.chip = &irq_chip_array[0],
 		.handler = platform_timer_handler,
-		.user_ack = 0,
 	},
 	[IRQ_TIMER1] = {
 		.name = "Timer1",
 		.chip = &irq_chip_array[0],
 		.handler = platform_timer_user_handler,
-                .user_ack = 0,
         },
 	[IRQ_KEYBOARD0] = {
 		.name = "Keyboard",
 		.chip = &irq_chip_array[1],
 		.handler = platform_keyboard_user_handler,
-		.user_ack = 1,
 	},
 	[IRQ_MOUSE0] = {
 		.name = "Mouse",
 		.chip = &irq_chip_array[1],
 		.handler = platform_mouse_user_handler,
-		.user_ack = 1,
 	},
 };
 

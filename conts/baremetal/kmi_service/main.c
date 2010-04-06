@@ -140,6 +140,12 @@ int keyboard_irq_handler(void *arg)
 		while (data--)
 			if ((c = kmi_keyboard_read(keyboard->base, &keyboard->state)))
 				printf("%c", c);
+
+		/*
+		 * Kernel has disabled irq for keyboard
+		 * We need to enable it
+		 */
+		kmi_rx_irq_enable(keyboard->base);
 	}
 }
 
@@ -174,6 +180,12 @@ int mouse_irq_handler(void *arg)
 		while (data--)
 			if ((c = kmi_data_read(mouse->base)))
 				printf("mouse data: %d\n", c);
+
+		/*
+		 * Kernel has disabled irq for mouse
+		 * We need to enable it
+		 */
+		kmi_rx_irq_enable(mouse->base);
 	}
 }
 

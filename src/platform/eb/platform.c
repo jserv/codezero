@@ -18,51 +18,37 @@
 #include INC_GLUE(smp.h)
 
 /*
+ * FIXME: This is not a platform specific
+ * call, we will move this out later
+ */
+void device_cap_init(struct kernel_resources *kres, int devtype,
+		     int devnum, unsigned long base)
+{
+	struct capability *cap;
+
+	cap =  alloc_bootmem(sizeof(*cap), 0);
+	cap_set_devtype(cap, devtype);
+	cap_set_devnum(cap, devnum);
+	cap->start = __pfn(base);
+	cap->end = cap->start + 1;
+	cap->size = cap->end - cap->start;
+	link_init(&cap->list);
+	cap_list_insert(cap, &kres->devmem_free);
+}
+
+/*
  * The devices that are used by the kernel are mapped
  * independent of these capabilities, but these provide a
  * concise description of what is used by the kernel.
  */
 int platform_setup_device_caps(struct kernel_resources *kres)
 {
-	struct capability *uart[4], *timer[4];
-
-	/* Setup capabilities for userspace uarts and timers */
-	uart[1] =  alloc_bootmem(sizeof(*uart[1]), 0);
-	uart[1]->start = __pfn(PLATFORM_UART1_BASE);
-	uart[1]->end = uart[1]->start + 1;
-	uart[1]->size = uart[1]->end - uart[1]->start;
-	cap_set_devtype(uart[1], CAP_DEVTYPE_UART);
-	cap_set_devnum(uart[1], 1);
-	link_init(&uart[1]->list);
-	cap_list_insert(uart[1], &kres->devmem_free);
-
-	uart[2] =  alloc_bootmem(sizeof(*uart[2]), 0);
-	uart[2]->start = __pfn(PLATFORM_UART2_BASE);
-	uart[2]->end = uart[2]->start + 1;
-	uart[2]->size = uart[2]->end - uart[2]->start;
-	cap_set_devtype(uart[2], CAP_DEVTYPE_UART);
-	cap_set_devnum(uart[2], 2);
-	link_init(&uart[2]->list);
-	cap_list_insert(uart[2], &kres->devmem_free);
-
-	uart[3] =  alloc_bootmem(sizeof(*uart[3]), 0);
-	uart[3]->start = __pfn(PLATFORM_UART3_BASE);
-	uart[3]->end = uart[3]->start + 1;
-	uart[3]->size = uart[3]->end - uart[3]->start;
-	cap_set_devtype(uart[3], CAP_DEVTYPE_UART);
-	cap_set_devnum(uart[3], 3);
-	link_init(&uart[3]->list);
-	cap_list_insert(uart[3], &kres->devmem_free);
-
-	/* Setup timer1 capability as free */
-	timer[1] =  alloc_bootmem(sizeof(*timer[1]), 0);
-	timer[1]->start = __pfn(PLATFORM_TIMER1_BASE);
-	timer[1]->end = timer[1]->start + 1;
-	timer[1]->size = timer[1]->end - timer[1]->start;
-	cap_set_devtype(timer[1], CAP_DEVTYPE_TIMER);
-	cap_set_devnum(timer[1], 1);
-	link_init(&timer[1]->list);
-	cap_list_insert(timer[1], &kres->devmem_free);
+	device_cap_init(kres, CAP_DEVTYPE_UART, 1, PLATFORM_UART1_BASE);
+	device_cap_init(kres, CAP_DEVTYPE_UART, 2, PLATFORM_UART2_BASE);
+	device_cap_init(kres, CAP_DEVTYPE_UART, 3, PLATFORM_UART3_BASE);
+	device_cap_init(kres, CAP_DEVTYPE_TIMER, 1, PLATFORM_TIMER1_BASE);
+	device_cap_init(kres, CAP_DEVTYPE_KEYBOARD, 0, PLATFORM_KEYBOARD0_BASE);
+	device_cap_init(kres, CAP_DEVTYPE_MOUSE, 0, PLATFORM_MOUSE0_BASE);
 
 	return 0;
 }
@@ -98,5 +84,16 @@ void init_platform_irq_controller()
 
 void init_platform_devices()
 {
+	/* TIMER23 */
+	add_boot_mapping(PLATFORM_TIMER1_BASE, PLATFORM_TIMER1_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+
+        /* KEYBOARD - KMI0 */
+	add_boot_mapping(PLATFORM_KEYBOARD0_BASE, PLATFORM_KEYBOARD0_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
+
+	/* MOUSE - KMI1 */
+	add_boot_mapping(PLATFORM_MOUSE0_BASE, PLATFORM_MOUSE0_VBASE,
+			 PAGE_SIZE, MAP_IO_DEFAULT);
 
 }

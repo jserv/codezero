@@ -15,9 +15,10 @@ int __l4_mutex_lock(void *m, l4id_t tid)
  loop:
 	__asm__ __volatile__(
 			     "ldrex %0, [%1]\n"
-			     : "=r"(tmp)
+			     : "=&r"(tmp)
 			     : "r"(m)
-			     );
+			     : "memory"
+	);
 
 	if(tmp != L4_MUTEX_UNLOCKED)
 		ret = L4_MUTEX_CONTENDED;
@@ -79,19 +80,19 @@ int __l4_mutex_unlock(void *m, l4id_t tid)
 	return ret;
 }
 
-u8 l4_atomic_dest_readb(u8 *location)
+u8 l4_atomic_dest_readb(unsigned long *location)
 {
 	unsigned int tmp, res;
 	__asm__ __volatile__ (
-		"1: \n"
-		"ldrex %0, [%2] \n"
-		"strex %1, %3, [%2] \n"
-		"teq %1, #0 \n"
-		"bne 1b \n"
+		"1: 				\n"
+		"	ldrex %0, [%2]		\n"
+		"	strex %1, %3, [%2]	\n"
+		"	teq %1, #0		\n"
+		"	bne 1b			\n"
 		: "=&r"(tmp), "=&r"(res)
 		: "r"(location), "r"(0)
 		: "cc", "memory"
-		);
+	);
 
 	return (u8)tmp;
 }

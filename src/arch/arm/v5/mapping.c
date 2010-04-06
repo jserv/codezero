@@ -372,9 +372,9 @@ void arch_space_switch(struct ktcb *to)
 void idle_task(void)
 {
 	while(1) {
+		/* Do maintenance */
 		tcb_delete_zombies();
 
-		// printk("Idle task.\n");
 		schedule();
 	}
 }

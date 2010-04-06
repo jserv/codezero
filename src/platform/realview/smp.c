@@ -19,7 +19,6 @@
 #include <l4/lib/string.h>
 #include <l4/generic/space.h>
 
-
 extern struct irq_desc irq_desc_array[IRQS_MAX];
 
 /* Print some SCU information */
@@ -49,16 +48,14 @@ void scu_init(void)
 
 void platform_smp_init(int ncpus)
 {
-        unsigned int i;
+	/* Add GIC SoftIRQ (aka IPI) */
+	for (int i = 0; i < 16; i++) {
+		strncpy(irq_desc_array[i].name, "SoftInt", 8);
+		irq_desc_array[i].chip  = &irq_chip_array[0];
+		irq_desc_array[i].handler = &ipi_handler;
+	}
 
-        /* Add GIC SoftIRQ (aka IPI) */
-        for (i = 0; i <= 15; i++) {
-                strncpy(irq_desc_array[i].name, "SoftInt", 8);
-                irq_desc_array[i].chip  = &irq_chip_array[0];
-                irq_desc_array[i].handler = &ipi_handler;
-        }
-
-        add_boot_mapping(PLATFORM_SYSTEM_REGISTERS, PLATFORM_SYSREGS_VBASE,
+	add_boot_mapping(PLATFORM_SYSTEM_REGISTERS, PLATFORM_SYSREGS_VBASE,
 			 PAGE_SIZE, MAP_IO_DEFAULT);
 
 }
@@ -74,7 +71,7 @@ int platform_smp_start(int cpu, void (*smp_start_func)(int))
 	dsb();	/* Make sure the write occurs */
 
 	/* Wake up other core who is waiting on a WFI. */
-	gic_send_ipi(CPUID_TO_MASK(cpu), 1);
+	gic_send_ipi(CPUID_TO_MASK(cpu), 0);
 
 	return 0;
 }
@@ -82,13 +79,4 @@ int platform_smp_start(int cpu, void (*smp_start_func)(int))
 void secondary_init_platform(void)
 {
 	gic_cpu_init(0, GIC0_CPU_VBASE);
-	gic_ack_irq(1);
-
-	gic_set_target(IRQ_TIMER0, 1 << smp_get_cpuid());
 }
-
-void arch_send_ipi(u32 cpu, int cmd)
-{
-       gic_send_ipi(cpu, cmd);
-}
-
