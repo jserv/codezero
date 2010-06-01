@@ -5,8 +5,8 @@
 #include <l4/lib/list.h>
 #include L4LIB_INC_ARCH(syscalls.h)
 #include L4LIB_INC_ARCH(syslib.h)
-#include <malloc/malloc.h>
-#include <mm/alloc_page.h>
+#include <mem/malloc.h>
+#include <mem/alloc_page.h>
 #include <vm_area.h>
 #include <string.h>
 #include <globals.h>

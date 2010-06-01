@@ -1,0 +1,55 @@
+/*
+ * Example working linker script for this container.
+ *
+ * Copyright (C) 2009 B Labs Ltd.
+ */
+
+vma_start = 0xa0000000;
+lma_start = 0x100000;
+offset = vma_start - lma_start;
+
+OUTPUT_ARCH(arm)
+ENTRY(_start)
+
+PHDRS
+{
+	rx PT_LOAD;
+	rw PT_LOAD;
+}
+
+SECTIONS
+{
+	. = vma_start;
+
+	/* Put all RX, RO sections here */
+	.text : AT (ADDR(.text) - offset)
+	{
+		*(.text.head) *(.text)
+	} : rx = 0x90909090
+
+	.rodata : AT (ADDR(.rodata) - offset)
+	{
+		*(.rodata)
+	} : rx = 0x90909090
+
+	.rodata1 : AT (ADDR(.rodata1) - offset)
+	{
+		*(.rodata1)
+	} : rx = 0x90909090
+
+	. = ALIGN(4K);
+
+	/* Put all RW sections here */
+	.data : AT (ADDR(.data) - offset)
+	{
+		*(.data)
+	} : rw
+	.bss : AT (ADDR(.bss) - offset)
+	{
+		*(.bss)
+		. += 0x1000;
+		. = ALIGN(8);
+		__stack = .;
+	} : rw
+	__end = .;
+}

@@ -1,0 +1,135 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- a microkernel for embedded systems.
+#
+# P.S : This file is called from PROJROOT directory,
+#       so all paths are given relative to PROJROOT.
+#
+#  Copyright © 2009  B Labs Ltd
+
+import os, sys
+from os.path import join
+
+sys.path.append(os.getcwd())
+
+from scripts.config.configuration import *
+from scripts.config.projpaths import *
+from scripts.loader.generate_loader_asm import *
+
+config = configuration_retrieve()
+arch = config.arch
+gcc_arch_flag = config.gcc_arch_flag
+symbols = config.all
+
+variant = 'baremetal'
+
+# Locally important paths are here
+LIBC_PATH = 'loader/libs/c'
+LIBC_LIBPATH = join(BUILDDIR, LIBC_PATH)
+LIBC_INCPATH = ['#' + join(LIBC_PATH, 'include'),
+                '#' + join(LIBC_PATH, 'include/arch/' + arch)]
+
+LIBELF_PATH = 'loader/libs/elf'
+LIBELF_LIBPATH = join(BUILDDIR, LIBELF_PATH)
+LIBELF_INCPATH = '#' + join(LIBELF_PATH, 'include')
+
+env = Environment(CC = config.toolchain_kernel + 'gcc',
+		          AR = config.toolchain_kernel + 'ar',
+		          RANLIB = config.toolchain_kernel + 'ranlib',
+		          # We don't use -nostdinc because sometimes we need standard headers,
+		          # such as stdarg.h e.g. for variable args, as in printk().
+		          CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99',
+                             '-Wall', '-Werror', '-march=' + gcc_arch_flag],
+		          LINKFLAGS = ['-nostdlib', '-T' + join(BUILDDIR, 'loader/linker.lds'),
+                               '-u_start'],
+		          ASFLAGS = ['-D__ASSEMBLY__'],
+		          PROGSUFFIX = '.elf',
+		          ENV = {'PATH' : os.environ['PATH']},
+		          LIBS = ['gcc', 'elf', 'libdev-baremetal', 'c-baremetal', 'gcc'],
+                  LIBPATH = [LIBDEV_BAREMETAL_LIBPATH, LIBELF_LIBPATH, LIBC_LIBPATH],
+                  CPPPATH = [KERNEL_HEADERS, LIBDEV_INCLUDE, LIBC_INCPATH, LIBELF_INCPATH],
+                  CPPFLAGS = '-include l4/config.h -include l4/macros.h \
+                              -include l4/types.h -D__KERNEL__')
+
+libdev_builddir = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-' + variant)
+objs = SConscript(join(LIBDEV_RELDIR, 'SConscript'), duplicate = 0,
+                  exports = { 'env' : env, 'type' : variant, 'build_dir' : libdev_builddir},
+                  variant_dir = join(BUILDDIR, LIBDEV_RELDIR))
+
+objs += SConscript('loader/libs/c/SConscript', duplicate = 0,
+                   exports = { 'env' : env, 'type' : variant},
+                   variant_dir = join(BUILDDIR, 'loader/libs/c'))
+
+objs += SConscript('loader/libs/elf/SConscript', duplicate = 0,
+                   exports = { 'env' : env },
+                   variant_dir = join(BUILDDIR, 'loader/libs/elf'))
+
+objs += SConscript('loader/SConscript', duplicate = 0,
+                   exports = { 'env' : env },
+                   variant_dir = join(BUILDDIR, 'loader'))
+
+#
+# Find the LMA for FINAL_ELF
+# Let size of physical memory hole needed for FINAL_ELF be 16MB
+# and default LMA = 32MB,
+# FIXME: default LMA = get_kernel_end_address()
+#
+def find_loader_load_address(target, source, env):
+    # Start/end addresses of various physical memory regions defined
+    array_start = []
+    array_end = []
+
+    for sym, val in symbols:
+        if re.search("(PHYS)([0-9]){1,4}(_START)", sym):
+            array_start.append(int(val, 0))
+        elif re.search("(PHYS)([0-9]){1,4}(_END)", sym):
+            array_end.append(int(val, 0))
+    array_start.sort()
+    array_end.sort()
+
+    mem_needed = 0x1000000
+    loadaddr = 0x1000000
+    for index, end in enumerate(array_end):
+        loadaddr = end
+        if (index+1) >= len(array_start):
+            # Reached end of start_array
+            break
+        else:
+            start = array_start[index+1]
+        if start - end >= mem_needed:
+            break
+
+    # Create target file
+    with open(source[1].path, 'r') as input:
+        buffer = input.read()
+        #print '\nLoad address for FINAL_ELF: ' + str(conv_hex(loadaddr))
+        with open(target[0].path, 'w+') as output:
+            output.write(buffer % str(loadaddr))
+    return None
+
+def ksym_to_loader(target, source, env):
+    generate_ksym_to_loader(target[0].path, source[0].path)
+
+def gen_loader_images_S(target, source, env):
+    generate_image_S(target[0].path, source)
+
+# Builders
+loader_image_S = Builder(action = gen_loader_images_S)
+env.Append(BUILDERS = {'IMAGE_S' : loader_image_S})
+env.IMAGE_S(join(BUILDDIR, 'loader/images.S'), [KERNEL_ELF, join(BUILDDIR, 'conts/containers.elf')])
+objs += env.Object(join(BUILDDIR, 'loader/images.S'))
+
+loader_ksyms = Builder(action = ksym_to_loader)
+env.Append(BUILDERS = {'LOADER_KSYSM' : loader_ksyms})
+env.LOADER_KSYSM(join(BUILDDIR, 'loader/ksyms.S'), [KERNEL_ELF])
+objs += env.Object(join(BUILDDIR, 'loader/ksyms.S'))
+
+lma_lds = Builder(action = find_loader_load_address)
+env.Append(BUILDERS = {'LMA_LDS' : lma_lds})
+env.LMA_LDS(join(BUILDDIR, 'loader/linker.lds'), [KERNEL_ELF, 'loader/linker.lds.in'])
+
+final_elf = env.Program(FINAL_ELF, objs)
+
+Depends(objs,join(BUILDDIR, 'conts/containers.elf'))
+Depends(objs,join(BUILDDIR, 'kernel.elf'))
+Depends(final_elf, join(BUILDDIR, 'loader/linker.lds'))

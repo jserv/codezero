@@ -17,19 +17,27 @@
 
 unsigned int space_flags_to_ptflags(unsigned int flags);
 
-void add_mapping_pgd(unsigned long paddr, unsigned long vaddr,
-		     unsigned int size, unsigned int flags,
-		     pgd_table_t *pgd);
+struct address_space;
+struct cap_list;
+int add_mapping_use_cap(unsigned long paddr, unsigned long vaddr,
+			unsigned int size, unsigned int flags,
+			struct address_space *space,
+			struct cap_list *clist);
 
-void add_mapping(unsigned long paddr, unsigned long vaddr,
+int add_mapping_space(unsigned long paddr, unsigned long vaddr,
+		       unsigned int size, unsigned int flags,
+		       struct address_space *space);
+
+int add_mapping(unsigned long paddr, unsigned long vaddr,
 		 unsigned int size, unsigned int flags);
 
 void add_boot_mapping(unsigned long paddr, unsigned long vaddr,
 		      unsigned int size, unsigned int flags);
 
 int remove_mapping(unsigned long vaddr);
-int remove_mapping_pgd(pgd_table_t *pgd, unsigned long vaddr);
-void remove_mapping_pgd_all_user(pgd_table_t *pgd);
+int remove_mapping_space(struct address_space *space, unsigned long vaddr);
+void remove_mapping_pgd_all_user(struct address_space *space,
+				 struct cap_list *clist);
 
 int check_mapping_pgd(unsigned long vaddr, unsigned long size,
 		      unsigned int flags, pgd_table_t *pgd);
@@ -40,7 +48,7 @@ int check_mapping(unsigned long vaddr, unsigned long size,
 void copy_pgd_kern_all(pgd_table_t *);
 
 struct address_space;
-int delete_page_tables(struct address_space *space);
+int delete_page_tables(struct address_space *space, struct cap_list *clist);
 int copy_user_tables(struct address_space *new, struct address_space *orig);
 void remap_as_pages(void *vstart, void *vend);
 
@@ -62,14 +70,14 @@ unsigned long virt_to_phys_by_pgd(pgd_table_t *pgd, unsigned long vaddr);
 void arch_prepare_pte(u32 paddr, u32 vaddr, unsigned int flags,
 		      pte_t *ptep);
 
-void arch_write_pte(pte_t *ptep, pte_t pte, u32 vaddr);
+void arch_write_pte(pte_t *ptep, pte_t pte, u32 vaddr, u32 asid);
 
-void arch_prepare_write_pte(u32 paddr, u32 vaddr,
+void arch_prepare_write_pte(struct address_space *space, u32 paddr, u32 vaddr,
 			    unsigned int flags, pte_t *ptep);
 
 pmd_t *arch_pick_pmd(pgd_table_t *pgd, unsigned long vaddr);
 
-void arch_write_pmd(pmd_t *pmd_entry, u32 pmd_phys, u32 vaddr);
+void arch_write_pmd(pmd_t *pmd_entry, u32 pmd_phys, u32 vaddr, u32 asid);
 
 int arch_check_pte_access_perms(pte_t pte, unsigned int flags);
 

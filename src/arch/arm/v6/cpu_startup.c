@@ -28,7 +28,7 @@ void cpu_startup(void)
         //arm_set_cp15_cr(val);
 
 
-#if defined (CONFIG_SMP)
+#if defined (CONFIG_SMP_)
 	/* Enable SCU*/
 	/* Enable SMP bit in CP15 */
 #endif

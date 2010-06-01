@@ -9,7 +9,7 @@
 #include <l4/lib/math.h>
 #include L4LIB_INC_ARCH(syslib.h)
 #include <vm_area.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 
 /* This splits a vma, splitter region must be in the *middle* of original vma */
 int vma_split(struct vm_area *vma, struct tcb *task,

@@ -74,6 +74,7 @@ void ipc_extended_test(void)
 	/* This test makes this assumption */
 	BUG_ON(L4_IPC_EXTENDED_MAX_SIZE > PAGE_SIZE);
 
+#if 0
 	/*
 	 * Request capability to ipc to each other from pager
 	 * (Actually only the sender needs it)
@@ -92,6 +93,7 @@ void ipc_extended_test(void)
 		       "err = %d\n", err);
 		goto out_err;
 	}
+#endif
 
 	/*
 	 * Both child and parent gets 2 pages

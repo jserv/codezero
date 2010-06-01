@@ -1,0 +1,257 @@
+
+main.c,65
+void run_tests(void)run_tests16,287
+int main(void)main38,770
+
+src/capability.c,0
+
+src/example.c,0
+
+src/cli_serv/cli_serv.c,45
+int test_cli_serv(void)test_cli_serv21,536
+
+src/api/cap.c,192
+#define TOTAL_CAPS	TOTAL_CAPS12,202
+struct capability cap_array[TOTAL_CAPS];cap_array14,228
+int test_cap_read(void)test_cap_read19,308
+int test_api_capctrl(void)test_api_capctrl47,968
+
+src/api/exregs.c,113
+int test_exregs_read_write(void)test_exregs_read_write15,229
+int test_api_exregs(void)test_api_exregs76,1453
+
+src/api/memory.c,771
+#define DECLARE_IDPOOL(DECLARE_IDPOOL23,461
+struct address_pool virtual_page_pool, physical_page_pool;virtual_page_pool26,558
+struct address_pool virtual_page_pool, physical_page_pool;physical_page_pool26,558
+#define PAGE_POOL_SIZE	PAGE_POOL_SIZE28,618
+#define virt_to_phys(virt_to_phys33,750
+#define phys_to_virt(phys_to_virt34,833
+#define TEST_POOL_TOTAL	TEST_POOL_TOTAL37,920
+void test_page_pool(void)test_page_pool41,972
+void page_pool_init(void)page_pool_init106,2602
+void *virtual_page_new(int npages)virtual_page_new177,4779
+void *physical_page_new(int npages)physical_page_new182,4879
+void virtual_page_free(void *address, int npages)virtual_page_free187,4981
+void physical_page_free(void *address, int npages)physical_page_free193,5104
+
+src/api/cache.c,158
+int test_cctrl_basic(void)test_cctrl_basic18,348
+int test_cctrl_sync_caches()test_cctrl_sync_caches43,971
+int test_api_cctrl(void)test_api_cctrl64,1314
+
+src/api/thread.c,517
+int new_thread_func(void *args)new_thread_func18,285
+int delayed_exit_func(void *args)delayed_exit_func32,614
+int imm_exit_func(void *args)imm_exit_func54,1031
+struct l4_thread *test_thread_create()test_thread_create62,1132
+int test_thread_actions(struct l4_thread *thread)test_thread_actions92,1698
+int test_thread_destroy(struct l4_thread *thread)test_thread_destroy126,2347
+int test_thread_invalid(struct l4_thread *thread)test_thread_invalid214,4305
+int test_api_tctrl(void)test_api_tctrl219,4371
+
+src/api/api.c,35
+int test_api(void)test_api15,214
+
+src/api/irq.c,50
+int test_api_irqctrl(void)test_api_irqctrl8,105
+
+src/api/ipc.c,705
+struct ipc_ext_data {ipc_ext_data18,330
+	void *virtual;	/* Virtual address to start ipc from */virtual19,352
+	l4id_t partner; /* Partner to do extended ipc */partner20,408
+int ipc_extended_sender(void *arg)ipc_extended_sender23,462
+int ipc_extended_receiver(void *arg)ipc_extended_receiver36,722
+int ipc_ext_handle_pfault(struct ipc_ext_data *ipc_data,ipc_ext_handle_pfault63,1348
+int test_ipc_extended(void)test_ipc_extended146,4092
+int ipc_full_thread(void *arg)ipc_full_thread276,7400
+int ipc_short_thread(void *arg)ipc_short_thread313,8275
+int test_ipc_full(void)test_ipc_full354,9106
+int test_ipc_short(void)test_ipc_short462,11483
+int test_api_ipc(void)test_api_ipc526,12763
+
+src/api/map.c,305
+#define KERNEL_PAGE	KERNEL_PAGE15,277
+#define KIP_PAGE	KIP_PAGE16,311
+#define SYSCALL_PAGE	SYSCALL_PAGE17,342
+#define VECTOR_PAGE	VECTOR_PAGE18,377
+int test_api_map(void)test_api_map20,412
+int test_api_unmap(void)test_api_unmap259,6043
+int test_api_map_unmap(void)test_api_map_unmap347,8064
+
+src/api/getid.c,167
+int thread_getid_nullptr(void *arg)thread_getid_nullptr15,250
+int test_getid_nullptr(void)test_getid_nullptr27,479
+int test_api_getid(void)test_api_getid84,1734
+
+src/api/smp.c,299
+static int new_thread_func(void *args)new_thread_func14,232
+int test_smp_two_threads(void)test_smp_two_threads48,945
+int test_smp_two_spaces(void)test_smp_two_spaces113,2491
+int test_smp_ipc(void)test_smp_ipc118,2537
+int test_smp(void)test_smp124,2601
+int test_smp(void)test_smp141,2833
+
+src/api/mutex.c,652
+#define MUTEX_NTHREADS	MUTEX_NTHREADS16,283
+#define MUTEX_INCREMENTS	MUTEX_INCREMENTS17,310
+#define MUTEX_VALUE_TOTAL	MUTEX_VALUE_TOTAL18,340
+struct mutex_test_data {mutex_test_data20,404
+	struct l4_mutex lock;lock21,429
+	int val;val22,452
+static struct mutex_test_data tdata;tdata25,466
+static void init_test_data(struct mutex_test_data *tdata)init_test_data27,504
+int mutex_thread_non_contending(void *arg)mutex_thread_non_contending34,615
+int mutex_thread_contending(void *arg)mutex_thread_contending67,1270
+int test_mutex(int (*mutex_thread)(void *))test_mutex106,2054
+int test_api_mutexctrl(void)test_api_mutexctrl187,3891
+
+src/captest.c,178
+int simple_pager_thread(void *arg)simple_pager_thread10,204
+int wait_check_test(struct task_ids *ids)wait_check_test57,1151
+int capability_test(void)capability_test74,1490
+
+src/perf/tctrl.c,174
+struct perfmon_cycles tctrl_cycles;tctrl_cycles18,324
+#define PERFTEST_THREAD_CREATE PERFTEST_THREAD_CREATE20,361
+void perf_measure_tctrl(void)perf_measure_tctrl22,399
+
+src/perf/exregs.c,181
+struct perfmon_cycles l4_exregs_cycles;l4_exregs_cycles19,372
+#define PERFTEST_EXREGS_COUNT	PERFTEST_EXREGS_COUNT21,413
+int perf_measure_exregs(void)perf_measure_exregs23,449
+
+src/perf/tswitch.c,472
+struct perfmon_cycles thread_switch_cycles;thread_switch_cycles18,324
+struct perfmon_cycles space_switch_cycles;space_switch_cycles19,368
+static int indicate_switch = 0;indicate_switch21,412
+void thread_switcher_thread(void *arg)thread_switcher_thread23,445
+void perf_measure_thread_switch(void)perf_measure_thread_switch39,799
+void perf_measure_space_switch(void)perf_measure_space_switch102,2328
+void perf_measure_tswitch(void)perf_measure_tswitch108,2372
+
+src/perf/perf.c,51
+int test_performance(void)test_performance15,204
+
+src/perf/simple.c,168
+struct perfmon_cycles simple_cycles;simple_cycles17,314
+#define PERFTEST_SIMPLE_LOOP	PERFTEST_SIMPLE_LOOP19,352
+void perf_test_simple(void)perf_test_simple21,387
+
+src/perf/ipc.c,51
+void perf_measure_ipc(void)perf_measure_ipc9,102
+
+src/perf/map.c,107
+void perf_measure_map(void)perf_measure_map9,111
+void perf_measure_unmap(void)perf_measure_unmap14,145
+
+src/perf/getid.c,245
+struct perfmon_cycles l4_getid_cycles;l4_getid_cycles18,333
+#define PERFTEST_GETID_COUNT	PERFTEST_GETID_COUNT20,373
+void perf_measure_getid_ticks(void)perf_measure_getid_ticks25,450
+void perf_measure_getid(void)perf_measure_getid67,1461
+
+src/perf/timer.c,150
+#define TIMER_PHYSICAL_BASE	TIMER_PHYSICAL_BASE15,298
+unsigned long timer_base;timer_base17,339
+void perf_timer_init(void)perf_timer_init19,366
+
+src/perf/mutex.c,55
+void perf_measure_mutex(void)perf_measure_mutex9,104
+
+src/perf/cycles.c,70
+void platform_measure_cpu_cycles()platform_measure_cpu_cycles20,354
+
+src/mthread/mthread.c,43
+int test_mthread(void)test_mthread22,547
+
+src/arch/arm/v7/mm.c,285
+int pte_get_access_simple(pte_t pte)pte_get_access_simple13,246
+int is_translation_fault(u32 fsr)is_translation_fault20,427
+unsigned int vm_prot_flags(pte_t pte, u32 fsr)vm_prot_flags25,521
+void set_generic_fault_params(struct fault_data *fault)set_generic_fault_params54,1163
+
+src/arch/arm/v5/mm.c,147
+unsigned int vm_prot_flags(pte_t pte)vm_prot_flags12,242
+void set_generic_fault_params(struct fault_data *fault)set_generic_fault_params42,960
+
+container.c,52
+void __container_init(void)__container_init14,216
+
+include/capability.h,47
+#define __CAPABILITY_H____CAPABILITY_H__2,25
+
+include/thread.h,121
+#define __THREAD_H____THREAD_H__2,21
+#define STACK_SIZE	STACK_SIZE15,318
+#define THREADS_TOTAL	THREADS_TOTAL17,345
+
+include/memory.h,59
+#define __TESTSUITE_MEMORY_H____TESTSUITE_MEMORY_H__2,31
+
+include/fault.h,840
+#define __FAULT_H____FAULT_H__2,20
+#define VM_NONE	VM_NONE10,169
+#define VM_READ	VM_READ11,197
+#define VM_EXEC	VM_EXEC12,225
+#define VM_WRITE	VM_WRITE13,253
+#define VM_PROT_MASK	VM_PROT_MASK14,281
+#define VMA_SHARED	VMA_SHARED17,364
+#define VMA_ANONYMOUS	VMA_ANONYMOUS19,459
+#define VMA_PRIVATE	VMA_PRIVATE21,521
+#define VMA_FIXED	VMA_FIXED23,574
+#define VMA_GROWSDOWN	VMA_GROWSDOWN25,651
+#define VM_DIRTY	VM_DIRTY28,751
+struct fault_data {fault_data31,842
+	fault_kdata_t *kdata;		/* Generic data forged by the kernel */kdata32,862
+	unsigned int reason;		/* Generic fault reason flags */reason33,926
+	unsigned int address;		/* Aborted address */address34,982
+	unsigned int pte_flags;		/* Generic protection flags on pte */pte_flags35,1028
+	l4id_t sender;			/* Inittask-related fault data */sender36,1092
+
+include/macros.h,201
+#define __TEST_MACROS_H____TEST_MACROS_H__2,26
+#define __INC_ARCH(__INC_ARCH4,53
+#define __INC_SUBARCH(__INC_SUBARCH5,94
+#define __INC_PLAT(__INC_PLAT6,149
+#define __INC_GLUE(__INC_GLUE7,198
+
+include/timer.h,59
+#define __PERF_TESTS_TIMER_H____PERF_TESTS_TIMER_H__2,31
+
+include/perf.h,740
+#define __PERF_TESTS_H____PERF_TESTS_H__2,25
+struct perfmon_cycles {perfmon_cycles9,192
+	u64 last;	/* Last op cycles */last10,216
+	u64 min;	/* Minimum cycles */min11,248
+	u64 max;	/* Max cycles */max12,279
+	u64 avg;	/* Average cycles */avg13,306
+	u64 total;	/* Total cycles */total14,337
+	u64 ops;	/* Total ops */ops15,368
+#define CORTEXA9_400MHZ_USEC	CORTEXA9_400MHZ_USEC26,614
+#define CORTEXA9_400MHZ_MSEC	CORTEXA9_400MHZ_MSEC27,654
+#define USEC_MULTIPLIER	USEC_MULTIPLIER28,697
+#define MSEC_MULTIPLIER	MSEC_MULTIPLIER29,743
+#define perfmon_record_cycles(perfmon_record_cycles34,832
+#define perfmon_record_cycles(perfmon_record_cycles38,919
+#define perfmon_checkpoint_cycles(perfmon_checkpoint_cycles50,1261
+
+include/api/api.h,55
+#define __TEST_SUITE_API_H____TEST_SUITE_API_H__2,29
+
+include/debug.h,432
+#define __ARCH_DEBUG_H____ARCH_DEBUG_H__7,111
+static inline u32 perfmon_read_cyccnt() { return 0; }perfmon_read_cyccnt14,250
+static inline void perfmon_reset_start_cyccnt() { }perfmon_reset_start_cyccnt16,305
+static inline u32 perfmon_read_reset_start_cyccnt() { return 0; }perfmon_read_reset_start_cyccnt17,357
+#define debug_record_cycles(debug_record_cycles19,424
+#define debug_record_cycles(debug_record_cycles33,763
+
+include/tests.h,149
+#define __TESTS_H____TESTS_H__2,20
+#define DEBUG_TESTS DEBUG_TESTS5,74
+#define dbg_printf(dbg_printf7,112
+#define dbg_printf(dbg_printf9,162
+
+include/linker.h,61
+#define __TEST_SUITE_LINKER_H____TEST_SUITE_LINKER_H__2,32

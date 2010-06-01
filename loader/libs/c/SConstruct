@@ -5,7 +5,7 @@
 #  Copyright © 2009  B Labs Ltd
 
 import os, sys, shelve
-from configure import *
+from scripts.config.config_invoke import *
 
 variant = "baremetal"
 config = configuration_retrieve()

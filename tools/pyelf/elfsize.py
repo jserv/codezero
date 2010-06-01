@@ -21,3 +21,7 @@ def elf_binary_size(img):
             paddr_end = x.p_paddr + x.p_memsz
     return paddr_end - paddr_start
 
+# Return load address of elf file
+def get_elf_load_address(img):
+    elffile = elf.ElfFile.from_file(img)
+    return elffile.header.ai.e_entry

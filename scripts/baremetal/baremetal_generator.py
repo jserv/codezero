@@ -15,9 +15,9 @@ sys.path.append(os.path.abspath("../"))
 
 SCRIPTROOT = os.path.abspath(os.path.dirname(__file__))
 
-from config.projpaths import *
-from config.configuration import *
-from config.lib import *
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
+from scripts.config.lib import *
 
 class BaremetalContGenerator:
     def __init__(self):
@@ -71,12 +71,14 @@ class BaremetalContGenerator:
             fout.write('\t' + conv_hex(cont.pager_lma) + '\n')
             fout.write(pager_vma_header)
             fout.write('\t' + conv_hex(cont.pager_vma) + '\n')
-            for ireg in range(cont.virt_regions):
+            for ireg in range(cont.caplist["PAGER"].virt_regions):
                 fout.write(pager_virtmem_header % ireg)
-                fout.write('\t' + cont.virtmem["START"][ireg] + ' - ' + cont.virtmem["END"][ireg] + '\n')
-            for ireg in range(cont.phys_regions):
+                fout.write('\t' + cont.caplist["PAGER"].virtmem["START"][ireg] + \
+			   ' - ' + cont.caplist["PAGER"].virtmem["END"][ireg] + '\n')
+            for ireg in range(cont.caplist["PAGER"].phys_regions):
                 fout.write(pager_physmem_header % ireg)
-                fout.write('\t' + cont.physmem["START"][ireg] + ' - ' + cont.physmem["END"][ireg] + '\n')
+                fout.write('\t' + cont.caplist["PAGER"].physmem["START"][ireg] + \
+			   ' - ' + cont.caplist["PAGER"].physmem["END"][ireg] + '\n')
 
     def copy_baremetal_build_readme(self, config, cont):
         with open(self.build_readme_in) as fin:
@@ -98,7 +100,10 @@ class BaremetalContGenerator:
                 fout.write(str % (cont.name, cont.id, cont.id))
 
     def create_baremetal_sources(self, config, cont):
-        self.create_baremetal_srctree(config, cont)
+        if cont.duplicate == 1:
+            self.create_baremetal_srctree(config, cont)
+        else:
+            os.makedirs(join(self.CONT_SRC_DIR, 'include'))
         self.copy_baremetal_build_readme(config, cont)
         self.copy_baremetal_build_desc(config, cont)
         self.generate_linker_script(config, cont)
@@ -112,8 +117,13 @@ class BaremetalContGenerator:
     def check_create_baremetal_sources(self, config):
         for cont in config.containers:
             if cont.type == "baremetal":
+
                 # Determine container directory name.
-                self.CONT_SRC_DIR = join(self.BAREMETAL_SRC_BASEDIR, cont.name.lower())
+                if cont.duplicate == 0:
+                    self.CONT_SRC_DIR = join(join(BUILDDIR, 'cont' + str(cont.id)), cont.name)
+                else:
+                    self.CONT_SRC_DIR = join(self.BAREMETAL_SRC_BASEDIR, cont.name)
+
                 self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
                 self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
                 self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
@@ -121,7 +131,7 @@ class BaremetalContGenerator:
                 self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), \
                                             self.container_h_name)
 
-                if not os.path.exists(join(self.BAREMETAL_SRC_BASEDIR, cont.name)):
+                if not os.path.exists(self.CONT_SRC_DIR):
                     self.create_baremetal_sources(config, cont)
                 else:
                     # Don't create new sources but update configuration
@@ -136,6 +146,20 @@ class BaremetalContGenerator:
 
     def baremetal_container_generate(self, config):
         self.check_create_baremetal_sources(config)
+
+    def baremetal_del_dynamic_files(self, cont):
+        self.CONT_SRC_DIR = join(join(BUILDDIR, 'cont' + str(cont.id)), cont.name)
+        self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
+        self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
+        self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), self.linker_lds_name)
+        self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), self.container_h_name)
+
+        if cont.duplicate == 0:
+            os.system('rm -f ' + self.build_readme_out)
+            os.system('rm -f ' + self.build_desc_out)
+            os.system('rm -f ' + self.linker_lds_out)
+            os.system('rm -f ' + self.container_h_out)
+        return None
 
 if __name__ == "__main__":
     config = configuration_retrieve()

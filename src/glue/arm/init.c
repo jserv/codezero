@@ -11,6 +11,7 @@
 #include <l4/generic/scheduler.h>
 #include <l4/generic/space.h>
 #include <l4/generic/tcb.h>
+#include <l4/generic/idle.h>
 #include <l4/generic/bootmem.h>
 #include <l4/generic/resource.h>
 #include <l4/generic/container.h>
@@ -106,60 +107,6 @@ void vectors_init()
 }
 
 
-#include <l4/generic/cap-types.h>
-#include <l4/api/capability.h>
-#include <l4/generic/capability.h>
-
-/* This is what an idle task needs */
-static DECLARE_PERCPU(struct capability, pmd_cap);
-
-/*
- * FIXME: Add this when initializing kernel resources
- * This is a hack.
- */
-void setup_idle_caps()
-{
-	struct capability *cap = &per_cpu(pmd_cap);
-
-	cap_list_init(&current->cap_list);
-	cap->type = CAP_RTYPE_MAPPOOL | CAP_TYPE_QUANTITY;
-	cap->size = 50;
-
-	link_init(&cap->list);
-	cap_list_insert(cap, &current->cap_list);
-}
-
-/*
- * Set up current stack's beginning, and initial page tables
- * as a valid task environment for idle task for current cpu
- */
-void setup_idle_task()
-{
-	memset(current, 0, sizeof(struct ktcb));
-
-	current->space = &init_space;
-	TASK_PGD(current) = &init_pgd;
-
-	/* Initialize space caps list */
-	cap_list_init(&current->space->cap_list);
-
-	/*
-	 * FIXME: This must go to kernel resources init.
-	 */
-
-	/* Init scheduler structs */
-	sched_init_task(current, TASK_PRIO_NORMAL);
-
-	/*
-	 * If using split page tables, kernel
-	 * resources must point at the global pgd
-	 * TODO: We may need this for V6, in the future
-	 */
-#if defined(CONFIG_SUBARCH_V7)
-	kernel_resources.pgd_global = &init_global_pgd;
-#endif
-}
-
 void remove_initial_mapping(void)
 {
 	/* At this point, execution is on virtual addresses. */
@@ -168,17 +115,15 @@ void remove_initial_mapping(void)
 
 void init_finalize(void)
 {
-	/* Set up idle task capabilities */
-	setup_idle_caps();
-
 	platform_timer_start();
 
-#if defined (CONFIG_SMP)
+#if defined (CONFIG_SMP_)
 	/* Tell other cores to continue */
 	secondary_run_signal = 1;
 	dmb();
 #endif
 
+	sched_resume_async(current);
 	idle_task();
 }
 

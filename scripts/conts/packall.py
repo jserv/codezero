@@ -9,12 +9,11 @@ import os, sys, shelve
 from os.path import join
 
 PROJRELROOT = '../../'
-
 SCRIPTROOT = os.path.abspath(os.path.dirname("."))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 
-from config.projpaths import *
-from config.configuration import *
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
 
 containers_assembler_body = \
 '''
@@ -46,7 +45,10 @@ containers_lds_end = \
 class AllContainerPacker:
     def __init__(self, image_list, container_list):
         self.cont_images_in = image_list
-        self.cont_images_in.sort()
+
+        if self.cont_images_in:
+            self.cont_images_in.sort()
+
         self.containers = container_list
 
         self.CONTAINERS_BUILDDIR = join(PROJROOT, 'build/conts')
@@ -87,12 +89,9 @@ class AllContainerPacker:
         return self.containers_elf_out
 
     def clean(self):
-        if os.path.exists(self.containers_elf_out):
-            shutil.rmtree(self.containers_elf_out)
-        if os.path.exists(self.containers_lds_out):
-            shutil.rmtree(self.containers_lds_out)
-        if os.path.exists(self.containers_S_out):
-            shutil.rmtree(self.containers_S_out)
+        os.system('rm -f ' + self.containers_elf_out)
+        os.system('rm -f ' + self.containers_lds_out)
+        os.system('rm -f ' + self.containers_S_out)
 
 if __name__ == "__main__":
     all_cont_packer = AllContainerPacker([], [])

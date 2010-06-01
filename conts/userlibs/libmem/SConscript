@@ -1,0 +1,26 @@
+# -*- mode: python; coding: utf-8; -*-
+
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+import os, sys
+
+PROJRELROOT = '../..'
+sys.path.append(PROJRELROOT)
+
+from scripts.config.projpaths import *
+from scripts.config.config_invoke import *
+
+Import('env')
+
+e = env.Clone()
+e.Append(CPPPATH = ['include', '.', LIBL4_INCLUDE])
+
+objmm = e.StaticObject(Glob('mm/*.c'))
+objmc = e.StaticObject(Glob('memcache/*.[cS]'))
+objmalloc = e.StaticObject(Glob('malloc/*.[cS]'))
+libmem = e.StaticLibrary('mem', objmm + objmc + objmalloc)
+#libmc = e.StaticLibrary('mc', objmc)
+#libmalloc = e.StaticLibrary('malloc', objmalloc)
+
+Return('libmem')

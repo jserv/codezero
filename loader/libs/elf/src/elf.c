@@ -376,16 +376,16 @@ elf_loadFile(void *elfFile, bool phys)
 		pheader_type = elf_getProgramHeaderType(elfFile, i);
 	//	printf("Elf program header type: %p\n", pheader_type);
 // Comment
-//printf("Copying to range from 0x%x to 0x%x of size: 0x%x\n", (unsigned int)dest, (unsigned int)dest + (unsigned int)len, (unsigned int)len);
+printf("Copying to range from 0x%x to 0x%x of size: 0x%x\n", (unsigned int)dest, (unsigned int)dest + (unsigned int)len, (unsigned int)len);
 		memcpy((void*) (uintptr_t) dest, (void*) (uintptr_t) src, len);
 		dest += len;
 		clrsize = elf_getProgramHeaderMemorySize(elfFile, i) - len;
-//		printf("Clearing memory... starting from %x, size: %x\n", (unsigned int)dest, (unsigned int)clrsize);
+		printf("Clearing memory... starting from %x, size: %x\n", (unsigned int)dest, (unsigned int)clrsize);
 		memset((void*) (uintptr_t) dest, 0, clrsize);
 //		printf("Memory cleared.\n");
 	}
 // And this one
-//	printf("\n");
+	printf("\n");
 
 	return true;
 }

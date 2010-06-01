@@ -2,7 +2,7 @@
 #define __VFS_H__
 
 #include <fs.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <l4/lib/list.h>
 #include <memfs/memfs.h>
 #include <l4/macros.h>

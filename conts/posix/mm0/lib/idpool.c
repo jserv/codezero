@@ -4,7 +4,7 @@
  * Copyright (C) 2007 Bahadir Balban
  */
 #include <lib/idpool.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <l4/macros.h>
 #include INC_GLUE(memory.h)
 #include <stdio.h>

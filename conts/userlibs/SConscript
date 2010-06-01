@@ -1,0 +1,39 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009 B Labs Ltd
+#
+import os, sys
+from os.path import *
+
+Import('env', 'build_dir')
+
+PROJRELROOT = '../..'
+sys.path.append(PROJRELROOT)
+
+libl4 = SConscript('libl4/SConscript', duplicate = 0,
+                   exports = { 'env' : env },
+                   variant_dir = join(build_dir, 'libl4'))
+
+e = env.Clone()
+e.Replace(CPPFLAGS = '')
+type = 'userspace'
+libdev_builddir = join(join(build_dir, 'libdev'), 'sys-' + type)
+libdev = SConscript('libdev/SConscript', duplicate = 0,
+                    exports = { 'env' : e, 'type' : type, 'build_dir' : libdev_builddir })
+
+libc = SConscript('libc/SConscript', duplicate = 0,
+                  exports = { 'env' : env, 'type' : 'userspace' },
+                  variant_dir = join(build_dir, 'libc'))
+
+libmem = SConscript('libmem/SConscript', duplicate = 0,
+                       exports = { 'env' : env, },
+                       variant_dir = join(build_dir, 'libmem'))
+
+Alias('libl4', libl4)
+Alias('libdev', libdev)
+Alias('libc', libc)
+Alias('libmem', libmem)
+#Alias('libmc', libmc)
+#Alias('libmalloc',libmalloc)

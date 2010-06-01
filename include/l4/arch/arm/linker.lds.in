@@ -25,6 +25,7 @@ _bootstack_physical	= _end_bootstack - kernel_offset;
  * virtual address.
  */
 ENTRY(kernel_physical)
+OUTPUT_ARCH(arm)
 
 SECTIONS
 {

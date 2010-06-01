@@ -63,16 +63,12 @@ enum sched_flags {
 /* Contains per-container scheduling structures */
 struct scheduler {
 	unsigned int flags;
-	unsigned int task_select_ctr;
+	unsigned int task_select_counter;
 	struct runqueue sched_rq[SCHED_RQ_TOTAL];
 
 	/* Regular runqueues */
 	struct runqueue *rq_runnable;
 	struct runqueue *rq_expired;
-
-	/* Real-time runqueues */
-	struct runqueue *rq_rt_runnable;
-	struct runqueue *rq_rt_expired;
 
 	struct ktcb *idle_task;
 

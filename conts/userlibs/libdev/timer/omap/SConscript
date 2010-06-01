@@ -1,0 +1,25 @@
+import sys
+
+Import('env')
+
+# Get global paths
+PROJRELROOT = '../../../'
+sys.path.append(PROJRELROOT)
+
+from scripts.config.configuration import *
+config = configuration_retrieve()
+platform = config.platform
+
+#Platforms using omap_uart
+plat_list = 'beagle'
+
+# The set of source files associated with this SConscript file.
+src_local = []
+
+#for plat_supported in plat_list:
+#if plat_supported == platform:
+if plat_list == platform:
+    src_local += ['timer.c']
+
+obj = env.StaticObject(src_local)
+Return('obj')

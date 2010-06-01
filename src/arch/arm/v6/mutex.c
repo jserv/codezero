@@ -26,7 +26,7 @@ void __spin_lock(unsigned int *s)
 		"teq	  %0, #0\n"
 		"strexeq  %0, %1, [%2]\n"
 		"teq	  %0, #0\n"
-#ifdef CONFIG_SMP
+#ifdef CONFIG_SMP_
 		"wfene\n"
 #endif
 		"bne	  1b\n"
@@ -47,7 +47,7 @@ void __spin_unlock(unsigned int *s)
 		: "memory"
 	);
 
-#ifdef CONFIG_SMP
+#ifdef CONFIG_SMP_
 	dsb();
 	__asm__ __volatile__ ("sev\n");
 #endif

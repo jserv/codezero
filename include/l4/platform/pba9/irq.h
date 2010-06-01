@@ -6,7 +6,6 @@
 #ifndef __PLATFORM_IRQ_H__
 #define __PLATFORM_IRQ_H__
 
-
 /* TODO: Not sure about this, need to check */
 #define IRQ_CHIPS_MAX		1
 #define IRQS_MAX		96
@@ -31,6 +30,10 @@
  * 32 - 74: Irqs from Motherboard (0 - 42)
  * 75- 81: Test chip interrupts
  */
+
+/* Range of IRQ numbers used by this platform */
+#define IRQ_RANGE_START         0
+#define IRQ_RANGE_END           95
 
 #endif /* __PLATFORM_IRQ_H__ */
 

@@ -14,6 +14,10 @@
 #define IRQS_MAX		96
 #endif
 
+/* Range of IRQ numbers used by this platform */
+#define IRQ_RANGE_START         0
+#define IRQ_RANGE_END           IRQS_MAX
+
 /*
  * Interrupt Distribution:
  * 0-31: Used as SI provided by distributed interrupt controller
@@ -44,9 +48,14 @@
 #define EB_IRQ_AACI		(EB_GIC_IRQ_OFFSET + 19) /* Advanced Audio codec */
 #define EB_IRQ_KMI0		(EB_GIC_IRQ_OFFSET + 20) /* Keyboard */
 #define EB_IRQ_KMI1		(EB_GIC_IRQ_OFFSET + 21) /* Mouse */
-#define EB_IRQ_LCD		(EB_GIC_IRQ_OFFSET + 20) /* Character LCD */
 #define EB_IRQ_DMAC		(EB_GIC_IRQ_OFFSET + 20) /* DMA Controller */
 
+/*
+ * We have 3 IRQs for CLCD
+ * 23 - clcd display
+ * 30, 31 for touch screen pen interrupt
+ */
+#define EB_IRQ_CLCD		(EB_GIC_IRQ_OFFSET + 23)
 
 /* Interrupt Sources to ARM 11 MPCore or EB+A9 MPCore GIC */
 #define MPCORE_GIC_IRQ_AACI		(EB_GIC_IRQ_OFFSET + 0)
@@ -59,6 +68,7 @@
 #define MPCORE_GIC_IRQ_KMI0		(EB_GIC_IRQ_OFFSET + 7)
 #define MPCORE_GIC_IRQ_KMI1		(EB_GIC_IRQ_OFFSET + 8)
 #define MPCORE_GIC_IRQ_ETH		(EB_GIC_IRQ_OFFSET + 9)
+#define MPCORE_GIC_IRQ_CLCD             (EB_GIC_IRQ_OFFSET + 23)
 
 /* Interrupt from GIC1 on Base board */
 #define MPCORE_GIC_IRQ_EB_GIC1		(EB_GIC_IRQ_OFFSET + 10)
@@ -69,13 +79,15 @@
 #if defined (CONFIG_CPU_ARM11MPCORE) || defined (CONFIG_CPU_CORTEXA9)
 #define IRQ_TIMER0	MPCORE_GIC_IRQ_TIMER01
 #define IRQ_TIMER1	MPCORE_GIC_IRQ_TIMER23
-#define IRQ_KEYBOARD0   MPCORE_GIC_IRQ_TIMER01
+#define IRQ_KEYBOARD0   MPCORE_GIC_IRQ_KMI0
 #define IRQ_MOUSE0	MPCORE_GIC_IRQ_KMI1
+#define IRQ_CLCD0	MPCORE_GIC_IRQ_CLCD
 #else
 #define IRQ_TIMER0	EB_IRQ_TIMER01
 #define IRQ_TIMER1	EB_IRQ_TIMER23
 #define IRQ_KEYBOARD0	EB_IRQ_KMI0
 #define IRQ_MOUSE0	EB_IRQ_KMI1
+#define IRQ_CLCD0	EB_IRQ_CLCD
 #endif
 
 #endif /* __PLATFORM_IRQ_H__ */

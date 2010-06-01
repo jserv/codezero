@@ -79,7 +79,7 @@ struct mutex_queue *mutex_control_create(unsigned long mutex_physical)
 	struct mutex_queue *mutex_queue;
 
 	/* Allocate the mutex queue structure */
-	if (!(mutex_queue = alloc_user_mutex()))
+	if (!(mutex_queue = mutex_cap_alloc()))
 		return 0;
 
 	/* Init and return */
@@ -98,7 +98,7 @@ void mutex_control_delete(struct mutex_queue *mq)
 	BUG_ON(!list_empty(&mq->wqh_contenders.task_list));
 	BUG_ON(!list_empty(&mq->wqh_holders.task_list));
 
-	free_user_mutex(mq);
+	mutex_cap_free(mq);
 }
 
 /*
@@ -309,9 +309,6 @@ int sys_mutex_control(unsigned long mutex_address, int mutex_flags)
 	if (mutex_op != MUTEX_CONTROL_LOCK &&
 	    mutex_op != MUTEX_CONTROL_UNLOCK)
 		return -EPERM;
-
-	if ((ret = cap_mutex_check(mutex_address, mutex_op)) < 0)
-		return ret;
 
 	/*
 	 * Find and check physical address for virtual mutex address

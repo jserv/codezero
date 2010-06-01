@@ -14,6 +14,7 @@
 #include <l4/platform/realview/offsets.h>
 
 /* Device offsets in physical memory */
+#define PLATFORM_CLCD0_BASE		0x10020000 /* CLCD0 */
 #define PLATFORM_GIC1_BASE		0x10040000 /* GIC 1 */
 #define PLATFORM_GIC2_BASE		0x10050000 /* GIC 2 */
 #define PLATFORM_GIC3_BASE		0x10060000 /* GIC 3 */

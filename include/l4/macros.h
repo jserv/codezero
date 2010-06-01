@@ -48,6 +48,7 @@
 #define SZ_1K			1024
 #define SZ_2K			2048
 #define SZ_4K			0x1000
+#define SZ_8K			0x2000
 #define SZ_16K			0x4000
 #define SZ_32K			0x8000
 #define SZ_64K			0x10000
@@ -63,14 +64,14 @@
 
 /* Per-cpu variables */
 
-#if defined CONFIG_SMP
+#if defined CONFIG_SMP_
 #define DECLARE_PERCPU(type, name)	\
 type name[CONFIG_NCPU]
 
 #define per_cpu(val)	(val)[smp_get_cpuid()]
 #define per_cpu_byid(val, cpu)	(val)[(cpu)]
 
-#else /* Not CONFIG_SMP */
+#else /* Not CONFIG_SMP_ */
 
 #define DECLARE_PERCPU(type, name)	\
 type name
@@ -78,7 +79,7 @@ type name
 #define per_cpu(val)	(val)
 #define per_cpu_byid(val, cpu)	val
 
-#endif /* End of Not CONFIG_SMP */
+#endif /* End of Not CONFIG_SMP_ */
 
 #ifndef __ASSEMBLY__
 #include <stddef.h>	/* offsetof macro, defined in the `standard' way. */

@@ -10,6 +10,7 @@ ENTRY(_start)
 SECTIONS
 {
 	. = load_address;
+	_start_loader = .;
 	.text : { *(.text.head) *(.text) }
 	.rodata : { *(.rodata) }
 	.rodata1 : { *(.rodata1) }
@@ -26,4 +27,5 @@ SECTIONS
 	}
 	.got : { *(.got) *(.got.plt) }
 	.bss : { *(.bss) }
+	_end_loader = .;
 }

@@ -116,7 +116,7 @@ void arch_prepare_pte(u32 paddr, u32 vaddr, unsigned int flags,
 		*ptep = paddr | flags | PTE_TYPE_SMALL;
 }
 
-void arch_write_pte(pte_t *ptep, pte_t pte, u32 vaddr)
+void arch_write_pte(pte_t *ptep, pte_t pte, u32 vaddr, u32 asid)
 {
 	/* FIXME:
 	 * Clean the dcache and invalidate the icache
@@ -143,7 +143,8 @@ void arch_write_pte(pte_t *ptep, pte_t pte, u32 vaddr)
 }
 
 
-void arch_prepare_write_pte(u32 paddr, u32 vaddr,
+void arch_prepare_write_pte(struct address_space *space,
+			    u32 paddr, u32 vaddr,
 			    unsigned int flags, pte_t *ptep)
 {
 	pte_t pte = 0;
@@ -154,7 +155,7 @@ void arch_prepare_write_pte(u32 paddr, u32 vaddr,
 
 	arch_prepare_pte(paddr, vaddr, flags, &pte);
 
-	arch_write_pte(ptep, pte, vaddr);
+	arch_write_pte(ptep, pte, vaddr, space->spid);
 }
 
 pmd_t *
@@ -166,7 +167,7 @@ arch_pick_pmd(pgd_table_t *pgd, unsigned long vaddr)
 /*
  * v5 pmd writes
  */
-void arch_write_pmd(pmd_t *pmd_entry, u32 pmd_phys, u32 vaddr)
+void arch_write_pmd(pmd_t *pmd_entry, u32 pmd_phys, u32 vaddr, u32 asid)
 {
 	/* FIXME: Clean the dcache if there was a valid entry */
 	*pmd_entry = (pmd_t)(pmd_phys | PMD_TYPE_PMD);
@@ -205,8 +206,10 @@ int is_global_pgdi(int i)
 
 extern pmd_table_t *pmd_array;
 
-void remove_mapping_pgd_all_user(pgd_table_t *pgd)
+void remove_mapping_pgd_all_user(struct address_space *space,
+				 struct cap_list *clist)
 {
+	pgd_table_t *pgd = space->pgd;
 	pmd_table_t *pmd;
 
 	/* Traverse through all pgd entries. */
@@ -221,34 +224,22 @@ void remove_mapping_pgd_all_user(pgd_table_t *pgd)
 				      phys_to_virt((pgd->entry[i] &
 						    PMD_ALIGN_MASK));
 				/* Free it */
-				free_pmd(pmd);
+				pmd_cap_free(pmd, clist);
 			}
 
 			/* Clear the pgd entry */
 			pgd->entry[i] = PMD_TYPE_FAULT;
 		}
 	}
+	/* FIXME: Flush tlbs here */
 }
-
-
-int pgd_count_boot_pmds()
-{
-	int npmd = 0;
-	pgd_table_t *pgd = &init_pgd;
-
-	for (int i = 0; i < PGD_ENTRY_TOTAL; i++)
-		if ((pgd->entry[i] & PMD_TYPE_MASK) == PMD_TYPE_PMD)
-			npmd++;
-	return npmd;
-}
-
 
 /*
  * Jumps from boot pmd/pgd page tables to tables allocated from the cache.
  */
 pgd_table_t *arch_realloc_page_tables(void)
 {
-	pgd_table_t *pgd_new = alloc_pgd();
+	pgd_table_t *pgd_new = pgd_alloc();
 	pgd_table_t *pgd_old = &init_pgd;
 	pmd_table_t *orig, *pmd;
 
@@ -260,7 +251,7 @@ pgd_table_t *arch_realloc_page_tables(void)
 		/* Detect a pmd entry */
 		if ((pgd_old->entry[i] & PMD_TYPE_MASK) == PMD_TYPE_PMD) {
 			/* Allocate new pmd */
-			if (!(pmd = alloc_pmd())) {
+			if (!(pmd = pmd_cap_alloc(&current->space->cap_list))) {
 				printk("FATAL: PMD allocation "
 				       "failed during system initialization\n");
 				BUG();
@@ -374,6 +365,9 @@ void idle_task(void)
 	while(1) {
 		/* Do maintenance */
 		tcb_delete_zombies();
+
+		/* Clear idle runnable flag */
+		per_cpu(scheduler).flags &= ~SCHED_RUN_IDLE;
 
 		schedule();
 	}

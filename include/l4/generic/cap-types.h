@@ -41,31 +41,6 @@
 	 (c)->type |= CAP_RTYPE_MASK & rtype;}
 
 /*
- * User-defined device-types
- * (Kept in the user field)
- */
-#define CAP_DEVTYPE_TIMER		1
-#define CAP_DEVTYPE_UART		2
-#define CAP_DEVTYPE_KEYBOARD           	3
-#define CAP_DEVTYPE_MOUSE              	4
-#define CAP_DEVTYPE_CLCD              	5
-#define CAP_DEVTYPE_OTHER		0xF
-#define CAP_DEVTYPE_MASK		0xFFFF
-#define CAP_DEVNUM_MASK			0xFFFF0000
-#define CAP_DEVNUM_SHIFT		16
-
-#define cap_is_devmem(c)		((c)->attr)
-#define cap_set_devtype(c, devtype)			\
-	{(c)->attr &= ~CAP_DEVTYPE_MASK;		\
-	 (c)->attr |= CAP_DEVTYPE_MASK & devtype;}
-#define cap_set_devnum(c, devnum)			\
-	{(c)->attr &= ~CAP_DEVNUM_MASK;		\
-	 (c)->attr |= CAP_DEVNUM_MASK & (devnum << CAP_DEVNUM_SHIFT);}
-#define cap_devnum(c)					\
-	(((c)->attr & CAP_DEVNUM_MASK) >> CAP_DEVNUM_SHIFT)
-#define cap_devtype(c)		((c)->attr & CAP_DEVTYPE_MASK)
-
-/*
  * Access permissions
  */
 

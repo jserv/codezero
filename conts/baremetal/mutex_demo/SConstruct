@@ -1,0 +1,57 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+#
+import os, shelve, sys
+from os.path import *
+
+CONTS_XXX = '../..'
+BAREMETAL_CONTS_XXX = '../../..'
+sys.path.append(CONTS_XXX)
+sys.path.append(BAREMETAL_CONTS_XXX)
+
+from scripts.config.projpaths import *
+from scripts.conts.containers import *
+from scripts.config.configuration import *
+
+config = configuration_retrieve()
+gcc_arch_flag = config.gcc_arch_flag
+
+cid = int(ARGUMENTS.get('cid', 0))
+cont = find_container_from_cid(cid)
+
+builddir = join(join(BUILDDIR, 'cont') + str(cid), cont.name)
+
+# linker.lds is generated either in conts/xxx or build/contx/include
+if cont.duplicate == 0:
+    linker_lds = join(builddir, 'include/linker.lds')
+else:
+    linker_lds = 'include/linker.lds'
+
+env = Environment(CC = config.toolchain_userspace + 'gcc',
+		          # We don't use -nostdinc because sometimes we need standard headers,
+		          # such as stdarg.h e.g. for variable args, as in printk().
+		          CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall',
+			                 '-Werror', '-march=' + gcc_arch_flag],
+		          LINKFLAGS = ['-nostdlib', '-T' + linker_lds, '-u_start'],
+		          ASFLAGS = ['-D__ASSEMBLY__'],
+                  PROGSUFFIX = '.elf', # The suffix to use for final executable
+                  ENV = {'PATH' : os.environ['PATH']}, # Inherit shell path
+                  LIBS = ['gcc', 'libl4', 'c-userspace', 'libdev-userspace',
+                          'libmem', 'gcc', 'c-userspace'],
+                  # libgcc.a - This is required for division routines.
+                  CPPPATH = ["#include", KERNEL_HEADERS, LIBL4_INCLUDE, LIBDEV_INCLUDE,
+                             LIBC_INCLUDE, LIBMEM_INCLUDE, join(builddir, 'include')],
+                  LIBPATH = [LIBL4_LIBPATH, LIBDEV_USER_LIBPATH, LIBC_LIBPATH, LIBMEM_LIBPATH],
+                  CPPFLAGS = '-include l4/config.h -include l4/macros.h \
+                              -include l4/types.h -include l4lib/macros.h')
+
+objs = SConscript('SConscript', exports = { 'env' : env },
+                   duplicate=0, build_dir = builddir)
+
+Depends(objs, join(PROJROOT, CONFIG_H))
+
+prog = env.Program(join(builddir, 'main.elf'), objs)
+Depends(prog, linker_lds)

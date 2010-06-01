@@ -52,4 +52,8 @@
 #define IRQ_KEYBOARD0           (SIC_IRQ_KEYBOARD + SIC_CHIP_OFFSET)
 #define IRQ_MOUSE0              (SIC_IRQ_MOUSE + SIC_CHIP_OFFSET)
 
+/* Range of IRQ numbers used by this platform */
+#define IRQ_RANGE_START         0
+#define IRQ_RANGE_END           63
+
 #endif /* __PLATFORM_IRQ_H__ */

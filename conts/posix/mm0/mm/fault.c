@@ -5,8 +5,8 @@
  */
 #include <vm_area.h>
 #include <task.h>
-#include <mm/alloc_page.h>
-#include <malloc/malloc.h>
+#include <mem/alloc_page.h>
+#include <mem/malloc.h>
 #include <l4/generic/space.h>
 #include <l4/api/errno.h>
 #include <string.h>

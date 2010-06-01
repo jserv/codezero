@@ -7,7 +7,7 @@
 #include <vm_area.h>
 #include <l4/macros.h>
 #include <l4/api/errno.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <globals.h>
 
 /* Global list of all in-memory files on the system */

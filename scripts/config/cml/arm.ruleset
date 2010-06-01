@@ -1,0 +1,290 @@
+start main_menu
+
+#############
+#  SYMBOLS  #
+#############
+symbols
+
+ARCH_ARM		'ARM'					text
+ARM architecture.
+
+Support for armv5, armv6, armv7 available.
+.
+
+arm_cpu_type		'ARM Processor Type'			text
+Select the type of arm cpu/processor to be used.
+.
+
+CPU_ARM1136		'ARM1136 - Experimental'		text
+ARMv6/ARM11 series based uniprocessor cpu.
+.
+
+CPU_ARM11MPCORE		'ARM11 MPCore - Experimental'		text
+ARMv6/ARM11 series based multiprocessor cpu.
+.
+
+CPU_ARM926		'ARM926EJ-S'				text
+ARMv5/ARM9 series based uniprocessor cpu.
+.
+
+CPU_CORTEXA8		'ARM Cortex-A8'				text
+ARMv7/Cortex series based uniprocessor cpu.
+.
+
+CPU_CORTEXA9            'ARM Cortex-A9'				text
+ARMv7/Cortex series based multiprocessor cpu.
+.
+
+arm_platform_type	'ARM Platform Type'			text
+Select the type of arm platform to be used.
+.
+
+PLATFORM_PB926		'PB926-Versatile Platform'		text
+ARMv5 based versatile-pb platform.
+.
+
+PLATFORM_EB		'Realview EB Platform'			text
+ARMv6 based realview-eb platform.
+Supported cpus:
+	ARM1136
+	ARM11MPCORE
+	Cortex-A8(Supported by qemu only)
+	Cortex-A9(Supported by RTSM/Models only)
+.
+
+PLATFORM_BEAGLE		'OMAP3530/Cortex-A8 Beagle Board'	text
+Texas Instrument's OMAP3530 based beagle board(rev C) platform.
+
+OMAP3530 is derived from armv7 based cortex-a8 cpu.
+.
+
+PLATFORM_PBA9		'Realview Express Cortex-A9'		text
+ARMv7 based realview-versatile-express quad-core platform.
+.
+
+main_menu		'Codezero Microkernel Configurator'
+
+arm_menu		'ARM Architecture Configuration'	text
+Configure arm architecture.
+.
+
+processor_properties	'Generic Processor Properties'		text
+Generic processor properties common to all types of processors supported.
+.
+
+kernel_generic_options	'Generic Kernel Properties'		text
+Generic kernel properties.
+.
+
+toolchain_menu		'Toolchain Prefix'			text
+Toolchains used for compiling kernel and user space.
+.
+
+containers_menu		'Container Setup'			text
+Select the number of containers and configure each container.
+.
+
+arch_type		'Main architecture'			text
+Select the type of architecture.
+.
+
+SMP_			'Enable SMP Support'			text
+Enable/Disable smp support.
+.
+
+NCPU			'Number of SMP CPUs'			text
+Configure the number of cpus in case of multiprocessor cores.
+
+Available only when smp is enabled.
+.
+
+DEBUG_ACCOUNTING	'Enable system operations accounting'	text
+Enable/Disable sytem operations accounting.
+
+By default operation accounting in kernel is enabled.
+To enable operation accounting in userspace enable DEBUG_PERFMON_USER.
+.
+
+DEBUG_PERFMON		'Enable performance monitoring'		text
+Enable/Disable system performance monitoring.
+.
+
+DEBUG_PERFMON_USER	'Userspace access to perfmon registers'	text
+Enable/Disable userspace access to processor's performance registers.
+Enabling this option will automatically disable in-kernel measurements.
+.
+
+DEBUG_SPINLOCKS		'Debug spinlocks'			text
+Enable/Disable spinlock debugging by the kernel.
+Eg: detect recursive locks, double unlocks etc.
+.
+
+SCHED_TICKS		'Scheduler ticks per second'		text
+Configure the number of ticks generated per second
+by the timer source of scheduler.
+.
+
+ICACHE_DISABLE		'Disable the L1 instruction cache'	text
+Enable/Disable usage of L1 instruction cache by the processor.
+.
+
+DCACHE_DISABLE		'Disable the L1 data cache'		text
+Enable/Disable usage of L1 data cache by the processor.
+.
+
+PREEMPT_DISABLE		'Disable Kernel Preemption'		text
+Enable/Disable premption of kernel.
+.
+
+TOOLCHAIN_USERSPACE	'Toolchain prefix for userspace'	text
+Toolchain used for compiling userspace libraries and container.
+
+Userspace is tested for an up-to-date codesourcery NONE-EABI-LINUX toolchain.
+
+To specify custom toolchain, use:
+	path/to/toolchain/toolchain-prefix
+.
+
+TOOLCHAIN_KERNEL     	'Toolchain prefix for kernel'		text
+Toolchain used for compiling kernel and loader.
+
+Kernel is tested for an up-to-date codesourcery EABI toolchain.
+To specify custom toolchain, use:
+	path/to/toolchain/toolchain-prefix
+.
+
+CAPABILITIES		'Enable capability checking'		text
+Enable/Disable capability checking by kernel.
+.
+
+#############
+#  CHOICES  #
+#############
+
+choices arch_type
+	ARCH_ARM
+	default ARCH_ARM
+
+choices arm_platform_type
+        PLATFORM_PB926
+	PLATFORM_PBA9
+	PLATFORM_BEAGLE
+	PLATFORM_EB
+        default PLATFORM_PBA9
+
+choices arm_cpu_type
+	CPU_ARM926
+	CPU_ARM1136
+	CPU_ARM11MPCORE
+	CPU_CORTEXA8
+	CPU_CORTEXA9
+        default CPU_CORTEXA9
+
+#############
+#   MENUS   #
+#############
+
+menu arm_menu
+	arm_platform_type
+	arm_cpu_type
+
+menu processor_properties
+	SMP_
+	NCPU%
+	ICACHE_DISABLE
+	DCACHE_DISABLE
+
+menu kernel_generic_options
+	PREEMPT_DISABLE
+	DEBUG_ACCOUNTING
+	DEBUG_PERFMON
+	DEBUG_PERFMON_USER
+	DEBUG_SPINLOCKS
+	SCHED_TICKS%
+
+menu toolchain_menu
+	TOOLCHAIN_USERSPACE$
+	TOOLCHAIN_KERNEL$
+
+menu main_menu
+	arch_type
+	arm_menu
+	processor_properties
+	kernel_generic_options
+	toolchain_menu
+	containers_menu
+
+#############
+#   RULES   #
+#############
+#Capability/Container rules:
+default CAPABILITIES from y
+default DEBUG_ACCOUNTING from n
+default DEBUG_PERFMON from n
+default DEBUG_PERFMON_USER from n
+default DEBUG_SPINLOCKS from n
+default SCHED_TICKS from 1000
+derive DEBUG_PERFMON_KERNEL from DEBUG_PERFMON == y and DEBUG_PERFMON_USER != y
+
+#Subarch Derivation Rules
+derive SUBARCH_V5 from CPU_ARM926
+
+derive SUBARCH_V6 from CPU_ARM1136 or
+		       CPU_ARM11MPCORE
+
+derive SUBARCH_V7 from CPU_CORTEXA8 or
+		       CPU_CORTEXA9
+
+#CPU rules:
+unless PLATFORM_PB926                          suppress        CPU_ARM926
+unless PLATFORM_EB			       suppress        CPU_ARM11MPCORE
+unless PLATFORM_EB                             suppress        CPU_ARM1136
+unless PLATFORM_PBA9 or PLATFORM_EB            suppress        CPU_CORTEXA9
+unless PLATFORM_BEAGLE or PLATFORM_EB          suppress        CPU_CORTEXA8
+
+#SMP support rules
+unless CPU_CORTEXA9 or CPU_ARM11MPCORE suppress SMP_
+unless CPU_CORTEXA9 or CPU_ARM11MPCORE suppress NCPU
+unless SMP_ suppress NCPU
+unless DEBUG_ACCOUNTING suppress DEBUG_PERFMON
+				 DEBUG_PERFMON_USER
+unless DEBUG_PERFMON suppress DEBUG_PERFMON_USER
+
+# NOTE: Unlike menus, choices dont take { sym } model of visibility
+# dependencies. Instead, a choice symbol is declared in a menu, and
+# suppress statement is used to make sym visible, instead of a
+# { sym } model under the choices. (See manual for { sym } usage).
+
+unless ARCH_ARM suppress arm_menu
+
+#SMP default value
+default SMP_ from y
+default NCPU from 4
+default ICACHE_DISABLE from n
+default DCACHE_DISABLE from n
+default PREEMPT_DISABLE from n
+
+require NCPU <= 4
+
+# Derive Ram base address depending on platform selected
+# we use this in setting containers physical regions
+# default values
+# FIXME: Find a better solution
+derive RAM_BASE_PLAT from  PLATFORM_BEAGLE ? 0x80000000 : 0x00000000
+
+# Toolchains:
+default TOOLCHAIN_USERSPACE from 'arm-none-linux-gnueabi-'
+default TOOLCHAIN_KERNEL from 'arm-none-eabi-'
+
+prefix CONFIG_
+
+# Checklist for correct CML2
+# 1) Have you defined a prompt for each menu, choice_type?
+# 2) Have you defined a default for each symbol?
+# 3) Have you put 'symbols' keyword before each symbol, menu and choice?
+
+
+# Important note on derived symbols
+# DO NOT place any declaration for derived symbols like normal symbols,
+# otherwise the derivation will be silently ignored, and you will be left
+# wondering why.

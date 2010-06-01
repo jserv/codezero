@@ -15,6 +15,9 @@
 #define	PLATFORM_PHYS_MEM_START			0x00000000 /* inclusive */
 #define	PLATFORM_PHYS_MEM_END			0x10000000 /* 256 MB, exclusive */
 
+#define PLATFORM_DEVICES_START			0x10000000 /* System registers */
+#define PLATFORM_DEVICES_END			0x20000000 /* System regs end */ 
+
 /*
  * Device offsets in physical memory
  * Naming of devices done starting with 0 subscript,

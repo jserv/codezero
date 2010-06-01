@@ -12,7 +12,7 @@
 #include L4LIB_INC_ARCH(syscalls.h)
 #include <l4/generic/cap-types.h>	/* TODO: Move this to API */
 #include L4LIB_INC_ARCH(syslib.h)
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <user.h>
 
 /* Capability descriptor list */
@@ -33,6 +33,7 @@ void cap_list_print(struct cap_list *cap_list)
 	printf("\n");
 }
 
+#if 0
 #define PAGER_TOTAL_MUTEX		5
 int setup_children_mutex(int total_caps, struct cap_list *cap_list)
 {
@@ -237,13 +238,16 @@ found:
 
 	return 0;
 }
+#endif
 
+#if 0
 int setup_children_caps(int total_caps, struct cap_list *cap_list)
 {
 	setup_children_ipc(total_caps, cap_list);
 	setup_children_mutex(total_caps, cap_list);
 	return 0;
 }
+#endif
 
 /* Copy all init-memory allocated capabilities */
 void copy_boot_capabilities(int ncaps)
@@ -283,6 +287,8 @@ int cap_read_all()
 	}
 	total_caps = ncaps;
 
+	printf("%s: Total of %d capabilities.\n", __FUNCTION__, total_caps);
+
 	/* Allocate array of caps from boot memory */
 	caparray = alloc_bootmem(sizeof(struct capability) * ncaps, 0);
 
@@ -299,7 +305,7 @@ int cap_read_all()
 	/* Copy them to real allocated structures */
 	copy_boot_capabilities(ncaps);
 
-	// cap_list_print(&capability_list);
+//	cap_list_print(&capability_list);
 
 	memset(&cont_mem_regions, 0, sizeof(cont_mem_regions));
 
@@ -371,12 +377,29 @@ int cap_read_all()
 	    !cont_mem_regions.utcb ||
 	    !cont_mem_regions.physmem ||
 	    !cont_mem_regions.pager) {
-		printf("%s: Error, pager does not have one of the required"
+		printf("%s: Error, pager does not have one of the required "
 	 	       "mem capabilities defined. (TASK, SHM, PHYSMEM, UTCB, PAGER)\n",
 		       __TASKNAME__);
-		printf("%p, %p, %p, %p, %p\n", cont_mem_regions.task,
-		       cont_mem_regions.shmem, cont_mem_regions.utcb,
-		       cont_mem_regions.physmem, cont_mem_regions.pager);
+		if (cont_mem_regions.task) {
+			printf("task start: %lx\n", cont_mem_regions.task->start << 12);
+			printf("task end: %lx\n", cont_mem_regions.task->end << 12);
+		}
+		if (cont_mem_regions.shmem) {
+			printf("shmem start: %lx\n", cont_mem_regions.shmem->start << 12);
+			printf("shmem end: %lx\n", cont_mem_regions.shmem->end << 12);
+		}
+		if (cont_mem_regions.physmem) {
+			printf("physmem start: %lx\n", cont_mem_regions.physmem->start << 12);
+			printf("physmem end: %lx\n", cont_mem_regions.physmem->end << 12);
+		}
+		if (cont_mem_regions.utcb) {
+			printf("utcb start: %lx\n", cont_mem_regions.utcb->start << 12);
+			printf("utcb end: %lx\n", cont_mem_regions.utcb->end << 12);
+		}
+		if (cont_mem_regions.pager) {
+			printf("pager start: %lx\n", cont_mem_regions.pager->start << 12);
+			printf("pager end: %lx\n", cont_mem_regions.pager->end << 12);
+		}
 		BUG();
 	}
 
@@ -386,9 +409,10 @@ int cap_read_all()
 void setup_caps()
 {
 	cap_read_all();
-	setup_children_caps(total_caps, &capability_list);
+//	setup_children_caps(total_caps, &capability_list);
 }
 
+#if 0
 /*
  * Find our own, widened replicable capability of same type as given,
  * replicate, reduce and grant as described with given parameters.
@@ -560,4 +584,6 @@ int sys_request_cap(struct tcb *task, struct capability *__cap_userptr)
 out:
 	return ret;
 }
+
+#endif
 

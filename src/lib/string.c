@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2010 B Labs Ltd.
+ * Copyright (C) 2008-2010 B Labs Ltd.
  */
 
 void *_memset(void *p, int c, int size);

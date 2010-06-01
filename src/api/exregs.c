@@ -61,10 +61,6 @@ void exregs_write_registers(struct ktcb *task, struct exregs_data *exregs)
 		context->pc = exregs->context.pc;
 
 flags:
-	/* Set thread's pager if one is supplied */
-	if (exregs->flags & EXREGS_SET_PAGER)
-		task->pagerid = exregs->pagerid;
-
 	/* Set thread's utcb if supplied */
 	if (exregs->flags & EXREGS_SET_UTCB) {
 		task->utcb_address = exregs->utcb_address;
@@ -122,7 +118,7 @@ void exregs_read_registers(struct ktcb *task, struct exregs_data *exregs)
 flags:
 	/* Read thread's pager if pager flag supplied */
 	if (exregs->flags & EXREGS_SET_PAGER)
-		exregs->pagerid = task->pagerid;
+		exregs->pagerid = tcb_pagerid(task);
 
 	/* Read thread's utcb if utcb flag supplied */
 	if (exregs->flags & EXREGS_SET_UTCB)
@@ -183,7 +179,7 @@ int sys_exchange_registers(struct exregs_data *exregs, l4id_t tid)
 	 * be the pagers making the call on themselves.
 	 */
 	if (task->state != TASK_INACTIVE && exregs->valid_vect &&
-	    current != task && task->pagerid != current->tid) {
+	    current != task && tcb_pagerid(task) != current->tid) {
 		err = -EACTIVE;
 		goto out;
 	}

@@ -19,8 +19,8 @@ PROJRELROOT = '../../../../'
 
 sys.path.append(os.path.abspath(PROJRELROOT))
 
-from config.projpaths import *
-from config.configuration import *
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
 from tools.pyelf import elf
 
 config = configuration_retrieve()

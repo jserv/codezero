@@ -48,10 +48,8 @@ int sys_map(unsigned long phys, unsigned long virt,
 	if ((err = cap_map_check(target, phys, virt, npages, flags)) < 0)
 		return err;
 
-	add_mapping_pgd(phys, virt, npages << PAGE_BITS,
-			flags, TASK_PGD(target));
-
-	return 0;
+	return add_mapping_space(phys, virt, npages << PAGE_BITS,
+				 flags, target->space);
 }
 
 /*
@@ -74,8 +72,8 @@ int sys_unmap(unsigned long virtual, unsigned long npages, unsigned int tid)
 		return ret;
 
 	for (int i = 0; i < npages; i++) {
-		ret = remove_mapping_pgd(TASK_PGD(target),
-					 virtual + i * PAGE_SIZE);
+		ret = remove_mapping_space(target->space,
+					   virtual + i * PAGE_SIZE);
 		if (ret)
 			retval = ret;
 	}

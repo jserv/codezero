@@ -60,16 +60,6 @@ void init_smp(void)
 	}
 }
 
-void secondary_setup_idle_task(void)
-{
-	/* This also has its spid allocated by primary */
-	current->space = &init_space;
-	TASK_PGD(current) = &init_pgd;
-
-	/* We need a thread id */
-	current->tid = id_new(&kernel_resources.ktcb_ids);
-}
-
 /*
  * Idle wait before any tasks become available for running.
  *
@@ -85,15 +75,12 @@ void sched_secondary_start(void)
 	while (!secondary_run_signal)
 		dmb();
 
-	secondary_setup_idle_task();
-
-	setup_idle_caps();
+	secondary_idle_task_init();
 
 	idle_task();
 
 	BUG();
 }
-
 
 /*
  * this is where it jumps from secondary_start(), which is called from

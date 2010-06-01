@@ -9,7 +9,7 @@
 #include L4LIB_INC_ARCH(utcb.h)
 #include <mmap.h>
 #include <utcb.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <vm_area.h>
 #include <memory.h>
 

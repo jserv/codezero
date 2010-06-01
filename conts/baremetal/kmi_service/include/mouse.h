@@ -9,7 +9,8 @@
  */
 struct mouse {
 	unsigned long base;	/* Virtual base address */
-	struct capability cap;  /* Capability describing keyboard */
+	unsigned long phys_base;  /* Physical address of device */
+	int irq_no;	/* IRQ number of device */
 };
 
 #endif /* __MOUSE_H__ */

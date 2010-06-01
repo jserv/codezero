@@ -117,7 +117,7 @@ fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far, u32 ipc_tag)
 	tcb_set_ipc_flags(current, IPC_FLAGS_SHORT);
 
 	/* Detect if a pager is self-faulting */
-	if (current->tid == current->pagerid) {
+	if (current == current->pager) {
 		printk("Pager (%d) faulted on itself. "
 		       "FSR: 0x%x, FAR: 0x%x, PC: 0x%x pte: 0x%x CPU%d Exiting.\n",
 		       current->tid, fault->fsr, fault->far,
@@ -126,8 +126,8 @@ fault_ipc_to_pager(u32 faulty_pc, u32 fsr, u32 far, u32 ipc_tag)
 	}
 
 	/* Send ipc to the task's pager */
-	if ((err = ipc_sendrecv(current->pagerid,
-				current->pagerid, 0)) < 0) {
+	if ((err = ipc_sendrecv(tcb_pagerid(current),
+				tcb_pagerid(current), 0)) < 0) {
 			BUG_ON(current->nlocks);
 
 		/* Return on interrupt */

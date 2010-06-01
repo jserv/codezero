@@ -8,6 +8,7 @@
 
 #include <l4/api/exregs.h>
 #include <l4/api/capability.h>
+#include <l4/lib/printk.h>
 
 /*
  * Some resources that capabilities possess don't
@@ -21,15 +22,11 @@
 
 
 struct cap_list {
-	int ktcb_refs;
 	int ncaps;
 	struct link caps;
 };
 
 void capability_init(struct capability *cap);
-struct capability *capability_create(void);
-struct capability *boot_capability_create(void);
-
 
 static inline void cap_list_init(struct cap_list *clist)
 {
@@ -94,14 +91,13 @@ struct task_ids;
 /* Capability checking for quantitative capabilities */
 int capability_consume(struct capability *cap, int quantity);
 int capability_free(struct capability *cap, int quantity);
-struct capability *capability_find_by_rtype(struct ktcb *task,
-					    unsigned int rtype);
+struct capability *cap_find_by_rtype(struct ktcb *task,
+				     unsigned int rtype);
 int cap_count(struct ktcb *task);
 struct capability *cap_list_find_by_rtype(struct cap_list *clist,
 					  unsigned int rtype);
-struct capability *cap_find_by_capid(l4id_t capid, struct cap_list **clist);
 
-/* Capability checking on system calls */
+/* Capability checking on systm calls */
 int cap_map_check(struct ktcb *task, unsigned long phys, unsigned long virt,
 		  unsigned long npages, unsigned int flags);
 int cap_unmap_check(struct ktcb *task, unsigned long virt,

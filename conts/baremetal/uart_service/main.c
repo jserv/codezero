@@ -6,6 +6,7 @@
 #include L4LIB_INC_ARCH(syscalls.h)
 #include <l4lib/exregs.h>
 #include <l4lib/lib/addr.h>
+#include <l4lib/lib/cap.h>
 #include <l4lib/ipcdefs.h>
 #include <l4/api/errno.h>
 #include <l4/api/capability.h>
@@ -14,42 +15,16 @@
 #include <container.h>
 #include <linker.h>
 #include <uart.h>
-#include <libdev/uart.h>
+#include <dev/uart.h>
+#include <dev/platform.h>
 
 /* Capabilities of this service */
-static struct capability caparray[32];
+static struct capability *caparray;
 static int total_caps = 0;
 
 /* Number of UARTS to be managed by this service */
 #define UARTS_TOTAL             1
 static struct uart uart[UARTS_TOTAL];
-
-int cap_read_all()
-{
-	int ncaps;
-	int err;
-
-	/* Read number of capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
-					 0, &ncaps)) < 0) {
-		printf("l4_capability_control() reading # of"
-		       " capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_NCAPS request.\n");
-		BUG();
-	}
-	total_caps = ncaps;
-
-	/* Read all capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_READ,
-					 0, caparray)) < 0) {
-		printf("l4_capability_control() reading of "
-		       "capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_READ_CAPS request.\n");
-		BUG();
-	}
-
-	return 0;
-}
 
 int cap_share_all_with_space()
 {
@@ -66,48 +41,23 @@ int cap_share_all_with_space()
 	return 0;
 }
 
-/*
- * Scans for up to UARTS_TOTAL uart devices in capabilities.
- */
-int uart_probe_devices(void)
-{
-	int uarts = 0;
-
-	/* Scan for uart devices */
-	for (int i = 0; i < total_caps; i++) {
-		/* Match device type */
-		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_UART) {
-			/* Copy to correct device index */
-			memcpy(&uart[cap_devnum(&caparray[i]) - 1].cap,
-			       &caparray[i], sizeof(uart[0].cap));
-			uarts++;
-		}
-	}
-
-	if (uarts != UARTS_TOTAL) {
-		printf("%s: Error, not all uarts could be found. "
-		       "total uarts=%d\n", __CONTAINER_NAME__, uarts);
-		return -ENODEV;
-	}
-	return 0;
-}
-
 static struct uart uart[UARTS_TOTAL];
 
 int uart_setup_devices(void)
 {
+	uart[0].phys_base = PLATFORM_UART1_BASE;
+
 	for (int i = 0; i < UARTS_TOTAL; i++) {
 		/* Get one page from address pool */
 		uart[i].base = (unsigned long)l4_new_virtual(1);
 
 		/* Map uart to a virtual address region */
-		if (IS_ERR(l4_map((void *)__pfn_to_addr(uart[i].cap.start),
-				  (void *)uart[i].base, uart[i].cap.size,
+		if (IS_ERR(l4_map((void *)uart[i].phys_base,
+				  (void *)uart[i].base, 1,
 				  MAP_USR_IO, self_tid()))) {
 			printf("%s: FATAL: Failed to map UART device "
-			       "%d to a virtual address\n",
-			       __CONTAINER_NAME__,
-			       cap_devnum(&uart[i].cap));
+			       "to a virtual address\n",
+			       __CONTAINER_NAME__);
 			BUG();
 		}
 
@@ -246,67 +196,22 @@ void handle_requests(void)
 	}
 }
 
-/*
- * UTCB-size aligned utcb.
- *
- * BIG WARNING NOTE:
- * This in-place declaration is legal if we are running
- * in a disjoint virtual address space, where the utcb
- * declaration lies in a unique virtual address in
- * the system.
- */
-#define DECLARE_UTCB(name) \
-	struct utcb name ALIGN(sizeof(struct utcb))
-
-DECLARE_UTCB(utcb);
-
-/* Set up own utcb for ipc */
-int l4_utcb_setup(void *utcb_address)
-{
-	struct task_ids ids;
-	struct exregs_data exregs;
-	int err;
-
-	l4_getid(&ids);
-
-	/* Clear utcb */
-	memset(utcb_address, 0, sizeof(struct utcb));
-
-	/* Setup exregs for utcb request */
-	memset(&exregs, 0, sizeof(exregs));
-	exregs_set_utcb(&exregs, (unsigned long)utcb_address);
-
-	if ((err = l4_exchange_registers(&exregs, ids.tid)) < 0)
-		return err;
-
-	return 0;
-}
-
 void main(void)
 {
-	int err;
-
 	/* Read all capabilities */
-	cap_read_all();
+	caps_read_all();
+
+	total_caps = cap_get_count();
+	caparray = cap_get_all();
 
 	/* Share all with space */
 	cap_share_all_with_space();
-
-	/* Scan for uart devices in capabilities */
-	uart_probe_devices();
 
 	/* Initialize virtual address pool for uarts */
 	init_vaddr_pool();
 
 	/* Map and initialize uart devices */
 	uart_setup_devices();
-
-	/* Setup own utcb */
-	if ((err = l4_utcb_setup(&utcb)) < 0) {
-		printf("FATAL: Could not set up own utcb. "
-		       "err=%d\n", err);
-		BUG();
-	}
 
 	/* Listen for uart requests */
 	while (1)

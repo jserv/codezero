@@ -11,7 +11,7 @@
  */
 struct uart {
 	unsigned long base; /* VMA where uart will be mapped */
-	struct capability cap;  /* Capability describing uart */
+	unsigned long phys_base;
 };
 
 #endif /* __UART_SERVICE_H__ */

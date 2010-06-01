@@ -1,7 +1,21 @@
+
 Import('env')
 
-# The set of source files associated with this SConscript file.
-src_local = ['timer.c']
-obj = env.Object(src_local)
+from scripts.config.projpaths import *
+from scripts.config.config_invoke import *
 
+config = configuration_retrieve()
+platform = config.platform
+
+# Platforms using sp804 timer
+plat_list = ('eb', 'pba9', 'pb926')
+
+# The set of source files associated with this SConscript file.
+src_local = []
+
+for plat_supported in plat_list:
+    if plat_supported == platform:
+        src_local += ['timer.c']
+
+obj = env.Object(src_local)
 Return('obj')

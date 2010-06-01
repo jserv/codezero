@@ -11,12 +11,8 @@ from os.path import join
 PROJRELROOT = "../.."
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 
-from config.projpaths import *
-from config.configuration import *
-
-#config = configuration_retrieve()
-#cpu = config.cpu
-#platform = config.platform
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
 
 # Mapping between system configuration and qemu flags
 #           Platform         CPU           qemu "-M" flag          qemu "-cpu" flag
@@ -26,13 +22,12 @@ map_list = (['EB',          'ARM1136',      'realview-eb',          'arm1136'],
             ['EB',          'CORTEXA9',     'realview-pbx-a9',      'cortex-a9'],
             ['PB926',       'ARM926',       'versatilepb',          'arm926'],
             ['BEAGLE',      'CORTEXA8',     'beagle',               'cortex-a8'],
-            ['PBA9',        'CORTEXA9',     'realview-pbx-a9',      'cortex-a9'],
-            ['PBA8',        'CORTEXA8',     'realview-pb-a8',       'cortex-a8'])
+            ['PBA9',        'CORTEXA9',     'realview-vx-a9',       'cortex-a9'])
 
 data_up = \
 '''
 cd build
-qemu-system-arm -s -S -kernel final.elf -nographic -M %s -cpu %s &
+qemu-system-arm -s -S -kernel final.elf -M %s -cpu %s %s &
 arm-none-insight ; pkill qemu-system-arm
 cd ..
 '''
@@ -40,15 +35,15 @@ cd ..
 data_smp = \
 '''
 cd build
-qemu-system-arm -s -S -kernel final.elf -smp %d -nographic -M %s -cpu %s &
+qemu-system-arm -s -S -kernel final.elf -smp %d -M %s -cpu %s %s &
 arm-none-insight ; pkill qemu-system-arm
 cd ..
 '''
 
-def build_qemu_cmdline_script():
-    build_tools_folder = 'tools'
-    qemu_cmd_file = join(build_tools_folder, 'run-qemu-insight')
+# File to be generated with qemu commandline
+qemu_cmd_file = join(TOOLSDIR, 'run-qemu-insight')
 
+def build_qemu_cmdline_script():
     # Get system selected platform and cpu
     config = configuration_retrieve()
     cpu = config.cpu.upper()
@@ -67,21 +62,33 @@ def build_qemu_cmdline_script():
         print 'Qemu flags not found'
         sys.exit(1)
 
-    if os.path.exists(build_tools_folder) is False:
-        os.system("mkdir " + build_tools_folder)
-
     # Special case for EB+A9(non-smp)
     if platform == 'EB' and cpu == 'CORTEXA9' and smp == False:
         mflag = 'realview-eb'
 
+    # Check if we CLCD is selected, otherwise use -nographic
+    clcd = None
+    for sym0, sym1 in config.all:
+	    parts = sym0.split("_", )
+	    if len(parts) >= 5 and parts[3] == 'DEVICE' and \
+	       parts[4][:len("CLCD")] == "CLCD":
+			clcd = '-serial stdio'
+    if not clcd:
+	    clcd = '-nographic'
+
     # Write run-qemu-insight file
     with open(qemu_cmd_file, 'w+') as f:
         if smp == False:
-            f.write(data_up % (mflag, cpuflag))
+            f.write(data_up % (mflag, cpuflag, clcd))
         else:
-            f.write(data_smp % (ncpu, mflag, cpuflag))
+            f.write(data_smp % (ncpu, mflag, cpuflag, clcd))
 
     os.system("chmod +x " + qemu_cmd_file)
+    return None
+
+def clean_qemu_cmdline_script():
+    os.system('rm -f ' + qemu_cmd_file)
+    return None
 
 if __name__ == "__main__":
     build_qemu_cmdline_script()

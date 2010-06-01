@@ -1,0 +1,39 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- Virtualization microkernel for embedded systems.
+#
+#  Copyright © 2009 B Labs Ltd
+#
+import os, sys
+from os.path import *
+
+PROJRELROOT = '../..'
+sys.path.append(PROJRELROOT)
+
+from scripts.config.config_invoke import *
+
+config = configuration_retrieve()
+gcc_arch_flag = config.gcc_arch_flag
+
+builddir = join(BUILDDIR, USERLIBS_RELDIR)
+
+env = Environment(CC = config.toolchain_userspace + 'gcc',
+		          AR = config.toolchain_userspace + 'ar',
+		          RANLIB = config.toolchain_userspace + 'ranlib',
+                  # We don't use -nostdinc because sometimes we need standard headers,
+                  # such as stdarg.h e.g. for variable args, as in printk().
+                  CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99', '-Wall',
+                             '-Werror', '-march=' + gcc_arch_flag],
+                  LINKFLAGS = ['-nostdlib'],
+                  ASFLAGS = ['-D__ASSEMBLY__', '-march=' + gcc_arch_flag],
+                  ENV = {'PATH' : os.environ['PATH']},
+                  LIBS = 'gcc',	# libgcc.a - Required for division routines.
+                  CPPPATH = KERNEL_HEADERS,
+                  CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
+
+# Set the build directory for this source tree
+VariantDir(builddir, os.getcwd())
+
+SConscript('SConscript', duplicate = 0,
+           exports = { 'env' : env, 'build_dir' : builddir })
+

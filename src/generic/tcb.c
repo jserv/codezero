@@ -34,8 +34,6 @@ void tcb_init(struct ktcb *new)
 
 	spin_lock_init(&new->thread_lock);
 
-	cap_list_init(&new->cap_list);
-
 	/* Initialise task's scheduling state and parameters. */
 	sched_init_task(new, TASK_PRIO_NORMAL);
 
@@ -51,7 +49,7 @@ struct ktcb *tcb_alloc_init(l4id_t cid)
 	struct ktcb *tcb;
 	struct task_ids ids;
 
-	if (!(tcb = alloc_ktcb()))
+	if (!(tcb = ktcb_cap_alloc(&current->space->cap_list)))
 		return 0;
 
 	ids.tid = id_new(&kernel_resources.ktcb_ids);
@@ -66,9 +64,14 @@ struct ktcb *tcb_alloc_init(l4id_t cid)
 	return tcb;
 }
 
-void tcb_delete(struct ktcb *tcb)
+/*
+ * Deletes tcb but moves capability list to struct pager
+ * Also the last child wakes up the pager which is absent here.
+ */
+void tcb_delete_pager(struct ktcb *tcb)
 {
-	struct ktcb *pager, *acc_task;
+	struct cap_list *pager_cap_list =
+		&tcb->container->pager->cap_list;
 
 	/* Sanity checks first */
 	BUG_ON(!is_page_aligned(tcb));
@@ -83,15 +86,7 @@ void tcb_delete(struct ktcb *tcb)
 	BUG_ON(tcb->nlocks);
 	BUG_ON(tcb->waiting_on);
 	BUG_ON(tcb->wq);
-
-	/* Remove from zombie list */
-	list_remove(&tcb->task_list);
-
-	/* Determine task to account deletions */
-	if (!(pager = tcb_find(tcb->pagerid)))
-		acc_task = current;
-	else
-		acc_task = pager;
+	BUG_ON(tcb->nchild);
 
 	/*
 	 * NOTE: This protects single threaded space
@@ -101,19 +96,69 @@ void tcb_delete(struct ktcb *tcb)
 	 * traversal would be needed to ensure list is
 	 * still there.
 	 */
-	mutex_lock(&tcb->container->space_list.lock);
-	mutex_lock(&tcb->space->lock);
+	spin_lock(&tcb->container->space_list.lock);
+	spin_lock(&tcb->space->lock);
+	BUG_ON(--tcb->space->ktcb_refs != 0);
+
+	address_space_remove(tcb->space, tcb->container);
+
+	cap_list_move(pager_cap_list, &tcb->space->cap_list);
+
+	spin_unlock(&tcb->space->lock);
+	spin_unlock(&tcb->container->space_list.lock);
+
+	address_space_delete(tcb->space, pager_cap_list);
+
+	/* Clear container id part */
+	tcb->tid &= ~TASK_CID_MASK;
+
+	/* Deallocate tcb ids */
+	id_del(&kernel_resources.ktcb_ids, tcb->tid);
+
+	/* Free the tcb */
+	ktcb_cap_free(tcb, pager_cap_list);
+}
+
+void tcb_delete(struct ktcb *tcb)
+{
+	struct ktcb *pager = tcb->pager;
+
+	/* Sanity checks first */
+	BUG_ON(!is_page_aligned(tcb));
+	BUG_ON(tcb->wqh_pager.sleepers > 0);
+	BUG_ON(tcb->wqh_send.sleepers > 0);
+	BUG_ON(tcb->wqh_recv.sleepers > 0);
+	BUG_ON(tcb->affinity != current->affinity);
+	BUG_ON(tcb->state != TASK_INACTIVE);
+	BUG_ON(!list_empty(&tcb->rq_list));
+	BUG_ON(tcb->rq);
+	BUG_ON(tcb == current);
+	BUG_ON(tcb->nlocks);
+	BUG_ON(tcb->waiting_on);
+	BUG_ON(tcb->wq);
+	BUG_ON(tcb->nchild);
+
+	/*
+	 * NOTE: This protects single threaded space
+	 * deletion against space modification.
+	 *
+	 * If space deletion were multi-threaded, list
+	 * traversal would be needed to ensure list is
+	 * still there.
+	 */
+	spin_lock(&tcb->container->space_list.lock);
+	spin_lock(&tcb->space->lock);
 	BUG_ON(--tcb->space->ktcb_refs < 0);
 
 	/* No refs left for the space, delete it */
 	if (tcb->space->ktcb_refs == 0) {
 		address_space_remove(tcb->space, tcb->container);
-		mutex_unlock(&tcb->space->lock);
-		address_space_delete(tcb->space, acc_task);
-		mutex_unlock(&tcb->container->space_list.lock);
+		spin_unlock(&tcb->space->lock);
+		spin_unlock(&tcb->container->space_list.lock);
+		address_space_delete(tcb->space, &tcb->pager->space->cap_list);
 	} else {
-		mutex_unlock(&tcb->space->lock);
-		mutex_unlock(&tcb->container->space_list.lock);
+		spin_unlock(&tcb->space->lock);
+		spin_unlock(&tcb->container->space_list.lock);
 	}
 
 	/* Clear container id part */
@@ -123,7 +168,17 @@ void tcb_delete(struct ktcb *tcb)
 	id_del(&kernel_resources.ktcb_ids, tcb->tid);
 
 	/* Free the tcb */
-	free_ktcb(tcb, acc_task);
+	ktcb_cap_free(tcb, &tcb->pager->space->cap_list);
+
+	/* Reduce child count after freeing tcb, so that
+	 * pager does not release capabilities until then */
+	spin_lock(&pager->thread_lock);
+	BUG_ON(pager->nchild-- < 0);
+	spin_unlock(&pager->thread_lock);
+
+	/* Wake up pager if this was the last child */
+	if (pager->nchild == 0)
+		wake_up(&pager->wqh_pager, 0);
 }
 
 struct ktcb *tcb_find_by_space(l4id_t spid)
@@ -248,13 +303,30 @@ void tcb_delete_zombies(void)
 	struct ktcb_list *ktcb_list =
 		&per_cpu(kernel_resources.zombie_list);
 
-	/* Traverse the per-cpu zombie list */
+	/* Lock and traverse the per-cpu zombie list */
 	spin_lock(&ktcb_list->list_lock);
 	list_foreach_removable_struct(zombie, n,
 				      &ktcb_list->list,
-				      task_list)
-		/* Delete all zombies one by one */
-		tcb_delete(zombie);
+				      task_list) {
+		/* Lock zombie */
+		spin_lock(&zombie->thread_lock);
+
+		/* Remove from zombie list */
+		list_remove(&zombie->task_list);
+
+		/* Unlock all locks */
+		spin_unlock(&zombie->thread_lock);
+		spin_unlock(&ktcb_list->list_lock);
+
+		/* Delete zombie as lock-free */
+		if (thread_is_pager(zombie))
+			tcb_delete_pager(zombie);
+		else
+			tcb_delete(zombie);
+
+		/* Lock back the list */
+		spin_lock(&ktcb_list->list_lock);
+	}
 	spin_unlock(&ktcb_list->list_lock);
 }
 
@@ -367,10 +439,16 @@ int tcb_check_and_lazy_map_utcb(struct ktcb *task, int page_in)
 				 * Update it with privileged flags,
 				 * so that only kernel can access.
 				 */
-				add_mapping_pgd(phys, page_align(task->utcb_address),
-						page_align_up(UTCB_SIZE),
-						MAP_KERN_RW,
-						TASK_PGD(current));
+				if ((ret = add_mapping_use_cap(phys,
+						      		page_align(task->utcb_address),
+						      		page_align_up(UTCB_SIZE),
+						      		MAP_KERN_RW,
+						      		current->space,
+						      		&task->space->cap_list)) < 0) {
+					printk("Warning: Irq owner thread is "
+					       "out of pmds. ret=%d\n", ret);
+					return ret;
+				}
 			}
 			BUG_ON(!phys);
 		}

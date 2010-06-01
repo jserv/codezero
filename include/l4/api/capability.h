@@ -12,26 +12,6 @@
 /* Capability syscall request types */
 #define CAP_CONTROL_NCAPS		0x00000000
 #define CAP_CONTROL_READ		0x00000001
-#define CAP_CONTROL_SHARE		0x00000002
-#define CAP_CONTROL_GRANT		0x00000003
-#define CAP_CONTROL_REPLICATE		0x00000004
-#define CAP_CONTROL_SPLIT		0x00000005
-#define CAP_CONTROL_DEDUCE		0x00000006
-#define CAP_CONTROL_DESTROY		0x00000007
-
-#define CAP_SHARE_MASK			0x0000000F
-#define CAP_SHARE_SINGLE		0x00000001
-#define CAP_SHARE_ALL_CONTAINER		0x00000002
-#define CAP_SHARE_ALL_SPACE		0x00000003
-
-#define CAP_GRANT_MASK			0x0000000F
-#define CAP_GRANT_SINGLE		0x00000001
-#define CAP_GRANT_IMMUTABLE		0x00000004
-
-#define CAP_SPLIT_MASK			0x0000000F
-#define CAP_SPLIT_SIZE			0x00000001
-#define CAP_SPLIT_ACCESS		0x00000002
-#define CAP_SPLIT_RANGE			0x00000003 /* Returns -EPERM */
 
 /*
  * A capability is a unique representation of security
@@ -87,10 +67,6 @@ struct capability {
 
 	/* Use count of resource */
 	unsigned long used;
-
-	/* Device attributes, if this is a device. */
-	unsigned int attr;
-	l4id_t irq;
 };
 
 #endif /* __API_CAPABILITY_H__ */

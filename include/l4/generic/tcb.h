@@ -70,6 +70,12 @@ struct task_ids {
 
 struct container;
 
+#define tcb_pagerid(tcb)	((tcb)->pager->tid)
+
+#define space_is_pager(tcb)	\
+	((tcb)->space->spid == (tcb)->pager->space->spid)
+#define thread_is_pager(tcb)	((tcb)->pager == (tcb))
+
 struct ktcb {
 	/* User context */
 	task_context_t context;
@@ -90,9 +96,6 @@ struct ktcb {
 
 	/* CPU affinity */
 	int affinity;
-
-	/* Other related threads */
-	l4id_t pagerid;
 
 	/* Flags to indicate various task status */
 	unsigned int flags;
@@ -133,10 +136,10 @@ struct ktcb {
 
 	/* Container */
 	struct container *container;
-	struct pager *pager;
 
-	/* Capability lists */
-	struct cap_list cap_list; /* Own private capabilities */
+	/* Other related threads */
+	struct ktcb *pager;
+	int nchild;
 
 	/* Fields for ipc rendezvous */
 	struct waitqueue_head wqh_recv;

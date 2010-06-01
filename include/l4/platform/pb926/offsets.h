@@ -31,7 +31,7 @@
 #define	PLATFORM_UART2_BASE			0x101F3000 /* Console port (UART2) */
 #define	PLATFORM_UART3_BASE			0x10009000 /* Console port (UART3) */
 #define	PLATFORM_CLCD0_BASE			0x10120000 /* Color LCD */
-
+#define PLATFORM_SYSREGS_SIZE			0x01000000 /* Portion allocated for sysregs */
 /*
  * Device offsets in virtual memory. They offset to some virtual
  * device base address. Each page on this virtual base is consecutively

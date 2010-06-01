@@ -96,7 +96,8 @@ virt_to_phys_by_task(struct ktcb *task, unsigned long vaddr)
  * Attaches a pmd to either a task or the global pgd
  * depending on the virtual address passed.
  */
-void attach_pmd(pgd_table_t *task_pgd, pmd_table_t *pmd_table,
+void attach_pmd(struct address_space *space,
+		pmd_table_t *pmd_table,
 		unsigned long vaddr)
 {
 	u32 pmd_phys = virt_to_phys(pmd_table);
@@ -108,15 +109,23 @@ void attach_pmd(pgd_table_t *task_pgd, pmd_table_t *pmd_table,
 	 * Pick the right pmd from the right pgd.
 	 * It makes a difference if split tables are used.
 	 */
-	pmd = arch_pick_pmd(task_pgd, vaddr);
+	pmd = arch_pick_pmd(space->pgd, vaddr);
 
 	/* Write the pmd into hardware pgd */
-	arch_write_pmd(pmd, pmd_phys, vaddr);
+	arch_write_pmd(pmd, pmd_phys, vaddr, space->spid);
 }
 
-void add_mapping_pgd(unsigned long physical, unsigned long virtual,
-		     unsigned int sz_bytes, unsigned int flags,
-		     pgd_table_t *task_pgd)
+/*
+ * Maps a new address to given space, but charges another
+ * capability owner task for the pmd, if any used.
+ *
+ * This is useful for when irqs force mapping of UTCBs of
+ * other tasks to the preempted tasks for handling.
+ */
+int add_mapping_use_cap(unsigned long physical, unsigned long virtual,
+		     	unsigned int sz_bytes, unsigned int flags,
+			struct address_space *space,
+			struct cap_list *clist)
 {
 	unsigned long npages = (sz_bytes >> PFN_SHIFT);
 	pmd_table_t *pmd_table;
@@ -136,27 +145,80 @@ void add_mapping_pgd(unsigned long physical, unsigned long virtual,
 	/* Map all pages that cover given size */
 	for (int i = 0; i < npages; i++) {
 		/* Check if a pmd was attached previously */
-		if (!(pmd_table = pmd_exists(task_pgd, virtual))) {
+		if (!(pmd_table = pmd_exists(space->pgd, virtual))) {
 
 			/* First mapping in pmd, allocate it */
-			pmd_table = alloc_pmd();
+			if (!(pmd_table = pmd_cap_alloc(clist)))
+				return -ENOMEM;
 
 			/* Prepare the pte but don't sync */
 			arch_prepare_pte(physical, virtual, flags,
 			&pmd_table->entry[PMD_INDEX(virtual)]);
 
 			/* Attach pmd to its pgd and sync it */
-			attach_pmd(task_pgd, pmd_table, virtual);
+			attach_pmd(space, pmd_table, virtual);
 		} else {
 			/* Prepare, write the pte and sync */
-			arch_prepare_write_pte(physical, virtual,
-			flags, &pmd_table->entry[PMD_INDEX(virtual)]);
+			arch_prepare_write_pte(space, physical, virtual,
+					       flags,
+					       &pmd_table->entry[PMD_INDEX(virtual)]);
 		}
 
 		/* Move on to the next page */
 		physical += PAGE_SIZE;
 		virtual += PAGE_SIZE;
 	}
+
+	return 0;
+}
+
+int add_mapping_space(unsigned long physical, unsigned long virtual,
+		      unsigned int sz_bytes, unsigned int flags,
+		      struct address_space *space)
+{
+	unsigned long npages = (sz_bytes >> PFN_SHIFT);
+	pmd_table_t *pmd_table;
+
+	if (sz_bytes < PAGE_SIZE) {
+		print_early("Error: Mapping size less than PAGE_SIZE. "
+			   "Mapping size is in bytes not pages.\n");
+		BUG();
+	}
+
+	if (sz_bytes & PAGE_MASK)
+		npages++;
+
+	/* Convert generic map flags to arch specific flags */
+	BUG_ON(!(flags = space_flags_to_ptflags(flags)));
+
+	/* Map all pages that cover given size */
+	for (int i = 0; i < npages; i++) {
+		/* Check if a pmd was attached previously */
+		if (!(pmd_table = pmd_exists(space->pgd, virtual))) {
+
+			/* First mapping in pmd, allocate it */
+			if (!(pmd_table = pmd_cap_alloc(&current->space->cap_list)))
+				return -ENOMEM;
+
+			/* Prepare the pte but don't sync */
+			arch_prepare_pte(physical, virtual, flags,
+			&pmd_table->entry[PMD_INDEX(virtual)]);
+
+			/* Attach pmd to its pgd and sync it */
+			attach_pmd(space, pmd_table, virtual);
+		} else {
+			/* Prepare, write the pte and sync */
+			arch_prepare_write_pte(space, physical, virtual,
+					       flags,
+					       &pmd_table->entry[PMD_INDEX(virtual)]);
+		}
+
+		/* Move on to the next page */
+		physical += PAGE_SIZE;
+		virtual += PAGE_SIZE;
+	}
+
+	return 0;
 }
 
 void add_boot_mapping(unsigned long physical, unsigned long virtual,
@@ -191,11 +253,12 @@ void add_boot_mapping(unsigned long physical, unsigned long virtual,
 			&pmd_table->entry[PMD_INDEX(virtual)]);
 
 			/* Attach pmd to its pgd and sync it */
-			attach_pmd(&init_pgd, pmd_table, virtual);
+			attach_pmd(current->space, pmd_table, virtual);
 		} else {
 			/* Prepare, write the pte and sync */
-			arch_prepare_write_pte(physical, virtual,
-			flags, &pmd_table->entry[PMD_INDEX(virtual)]);
+			arch_prepare_write_pte(current->space, physical,
+					       virtual, flags,
+					       &pmd_table->entry[PMD_INDEX(virtual)]);
 		}
 
 		/* Move on to the next page */
@@ -204,10 +267,10 @@ void add_boot_mapping(unsigned long physical, unsigned long virtual,
 	}
 }
 
-void add_mapping(unsigned long paddr, unsigned long vaddr,
-		 unsigned int size, unsigned int flags)
+int add_mapping(unsigned long paddr, unsigned long vaddr,
+		unsigned int size, unsigned int flags)
 {
-	add_mapping_pgd(paddr, vaddr, size, flags, TASK_PGD(current));
+	return add_mapping_space(paddr, vaddr, size, flags, current->space);
 }
 
 /*
@@ -247,7 +310,7 @@ int check_mapping(unsigned long vaddr, unsigned long size,
  * This can be made common for v5/v7, keeping split/page table
  * and cache flush parts in arch-specific files.
  */
-int remove_mapping_pgd(pgd_table_t *task_pgd, unsigned long vaddr)
+int remove_mapping_space(struct address_space *space, unsigned long vaddr)
 {
 	pmd_table_t *pmd_table;
 	int pgd_i, pmd_i;
@@ -262,7 +325,7 @@ int remove_mapping_pgd(pgd_table_t *task_pgd, unsigned long vaddr)
 	 * Get the right pgd's pmd according to whether
 	 * the address is global or task-specific.
 	 */
-	pmd = arch_pick_pmd(task_pgd, vaddr);
+	pmd = arch_pick_pmd(space->pgd, vaddr);
 
 	pmd_type = *pmd & PMD_TYPE_MASK;
 
@@ -288,7 +351,7 @@ int remove_mapping_pgd(pgd_table_t *task_pgd, unsigned long vaddr)
 		BUG();
 
 	/* Write to pte, also syncing it as required by arch */
-	arch_prepare_write_pte(0, vaddr,
+	arch_prepare_write_pte(space, 0, vaddr,
 			       space_flags_to_ptflags(MAP_FAULT),
 			       (pte_t *)&pmd_table->entry[pmd_i]);
 	return 0;
@@ -296,14 +359,14 @@ int remove_mapping_pgd(pgd_table_t *task_pgd, unsigned long vaddr)
 
 int remove_mapping(unsigned long vaddr)
 {
-	return remove_mapping_pgd(TASK_PGD(current), vaddr);
+	return remove_mapping_space(current->space, vaddr);
 }
 
 
-int delete_page_tables(struct address_space *space)
+int delete_page_tables(struct address_space *space, struct cap_list *clist)
 {
-	remove_mapping_pgd_all_user(space->pgd);
-	free_pgd(space->pgd);
+	remove_mapping_pgd_all_user(space, clist);
+	pgd_free(space->pgd);
 	return 0;
 }
 
@@ -325,7 +388,7 @@ int copy_user_tables(struct address_space *new,
 		    ((from->entry[i] & PMD_TYPE_MASK)
 		     == PMD_TYPE_PMD)) {
 			/* Allocate new pmd */
-			if (!(pmd = alloc_pmd()))
+			if (!(pmd = pmd_cap_alloc(&current->space->cap_list)))
 				goto out_error;
 
 			/* Find original pmd */
@@ -359,7 +422,7 @@ out_error:
 			      phys_to_virt((to->entry[i] &
 					    PMD_ALIGN_MASK));
 			/* Free pmd  */
-			free_pmd(pmd);
+			pmd_cap_free(pmd, &current->space->cap_list);
 		}
 	}
 	return -ENOMEM;
@@ -385,7 +448,6 @@ void remap_as_pages(void *vstart, void *vend)
 	unsigned long paddr = pstart;
 	unsigned long vaddr = (unsigned long)vstart;
 	int pmd_i = PMD_INDEX(vstart);
-	pgd_table_t *pgd = &init_pgd;
 	pmd_table_t *pmd = alloc_boot_pmd();
 	int npages = __pfn(pend - pstart);
 	int map_flags;
@@ -408,7 +470,7 @@ void remap_as_pages(void *vstart, void *vend)
 		vaddr += PAGE_SIZE;
 	}
 
-	attach_pmd(pgd, pmd, (unsigned long)vstart);
+	attach_pmd(current->space, pmd, (unsigned long)vstart);
 
 	printk("%s: Kernel area 0x%lx - 0x%lx "
 	       "remapped as %d pages\n", __KERNELNAME__,

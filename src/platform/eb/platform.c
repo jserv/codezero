@@ -49,6 +49,7 @@ int platform_setup_device_caps(struct kernel_resources *kres)
 	device_cap_init(kres, CAP_DEVTYPE_TIMER, 1, PLATFORM_TIMER1_BASE);
 	device_cap_init(kres, CAP_DEVTYPE_KEYBOARD, 0, PLATFORM_KEYBOARD0_BASE);
 	device_cap_init(kres, CAP_DEVTYPE_MOUSE, 0, PLATFORM_MOUSE0_BASE);
+	device_cap_init(kres, CAP_DEVTYPE_CLCD, 0, PLATFORM_CLCD0_BASE);
 
 	return 0;
 }

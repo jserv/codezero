@@ -1,0 +1,12 @@
+
+# Inherit global environment
+Import('env')
+
+# The set of source files associated with this SConscript file.
+src_local = Glob('*.[cS]')
+src_local += Glob('src/*.[cS]')
+src_local += Glob('src/arch/*.[cS]')
+
+obj = env.Object(src_local)
+Return('obj')
+

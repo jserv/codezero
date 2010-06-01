@@ -7,5 +7,4 @@ Import('env')
 src_local = ['print-early.c', 'platform.c', 'perfmon.c', 'irq.c', 'cm.c']
 
 obj = env.Object(src_local)
-
 Return('obj')

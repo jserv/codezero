@@ -10,7 +10,7 @@
 #include <l4/lib/list.h>
 #include <l4/api/errno.h>
 #include <l4/macros.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <stdio.h>
 
 

@@ -20,7 +20,7 @@
 #include <l4lib/exregs.h>
 
 #include <lib/addr.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 
 #include <init.h>
 #include <string.h>

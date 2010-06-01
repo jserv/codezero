@@ -51,7 +51,7 @@ int platform_mouse_user_handler(struct irq_desc *desc)
 	 * Disable rx keyboard interrupt.
 	 * User will enable this
 	 */
-	clrbit((unsigned int *)PLATFORM_KEYBOARD0_VBASE + PL050_KMICR,
+	clrbit((unsigned int *)PLATFORM_MOUSE0_VBASE + PL050_KMICR,
 	       PL050_KMI_RXINTR);
 
 	irq_thread_notify(desc);

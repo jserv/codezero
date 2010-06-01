@@ -3,12 +3,10 @@
 #
 # Copyright (C) 2007 Bahadir Balban
 #
-import os
-import sys
-import shutil
+import os, sys, shutil
 from os.path import join
 from glob import glob
-from configure import *
+from scripts.config.config_invoke import *
 
 config = configuration_retrieve()
 

@@ -9,7 +9,7 @@
 #include <l4lib/types.h>
 #include <l4/macros.h>
 #include <l4/api/errno.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <vm_area.h>
 #include <syscalls.h>
 #include <string.h>

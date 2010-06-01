@@ -19,7 +19,8 @@
 #define curcont			(current->container)
 
 #define CONFIG_CONTAINER_NAMESIZE		64
-#define CONFIG_MAX_CAPS_USED			16
+#define CONFIG_MAX_PAGER_CAPS			20
+#define CONFIG_MAX_CONT_CAPS			5
 #define CONFIG_MAX_PAGERS_USED			1
 
 /* Container macro. No locks needed! */
@@ -33,17 +34,12 @@ struct pager {
 	unsigned long memsize;
 	struct cap_list cap_list;
 
-	/*
-	 * Section markings,
-	 * We dont care for other types of sections,
-	 * RO will be included inside RX.
-	 */
-	unsigned long rw_sections_start;
-	unsigned long rw_sections_end;
-	unsigned long rx_sections_start;
-	unsigned long rx_sections_end;
+	/* Program header markings of pager's elf */
+	unsigned long rw_pheader_start;
+	unsigned long rw_pheader_end;
+	unsigned long rx_pheader_start;
+	unsigned long rx_pheader_end;
 };
-
 
 struct container {
 	l4id_t cid;				/* Unique container id */
@@ -82,15 +78,11 @@ struct pager_info {
 	unsigned long start_address;
 	unsigned long stack_address;
 
-	/*
-	 * Section markings,
-	 * We dont care for other types of sections,
-	 * RO will be included inside RX.
-	 */
-	unsigned long rw_sections_start;
-	unsigned long rw_sections_end;
-	unsigned long rx_sections_start;
-	unsigned long rx_sections_end;
+	/* Program header markings of pager's elf */
+	unsigned long rw_pheader_start;
+	unsigned long rw_pheader_end;
+	unsigned long rx_pheader_start;
+	unsigned long rx_pheader_end;
 
 	/* Number of capabilities defined */
 	int ncaps;
@@ -106,7 +98,7 @@ struct pager_info {
 	 * One or more virtmem caps,
 	 * Zero or more umutex caps,
 	 */
-	struct cap_info caps[CONFIG_MAX_CAPS_USED];
+	struct cap_info caps[CONFIG_MAX_PAGER_CAPS];
 };
 
 /*
@@ -116,6 +108,8 @@ struct pager_info {
 struct container_info {
 	char name[CONFIG_CONTAINER_NAMESIZE];
 	int npagers;
+	int ncaps;
+	struct cap_info caps[CONFIG_MAX_CONT_CAPS];
 	struct pager_info pager[CONFIG_MAX_PAGERS_USED];
 };
 
@@ -128,8 +122,10 @@ struct container *container_create(void);
 
 int container_init_pagers(struct kernel_resources *kres);
 
+struct container *container_alloc_init(void);
 int init_containers(struct kernel_resources *kres);
 struct container *container_find(struct kernel_resources *kres, l4id_t cid);
+struct ktcb *container_find_tcb(struct container *c, l4id_t tid);
 
 #endif /* __CONTAINER_H__ */
 

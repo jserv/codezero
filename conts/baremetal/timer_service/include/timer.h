@@ -78,7 +78,8 @@ struct timer {
 	unsigned int count;		/* Counter/jiffies */
 	struct sleeper_task_bucket task_list;	/* List of sleeping tasks */
 	struct l4_mutex task_list_lock;	/* Lock for sleeper_task_bucket */
-	struct capability cap;  /* Capability describing timer */
+	unsigned long phys_base;	/* Physical address of Device */
+	int irq_no;	/* IRQ number of device */
 };
 
 #endif /* __TIMER_H__ */

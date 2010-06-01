@@ -1,10 +1,28 @@
 
+import sys
 
 # Inherit global environment
 Import('env')
 
+PROJROOT = '../..'
+sys.path.append(PROJROOT)
+
+from scripts.kernel.generate_kernel_cinfo import*
+
 # The set of source files associated with this SConscript file.
-src_local = ['irq.c', 'scheduler.c', 'time.c', 'tcb.c', 'space.c', 'bootmem.c', 'resource.c', 'container.c', 'capability.c', 'cinfo.c', 'debug.c']
+src_local = ['irq.c', 'scheduler.c', 'time.c', 'tcb.c', 'space.c',
+             'bootmem.c', 'resource.c', 'container.c', 'capability.c',
+             'cinfo.c', 'debug.c', 'idle.c']
+
+# Generate kernel cinfo structure for container definitions
+def generate_cinfo(target, source, env):
+    generate_kernel_cinfo(target[0])
+    return None
+
+cinfo_generator = Builder(action = generate_cinfo)
+env.Append(BUILDERS = {'CINFO_GENERATOR' : cinfo_generator})
+env.CINFO_GENERATOR(KERNEL_CINFO_PATH, CONFIG_H)
 
 obj = env.Object(src_local)
+Depends(obj, KERNEL_CINFO_PATH)
 Return('obj')

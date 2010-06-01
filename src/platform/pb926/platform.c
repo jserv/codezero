@@ -23,42 +23,21 @@
 #include <l4/generic/capability.h>
 #include <l4/generic/cap-types.h>
 
-/*
- * FIXME: This is not a platform specific
- * call, we will move this out later
- */
-void device_cap_init(struct kernel_resources *kres, int devtype,
-		     int devnum, unsigned long base)
-{
-	struct capability *cap;
-
-	cap =  alloc_bootmem(sizeof(*cap), 0);
-	cap_set_devtype(cap, devtype);
-	cap_set_devnum(cap, devnum);
-	cap->start = __pfn(base);
-	cap->end = cap->start + 1;
-	cap->size = cap->end - cap->start;
-	link_init(&cap->list);
-	cap_list_insert(cap, &kres->devmem_free);
-}
-
-/*
- * The devices that are used by the kernel are mapped
- * independent of these capabilities, but these provide a
- * concise description of what is used by the kernel.
- */
-int platform_setup_device_caps(struct kernel_resources *kres)
-{
-	device_cap_init(kres, CAP_DEVTYPE_UART, 1, PLATFORM_UART1_BASE);
-	device_cap_init(kres, CAP_DEVTYPE_UART, 2, PLATFORM_UART2_BASE);
-	device_cap_init(kres, CAP_DEVTYPE_UART, 3, PLATFORM_UART3_BASE);
-	device_cap_init(kres, CAP_DEVTYPE_TIMER, 1, PLATFORM_TIMER1_BASE);
-	device_cap_init(kres, CAP_DEVTYPE_KEYBOARD, 0, PLATFORM_KEYBOARD0_BASE);
-	device_cap_init(kres, CAP_DEVTYPE_MOUSE, 0, PLATFORM_MOUSE0_BASE);
-	device_cap_init(kres, CAP_DEVTYPE_CLCD, 0, PLATFORM_CLCD0_BASE);
-
-	return 0;
-}
+struct platform_mem_regions platform_mem_regions = {
+	.nregions = 1,
+	.mem_range = {
+		[0] = {
+		.start = PLATFORM_PHYS_MEM_START,
+		.end = PLATFORM_PHYS_MEM_END,
+		.type = MEM_TYPE_RAM,
+		},
+		[1] = {
+		.start = PLATFORM_SYSTEM_REGISTERS,
+		.end = PLATFORM_SYSTEM_REGISTERS + PLATFORM_SYSREGS_SIZE,
+		.type = MEM_TYPE_DEV,
+		},
+	},
+};
 
 /*
  * We will use UART0 for kernel as well as user tasks,

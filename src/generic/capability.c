@@ -19,6 +19,7 @@
 #include <l4/api/cache.h>
 #include INC_GLUE(message.h)
 #include INC_GLUE(ipc.h)
+#include INC_PLAT(irq.h)
 
 void capability_init(struct capability *cap)
 {
@@ -26,32 +27,13 @@ void capability_init(struct capability *cap)
 	link_init(&cap->list);
 }
 
-/*
- * Boot-time function to create capability without
- * capability checking
- */
-struct capability *boot_capability_create(void)
-{
-	struct capability *cap = boot_alloc_capability();
-
-	capability_init(cap);
-
-	return cap;
-}
-
-struct capability *capability_create(void)
-{
-	struct capability *cap;
-
-	if (!(cap = alloc_capability()))
-		return 0;
-
-	capability_init(cap);
-
-	return cap;
-}
 
 #if defined(CONFIG_CAPABILITIES)
+
+/*
+ * FIXME: These need locking. A child can quit without
+ * pager's call.
+ */
 int capability_consume(struct capability *cap, int quantity)
 {
 	if (cap->size < cap->used + quantity)
@@ -107,15 +89,10 @@ struct capability *cap_list_find_by_rtype(struct cap_list *cap_list,
  * In conclusion freeing of pool-type capabilities need to be done
  * in order of privacy.
  */
-struct capability *capability_find_by_rtype(struct ktcb *task,
-					    unsigned int rtype)
+struct capability *cap_find_by_rtype(struct ktcb *task,
+				     unsigned int rtype)
 {
 	struct capability *cap;
-
-	/* Search task's own list */
-	list_foreach_struct(cap, &task->cap_list.caps, list)
-		if (cap_rtype(cap) == rtype)
-			return cap;
 
 	/* Search space list */
 	list_foreach_struct(cap, &task->space->cap_list.caps, list)
@@ -126,43 +103,13 @@ struct capability *capability_find_by_rtype(struct ktcb *task,
 	list_foreach_struct(cap, &task->container->cap_list.caps, list)
 		if (cap_rtype(cap) == rtype)
 			return cap;
-
-	return 0;
-}
-
-struct capability *cap_find_by_capid(l4id_t capid, struct cap_list **cap_list)
-{
-	struct capability *cap;
-	struct ktcb *task = current;
-
-	/* Search task's own list */
-	list_foreach_struct(cap, &task->cap_list.caps, list)
-		if (cap->capid == capid) {
-			*cap_list = &task->cap_list;
-			return cap;
-		}
-
-	/* Search space list */
-	list_foreach_struct(cap, &task->space->cap_list.caps, list)
-		if (cap->capid == capid) {
-			*cap_list = &task->space->cap_list;
-			return cap;
-		}
-
-	/* Search container list */
-	list_foreach_struct(cap, &task->container->cap_list.caps, list)
-		if (cap->capid == capid) {
-			*cap_list = &task->container->cap_list;
-			return cap;
-		}
 
 	return 0;
 }
 
 int cap_count(struct ktcb *task)
 {
-	return task->cap_list.ncaps +
-	       task->space->cap_list.ncaps +
+	return task->space->cap_list.ncaps +
 	       task->container->cap_list.ncaps;
 }
 
@@ -174,15 +121,9 @@ typedef struct capability *(*cap_match_func_t) \
  * operation with a capability in a syscall-specific way.
  */
 struct capability *cap_find(struct ktcb *task, cap_match_func_t cap_match_func,
-			     void *match_args, unsigned int cap_type)
+			    void *match_args, unsigned int cap_type)
 {
 	struct capability *cap, *found;
-
-	/* Search task's own list */
-	list_foreach_struct(cap, &task->cap_list.caps, list)
-		if (cap_type(cap) == cap_type &&
-		    ((found = cap_match_func(cap, match_args))))
-			return found;
 
 	/* Search space list */
 	list_foreach_struct(cap, &task->space->cap_list.caps, list)
@@ -197,129 +138,6 @@ struct capability *cap_find(struct ktcb *task, cap_match_func_t cap_match_func,
 			return found;
 
 	return 0;
-}
-
-struct sys_mutex_args {
-	unsigned long address;
-	unsigned int op;
-};
-
-/*
- * Check broadly the ability to do mutex ops. Check it by
- * the thread, space or container, (i.e. the group that can
- * do this operation broadly)
- *
- * Note, that we check mutex_address elsewhere as a quick,
- * per-task virt_to_phys translation that would not get
- * easily/quickly satisfied by a memory capability checking.
- *
- * While this is not %100 right from a capability checking
- * point-of-view, it is a shortcut that works and makes sense.
- *
- * For sake of completion, the right way to do it would be to
- * add MUTEX_LOCKABLE, MUTEX_UNLOCKABLE attributes to both
- * virtual and physical memory caps of a task, search those
- * to validate the address. But we would have to translate
- * from the page tables either ways.
- */
-struct capability *
-cap_match_mutex(struct capability *cap, void *args)
-{
-	/* Unconditionally expect these flags */
-	unsigned int perms = CAP_UMUTEX_LOCK | CAP_UMUTEX_UNLOCK;
-
-	if ((cap->access & perms) != perms)
-		return 0;
-
-	/* Now check the usual restype/resid pair */
-	switch (cap_rtype(cap)) {
-	case CAP_RTYPE_THREAD:
-		if (current->tid != cap->resid)
-			return 0;
-		break;
-	case CAP_RTYPE_SPACE:
-		if (current->space->spid != cap->resid)
-			return 0;
-		break;
-	case CAP_RTYPE_CONTAINER:
-		if (current->container->cid != cap->resid)
-			return 0;
-		break;
-	default:
-		BUG(); /* Unknown cap type is a bug */
-	}
-
-	return cap;
-}
-
-struct sys_capctrl_args {
-	unsigned int req;
-	unsigned int flags;
-	struct ktcb *task;
-};
-
-struct capability *
-cap_match_capctrl(struct capability *cap, void *args_ptr)
-{
-	struct sys_capctrl_args *args = args_ptr;
-	unsigned int req = args->req;
-	struct ktcb *target = args->task;
-
-	/* Check operation privileges */
-	switch (req) {
-	case CAP_CONTROL_NCAPS:
-	case CAP_CONTROL_READ:
-		if (!(cap->access & CAP_CAP_READ))
-			return 0;
-		break;
-	case CAP_CONTROL_SHARE:
-		if (!(cap->access & CAP_CAP_SHARE))
-			return 0;
-		break;
-	case CAP_CONTROL_GRANT:
-		if (!(cap->access & CAP_CAP_GRANT))
-			return 0;
-		break;
-	case CAP_CONTROL_REPLICATE:
-		if (!(cap->access & CAP_CAP_REPLICATE))
-			return 0;
-		break;
-	case CAP_CONTROL_SPLIT:
-		if (!(cap->access & CAP_CAP_SPLIT))
-			return 0;
-		break;
-	case CAP_CONTROL_DEDUCE:
-		if (!(cap->access & CAP_CAP_DEDUCE))
-			return 0;
-		break;
-	case CAP_CONTROL_DESTROY:
-		if (!(cap->access & CAP_CAP_DESTROY))
-			return 0;
-		break;
-	default:
-		/* We refuse to accept anything else */
-		return 0;
-	}
-
-	/* Now check the usual restype/resid pair */
-	switch (cap_rtype(cap)) {
-	case CAP_RTYPE_THREAD:
-		if (target->tid != cap->resid)
-			return 0;
-		break;
-	case CAP_RTYPE_SPACE:
-		if (target->space->spid != cap->resid)
-			return 0;
-		break;
-	case CAP_RTYPE_CONTAINER:
-		if (target->container->cid != cap->resid)
-			return 0;
-		break;
-	default:
-		BUG(); /* Unknown cap type is a bug */
-	}
-
-	return cap;
 }
 
 struct sys_ipc_args {
@@ -664,72 +482,11 @@ struct capability *cap_match_mem(struct capability *cap,
 }
 
 struct sys_irqctrl_args {
-	struct ktcb *registrant;
+	struct ktcb *task;
 	unsigned int req;
 	unsigned int flags;
 	l4id_t irq;
 };
-
-/*
- * CAP_TYPE_MAP already matched upon entry.
- *
- * Match only device-specific details, e.g. irq registration
- * capability
- */
-struct capability *cap_match_devmem(struct capability *cap,
-				    void *args_ptr)
-{
-	struct sys_irqctrl_args *args = args_ptr;
-	struct ktcb *target = args->registrant;
-	unsigned int perms;
-
-	/* It must be a physmem type */
-	if (cap_type(cap) != CAP_TYPE_MAP_PHYSMEM)
-		return 0;
-
-	/* It must be a device */
-	if (!cap_is_devmem(cap))
-		return 0;
-
-	/* Irq numbers should match */
-	if (cap->irq != args->irq)
-		return 0;
-
-	/* Check permissions, we only check irq specific */
-	switch (args->req) {
-	case IRQ_CONTROL_REGISTER:
-		perms = CAP_IRQCTRL_REGISTER;
-		if ((cap->access & perms) != perms)
-			return 0;
-		break;
-	default:
-		/* Anything else is an invalid/unrecognised argument */
-		return 0;
-	}
-
-	/*
-	 * Check that irq registration to target is covered
-	 * by the capability containment rules.
-	 */
-	switch (cap_rtype(cap)) {
-	case CAP_RTYPE_THREAD:
-		if (target->tid != cap->resid)
-			return 0;
-		break;
-	case CAP_RTYPE_SPACE:
-		if (target->space->spid != cap->resid)
-			return 0;
-		break;
-	case CAP_RTYPE_CONTAINER:
-		if (target->container->cid != cap->resid)
-			return 0;
-		break;
-	default:
-		BUG(); /* Unknown cap type is a bug */
-	}
-
-	return cap;
-}
 
 /*
  * CAP_TYPE_IRQCTRL already matched
@@ -738,7 +495,7 @@ struct capability *cap_match_irqctrl(struct capability *cap,
 				     void *args_ptr)
 {
 	struct sys_irqctrl_args *args = args_ptr;
-	struct ktcb *target = args->registrant;
+	struct ktcb *target = args->task;
 
 	/* Check operation privileges */
 	switch (args->req) {
@@ -754,6 +511,11 @@ struct capability *cap_match_irqctrl(struct capability *cap,
 		/* We refuse to accept anything else */
 		return 0;
 	}
+
+	/* Irq number should match range */
+	if (args->irq < cap->start &&
+	    args->irq > cap->end)
+		return 0;
 
 	/*
 	 * Target thread is the thread that is going to
@@ -828,35 +590,6 @@ struct capability *cap_match_cache(struct capability *cap, void *args_ptr)
 }
 
 #if defined(CONFIG_CAPABILITIES)
-int cap_mutex_check(unsigned long mutex_address, int mutex_op)
-{
-	struct sys_mutex_args args = {
-		.address = mutex_address,
-		.op = mutex_op,
-	};
-
-	if (!(cap_find(current, cap_match_mutex,
-		       &args, CAP_TYPE_UMUTEX)))
-		return -ENOCAP;
-
-	return 0;
-}
-
-int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags)
-{
-	struct sys_capctrl_args args = {
-		.req = req,
-		.flags = flags,
-		.task = task,
-	};
-
-	if (!(cap_find(current, cap_match_capctrl,
-		       &args, CAP_TYPE_CAP)))
-		return -ENOCAP;
-
-	return 0;
-}
-
 int cap_map_check(struct ktcb *target, unsigned long phys, unsigned long virt,
 		  unsigned long npages, unsigned int flags)
 {
@@ -967,11 +700,11 @@ int cap_thread_check(struct ktcb *task,
 }
 
 
-int cap_irq_check(struct ktcb *registrant, unsigned int req,
+int cap_irq_check(struct ktcb *task, unsigned int req,
 		  unsigned int flags, l4id_t irq)
 {
 	struct sys_irqctrl_args args = {
-		.registrant = registrant,
+		.task = task,
 		.req = req,
 		.flags = flags,
 		.irq = irq,
@@ -981,15 +714,6 @@ int cap_irq_check(struct ktcb *registrant, unsigned int req,
 	if (!(cap_find(current, cap_match_irqctrl,
 		       &args, CAP_TYPE_IRQCTRL)))
 		return -ENOCAP;
-
-	/*
-	 * If it is an irq registration, find the device
-	 * capability and check that it allows irq registration.
-	 */
-	if (req == IRQ_CONTROL_REGISTER)
-		if (!cap_find(current, cap_match_devmem,
-			      &args, CAP_TYPE_MAP_PHYSMEM))
-			return -ENOCAP;
 	return 0;
 }
 
@@ -1019,16 +743,6 @@ int cap_cache_check(unsigned long start, unsigned long end, unsigned int flags)
 }
 
 #else /* Meaning !CONFIG_CAPABILITIES */
-int cap_mutex_check(unsigned long mutex_address, int mutex_op)
-{
-	return 0;
-}
-
-int cap_cap_check(struct ktcb *task, unsigned int req, unsigned int flags)
-{
-	return 0;
-}
-
 int cap_ipc_check(l4id_t to, l4id_t from,
 		  unsigned int flags, unsigned int ipc_type)
 {

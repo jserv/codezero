@@ -62,8 +62,7 @@ int thread_exit(struct ktcb *task)
 
 static inline int task_is_child(struct ktcb *task)
 {
-	return (((task) != current) &&
-		((task)->pagerid == current->tid));
+	return ((task != current) && task->pager == current);
 }
 
 int thread_destroy_child(struct ktcb *task)
@@ -91,9 +90,11 @@ int thread_destroy_child(struct ktcb *task)
 	return 0;
 }
 
+/* Must be called from pager thread only */
 int thread_destroy_children(void)
 {
 	struct ktcb *task, *n;
+	int ret;
 
 	spin_lock(&curcont->ktcb_list.list_lock);
 	list_foreach_removable_struct(task, n,
@@ -106,17 +107,21 @@ int thread_destroy_children(void)
 		}
 	}
 	spin_unlock(&curcont->ktcb_list.list_lock);
-	return 0;
 
+	/* Wait till all children are gone */
+	WAIT_EVENT(&current->wqh_pager, current->nchild == 0, ret);
+
+	return ret;
 }
 
 void thread_destroy_self(unsigned int exit_code)
 {
-	/* Destroy all children first */
-	thread_destroy_children();
-
 	/* If self-paged, finish everything except deletion */
-	if (current->tid == current->pagerid) {
+	if (thread_is_pager(current)) {
+
+		/* Destroy all children first */
+		BUG_ON(thread_destroy_children() < 0);
+
 		/* Remove self safe against ipc */
 		tcb_remove(current);
 
@@ -124,9 +129,9 @@ void thread_destroy_self(unsigned int exit_code)
 		wake_up_all(&current->wqh_send, WAKEUP_INTERRUPT);
 		wake_up_all(&current->wqh_recv, WAKEUP_INTERRUPT);
 
-		/* Move capabilities to current cpu idle task */
-		cap_list_move(&per_cpu(scheduler).idle_task->cap_list,
-			      &current->cap_list);
+		/* Move capabilities to struct pager */
+		cap_list_move(&curcont->pager->cap_list,
+			      &current->space->cap_list);
 
 		/* Place self on the per-cpu zombie queue */
 		ktcb_list_add(current, &per_cpu(kernel_resources.zombie_list));
@@ -219,7 +224,7 @@ int arch_clear_thread(struct ktcb *tcb)
 	tcb->context.spsr = ARM_MODE_USR;
 
 	/* Clear the page tables */
-	remove_mapping_pgd_all_user(TASK_PGD(tcb));
+	remove_mapping_pgd_all_user(tcb->space, &current->space->cap_list);
 
 	/* Reinitialize all other fields */
 	tcb_init(tcb);
@@ -358,36 +363,36 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 	int ret = 0;
 
 	if (flags & TC_SHARE_SPACE) {
-		mutex_lock(&curcont->space_list.lock);
+		spin_lock(&curcont->space_list.lock);
 		if (!(space = address_space_find(ids->spid))) {
-			mutex_unlock(&curcont->space_list.lock);
+			spin_unlock(&curcont->space_list.lock);
 			ret = -ESRCH;
 			goto out;
 		}
-		mutex_lock(&space->lock);
-		mutex_unlock(&curcont->space_list.lock);
+		spin_lock(&space->lock);
+		spin_unlock(&curcont->space_list.lock);
 		address_space_attach(tcb, space);
-		mutex_unlock(&space->lock);
+		spin_unlock(&space->lock);
 	}
 	else if (flags & TC_COPY_SPACE) {
-		mutex_lock(&curcont->space_list.lock);
+		spin_lock(&curcont->space_list.lock);
 		if (!(space = address_space_find(ids->spid))) {
-			mutex_unlock(&curcont->space_list.lock);
+			spin_unlock(&curcont->space_list.lock);
 			ret = -ESRCH;
 			goto out;
 		}
-		mutex_lock(&space->lock);
+		spin_lock(&space->lock);
 		if (IS_ERR(new = address_space_create(space))) {
-			mutex_unlock(&curcont->space_list.lock);
-			mutex_unlock(&space->lock);
+			spin_unlock(&curcont->space_list.lock);
+			spin_unlock(&space->lock);
 			ret = (int)new;
 			goto out;
 		}
-		mutex_unlock(&space->lock);
+		spin_unlock(&space->lock);
 		ids->spid = new->spid; 	/* Return newid to caller */
 		address_space_attach(tcb, new);
 		address_space_add(new);
-		mutex_unlock(&curcont->space_list.lock);
+		spin_unlock(&curcont->space_list.lock);
 	}
 	else if (flags & TC_NEW_SPACE) {
 		if (IS_ERR(new = address_space_create(0))) {
@@ -397,9 +402,9 @@ int thread_setup_space(struct ktcb *tcb, struct task_ids *ids, unsigned int flag
 		/* New space id to be returned back to caller */
 		ids->spid = new->spid;
 		address_space_attach(tcb, new);
-		mutex_lock(&curcont->space_list.lock);
+		spin_lock(&curcont->space_list.lock);
 		address_space_add(new);
-		mutex_unlock(&curcont->space_list.lock);
+		spin_unlock(&curcont->space_list.lock);
 	}
 
 out:
@@ -448,7 +453,12 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 	}
 
 	/* Set creator as pager */
-	new->pagerid = current->tid;
+	new->pager = current;
+
+	/* Update pager child count */
+	spin_lock(&current->thread_lock);
+	current->nchild++;
+	spin_unlock(&current->thread_lock);
 
 	/* Setup container-generic fields from current task */
 	new->container = current->container;
@@ -476,7 +486,7 @@ int thread_create(struct task_ids *ids, unsigned int flags)
 
 out_err:
 	/* Pre-mature tcb needs freeing by free_ktcb */
-	free_ktcb(new, current);
+	ktcb_cap_free(new, &current->space->cap_list);
 	return err;
 }
 
@@ -487,7 +497,7 @@ out_err:
  */
 int sys_thread_control(unsigned int flags, struct task_ids *ids)
 {
-	struct ktcb *task = 0;
+	struct ktcb *task = 0, *pager = 0;
 	int err, ret = 0;
 
 	if ((err = check_access((unsigned long)ids, sizeof(*ids),
@@ -498,15 +508,13 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 		if (!(task = tcb_find(ids->tid)))
 			return -ESRCH;
 
+		pager = task->pager;
+
 		/*
-		 * Tasks may only operate on their children. They may
-		 * also destroy themselves or any children.
+		 * Caller may operate on a thread if it shares
+		 * the same address space with that thread's pager
 		 */
-		if ((flags & THREAD_ACTION_MASK) == THREAD_DESTROY &&
-		    !task_is_child(task) && task != current)
-			return -EPERM;
-		if ((flags & THREAD_ACTION_MASK) != THREAD_DESTROY
-		    && !task_is_child(task))
+		if (!space_is_pager(current))
 			return -EPERM;
 	}
 

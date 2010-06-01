@@ -7,7 +7,7 @@ arch = config.arch
 subarch = config.subarch
 
 sys.path.append('../../../../')
-from config.lib import *
+from scripts.config.lib import *
 
 container = next((c for c in config.containers if int(c.id) == int(contid)), None)
 

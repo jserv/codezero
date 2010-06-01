@@ -5,7 +5,7 @@
  */
 #include <l4/lib/math.h>
 #include <vm_area.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include INC_API(errno.h)
 #include <posix/sys/types.h>
 #include L4LIB_INC_ARCH(syscalls.h)
@@ -98,8 +98,58 @@ int task_insert_vma(struct vm_area *this, struct link *vma_list)
 	BUG();
 }
 
+int vma_intersection(struct tcb *task,
+		     unsigned long pfn_start, unsigned long pfn_end)
+{
+	struct vm_area *vma;
+
+	list_foreach_struct(vma, &task->vm_area_head->list, list) {
+		if (set_intersection(pfn_start, pfn_end,
+				     vma->pfn_start, vma->pfn_end))
+			return 1;
+	}
+	return 0;
+}
+
+/*
+ * Take first vma, place region after it. Traverse all vmas, if hit
+ * an intersection, take the next vma and retry until all are traversed
+ */
+unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
+{
+	unsigned long pfn_start = __pfn(task->map_start);
+	unsigned long pfn_end = pfn_start + npages;
+	struct vm_area *vma;
+
+	if (npages > __pfn(task->map_end - task->map_start))
+		return 0;
+
+	/* If no vmas, first map slot is available. */
+	if (list_empty(&task->vm_area_head->list))
+		return task->map_start;
+
+	list_foreach_struct(vma, &task->vm_area_head->list, list) {
+		/* Update region to after this vma */
+		pfn_start = vma->pfn_end;
+		pfn_end = pfn_start + npages;
+
+		/* If it doesn't intersect with any other vmas
+		 * and is within boundaries, return it */
+		if (pfn_end <= __pfn(task->map_end) &&
+		    !vma_intersection(task, pfn_start, pfn_end))
+			return __pfn_to_addr(pfn_start);
+	}
+	return 0;
+}
+
+
+#if 0
 /*
  * Search an empty space in the task's mmapable address region.
+ *
+ * This works most of the time - but fails if an empty region is
+ * encountered that is used at a later vma that doesn't get checked.
+ * This may occur.
  *
  * This does a less than O(n) algorithm by starting the estimated region
  * and vma comparison from the beginning, once a vma is not intersected
@@ -157,6 +207,7 @@ unsigned long find_unmapped_area(unsigned long npages, struct tcb *task)
 
 	return 0;
 }
+#endif
 
 /* Validate an address that is a possible candidate for an mmap() region */
 int mmap_address_validate(struct tcb *task, unsigned long map_address,

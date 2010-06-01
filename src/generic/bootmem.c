@@ -16,14 +16,8 @@
  */
 #define BOOTMEM_SIZE		(SZ_4K * 4)
 SECTION(".init.bootmem") char bootmem[BOOTMEM_SIZE];
-struct address_space init_space;
 
 static unsigned long cursor = (unsigned long)&bootmem;
-
-unsigned long bootmem_free_pages(void)
-{
-	return BOOTMEM_SIZE - (page_align_up(cursor) - (unsigned long)&bootmem);
-}
 
 void *alloc_bootmem(int size, int alignment)
 {
@@ -45,6 +39,9 @@ void *alloc_bootmem(int size, int alignment)
 
 	/* Allocate from cursor */
 	ptr = (void *)cursor;
+
+	/* Zero initialize */
+	memset(ptr, 0, size);
 
 	/* Update cursor */
 	cursor += size;

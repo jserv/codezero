@@ -8,7 +8,7 @@
 #include <task.h>
 #include <user.h>
 #include <l4/api/errno.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 
 /*
  * Checks if the given user virtual address range is

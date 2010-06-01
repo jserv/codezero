@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELR
 from optparse import OptionParser
 from os.path import join
 from shutil import copytree
-from config.projpaths import *
+from scripts.config.projpaths import *
 
 def parse_cmdline_options():
     usage = "usage: %prog [options] arg"

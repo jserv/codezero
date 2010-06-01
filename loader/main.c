@@ -10,6 +10,8 @@ extern char _start_kernel[];
 extern char _end_kernel[];
 extern char _start_containers[];
 extern char _end_containers[];
+extern char _start_loader[];
+extern char _end_loader[];
 
 /* This is a kernel symbol exported to loader's linker script from kernel build */
 extern char bkpt_phys_to_virt[];
@@ -105,11 +107,16 @@ void arch_start_kernel(void *entry)
 	func(0);
 }
 
+#define __NAME__	"ELF Loader"
 int main(void)
 {
 	unsigned long *kernel_entry;
 
-	printf("ELF Loader: Started.\n");
+	printf("%s: Loader image size: %luKB, placed "
+	       "at physical 0x%lx - 0x%lx\n",
+	       __NAME__, (unsigned long)(_end_loader - _start_loader) / 1024,
+	       (unsigned long)_start_loader,
+	       (unsigned long)_end_loader);
 
 	printf("Loading the kernel...\n");
 	load_elf_image(&kernel_entry, (void *)_start_kernel);

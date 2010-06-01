@@ -36,7 +36,6 @@ int user_mutex_test(void)
 {
 	pid_t child, parent;
 	int map_size = PAGE_SIZE;
-	struct capability cap;
 	void *base;
 	int err;
 
@@ -74,7 +73,7 @@ int user_mutex_test(void)
 		test_printf("%d: Created child with pid %d\n", getpid(), child);
 	else
 		test_printf("Child %d running.\n", getpid());
-
+#if 0
 	/*
 	 * Request capability to ipc to each other from pager
 	 * (Actually only the sender needs it)
@@ -95,6 +94,7 @@ int user_mutex_test(void)
 		       "err = %d\n", err);
 		goto out_err;
 	}
+#endif
 
 	/* Child locks and produces */
 	if (child == 0) {

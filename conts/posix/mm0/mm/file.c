@@ -5,8 +5,8 @@
  */
 #include <init.h>
 #include <vm_area.h>
-#include <malloc/malloc.h>
-#include <mm/alloc_page.h>
+#include <mem/malloc.h>
+#include <mem/alloc_page.h>
 #include <l4/macros.h>
 #include <l4/api/errno.h>
 #include <l4lib/types.h>
@@ -22,7 +22,6 @@
 #include <test.h>
 
 #include <lib/pathstr.h>
-#include <malloc/malloc.h>
 #include <stdio.h>
 #include <task.h>
 #include <stat.h>

@@ -19,8 +19,7 @@ int simple_pager_thread(void *arg)
 	printf("Thread spawned from pager, \
 	       trying to create new thread.\n");
 	err = l4_thread_control(THREAD_CREATE |
-				TC_SHARE_SPACE |
-				TC_AS_PAGER, &ids);
+				TC_SHARE_SPACE, &ids);
 
 	if (res == 0)
 		if (err == -ENOCAP ||

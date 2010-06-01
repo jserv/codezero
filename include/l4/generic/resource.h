@@ -9,6 +9,7 @@
 
 /* Number of containers defined at compile-time */
 #include <l4/generic/capability.h>
+#include <l4/generic/space.h>
 #include <l4/lib/list.h>
 #include <l4/lib/mutex.h>
 #include <l4/lib/idpool.h>
@@ -21,11 +22,6 @@ struct boot_resources {
 	int nspaces;
 	int npmds;
 	int nmutex;
-
-	/* Kernel resource usage */
-	int nkpmds;
-	int nkpgds;
-	int nkcaps;
 };
 
 /* List of containers */
@@ -80,9 +76,6 @@ struct kernel_resources {
 	struct cap_list devmem_used;
 	struct cap_list devmem_free;
 
-	/* All other caps that belong to the kernel */
-	struct cap_list non_memory_caps;
-
 	struct mem_cache *pgd_cache;
 	struct mem_cache *pmd_cache;
 	struct mem_cache *ktcb_cache;
@@ -98,31 +91,25 @@ struct kernel_resources {
 	/* Global page tables on split page tables */
 	pgd_global_table_t *pgd_global;
 #endif
+	struct address_space init_space;
 };
 
 extern struct kernel_resources kernel_resources;
 
-void free_pgd(void *addr);
-void free_pmd(void *addr);
-void free_space(void *addr, struct ktcb *task);
-void free_ktcb(void *addr, struct ktcb *task);
-void free_capability(void *addr);
-void free_container(void *addr);
-void free_user_mutex(void *addr);
+void pgd_free(void *addr);
+void pmd_cap_free(void *addr, struct cap_list *clist);
+void space_cap_free(void *addr, struct cap_list *clist);
+void ktcb_cap_free(void *addr, struct cap_list *clist);
+void mutex_cap_free(void *addr);
 
-pgd_table_t *alloc_pgd(void);
-pmd_table_t *alloc_pmd(void);
-struct address_space *alloc_space(void);
-struct ktcb *alloc_ktcb(void);
-struct ktcb *alloc_ktcb_use_capability(struct capability *cap);
-struct capability *boot_alloc_capability(void);
-struct capability *alloc_capability(void);
-struct container *alloc_container(void);
-struct mutex_queue *alloc_user_mutex(void);
-int free_boot_memory(struct kernel_resources *kres);
+pgd_table_t *pgd_alloc(void);
+pmd_table_t *pmd_cap_alloc(struct cap_list *clist);
+struct address_space *space_cap_alloc(struct cap_list *clist);
+struct ktcb *ktcb_cap_alloc(struct cap_list *clist);
+struct mutex_queue *mutex_cap_alloc(void);
 
 int init_system_resources(struct kernel_resources *kres);
 
-void setup_idle_caps(); /*TODO: Delete this when done with it */
+void setup_idle_caps(struct kernel_resources *kres);
 
 #endif /* __RESOURCES_H__ */

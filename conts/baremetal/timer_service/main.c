@@ -2,6 +2,7 @@
  * Timer service for userspace
  */
 #include <l4lib/lib/addr.h>
+#include <l4lib/lib/cap.h>
 #include <l4lib/irq.h>
 #include <l4lib/lib/thread.h>
 #include <l4lib/ipcdefs.h>
@@ -10,14 +11,15 @@
 #include <l4/api/capability.h>
 #include <l4/generic/cap-types.h>
 #include <l4/api/space.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <container.h>
 #include <linker.h>
 #include <timer.h>
-#include <libdev/timer.h>
+#include <dev/timer.h>
+#include <dev/platform.h>
 
 /* Capabilities of this service */
-static struct capability caparray[32];
+static struct capability *caparray;
 static int total_caps = 0;
 
 /* Total number of timer chips being handled by us */
@@ -32,33 +34,6 @@ struct wake_task_list wake_tasks;
 
 /* tid of handle_request thread */
 l4id_t tid_ipc_handler;
-
-int cap_read_all()
-{
-	int ncaps;
-	int err;
-
-	/* Read number of capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_NCAPS,
-					 0, &ncaps)) < 0) {
-		printf("l4_capability_control() reading # of"
-		       " capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_NCAPS request.\n");
-		BUG();
-	}
-	total_caps = ncaps;
-
-	/* Read all capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_READ,
-					 0, caparray)) < 0) {
-		printf("l4_capability_control() reading of "
-		       "capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_READ_CAPS request.\n");
-		BUG();
-	}
-
-	return 0;
-}
 
 int cap_share_all_with_space()
 {
@@ -161,32 +136,6 @@ struct link* find_bucket_list(unsigned long seconds)
 }
 
 /*
- * Scans for up to TIMERS_TOTAL timer devices in capabilities.
- */
-int timer_probe_devices(void)
-{
-	int timers = 0;
-
-	/* Scan for timer devices */
-	for (int i = 0; i < total_caps; i++) {
-		/* Match device type */
-		if (cap_devtype(&caparray[i]) == CAP_DEVTYPE_TIMER) {
-			/* Copy to correct device index */
-			memcpy(&global_timer[cap_devnum(&caparray[i]) - 1].cap,
-			       &caparray[i], sizeof(global_timer[0].cap));
-			timers++;
-		}
-	}
-
-	if (timers != TIMERS_TOTAL) {
-		printf("%s: Error, not all timers could be found. "
-		       "timers=%d\n", __CONTAINER_NAME__, timers);
-		return -ENODEV;
-	}
-	return 0;
-}
-
-/*
  * Irq handler for timer interrupts
  */
 int timer_irq_handler(void *arg)
@@ -204,7 +153,7 @@ int timer_irq_handler(void *arg)
 
 	/* Register self for timer irq, using notify slot 0 */
 	if ((err = l4_irq_control(IRQ_CONTROL_REGISTER, slot,
-				  timer->cap.irq)) < 0) {
+				  timer->irq_no)) < 0) {
 		printf("%s: FATAL: Timer irq could not be registered. "
 		       "err=%d\n", __FUNCTION__, err);
 		BUG();
@@ -219,7 +168,7 @@ int timer_irq_handler(void *arg)
 		struct link *task_list;
 
 		/* Block on irq */
-		if((count = l4_irq_wait(slot, timer->cap.irq)) < 0) {
+		if((count = l4_irq_wait(slot, timer->irq_no)) < 0) {
 			printf("l4_irq_wait() returned with negative value\n");
 			BUG();
 		}
@@ -234,6 +183,7 @@ int timer_irq_handler(void *arg)
 
 		/* find bucket list of taks to be woken for current count */
 		vector = find_bucket_list(timer->count);
+		l4_send(tid_ipc_handler,L4_IPC_TAG_TIMER_WAKE_THREADS);
 
 		if (!list_empty(vector)) {
 			/* Removing tasks from sleeper list */
@@ -300,19 +250,21 @@ int timer_setup_devices(void)
 	struct l4_thread *tptr = &thread;
 	int err;
 
+	global_timer[0].phys_base = PLATFORM_TIMER1_BASE;
+	global_timer[0].irq_no	= IRQ_TIMER1;
+
 	for (int i = 0; i < TIMERS_TOTAL; i++) {
 		/* initialize timer */
 		timer_struct_init(&global_timer[i],(unsigned long)l4_new_virtual(1) );
 
 		/* Map timer to a virtual address region */
-		if (IS_ERR(l4_map((void *)__pfn_to_addr(global_timer[i].cap.start),
-				  (void *)global_timer[i].base, global_timer[i].cap.size,
-				  MAP_USR_IO,
-				  self_tid()))) {
-			printf("%s: FATAL: Failed to map TIMER device "
-			       "%d to a virtual address\n",
-			       __CONTAINER_NAME__,
-			       cap_devnum(&global_timer[i].cap));
+		if (IS_ERR(l4_map((void *)global_timer[i].phys_base,
+				  (void *)global_timer[i].base, 1,
+				  MAP_USR_IO, self_tid()))) {
+			printf("%s: FATAL: Failed to map TIMER device from 0x%lx"
+			       " to 0x%lx\n", __CONTAINER_NAME__,
+			       global_timer[i].phys_base,
+			       global_timer[i].base);
 			BUG();
 		}
 
@@ -502,63 +454,19 @@ void handle_requests(void)
 	}
 }
 
-/*
- * UTCB-size aligned utcb.
- *
- * BIG WARNING NOTE: This declaration is legal if we are
- * running in a disjoint virtual address space, where the
- * utcb declaration lies in a unique virtual address in
- * the system.
- */
-#define DECLARE_UTCB(name) \
-	struct utcb name ALIGN(sizeof(struct utcb))
-
-DECLARE_UTCB(utcb);
-
-/* Set up own utcb for ipc */
-int l4_utcb_setup(void *utcb_address)
-{
-	struct task_ids ids;
-	struct exregs_data exregs;
-	int err;
-
-	l4_getid(&ids);
-
-	/* Clear utcb */
-	memset(utcb_address, 0, sizeof(struct utcb));
-
-	/* Setup exregs for utcb request */
-	memset(&exregs, 0, sizeof(exregs));
-	exregs_set_utcb(&exregs, (unsigned long)utcb_address);
-
-	if ((err = l4_exchange_registers(&exregs, ids.tid)) < 0)
-		return err;
-
-	return 0;
-}
-
 void main(void)
 {
-	int err;
-
 	/* Read all capabilities */
-	cap_read_all();
+	caps_read_all();
+
+	total_caps = cap_get_count();
+	caparray = cap_get_all();
 
 	/* Share all with space */
 	cap_share_all_with_space();
 
-	/* Scan for timer devices in capabilities */
-	timer_probe_devices();
-
 	/* Initialize virtual address pool for timers */
 	init_vaddr_pool();
-
-	/* Setup own static utcb */
-	if ((err = l4_utcb_setup(&utcb)) < 0) {
-		printf("FATAL: Could not set up own utcb. "
-		       "err=%d\n", err);
-		BUG();
-	}
 
 	/* initialise timed_out_task list */
 	wake_task_list_init();

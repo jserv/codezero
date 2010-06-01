@@ -26,8 +26,25 @@ void platform_irq_disable(int irq);
 void print_early(char *str);
 void printhex8(unsigned int);
 
-int platform_setup_device_caps(struct kernel_resources *kres);
-
 void platform_test_cpucycles(void);
+
+enum mem_type {
+	MEM_TYPE_RAM = 0,
+	MEM_TYPE_DEV = 1,
+};
+
+struct platform_mem_range {
+	unsigned long start;
+	unsigned long end;
+	unsigned int type;
+};
+
+struct platform_mem_regions {
+	int nregions;
+	struct platform_mem_range mem_range[];
+};
+
+/* Kernel uses this to initialize physmem capabilities */
+extern struct platform_mem_regions platform_mem_regions;
 
 #endif /* __PLATFORM_H__ */

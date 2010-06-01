@@ -21,7 +21,7 @@ void init_address_space_list(struct address_space_list *space_list)
 	memset(space_list, 0, sizeof(*space_list));
 
 	link_init(&space_list->list);
-	mutex_init(&space_list->lock);
+	spin_lock_init(&space_list->lock);
 }
 
 void address_space_attach(struct ktcb *tcb, struct address_space *space)
@@ -54,20 +54,22 @@ void address_space_remove(struct address_space *space, struct container *cont)
 	list_remove_init(&space->list);
 }
 
+
 /* Assumes address space reflock is already held */
-void address_space_delete(struct address_space *space,
-			  struct ktcb *task_accounted)
+void address_space_delete(struct address_space *space, struct cap_list *clist)
 {
 	BUG_ON(space->ktcb_refs);
+	BUG_ON(!list_empty(&space->cap_list.caps));
+	BUG_ON(space->cap_list.ncaps);
 
 	/* Traverse the page tables and delete private pmds */
-	delete_page_tables(space);
+	delete_page_tables(space, clist);
 
 	/* Return the space id */
 	id_del(&kernel_resources.space_ids, space->spid);
 
 	/* Deallocate the space structure */
-	free_space(space, task_accounted);
+	space_cap_free(space, clist);
 }
 
 struct address_space *address_space_create(struct address_space *orig)
@@ -77,19 +79,19 @@ struct address_space *address_space_create(struct address_space *orig)
 	int err;
 
 	/* Allocate space structure */
-	if (!(space = alloc_space()))
+	if (!(space = space_cap_alloc(&current->space->cap_list)))
 		return PTR_ERR(-ENOMEM);
 
 	/* Allocate pgd */
-	if (!(pgd = alloc_pgd())) {
-		free_space(space, current);
+	if (!(pgd = pgd_alloc())) {
+		space_cap_free(space, &current->space->cap_list);
 		return PTR_ERR(-ENOMEM);
 	}
 
 	/* Initialize space structure */
 	link_init(&space->list);
 	cap_list_init(&space->cap_list);
-	mutex_init(&space->lock);
+	spin_lock_init(&space->lock);
 	space->pgd = pgd;
 
 	/* Copy all kernel entries */
@@ -106,8 +108,8 @@ struct address_space *address_space_create(struct address_space *orig)
 	if (orig) {
 		/* Copy its user entries/tables */
 		if ((err = copy_user_tables(space, orig)) < 0) {
-			free_pgd(pgd);
-			free_space(space, current);
+			pgd_free(pgd);
+			space_cap_free(space, &current->space->cap_list);
 			return PTR_ERR(err);
 		}
 	}

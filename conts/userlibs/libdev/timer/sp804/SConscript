@@ -1,0 +1,24 @@
+import sys
+
+Import('env')
+
+# Get global paths
+PROJRELROOT = '../../../'
+sys.path.append(PROJRELROOT)
+
+from scripts.config.configuration import *
+config = configuration_retrieve()
+platform = config.platform
+
+#Platforms using sp804
+plat_list = ('eb', 'pba9', 'pb926')
+
+# The set of source files associated with this SConscript file.
+src_local = []
+
+for plat_supported in plat_list:
+    if plat_supported == platform:
+        src_local += Glob('*.c')
+
+obj = env.StaticObject(src_local)
+Return('obj')

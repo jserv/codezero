@@ -6,7 +6,7 @@ import os, sys
 arch = config.arch
 
 sys.path.append('../../../../')
-from config.lib import *
+from scripts.config.lib import *
 from tools.pyelf.lmanext import *
 
 src = [Glob('*.c') + Glob('test_exec.S') + Glob('src/*.[Sc]') + Glob('src/arch/arm/*.c')]

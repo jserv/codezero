@@ -22,7 +22,7 @@ struct cpuinfo {
 
 extern struct cpuinfo cpuinfo;
 
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SMP_)
 
 void smp_attach(void);
 void smp_start_cores(void);

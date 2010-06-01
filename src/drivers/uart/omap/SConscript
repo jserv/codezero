@@ -1,7 +1,20 @@
+
 Import('env')
 
-# The set of source files associated with this SConscript file.
-src_local = ['uart.c']
-obj = env.Object(src_local)
+from scripts.config.projpaths import *
+from scripts.config.config_invoke import *
 
+config = configuration_retrieve()
+platform = config.platform
+
+# Platforms using omap_uart
+plat_list = 'beagle'
+
+# The set of source files associated with this SConscript file.
+src_local = []
+
+if plat_list == platform:
+    src_local += ['uart.c']
+
+obj = env.Object(src_local)
 Return('obj')

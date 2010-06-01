@@ -30,7 +30,7 @@ static inline void spin_lock_init(struct spinlock *s)
 static inline void spin_lock(struct spinlock *s)
 {
 	preempt_disable();	/* This must disable local preempt */
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SMP_)
 
 #if defined (CONFIG_DEBUG_SPINLOCKS)
 	spin_lock_record_check(s);
@@ -41,7 +41,7 @@ static inline void spin_lock(struct spinlock *s)
 
 static inline void spin_unlock(struct spinlock *s)
 {
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SMP_)
 
 #if defined (CONFIG_DEBUG_SPINLOCKS)
 	spin_unlock_delete_check(s);
@@ -60,7 +60,7 @@ static inline void spin_lock_irq(struct spinlock *s,
 				 unsigned long *state)
 {
 	irq_local_disable_save(state);
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SMP_)
 #if defined (CONFIG_DEBUG_SPINLOCKS)
 	spin_lock_record_check(s);
 #endif
@@ -72,7 +72,7 @@ static inline void spin_lock_irq(struct spinlock *s,
 static inline void spin_unlock_irq(struct spinlock *s,
 				   unsigned long state)
 {
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SMP_)
 
 #if defined (CONFIG_DEBUG_SPINLOCKS)
 	spin_unlock_delete_check(s);

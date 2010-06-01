@@ -1,8 +1,20 @@
-# Inherit global environment
 
 Import('env')
-# The set of source files associated with this SConscript file.
-src_local = ['pl190_vic.c']
-obj = env.Object(src_local)
 
+from scripts.config.projpaths import *
+from scripts.config.config_invoke import *
+
+config = configuration_retrieve()
+platform = config.platform
+
+# The set of source files associated with this SConscript file.
+src_local = []
+
+# Platforms using pl190
+plat_list = 'pb926'
+
+if plat_list == platform:
+    src_local += ['pl190_vic.c']
+
+obj = env.Object(src_local)
 Return('obj')

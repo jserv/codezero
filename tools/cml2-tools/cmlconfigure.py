@@ -75,7 +75,7 @@ _eng = {
     "GOBUTTON":"Go to...",
     "GOTOBYNAME":"Go to symbol by name: ",
     "GPROMPT":"Symbol to set or edit: ",
-    "HELPBANNER": "Press ? for help on current symbol, h for command help",
+    "HELPBANNER": "Press h for help on current symbol, c for command help",
     "HELPBUTTON":"Help",
     "HELPFOR":"Help for %s",
     "HSEARCHBUTTON":"Search help text...",
@@ -207,7 +207,7 @@ Type `x' to save configuration and exit, `q' to exit without saving, `s' to
 save the configuration to a named file, and `i' to read in a configuration by
 filename.  -I reads in a configuration and freezes the variables.
 
-Type '?' to see any help text associated with the current symbol.  Type 'h'
+Type 'h' to see any help text associated with the current symbol.  Type 'c'
 to see this command summary again.  Some expert commands are documented
 in separate help; press TAB from this help screen to see it.\
 """,
@@ -297,7 +297,7 @@ using the `Go' command to visit a suppressed symbol, or by doing a Search.
 """,
     "CLIHELP":"""\
 
-Usage: clmlconfigure.py [-tcxqbs] [-[Dd] sym] [-[Ii] file]
+Usage: cmlconfigure.py [-tcxqbs] [-[Dd] sym] [-[Ii] file]
                         [-B banner] [-o output] [-v]
 
 -t            force tty (line-oriented) mode
@@ -1648,7 +1648,7 @@ class curses_style_menu:
                     (self.lines, self.columns) = self.window.getmaxyx()
                     self.menus.viewport_height = self.lines-1
                     recompute = 1
-                elif cmd in (curses.ascii.TAB, ord('h')):
+                elif cmd in (curses.ascii.TAB, ord('c')):
                     if self.in_menu():
                         self.menus.push(string.split(lang["CURSHELP"], "\n"))
                         self.msgbuf = lang["WELCOME"] % (configuration.banner) \
@@ -1682,7 +1682,7 @@ class curses_style_menu:
                         else:
                             self.menus.push(entry.menu.items, entry)
                             recompute = 1
-                elif cmd == ord('?'):
+                elif cmd == ord('h'):
                     if not self.in_menu():
                         self.help_popup("PRESSANY", (lang["NOSYMBOL"],))
                     else:

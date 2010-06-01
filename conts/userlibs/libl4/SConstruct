@@ -1,0 +1,31 @@
+# -*- mode: python; coding: utf-8; -*-
+#
+#  Codezero -- a microkernel for embedded systems.
+#
+#  Copyright © 2009  B Labs Ltd
+#
+import os, sys
+
+PROJRELROOT = '../../..'
+sys.path.append(PROJRELROOT)
+
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
+
+config = configuration_retrieve()
+gcc_arch_flag = config.gcc_arch_flag
+
+builddir = join(BUILDDIR, LIBL4_RELDIR)
+VariantDir(builddir, os.getcwd(), 0)
+
+env = Environment(CC = config.toolchain_userspace + 'gcc',
+		       CCFLAGS = ['-g', '-nostdlib', '-ffreestanding', '-std=gnu99',
+                             '-nostdinc', '-Wall', '-Werror', '-march=' + gcc_arch_flag],
+		       LINKFLAGS = ['-nostdlib'],
+		       ASFLAGS = ['-D__ASSEMBLY__', '-march=' + gcc_arch_flag],
+		       ENV = {'PATH' : os.environ['PATH']},
+		       CPPPATH = ['#include', LIBC_INCLUDE, KERNEL_HEADERS, LIBMEM_INCLUDE],
+               CPPFLAGS = ' -include l4lib/macros.h ')
+
+objects = SConscript('SConscript', exports = { 'env' : env }, duplicate=0, build_dir = builddir)
+

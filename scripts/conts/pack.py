@@ -9,12 +9,11 @@ import os, sys, shelve, glob
 from os.path import join
 
 PROJRELROOT = '../../'
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 sys.path.append(os.path.abspath('../'))
 
-from config.projpaths import *
-from config.configuration import *
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
 
 container_assembler_body = \
 '''
@@ -53,7 +52,7 @@ def source_to_builddir(srcdir, id):
     return join(BUILDDIR, cont_builddir)
 
 class LinuxContainerPacker:
-    def __init__(self, container, linux_builder, rootfs_builder, atags_builder):
+    def __init__(self, container, linux_builder):
 
         # Here, we simply attempt to get PROJROOT/conts as
         # PROJROOT/build/cont[0-9]
@@ -65,9 +64,10 @@ class LinuxContainerPacker:
         self.container_S_out = join(self.CONTAINER_BUILDDIR_BASE, 'container.S')
         self.container_elf_out = join(self.CONTAINER_BUILDDIR_BASE, \
                                       'container' + str(container.id) + '.elf')
+
         self.kernel_image_in = linux_builder.kernel_image
-        self.rootfs_elf_in = rootfs_builder.rootfs_elf_out
-        self.atags_elf_in = atags_builder.atags_elf_out
+        self.rootfs_elf_in = join(self.CONTAINER_BUILDDIR_BASE, 'linux/rootfs/rootfs.elf')
+        self.atags_elf_in = join(self.CONTAINER_BUILDDIR_BASE, 'linux/atags/atags.elf')
 
     def generate_container_assembler(self, source):
         with open(self.container_S_out, 'w+') as f:
@@ -104,12 +104,9 @@ class LinuxContainerPacker:
         return self.container_elf_out
 
     def clean(self):
-        if os.path.exists(self.container_elf_out):
-            shutil.rmtree(self.container_elf_out)
-        if os.path.exists(self.container_lds_out):
-            shutil.rmtree(self.container_lds_out)
-        if os.path.exists(self.container_S_out):
-            shutil.rmtree(self.container_S_out)
+        os.system('rm -rf ' + self.container_elf_out)
+        os.system('rm -rf ' + self.container_lds_out)
+        os.system('rm -rf ' + self.container_S_out)
 
 
 class DefaultContainerPacker:
@@ -118,7 +115,7 @@ class DefaultContainerPacker:
         # Here, we simply attempt to get PROJROOT/conts as
         # PROJROOT/build/cont[0-9]
         self.CONTAINER_BUILDDIR_BASE = \
-            source_to_builddir(join(PROJROOT,'conts'), container.id)
+            join(source_to_builddir(join(PROJROOT,'conts'), container.id), 'packer')
 
         if not os.path.exists(self.CONTAINER_BUILDDIR_BASE):
             os.mkdir(self.CONTAINER_BUILDDIR_BASE)
@@ -163,10 +160,7 @@ class DefaultContainerPacker:
         return self.container_elf_out
 
     def clean(self):
-        if os.path.exists(self.container_elf_out):
-            shutil.rmtree(self.container_elf_out)
-        if os.path.exists(self.container_lds_out):
-            shutil.rmtree(self.container_lds_out)
-        if os.path.exists(self.container_S_out):
-            shutil.rmtree(self.container_S_out)
+        os.system('rm -f ' + self.container_elf_out)
+        os.system('rm -f ' + self.container_lds_out)
+        os.system('rm -f ' + self.container_S_out)
 

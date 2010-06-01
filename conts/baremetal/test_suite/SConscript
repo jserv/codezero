@@ -1,0 +1,23 @@
+
+# Inherit global environment
+Import('env')
+
+from scripts.config.configuration import *
+
+config = configuration_retrieve()
+arch = config.arch
+subarch = config.subarch
+
+# The set of source files associated with this SConscript file.
+src_local = Glob('*.[cS]')
+src_local += Glob('src/*.[cS]')
+src_local += Glob('src/arch/' + arch + '/*.[cS]')
+src_local += Glob('src/api/*.c');
+src_local += Glob('src/perf/*.c');
+src_local += Glob('src/cli_serv/*.c');
+src_local += Glob('src/mthread/*.c');
+src_local += Glob('src/arch/' + arch + '/' + subarch + '/*.[cS]')
+
+obj = env.Object(src_local)
+Return('obj')
+

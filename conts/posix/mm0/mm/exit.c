@@ -13,7 +13,7 @@
 #include <syscalls.h>
 #include <l4lib/exregs.h>
 #include <l4lib/ipcdefs.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <l4/api/space.h>
 #include L4LIB_INC_ARCH(syslib.h)
 #include L4LIB_INC_ARCH(syscalls.h)

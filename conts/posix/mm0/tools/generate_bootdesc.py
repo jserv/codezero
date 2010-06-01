@@ -2,7 +2,7 @@
 import os
 import sys
 
-from configure import *
+from config.config_invoke import *
 config = configuration_retrieve()
 
 objdump = "objdump"

@@ -12,7 +12,7 @@
 #include <l4/macros.h>
 #include <l4/config.h>
 #include INC_GLUE(memory.h)
-#include <memcache/memcache.h>
+#include <mem/memcache.h>
 #include <lib/idpool.h>
 
 /*

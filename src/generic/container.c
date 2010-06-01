@@ -15,8 +15,11 @@
 #include INC_SUBARCH(mm.h)
 #include INC_ARCH(linker.h)
 
-int container_init(struct container *c)
+struct container *container_alloc_init()
 {
+	/* Allocate container */
+	struct container *c = alloc_bootmem(sizeof(*c), 0);
+
 	/* Allocate new container id */
 	c->cid = id_new(&kernel_resources.container_ids);
 
@@ -33,15 +36,6 @@ int container_init(struct container *c)
 	for (int i = 0; i < CONFIG_MAX_PAGERS_USED; i++)
 		cap_list_init(&c->pager[i].cap_list);
 
-
-	return 0;
-}
-
-struct container *container_create(void)
-{
-	struct container *c = alloc_container();
-
-	container_init(c);
 
 	return c;
 }
@@ -71,6 +65,63 @@ struct container *container_find(struct kernel_resources *kres, l4id_t cid)
 }
 
 /*
+ * Map pagers based on section flags
+ */
+void map_pager_sections(struct pager *pager, struct container *cont,
+			struct ktcb *task)
+{
+	unsigned long size_rx = 0;
+	unsigned long size_rw = 0;
+
+	if ((size_rx = page_align_up(pager->rx_pheader_end) -
+ 	     pager->rx_pheader_start) >= PAGE_SIZE) {
+		printk("%s: Mapping 0x%lx bytes as RX "
+		       "from 0x%lx physical to 0x%lx virtual for %s\n",
+		       __KERNELNAME__, size_rx,
+		       (pager->rx_pheader_start -
+			pager->start_vma + pager->start_lma),
+		       pager->rx_pheader_start, cont->name);
+
+		add_mapping_space((pager->rx_pheader_start - pager->start_vma +
+				  pager->start_lma),
+				  pager->rx_pheader_start, size_rx,
+				  MAP_USR_RX, task->space);
+	}
+
+	if ((size_rw = page_align_up(pager->rw_pheader_end) -
+	     pager->rw_pheader_start) >= PAGE_SIZE) {
+		printk("%s: Mapping 0x%lx bytes as RW "
+		       "from 0x%lx physical to 0x%lx virtual for %s\n",
+		       __KERNELNAME__, size_rw,
+		       (pager->rw_pheader_start -
+			pager->start_vma + pager->start_lma),
+		       pager->rw_pheader_start, cont->name);
+
+		add_mapping_space((pager->rw_pheader_start - pager->start_vma +
+				   pager->start_lma),
+				  pager->rw_pheader_start, size_rw,
+				  MAP_USR_RW, task->space);
+	}
+
+	/*
+	 * If no RX, RW sections are there, map full image as RWX
+	 * TODO: This doesnot look like the best way.
+	 */
+	if (!size_rx && !size_rw) {
+		printk("%s: Mapping 0x%lx bytes (%lu pages) "
+		       "from 0x%lx to 0x%lx for %s\n",
+		       __KERNELNAME__, pager->memsize,
+		       __pfn(page_align_up(pager->memsize)),
+		       pager->start_lma, pager->start_vma, cont->name);
+
+		/* Map the task's space */
+		add_mapping_space(pager->start_lma, pager->start_vma,
+				  page_align_up(pager->memsize),
+				  MAP_USR_RWX, task->space);
+	}
+}
+
+/*
  * TODO:
  *
  * Create a purer address_space_create that takes
@@ -96,7 +147,7 @@ int init_pager(struct pager *pager, struct container *cont)
 	 * can be done to this pager. Note, that we're still on
 	 * idle task stack.
 	 */
-	cap_list_move(&current->cap_list, &pager->cap_list);
+	cap_list_move(&current->space->cap_list, &pager->cap_list);
 
 	/* Setup dummy container pointer so that curcont works */
 	current->container = cont;
@@ -111,7 +162,7 @@ int init_pager(struct pager *pager, struct container *cont)
 	task_init_registers(task, pager->start_address);
 
 	/* Initialize container/pager relationships */
-	task->pagerid = task->tid;
+	task->pager = task;
 	task->tgid = task->tid;
 	task->container = cont;
 
@@ -121,72 +172,11 @@ int init_pager(struct pager *pager, struct container *cont)
 	/* Add the address space to container space list */
 	address_space_add(task->space);
 
-#if 0
-	printk("%s: Mapping 0x%lx bytes (%lu pages) "
-	       "from 0x%lx to 0x%lx for %s\n",
-	       __KERNELNAME__, pager->memsize,
-	       __pfn(page_align_up(pager->memsize)),
-	       pager->start_lma, pager->start_vma, cont->name);
-
-	/* Map the task's space */
-	add_mapping_pgd(pager->start_lma, pager->start_vma,
-			page_align_up(pager->memsize),
-			MAP_USR_RWX, TASK_PGD(task));
-#else
-        /*
-	 * Map pager with appropriate section flags
-	 * We do page_align_down() to do a page alignment for
-	 * various kinds of sections, this automatically
-	 * takes care of the case where we have different kinds of
-	 * data lying on same page, eg: RX, RO etc.
-	 * Here one assumption made is, starting of first
-	 * RW section will be already page aligned, if this is
-	 * not true then we have to take special care of this.
-	 */
-	if(pager->rx_sections_end >= pager->rw_sections_start) {
-		pager->rx_sections_end = page_align(pager->rx_sections_end);
-		pager->rw_sections_start = page_align(pager->rw_sections_start);
-	}
-
-	unsigned long size = 0;
-	if((size = page_align_up(pager->rx_sections_end) -
-	    page_align_up(pager->rx_sections_start))) {
-		add_mapping_pgd(page_align_up(pager->rx_sections_start -
-					      pager->start_vma +
-					      pager->start_lma),
-				page_align_up(pager->rx_sections_start),
-				size, MAP_USR_RX, TASK_PGD(task));
-
-		printk("%s: Mapping 0x%lx bytes as RX "
-		       "from 0x%lx to 0x%lx for %s\n",
-		       __KERNELNAME__, size,
-		       page_align_up(pager->rx_sections_start -
-		       pager->start_vma + pager->start_lma),
-		       page_align_up(pager->rx_sections_start),
-		       cont->name);
-	}
-
-	if((size = page_align_up(pager->rw_sections_end) -
-	    page_align_up(pager->rw_sections_start))) {
-		add_mapping_pgd(page_align_up(pager->rw_sections_start -
-					      pager->start_vma +
-					      pager->start_lma),
-				page_align_up(pager->rw_sections_start),
-				size, MAP_USR_RW, TASK_PGD(task));
-
-		printk("%s: Mapping 0x%lx bytes as RW "
-		       "from 0x%lx to 0x%lx for %s\n",
-		       __KERNELNAME__, size,
-		       page_align_up(pager->rw_sections_start -
-		       pager->start_vma + pager->start_lma),
-		       page_align_up(pager->rw_sections_start),
-		       cont->name);
-	}
-
-#endif
+	/* Map various pager sections based on section flags */
+	map_pager_sections(pager, cont, task);
 
 	/* Move capability list from dummy to task's space cap list */
-	cap_list_move(&task->space->cap_list, &current->cap_list);
+	cap_list_move(&task->space->cap_list, &current->space->cap_list);
 
 	/* Initialize task scheduler parameters */
 	sched_init_task(task, TASK_PRIO_PAGER);

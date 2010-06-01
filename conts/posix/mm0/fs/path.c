@@ -7,7 +7,7 @@
 #include <l4/lib/list.h>
 #include <l4/api/errno.h>
 #include <lib/pathstr.h>
-#include <malloc/malloc.h>
+#include <mem/malloc.h>
 #include <path.h>
 #include <stdio.h>
 #include <fs.h>

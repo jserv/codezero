@@ -7,15 +7,14 @@
 #
 import os, sys, shelve, subprocess
 from os.path import join
-from configure import *
 
 PROJRELROOT = '../../'
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 
-from config.projpaths import *
-from config.configuration import *
-from config.lib import *
+from scripts.config.projpaths import *
+from scripts.config.configuration import *
+from scripts.config.lib import *
+from scripts.config.config_invoke import *
 
 config = configuration_retrieve()
 
@@ -86,8 +85,7 @@ def generate_image_S(target_path, images):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
-        generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), \
-                                join(BUILDDIR, 'kernel.elf'))
+        generate_ksym_to_loader(join(PROJROOT, 'loader/ksyms.S'), KERNEL_ELF)
     elif len(sys.argv) == 3:
         generate_ksym_to_loader(sys.argv[1], sys.argv[1])
     else:

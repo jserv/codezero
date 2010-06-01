@@ -13,6 +13,9 @@
 
 #include <l4/platform/realview/offsets.h>
 
+#define PLATFORM_DEVICES1_START		0x40000000
+#define PLATFORM_DEVICES1_END		0x60000000
+
 /*
  * Device offsets in physical memory
  * Naming of devices done starting with 0 subscript,

@@ -5,7 +5,7 @@
  */
 #include <stdio.h>
 #include <l4/config.h>
-#include <libdev/uart.h>
+#include <dev/uart.h>
 
 int __fputc(int c, FILE *stream)
 {

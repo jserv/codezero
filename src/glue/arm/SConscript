@@ -1,22 +1,25 @@
 
 # Inherit global environment
-import os, sys, glob
+import os, sys
 
 PROJRELROOT = '../../'
-
 sys.path.append(PROJRELROOT)
 
-from config.projpaths import *
-from configure import *
+from scripts.config.projpaths import *
+from scripts.config.config_invoke import *
 
-Import('env', 'symbols')
+Import('env')
+
+config  = configuration_retrieve()
+symbols = config.all
 
 # The set of source files associated with this SConscript file.
-src_local = ['init.c', 'memory.c', 'systable.c', 'irq.c', 'cache.c', 'debug.c']
+src_local = ['init.c', 'memory.c', 'systable.c',
+             'irq.c', 'cache.c', 'debug.c']
 
 for name, val in symbols:
-    if 'CONFIG_SMP' == name:
-	src_local += ['smp.c', 'ipi.c']
+    if 'CONFIG_SMP_' == name:
+	    src_local += ['smp.c', 'ipi.c']
 
 obj = env.Object(src_local)
 Return('obj')

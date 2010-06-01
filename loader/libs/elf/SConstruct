@@ -6,7 +6,7 @@
 
 import os, sys, shelve
 from os.path import join
-from configure import *
+from scripts.config.config_invoke import *
 
 config = configuration_retrieve()
 arch = config.arch

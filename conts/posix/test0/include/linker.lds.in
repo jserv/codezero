@@ -11,38 +11,60 @@ __stack = (virtual_base - 0x1000 - 8); /* First page before the env/args */
 
 offset = virtual_base - physical_base;
 
+OUTPUT_ARCH(arm)
 ENTRY(_start)
+
+PHDRS
+{
+	rx PT_LOAD;
+	rw PT_LOAD;
+}
 
 SECTIONS
 {
 	. = virtual_base;
+
+	/* Put all RX, RO sections here */
 	_start_text = .;
-	.text : AT (ADDR(.text) - offset) {
+	.text : AT (ADDR(.text) - offset)
+	{
 		*(.text.head)
 		*(.text)
-	}
-	.rodata : AT (ADDR(.rodata) - offset) {
+	} : rx = 0x90909090
+
+	.rodata : AT (ADDR(.rodata) - offset)
+	{
 		*(.rodata)
-	}
-	.rodata1 : AT (ADDR(.rodata1) - offset) {
+	} : rx = 0x90909090
+	.rodata1 : AT (ADDR(.rodata1) - offset)
+	{
 		*(.rodata1)
-	}
+	} : rx = 0x90909090
 
 	. = ALIGN(4K);
-	.data : AT (ADDR(.data) - offset) {
+
+	/* Put all RW sections here */
+	.data : AT (ADDR(.data) - offset)
+	{
 		_start_test_exec = .;
 		*(.testexec)
 		_end_test_exec = .;
 		*(.data)
-	}
-	.got : AT (ADDR(.got) - offset) {
+	} : rw
+
+	.got : AT (ADDR(.got) - offset)
+	{
 		*(.got)
-	}
-	.got.plt : AT (ADDR(.got.plt) - offset) {
+	} : rw
+
+	.got.plt : AT (ADDR(.got.plt) - offset)
+	{
 		*(.got.plt)
-	}
-	.bss : AT (ADDR(.bss) - offset) {
+	} : rw
+
+	.bss : AT (ADDR(.bss) - offset)
+	{
 		*(.bss)
-	}
+	} : rw
 	_end = .;
 }

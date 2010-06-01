@@ -40,7 +40,7 @@
 struct address_space {
 	l4id_t spid;
 	struct link list;
-	struct mutex lock;
+	struct spinlock lock;
 	pgd_table_t *pgd;
 
 	/* Capabilities shared by threads in same space */
@@ -50,13 +50,12 @@ struct address_space {
 
 struct address_space_list {
 	struct link list;
-	struct mutex lock;
+	struct spinlock lock;
 	int count;
 };
 
 struct address_space *address_space_create(struct address_space *orig);
-void address_space_delete(struct address_space *space,
-			  struct ktcb *task_accounted);
+void address_space_delete(struct address_space *space, struct cap_list *clist);
 void address_space_attach(struct ktcb *tcb, struct address_space *space);
 struct address_space *address_space_find(l4id_t spid);
 void address_space_add(struct address_space *space);

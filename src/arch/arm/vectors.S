@@ -565,7 +565,7 @@ current_irq_nest_count:
 .word	0
 .word	0
 
-#if defined (CONFIG_SMP)
+#if defined (CONFIG_SMP_)
 	@ Rx contains the address of per cpu variable
 	.macro per_cpu adr, temp, varname
 		get_cpuid \temp

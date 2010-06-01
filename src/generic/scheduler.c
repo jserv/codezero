@@ -27,6 +27,8 @@
 #include INC_ARCH(exception.h)
 #include INC_SUBARCH(irq.h)
 
+#define is_idle_task(task)	(task == per_cpu(scheduler).idle_task)
+
 DECLARE_PERCPU(struct scheduler, scheduler);
 
 /* This is incremented on each irq or voluntarily by preempt_disable() */
@@ -119,8 +121,6 @@ void sched_init()
 
 	sched->rq_runnable = &sched->sched_rq[0];
 	sched->rq_expired = &sched->sched_rq[1];
-	sched->rq_rt_runnable = &sched->sched_rq[2];
-	sched->rq_rt_expired = &sched->sched_rq[3];
 	sched->prio_total = TASK_PRIO_TOTAL;
 	sched->idle_task = current;
 }
@@ -136,18 +136,6 @@ static void sched_rq_swap_queues(void)
 	temp = per_cpu(scheduler).rq_runnable;
 	per_cpu(scheduler).rq_runnable = per_cpu(scheduler).rq_expired;
 	per_cpu(scheduler).rq_expired = temp;
-}
-
-static void sched_rq_swap_rtqueues(void)
-{
-	struct runqueue *temp;
-
-	BUG_ON(list_empty(&per_cpu(scheduler).rq_rt_expired->task_list));
-
-	/* Queues are swapped and expired list becomes runnable */
-	temp = per_cpu(scheduler).rq_rt_runnable;
-	per_cpu(scheduler).rq_rt_runnable = per_cpu(scheduler).rq_rt_expired;
-	per_cpu(scheduler).rq_rt_expired = temp;
 }
 
 /* Set policy on where to add tasks in the runqueue */
@@ -199,29 +187,6 @@ static inline void sched_rq_remove_task(struct ktcb *task)
 	sched_unlock_runqueues(sched, irqflags);
 }
 
-static inline void
-sched_run_task(struct ktcb *task, struct scheduler *sched)
-{
-	if (task->flags & TASK_REALTIME)
-		sched_rq_add_task(task, sched->rq_rt_runnable,
-				  RQ_ADD_BEHIND);
-	else
-		sched_rq_add_task(task, sched->rq_runnable,
-				  RQ_ADD_BEHIND);
-}
-
-static inline void
-sched_expire_task(struct ktcb *task, struct scheduler *sched)
-{
-
-	if (task->flags & TASK_REALTIME)
-		sched_rq_add_task(current, sched->rq_rt_expired,
-				  RQ_ADD_BEHIND);
-	else
-		sched_rq_add_task(current, sched->rq_expired,
-				  RQ_ADD_BEHIND);
-}
-
 void sched_init_task(struct ktcb *task, int prio)
 {
 	link_init(&task->rq_list);
@@ -237,7 +202,9 @@ void sched_resume_sync(struct ktcb *task)
 {
 	BUG_ON(task == current);
 	task->state = TASK_RUNNABLE;
-	sched_run_task(task, &per_cpu_byid(scheduler, task->affinity));
+	sched_rq_add_task(task, per_cpu_byid(scheduler,
+					     task->affinity).rq_runnable,
+					     1);
 	schedule();
 }
 
@@ -250,7 +217,9 @@ void sched_resume_sync(struct ktcb *task)
 void sched_resume_async(struct ktcb *task)
 {
 	task->state = TASK_RUNNABLE;
-	sched_run_task(task, &per_cpu_byid(scheduler, task->affinity));
+	sched_rq_add_task(task, per_cpu_byid(scheduler,
+					     task->affinity).rq_runnable,
+					     1);
 }
 
 /*
@@ -279,7 +248,7 @@ void sched_suspend_sync(void)
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
 
-	if (current->pagerid != current->tid)
+	if (current->pager != current)
 		wake_up(&current->wqh_pager, 0);
 	preempt_enable();
 
@@ -293,7 +262,7 @@ void sched_suspend_async(void)
 	current->state = TASK_INACTIVE;
 	current->flags &= ~TASK_SUSPENDING;
 
-	if (current->pagerid != current->tid)
+	if (current->pager != current)
 		wake_up(&current->wqh_pager, 0);
 	preempt_enable();
 
@@ -341,18 +310,6 @@ static inline int sched_recalc_ticks(struct ktcb *task, int prio_total)
 		CONFIG_SCHED_TICKS * task->priority / prio_total;
 }
 
-/*
- * Select a real-time task 1/8th of any one selection
- */
-static inline int sched_select_rt(struct scheduler *sched)
-{
-	int ctr = sched->task_select_ctr++ & 0xF;
-
-	if (ctr == 0 || ctr == 8 || ctr == 15)
-		return 0;
-	else
-		return 1;
-}
 
 /*
  * Selection happens as follows:
@@ -370,28 +327,13 @@ static inline int sched_select_rt(struct scheduler *sched)
 struct ktcb *sched_select_next(void)
 {
 	struct scheduler *sched = &per_cpu(scheduler);
-	int realtime = sched_select_rt(sched);
-	struct ktcb *next = 0;
+	struct ktcb *next = NULL;
 
 	for (;;) {
 
-		/* Decision to run an RT task? */
-		if (realtime && sched->rq_rt_runnable->total > 0) {
-			/* Get a real-time task, if available */
-			next = link_to_struct(sched->rq_rt_runnable->task_list.next,
-					      struct ktcb, rq_list);
-			break;
-		} else if (realtime && sched->rq_rt_expired->total > 0) {
-			/* Swap real-time queues */
-			sched_rq_swap_rtqueues();
-			/* Get a real-time task */
-			next = link_to_struct(sched->rq_rt_runnable->task_list.next,
-					      struct ktcb, rq_list);
-			break;
 		/* Idle flagged for run? */
-		} else if (sched->flags & SCHED_RUN_IDLE) {
-			/* Clear idle flag */
-			sched->flags &= ~SCHED_RUN_IDLE;
+		if (sched->flags & SCHED_RUN_IDLE) {
+			/* Select and add to runqueue */
 			next = sched->idle_task;
 			break;
 		} else if (sched->rq_runnable->total > 0) {
@@ -421,6 +363,7 @@ struct ktcb *sched_select_next(void)
 	return next;
 }
 
+
 /* Prepare next runnable task right before switching to it */
 void sched_prepare_next(struct ktcb *next)
 {
@@ -438,6 +381,10 @@ void sched_prepare_next(struct ktcb *next)
 		sched_recalc_ticks(next, per_cpu(scheduler).prio_total);
 		next->ticks_left = next->ticks_assigned;
 	}
+
+	/* Idle task needs adding to queue so its schedulable */
+	if (is_idle_task(next))
+		sched_rq_add_task(next, per_cpu(scheduler).rq_runnable, 1);
 
 	/* Reinitialise task's schedule granularity boundary */
 	next->sched_granule = SCHED_GRANULARITY;
@@ -491,13 +438,20 @@ void schedule()
 	/* Reset schedule flag */
 	need_resched = 0;
 
-	/* Remove from runnable and put into appropriate runqueue */
+	/* Remove runnable task from queue */
 	if (current->state == TASK_RUNNABLE) {
 		sched_rq_remove_task(current);
-		if (current->ticks_left)
-			sched_run_task(current, &per_cpu(scheduler));
-		else
-			sched_expire_task(current, &per_cpu(scheduler));
+		/* Non-idle tasks go back to a runqueue */
+		if (!is_idle_task(current)) {
+			if (current->ticks_left)
+				sched_rq_add_task(current,
+						  per_cpu(scheduler).rq_runnable,
+						  0);
+			else
+				sched_rq_add_task(current,
+						  per_cpu(scheduler).rq_expired,
+						  0);
+		}
 	}
 
 	/*

@@ -55,9 +55,6 @@ void platform_smp_init(int ncpus)
 		irq_desc_array[i].handler = &ipi_handler;
 	}
 
-	add_boot_mapping(PLATFORM_SYSTEM_REGISTERS, PLATFORM_SYSREGS_VBASE,
-			 PAGE_SIZE, MAP_IO_DEFAULT);
-
 }
 
 int platform_smp_start(int cpu, void (*smp_start_func)(int))

@@ -4,13 +4,13 @@
  * Copyright (C) 2009 B Labs Ltd.
  */
 #include <stdio.h>
-#include <l4lib/capability/cap_print.h>
+#include <l4lib/lib/cap.h>
 #include <l4lib/macros.h>
 #include L4LIB_INC_ARCH(syscalls.h)
 
+#if 0
 static struct capability cap_array[30];
 
-#if 0
 struct cap_group {
 	struct cap_list virtmem;
 	struct cap_list physmem;
@@ -75,7 +75,6 @@ void cap_grant_single(struct capability *orig, struct capability *share, l4id_t 
 {
 }
 
-#endif
 
 int caps_read_all(void)
 {
@@ -104,3 +103,4 @@ int caps_read_all(void)
 	return 0;
 }
 
+#endif

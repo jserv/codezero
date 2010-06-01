@@ -148,7 +148,7 @@ int do_timer_irq(void)
 	update_process_times();
 	update_system_time();
 
-#if defined (CONFIG_SMP)
+#if defined (CONFIG_SMP_)
 	smp_send_ipi(cpu_mask_others(), IPI_TIMER_EVENT);
 #endif
 

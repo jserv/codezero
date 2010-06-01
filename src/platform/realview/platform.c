@@ -84,7 +84,7 @@ void platform_init(void)
 	init_platform_irq_controller();
 	init_platform_devices();
 
-#if defined (CONFIG_SMP)
+#if defined (CONFIG_SMP_)
 	init_smp();
 	scu_init();
 #endif

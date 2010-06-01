@@ -8,18 +8,29 @@ virtual_base = %s;
 
 /* First page before the env/args */
 
-
+OUTPUT_ARCH(arm)
 ENTRY(_start)
+
+PHDRS
+{
+	rx PT_LOAD;
+	rw PT_LOAD;
+}
 
 SECTIONS
 {
 	. = virtual_base;
-	.text : { *(.text.head) *(.text) }
-	.rodata : { *(.rodata) }
-	.rodata1 : { *(.rodata1) }
+
+	/* RX, RO sections */
+	.text : { *(.text.head) *(.text) } : rx  =0x90909090
+	.rodata : { *(.rodata) } : rx  =0x90909090
+	.rodata1 : { *(.rodata1) } : rx  =0x90909090
+
 	. = ALIGN(4K);
-	.data :	{ *(.data) }
-	.got : { *(.got) }
-	.got.plt : { *(.got.plt) }
-	.bss : { *(.bss) }
+
+	/* RW sections */
+	.data :	{ *(.data) } : rw
+	.got : { *(.got) } : rw
+	.got.plt : { *(.got.plt) } :rw
+	.bss : { *(.bss) } : rw
 }

@@ -12,15 +12,14 @@
 void switch_to_user(struct ktcb *inittask);
 void timer_start(void);
 
-extern struct address_space init_space;
 void init_kernel_mappings(void);
 void start_virtual_memory(void);
 void finalize_virtual_memory(void);
 void init_finalize(void);
 
+void secondary_idle_task_init(void);
 void remove_section_mapping(unsigned long vaddr);
 
 void vectors_init(void);
-void setup_idle_caps(void);
-void setup_idle_task(void);
+
 #endif /* __ARM_GLUE_INIT_H__ */
