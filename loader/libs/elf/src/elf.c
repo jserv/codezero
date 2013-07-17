@@ -339,16 +339,12 @@ elf_loadFile(void *elfFile, bool phys)
 {
 	int i;
 	int num_pheaders;
-	int pheader_offset;
-	int pheader_type;
 	if (elf_checkFile(elfFile) != 0) {
 		return false;
 	}
 
 	num_pheaders = elf_getNumProgramHeaders(elfFile);
-	pheader_offset = elf_getProgramHeaderOffset(elfFile, 0);
 	//printf("Number of program headers: %d\n", num_pheaders);
-	//printf("Program header offset of first header from file beginning: 0x%p\n",pheader_offset);
 
 	/*
 	 * FIXME:
@@ -373,8 +369,6 @@ elf_loadFile(void *elfFile, bool phys)
 	//	printf("This section's size in file: %p\n", len);
 		src = (uint64_t) (uintptr_t) elfFile + elf_getProgramHeaderOffset(elfFile, i);
 	//	printf("Elf program header offset: %p\n", src);
-		pheader_type = elf_getProgramHeaderType(elfFile, i);
-	//	printf("Elf program header type: %p\n", pheader_type);
 // Comment
 printf("Copying to range from 0x%x to 0x%x of size: 0x%x\n", (unsigned int)dest, (unsigned int)dest + (unsigned int)len, (unsigned int)len);
 		memcpy((void*) (uintptr_t) dest, (void*) (uintptr_t) src, len);

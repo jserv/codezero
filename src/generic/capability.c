@@ -403,7 +403,7 @@ struct capability *cap_match_mem(struct capability *cap,
 {
 	struct sys_map_args *args = args_ptr;
 	struct ktcb *target = args->task;
-	unsigned long long start, end, pfn_point;
+	unsigned long long start, pfn_point;
 	unsigned long pfn;
 	unsigned int perms;
 
@@ -415,7 +415,6 @@ struct capability *cap_match_mem(struct capability *cap,
 
 	/* Long long range check to avoid overflow */
 	start = cap->start;
-	end = cap->end;
 	pfn_point = pfn;
 	if (start > pfn_point || cap->end < pfn_point + args->npages)
 		return 0;

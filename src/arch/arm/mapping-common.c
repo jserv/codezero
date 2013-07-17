@@ -313,12 +313,11 @@ int check_mapping(unsigned long vaddr, unsigned long size,
 int remove_mapping_space(struct address_space *space, unsigned long vaddr)
 {
 	pmd_table_t *pmd_table;
-	int pgd_i, pmd_i;
+	int pmd_i;
 	pmd_t *pmd;
 	unsigned int pmd_type, pte_type;
 
 	vaddr = page_align(vaddr);
-	pgd_i = PGD_INDEX(vaddr);
 	pmd_i = PMD_INDEX(vaddr);
 
 	/*

@@ -78,6 +78,6 @@ int sys_unmap(unsigned long virtual, unsigned long npages, unsigned int tid)
 			retval = ret;
 	}
 
-	return ret;
+	return retval;
 }
 

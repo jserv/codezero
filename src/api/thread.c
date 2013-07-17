@@ -497,7 +497,7 @@ out_err:
  */
 int sys_thread_control(unsigned int flags, struct task_ids *ids)
 {
-	struct ktcb *task = 0, *pager = 0;
+	struct ktcb *task = 0;
 	int err, ret = 0;
 
 	if ((err = check_access((unsigned long)ids, sizeof(*ids),
@@ -507,8 +507,6 @@ int sys_thread_control(unsigned int flags, struct task_ids *ids)
 	if ((flags & THREAD_ACTION_MASK) != THREAD_CREATE) {
 		if (!(task = tcb_find(ids->tid)))
 			return -ESRCH;
-
-		pager = task->pager;
 
 		/*
 		 * Caller may operate on a thread if it shares

@@ -248,7 +248,6 @@ elf32_fprintf(FILE *f, struct Elf32_Header *file, int size, const char *name, in
 	struct Elf32_Shdr *sections;
 	unsigned numSections;
 	int i, r;
-	char *str_table;
 
 	fprintf(f, "Found an elf32 file called \"%s\" located "
 		"at address 0x%p\n", name, file);
@@ -307,7 +306,6 @@ elf32_fprintf(FILE *f, struct Elf32_Header *file, int size, const char *name, in
 		}
 	}
 	if (flags & ELF_PRINT_SECTIONS) {
-		str_table = elf32_getSegmentStringTable(file);
 
 		printf("Section Headers:\n");
 		printf("  [Nr] Name              Type            Addr     Off\n");

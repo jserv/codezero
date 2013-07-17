@@ -26,7 +26,6 @@ int load_elf_image(unsigned long **entry, void *filebuf);
 int load_container_image(void *cont_section)
 {
 	struct Elf32_Header *elf_header = (struct Elf32_Header *)cont_section;
-	struct Elf32_Shdr *sect_header;
 	int nsect;
 	int nimgs = 0;
 	unsigned long *image_entry;
@@ -36,7 +35,6 @@ int load_container_image(void *cont_section)
 		return -1;
 	}
 
-	sect_header = elf32_getSectionTable(elf_header);
 	nsect = elf32_getNumSections(elf_header);
 
 	for (int i = 0; i < nsect; i++) {
@@ -59,7 +57,6 @@ int load_container_image(void *cont_section)
 int load_container_images(unsigned long start, unsigned long end)
 {
 	struct Elf32_Header *elf_header = (struct Elf32_Header *)start;
-	struct Elf32_Shdr *sect_header;
 	int nsect = 0;
 	int nconts = 0;
 
@@ -68,7 +65,6 @@ int load_container_images(unsigned long start, unsigned long end)
 		return -1;
 	}
 
-	sect_header = elf32_getSectionTable(elf_header);
 	nsect = elf32_getNumSections(elf_header);
 
 	for (int i = 0; i < nsect; i++) {

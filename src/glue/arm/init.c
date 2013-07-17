@@ -68,8 +68,6 @@ void print_sections(void)
 /* The kip is non-standard, using 0xBB to indicate mine for now ;-) */
 void kip_init()
 {
-	struct utcb **utcb_ref;
-
 	/*
 	 * TODO: Adding utcb size might be useful
 	 */
@@ -85,9 +83,6 @@ void kip_init()
 	strncpy(kip.kdesc.time, __TIME__, KDESC_TIME_SIZE);
 
 	kip_init_syscalls();
-
-	/* KIP + 0xFF0 is pointer to UTCB segment start address */
-	utcb_ref = (struct utcb **)((unsigned long)&kip + UTCB_KIP_OFFSET);
 
 	add_boot_mapping(virt_to_phys(&kip), USER_KIP_PAGE, PAGE_SIZE,
 			 MAP_USR_RO);
