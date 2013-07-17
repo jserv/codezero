@@ -57,4 +57,4 @@ BEGIN_PROC(memcpy)
 		bne last
 	1:
 	pop {r0, r4 - r11, pc}
-END_PROC(_memcpy)
+END_PROC(memcpy)

@@ -65,4 +65,4 @@ BEGIN_PROC(memset)
 		bne	end
 
 	ldmfd	sp!, {r4 - r11, pc}
-END_PROC(_memset)
+END_PROC(memset)

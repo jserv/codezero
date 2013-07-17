@@ -503,7 +503,7 @@ BEGIN_PROC(arm_irq_exception_basic)
 	mov	lr, pc
 	ldr	pc, =do_irq
 	ldmfd	sp!, {r0-r3, pc}^
-END_PROC(arm_irq_exception)
+END_PROC(arm_irq_exception_basic)
 
 /* Minimal IRQ state saved on irq stack right after irq vector enters: */
 #define	IRQ_R0		0
