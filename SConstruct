@@ -71,35 +71,35 @@ env = Environment(CC = config.toolchain_kernel + 'gcc',
 objects = []
 objects += SConscript('src/generic/SConscript',
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, 'generic'))
+                      variant_dir = join(builddir, 'generic'))
 
 objects += SConscript(join(join('src/glue', arch), 'SConscript'),
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, join('glue',arch)))
+                      variant_dir = join(builddir, join('glue',arch)))
 
 objects += SConscript(join(join('src/arch', arch), 'SConscript'),
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, join('arch', arch)))
+                      variant_dir = join(builddir, join('arch', arch)))
 
 objects += SConscript(join(join('src/arch', arch), join(subarch, 'SConscript')),
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, join(join('arch',arch), subarch)))
+                      variant_dir = join(builddir, join(join('arch',arch), subarch)))
 
 objects += SConscript('src/lib/SConscript',
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, 'lib'))
+                      variant_dir = join(builddir, 'lib'))
 
 objects += SConscript('src/api/SConscript',
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, 'api'))
+                      variant_dir = join(builddir, 'api'))
 
 objects += SConscript('src/drivers/SConscript',
                       exports = { 'env' : env, 'bdir' : 'driver/'}, duplicate = 0,
-                      build_dir = join(builddir, 'driver'))
+                      variant_dir = join(builddir, 'driver'))
 
 objects += SConscript(join(join('src/platform', platform), 'SConscript'),
                       exports = { 'env' : env }, duplicate = 0,
-                      build_dir = join(builddir, join('platform', platform)))
+                      variant_dir = join(builddir, join('platform', platform)))
 
 
 # Add builders for generating kernel linker scripts

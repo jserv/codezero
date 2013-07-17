@@ -48,7 +48,7 @@ env = Environment(CC = config.toolchain_userspace + 'gcc',
 		          CPPFLAGS = '-include l4/config.h -include l4/macros.h -include l4/types.h')
 
 objs = SConscript('SConscript', exports = { 'env' : env },
-                  duplicate=0, build_dir = builddir)
+                  duplicate=0, variant_dir = builddir)
 
 Depends(objs, join(PROJROOT, CONFIG_H))
 prog = env.Program(join(builddir, 'main.elf'), objs)

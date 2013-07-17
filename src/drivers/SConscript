@@ -8,24 +8,24 @@ src_local = []
 objs = []
 
 objs += SConscript("uart/pl011/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'pl011'))
+                   duplicate=0, variant_dir = join(bdir, 'pl011'))
 
 objs += SConscript("timer/sp804/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'timer'))
+                   duplicate=0, variant_dir = join(bdir, 'timer'))
 
 objs += SConscript("irq/pl190/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'vic'))
+                   duplicate=0, variant_dir = join(bdir, 'vic'))
 
 objs += SConscript("irq/gic/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'gic'))
+                   duplicate=0, variant_dir = join(bdir, 'gic'))
 
 objs += SConscript("irq/omap3/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'omap/intc'))
+                   duplicate=0, variant_dir = join(bdir, 'omap/intc'))
 
 objs += SConscript("uart/omap/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'omap/uart'))
+                   duplicate=0, variant_dir = join(bdir, 'omap/uart'))
 
 objs += SConscript("timer/omap/SConscript", exports = { 'env' : env },
-                   duplicate=0, build_dir = join(bdir, 'omap/timer'))
+                   duplicate=0, variant_dir = join(bdir, 'omap/timer'))
 
 Return('objs')
