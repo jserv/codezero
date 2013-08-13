@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.6
+#! /usr/bin/env python2.7
 # -*- mode: python; coding: utf-8; -*-
 #
 #  Codezero -- Virtualization microkernel for embedded systems.

@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.6
+#! /usr/bin/env python2.7
 # -*- mode: python; coding: utf-8; -*-
 #
 # Call this script from codezero/conts/linux/kernel-2.6.34

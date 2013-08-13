@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.6
+#! /usr/bin/env python2.7
 # -*- mode: python; coding: utf-8; -*-
 import os, sys, shelve, shutil, time
 from time import strftime, localtime
