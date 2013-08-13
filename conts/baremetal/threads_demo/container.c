@@ -4,9 +4,8 @@
  * Copyright (C) 2007-2009 B Labs Ltd.
  */
 
+#include <string.h>
 #include <l4lib/init.h>
-#include <l4lib/utcb.h>
-
 
 extern void main(void);
 

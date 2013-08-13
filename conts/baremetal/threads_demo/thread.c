@@ -6,7 +6,7 @@
  * Author: Bahadir Balban
  */
 
-#include <l4lib/macros.h>
+#include <string.h>
 #include L4LIB_INC_ARCH(syslib.h)
 #include L4LIB_INC_ARCH(syscalls.h)
 #include <l4lib/lib/thread.h>
