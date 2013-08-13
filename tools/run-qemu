@@ -1,0 +1,2 @@
+cd build
+qemu-system-arm -kernel final.elf -M versatilepb -cpu arm926 -nographic
