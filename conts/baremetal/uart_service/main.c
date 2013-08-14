@@ -26,25 +26,10 @@ static int total_caps = 0;
 #define UARTS_TOTAL             1
 static struct uart uart[UARTS_TOTAL];
 
-int cap_share_all_with_space()
-{
-	int err;
-	/* Share all capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
-					 CAP_SHARE_ALL_SPACE, 0)) < 0) {
-		printf("l4_capability_control() sharing of "
-		       "capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_SHARE request. err=%d\n", err);
-		BUG();
-	}
-
-	return 0;
-}
-
-static struct uart uart[UARTS_TOTAL];
-
 int uart_setup_devices(void)
 {
+	int err;
+
 	uart[0].phys_base = PLATFORM_UART1_BASE;
 
 	for (int i = 0; i < UARTS_TOTAL; i++) {
@@ -52,12 +37,13 @@ int uart_setup_devices(void)
 		uart[i].base = (unsigned long)l4_new_virtual(1);
 
 		/* Map uart to a virtual address region */
-		if (IS_ERR(l4_map((void *)uart[i].phys_base,
+		if (IS_ERR(err = l4_map((void *)uart[i].phys_base,
 				  (void *)uart[i].base, 1,
 				  MAP_USR_IO, self_tid()))) {
-			printf("%s: FATAL: Failed to map UART device "
-			       "to a virtual address\n",
-			       __CONTAINER_NAME__);
+			printf("%s: FATAL(%d): Failed to map UART device "
+			       "0x%lx physcial to 0x%lx virtual address\n",
+			       __CONTAINER_NAME__, err,
+			       uart[i].phys_base, uart[i].base);
 			BUG();
 		}
 
@@ -203,9 +189,6 @@ void main(void)
 
 	total_caps = cap_get_count();
 	caparray = cap_get_all();
-
-	/* Share all with space */
-	cap_share_all_with_space();
 
 	/* Initialize virtual address pool for uarts */
 	init_vaddr_pool();
