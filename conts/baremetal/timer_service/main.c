@@ -35,23 +35,6 @@ struct wake_task_list wake_tasks;
 /* tid of handle_request thread */
 l4id_t tid_ipc_handler;
 
-int cap_share_all_with_space()
-{
-	int err;
-
-	/* Share all capabilities */
-	if ((err = l4_capability_control(CAP_CONTROL_SHARE,
-					 CAP_SHARE_ALL_SPACE, 0)) < 0) {
-		printf("l4_capability_control() sharing of "
-		       "capabilities failed.\n Could not "
-		       "complete CAP_CONTROL_SHARE request. err=%d\n",
-		       err);
-		BUG();
-	}
-
-	return 0;
-}
-
 /*
  * Initialize timer devices
  */
@@ -461,9 +444,6 @@ void main(void)
 
 	total_caps = cap_get_count();
 	caparray = cap_get_all();
-
-	/* Share all with space */
-	cap_share_all_with_space();
 
 	/* Initialize virtual address pool for timers */
 	init_vaddr_pool();
