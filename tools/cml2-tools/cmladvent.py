@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # cmladvent.py -- CML2 configurator adventure-game front end
 # by Eric S. Raymond, <esr@thyrsus.com>

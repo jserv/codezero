@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python2
 # -*- mode: python; coding: utf-8; -*-
 #
 # Top-level build script for Codezero

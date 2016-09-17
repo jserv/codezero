@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 #
 # cmlconfigure.py -- CML2 configurator front ends
 # by Eric S. Raymond, <esr@thyrsus.com>
