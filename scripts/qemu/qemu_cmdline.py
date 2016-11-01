@@ -28,7 +28,7 @@ data_up = \
 '''
 cd build
 qemu-system-arm -s -S -kernel final.elf -M %s -cpu %s %s &
-arm-none-insight ; pkill qemu-system-arm
+arm-none-gdb ; pkill qemu-system-arm
 cd ..
 '''
 
@@ -36,12 +36,12 @@ data_smp = \
 '''
 cd build
 qemu-system-arm -s -S -kernel final.elf -smp %d -M %s -cpu %s %s &
-arm-none-insight ; pkill qemu-system-arm
+arm-none-gdb ; pkill qemu-system-arm
 cd ..
 '''
 
 # File to be generated with qemu commandline
-qemu_cmd_file = join(TOOLSDIR, 'run-qemu-insight')
+qemu_cmd_file = join(TOOLSDIR, 'run-qemu-gdb')
 
 def build_qemu_cmdline_script():
     # Get system selected platform and cpu
@@ -76,7 +76,7 @@ def build_qemu_cmdline_script():
     if not clcd:
 	    clcd = '-nographic'
 
-    # Write run-qemu-insight file
+    # Write run-qemu-gdb file
     with open(qemu_cmd_file, 'w+') as f:
         if smp == False:
             f.write(data_up % (mflag, cpuflag, clcd))

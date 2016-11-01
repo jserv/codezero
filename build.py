@@ -72,12 +72,12 @@ def build_system(opts, args):
         print "Building loader failed...\n"
         sys.exit(1)
 
-    # Build qemu-insight-script
-    print "\nBuilding qemu-insight-script..."
+    # Build qemu-gdb-script
+    print "\nBuilding qemu-gdb-script..."
     build_qemu_cmdline_script()
 
     print "\nBuild complete..."
-    print "\nRun qemu with following command: ./tools/run-qemu-insight\n"
+    print "\nRun qemu with following command: ./tools/run-qemu-gdb\n"
 
     renamed_cml = rename_config_cml(opts)
     if(renamed_cml):
@@ -111,8 +111,8 @@ def clean_system(opts):
     print "\nCleaning the loader..."
     ret = os.system("scons -c -f " + join(LOADERDIR, 'SConstruct'))
 
-    # Remove qemu-insight-script
-    print "\nRemoving qemu-insight-script..."
+    # Remove qemu-gdb-script
+    print "\nRemoving qemu-gdb-script..."
     clean_qemu_cmdline_script()
 
     if opts.clean_all:
