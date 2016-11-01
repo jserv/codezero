@@ -392,7 +392,7 @@ void copy_init_process(void)
 	int fd;
 	struct svc_image *init_img;
 	unsigned long img_size;
-	void *init_img_start, *init_img_end;
+	void *init_img_start;
 	struct tcb *self = find_task(self_tid());
 	void *mapped;
 	int err;
@@ -415,7 +415,6 @@ void copy_init_process(void)
 
 	init_img_start = l4_map_helper((void *)init_img->phys_start,
 				       __pfn(img_size));
-	init_img_end = init_img_start + img_size;
 
 	/*
 	 * Map an anonymous region and prefault it.
