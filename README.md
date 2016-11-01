@@ -29,8 +29,6 @@ have more demanding requirements.
 ## What is the license?
 
 The current release is distributed under GNU General Public License Version 3.
-For contributions we ask for a copyright share agreement and you may freely
-contribute to the project this way.
 
 The third party source code under the directories loader/ tools/ libs/c
 libs/elf have their own copyright and licenses, separate from this project. All
