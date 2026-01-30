@@ -314,8 +314,8 @@ int do_printk(char* format_p, va_list args)
 
 #define arg(x) va_arg(args, x)
 
-    /* sanity check */
-    if (format == '\0')
+    /* sanity check: NULL pointer or empty string */
+    if (!format || !*format)
     {
 	return 0;
     }

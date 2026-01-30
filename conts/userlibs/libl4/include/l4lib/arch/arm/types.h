@@ -1,4 +1,4 @@
-#ifndef __L4LIB_ARM_TYPES_H___
+#ifndef __L4LIB_ARM_TYPES_H__
 #define __L4LIB_ARM_TYPES_H__
 
 #define TASK_ID_INVALID			0xFFFFFFFF

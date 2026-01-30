@@ -17,8 +17,14 @@
 
 int ipc_short_copy(struct ktcb *to, struct ktcb *from)
 {
-	unsigned int *mr0_src = KTCB_REF_MR0(from);
-	unsigned int *mr0_dst = KTCB_REF_MR0(to);
+	unsigned int *mr0_src;
+	unsigned int *mr0_dst;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+	mr0_src = KTCB_REF_MR0(from);
+	mr0_dst = KTCB_REF_MR0(to);
+#pragma GCC diagnostic pop
 
 	/* NOTE:
 	 * Make sure MR_TOTAL matches the number of registers saved on stack.
@@ -119,10 +125,12 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 			ret = -ENOIPC;
 		break;
 	case IPC_FLAGS_EXTENDED:
-		if (send_ipc_type == IPC_FLAGS_EXTENDED)
+		if (send_ipc_type == IPC_FLAGS_EXTENDED) {
 			/* We do a short copy as well. */
-			ret = ipc_short_copy(to, from);
+			if ((ret = ipc_short_copy(to, from)) < 0)
+				break;
 			ret = ipc_extended_copy(to, from);
+		}
 		if (send_ipc_type == IPC_FLAGS_SHORT)
 			ret = -ENOIPC;
 		if (send_ipc_type == IPC_FLAGS_FULL)
@@ -132,7 +140,10 @@ int ipc_msg_copy(struct ktcb *to, struct ktcb *from)
 
 	/* Save the sender id in case of ANYTHREAD receiver */
 	if (to->expected_sender == L4_ANYTHREAD) {
-       		mr0_dst = KTCB_REF_MR0(to);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+		mr0_dst = KTCB_REF_MR0(to);
+#pragma GCC diagnostic pop
 		mr0_dst[MR_SENDER] = from->tid;
 	}
 
@@ -388,7 +399,10 @@ int ipc_recv_extended(l4id_t sendertid, unsigned int flags)
 	msg_index = extended_ipc_msg_index(flags);
 
 	/* Get the pointer to primary message registers */
-       	mr0_current = KTCB_REF_MR0(current);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+	mr0_current = KTCB_REF_MR0(current);
+#pragma GCC diagnostic pop
 
 	/* Obtain extended ipc address */
 	ipc_address = (unsigned long)mr0_current[msg_index];
@@ -442,7 +456,10 @@ int ipc_send_extended(l4id_t recv_tid, unsigned int flags)
 	msg_index = extended_ipc_msg_index(flags);
 
 	/* Get the pointer to primary message registers */
-       	mr0_current = KTCB_REF_MR0(current);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+	mr0_current = KTCB_REF_MR0(current);
+#pragma GCC diagnostic pop
 
 	/* Obtain extended ipc address */
 	ipc_address = (unsigned long)mr0_current[msg_index];

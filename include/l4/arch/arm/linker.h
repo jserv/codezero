@@ -29,8 +29,8 @@ extern unsigned long _end_kernel[];
 extern unsigned long _end[];
 
 /* Link markers that get modified at runtime */
-unsigned long __svc_images_end;
-unsigned long __pt_start;
-unsigned long __pt_end;
+extern unsigned long __svc_images_end;
+extern unsigned long __pt_start;
+extern unsigned long __pt_end;
 
 #endif /* __ARCH_ARM_LINKER_H__ */

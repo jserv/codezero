@@ -1,13 +1,14 @@
 import mmap
 import os
 
+
 class ELF:
     EI_MAGIC = "\x7fELF"
-    
+
     def __init__(self, name):
         f = file(name, "rb")
         size = os.stat(name).st_size
-        
+
         self.data = mmap.mmap(f.fileno(), size, mmap.MAP_PRIVATE, mmap.PROT_READ)
 
         if self.magic != self.EI_MAGIC:
@@ -15,12 +16,13 @@ class ELF:
 
     def get_magic(self):
         return self.data[:4]
+
     magic = property(get_magic)
 
     def get_class(self):
         return self.data[4]
-    elf_class = property(get_class)
 
+    elf_class = property(get_class)
 
 
 "Test suite"

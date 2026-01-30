@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import elf
+from . import elf
+
 
 # Calculate the size of loadable sections of elf binary
 def elf_binary_size(img):
@@ -20,6 +21,7 @@ def elf_binary_size(img):
         if paddr_end < x.p_paddr + x.p_memsz:
             paddr_end = x.p_paddr + x.p_memsz
     return paddr_end - paddr_start
+
 
 # Return load address of elf file
 def get_elf_load_address(img):

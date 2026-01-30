@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
 #
 #  Codezero -- a microkernel for embedded systems.
@@ -15,21 +15,21 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELR
 from config.projpaths import *
 from config.configuration import *
 
+
 # Create linux kernel build directory path as:
 # conts/linux -> build/cont[0-9]/linux
 def source_to_builddir(srcdir, id):
-    cont_builddir = \
-        os.path.relpath(srcdir, \
-                        PROJROOT).replace("conts", \
-                                          "cont" + str(id))
+    cont_builddir = os.path.relpath(srcdir, PROJROOT).replace("conts", "cont" + str(id))
     return join(BUILDDIR, cont_builddir)
+
 
 class RootfsBuilder:
 
     def __init__(self, pathdict, container):
         self.LINUX_ROOTFSDIR = pathdict["LINUX_ROOTFSDIR"]
-        self.LINUX_ROOTFS_BUILDDIR = \
-            source_to_builddir(self.LINUX_ROOTFSDIR, container.id)
+        self.LINUX_ROOTFS_BUILDDIR = source_to_builddir(
+            self.LINUX_ROOTFSDIR, container.id
+        )
 
         self.rootfs_lds_in = join(self.LINUX_ROOTFSDIR, "rootfs.lds.in")
         self.rootfs_lds_out = join(self.LINUX_ROOTFS_BUILDDIR, "rootfs.lds")
@@ -41,29 +41,35 @@ class RootfsBuilder:
         self.cont_id = container.id
 
     def build_rootfs(self, config):
-        print 'Building the root filesystem...'
+        print("Building the root filesystem...")
         # IO files from this build
         os.chdir(LINUX_ROOTFSDIR)
         if not os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
             os.makedirs(self.LINUX_ROOTFS_BUILDDIR)
 
-        with open(self.rootfs_h_out, 'w+') as output:
-            with open(self.rootfs_h_in, 'r') as input:
-                output.write(input.read() % {'cn' : self.cont_id})
+        with open(self.rootfs_h_out, "w+") as output:
+            with open(self.rootfs_h_in, "r") as input:
+                output.write(input.read() % {"cn": self.cont_id})
 
-        os.system(config.toolchain_userspace + "cpp -I%s -P %s > %s" % \
-                  (self.LINUX_ROOTFS_BUILDDIR, self.rootfs_lds_in, \
-                   self.rootfs_lds_out))
-        os.system(config.toolchain_userspace + "gcc " + \
-                  "-nostdlib -o %s -T%s rootfs.S" % (self.rootfs_elf_out, \
-                                                     self.rootfs_lds_out))
-        print "Done..."
+        os.system(
+            config.toolchain_userspace
+            + "cpp -I%s -P %s > %s"
+            % (self.LINUX_ROOTFS_BUILDDIR, self.rootfs_lds_in, self.rootfs_lds_out)
+        )
+        os.system(
+            config.toolchain_userspace
+            + "gcc "
+            + "-nostdlib -o %s -T%s rootfs.S"
+            % (self.rootfs_elf_out, self.rootfs_lds_out)
+        )
+        print("Done...")
 
     def clean(self):
-        print 'Cleaning the built root filesystem...'
+        print("Cleaning the built root filesystem...")
         if os.path.exists(self.LINUX_ROOTFS_BUILDDIR):
             shutil.rmtree(self.LINUX_ROOTFS_BUILDDIR)
-        print 'Done...'
+        print("Done...")
+
 
 if __name__ == "__main__":
     # This is only a default test case
@@ -76,4 +82,4 @@ if __name__ == "__main__":
     elif "clean" == sys.argv[1]:
         rootfs_builder.clean()
     else:
-        print " Usage: %s [clean]" % (sys.argv[0])
+        print(" Usage: %s [clean]" % (sys.argv[0]))

@@ -1,14 +1,16 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
 import os, sys, shelve, shutil, re
-from projpaths import *
-from lib import *
-from caps import *
+from functools import cmp_to_key
+from .projpaths import *
+from .lib import *
+from .caps import *
+
 
 class CapabilityList:
     def __init__(self):
         self.physmem = {}
-	self.physmem["START"] = {}
+        self.physmem["START"] = {}
         self.physmem["END"] = {}
         self.virtmem = {}
         self.virtmem["START"] = {}
@@ -16,6 +18,7 @@ class CapabilityList:
         self.caps = {}
         self.virt_regions = 0
         self.phys_regions = 0
+
 
 class Container:
     def __init__(self, id):
@@ -41,29 +44,48 @@ class Container:
         self.linux_page_offset = 0
         self.linux_phys_offset = 0
         self.linux_rootfs_address = 0
-	self.caplist = {}
-	self.caplist["PAGER"] = CapabilityList()
-	self.caplist["CONTAINER"] = CapabilityList()
+        self.caplist = {}
+        self.caplist["PAGER"] = CapabilityList()
+        self.caplist["CONTAINER"] = CapabilityList()
 
     def print_self(self):
-        print '\nContainer %d' % self.id
-        print '------------'
-        print 'Container type:                      %s' % self.type
-        print 'Container Name:                      %s' % self.name
-        print 'Container Pager lma:                 %s' % conv_hex(self.pager_lma)
-        print 'Container Pager vma:                 %s' % conv_hex(self.pager_vma)
-        print 'Container Pager shm region start:    %s' % conv_hex(self.pager_shm_region_start)
-        print 'Container Pager shm region end:      %s' % conv_hex(self.pager_shm_region_end)
-        print 'Container Pager task region start:   %s' % conv_hex(self.pager_task_region_start)
-        print 'Container Pager task region end:     %s' % conv_hex(self.pager_task_region_end)
-        print 'Container Pager utcb region start:   %s' % conv_hex(self.pager_utcb_region_start)
-        print 'Container Pager utcb region end:     %s' % conv_hex(self.pager_utcb_region_end)
-        print 'Container Virtual regions:           %s' % self.caps.virt_regions
-        print 'Container Physical regions:          %s' % self.caps.phys_regions
-        print 'Container Pager Virtual regions:     %s' % self.pager_caps.virt_regions
-        print 'Container Pager Physical regions:    %s' % self.pager_caps.phys_regions
-        #print 'Container Capabilities:             %s' % self.caps
-        print '\n'
+        print("\nContainer %d" % self.id)
+        print("------------")
+        print("Container type:                      %s" % self.type)
+        print("Container Name:                      %s" % self.name)
+        print("Container Pager lma:                 %s" % conv_hex(self.pager_lma))
+        print("Container Pager vma:                 %s" % conv_hex(self.pager_vma))
+        print(
+            "Container Pager shm region start:    %s"
+            % conv_hex(self.pager_shm_region_start)
+        )
+        print(
+            "Container Pager shm region end:      %s"
+            % conv_hex(self.pager_shm_region_end)
+        )
+        print(
+            "Container Pager task region start:   %s"
+            % conv_hex(self.pager_task_region_start)
+        )
+        print(
+            "Container Pager task region end:     %s"
+            % conv_hex(self.pager_task_region_end)
+        )
+        print(
+            "Container Pager utcb region start:   %s"
+            % conv_hex(self.pager_utcb_region_start)
+        )
+        print(
+            "Container Pager utcb region end:     %s"
+            % conv_hex(self.pager_utcb_region_end)
+        )
+        print("Container Virtual regions:           %s" % self.caps.virt_regions)
+        print("Container Physical regions:          %s" % self.caps.phys_regions)
+        print("Container Pager Virtual regions:     %s" % self.pager_caps.virt_regions)
+        print("Container Pager Physical regions:    %s" % self.pager_caps.phys_regions)
+        # print('Container Capabilities:             %s' % self.caps)
+        print("\n")
+
 
 class configuration:
 
@@ -72,11 +94,13 @@ class configuration:
         # Optimized solution to derive gcc arch flag from cpu
         # gcc flag here is "-march"
         #                          cpu          -march flag
-        self.arch_to_gcc_flag = (['ARM926',       'armv5'],
-                                 ['ARM1136',      'armv6'],
-                                 ['ARM11MPCORE',  'armv6k'],
-                                 ['CORTEXA8',     'armv7-a'],
-                                 ['CORTEXA9',     'armv7-a'])
+        self.arch_to_gcc_flag = (
+            ["ARM926", "armv5te"],
+            ["ARM1136", "armv6"],
+            ["ARM11MPCORE", "armv6k"],
+            ["CORTEXA8", "armv7-a"],
+            ["CORTEXA9", "armv7-a"],
+        )
         self.arch = None
         self.subarch = None
         self.platform = None
@@ -104,32 +128,32 @@ class configuration:
 
     # Check if SMP enable, and get NCPU if SMP
     def get_ncpu(self, name, value):
-        if name[:len("CONFIG_SMP")] == "CONFIG_SMP":
+        if name[: len("CONFIG_SMP")] == "CONFIG_SMP":
             self.smp = bool(value)
-        if name[:len("CONFIG_NCPU")] == "CONFIG_NCPU":
+        if name[: len("CONFIG_NCPU")] == "CONFIG_NCPU":
             self.ncpu = int(value)
 
     # Extract architecture from a name value pair
     def get_arch(self, name, val):
-        if name[:len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
+        if name[: len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
             parts = name.split("_", 3)
             self.arch = parts[2].lower()
 
     # Extract subarch from a name value pair
     def get_subarch(self, name, val):
-        if name[:len("CONFIG_SUBARCH_")] == "CONFIG_SUBARCH_":
+        if name[: len("CONFIG_SUBARCH_")] == "CONFIG_SUBARCH_":
             parts = name.split("_", 3)
             self.subarch = parts[2].lower()
 
     # Extract platform from a name value pair
     def get_platform(self, name, val):
-        if name[:len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
+        if name[: len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
             parts = name.split("_", 3)
             self.platform = parts[2].lower()
 
     # Extract cpu from a name value pair
     def get_cpu(self, name, val):
-        if name[:len("CONFIG_CPU_")] == "CONFIG_CPU_":
+        if name[: len("CONFIG_CPU_")] == "CONFIG_CPU_":
             parts = name.split("_", 3)
             self.cpu = parts[2].lower()
 
@@ -140,60 +164,61 @@ class configuration:
 
     # Extract kernel space toolchain from a name value pair
     def get_toolchain(self, name, val):
-        if name[:len("CONFIG_TOOLCHAIN_USERSPACE")] == \
-			"CONFIG_TOOLCHAIN_USERSPACE":
-            parts = val.split("\"", 2)
+        if name[: len("CONFIG_TOOLCHAIN_USERSPACE")] == "CONFIG_TOOLCHAIN_USERSPACE":
+            parts = val.split('"', 2)
             self.toolchain_userspace = parts[1]
 
-	if name[:len("CONFIG_TOOLCHAIN_KERNEL")] == \
-			"CONFIG_TOOLCHAIN_KERNEL":
-		parts = val.split("\"", 2)
-		self.toolchain_kernel = parts[1]
-
+        if name[: len("CONFIG_TOOLCHAIN_KERNEL")] == "CONFIG_TOOLCHAIN_KERNEL":
+            parts = val.split('"', 2)
+            self.toolchain_kernel = parts[1]
 
     # Extract number of containers
     def get_ncontainers(self, name, val):
-        if name[:len("CONFIG_CONTAINERS")] == "CONFIG_CONTAINERS":
+        if name[: len("CONFIG_CONTAINERS")] == "CONFIG_CONTAINERS":
             self.ncontainers = int(val)
 
     # TODO: Carry this over to Container() as static method???
     def get_container_parameter(self, id, param, val):
-        if param[:len("PAGER_LMA")] == "PAGER_LMA":
+        if param[: len("PAGER_LMA")] == "PAGER_LMA":
             self.containers[id].pager_lma = int(val, 0)
-        elif param[:len("PAGER_VMA")] == "PAGER_VMA":
+        elif param[: len("PAGER_VMA")] == "PAGER_VMA":
             self.containers[id].pager_vma = int(val, 0)
-        elif param[:len("PAGER_UTCB_START")] == "PAGER_UTCB_START":
+        elif param[: len("PAGER_UTCB_START")] == "PAGER_UTCB_START":
             self.containers[id].pager_utcb_region_start = int(val, 0)
-        elif param[:len("PAGER_UTCB_END")] == "PAGER_UTCB_END":
+        elif param[: len("PAGER_UTCB_END")] == "PAGER_UTCB_END":
             self.containers[id].pager_utcb_region_end = int(val, 0)
-        elif param[:len("PAGER_SHM_START")] == "PAGER_SHM_START":
+        elif param[: len("PAGER_SHM_START")] == "PAGER_SHM_START":
             self.containers[id].pager_shm_region_start = int(val, 0)
-        elif param[:len("PAGER_SHM_END")] == "PAGER_SHM_END":
+        elif param[: len("PAGER_SHM_END")] == "PAGER_SHM_END":
             self.containers[id].pager_shm_region_end = int(val, 0)
-        elif param[:len("PAGER_TASK_START")] == "PAGER_TASK_START":
+        elif param[: len("PAGER_TASK_START")] == "PAGER_TASK_START":
             self.containers[id].pager_task_region_start = int(val, 0)
-        elif param[:len("PAGER_TASK_END")] == "PAGER_TASK_END":
+        elif param[: len("PAGER_TASK_END")] == "PAGER_TASK_END":
             self.containers[id].pager_task_region_end = int(val, 0)
-        elif param[:len("LINUX_PAGE_OFFSET")] == "LINUX_PAGE_OFFSET":
+        elif param[: len("LINUX_PAGE_OFFSET")] == "LINUX_PAGE_OFFSET":
             self.containers[id].linux_page_offset = int(val, 0)
             self.containers[id].pager_vma += int(val, 0)
-        elif param[:len("LINUX_PHYS_OFFSET")] == "LINUX_PHYS_OFFSET":
+        elif param[: len("LINUX_PHYS_OFFSET")] == "LINUX_PHYS_OFFSET":
             self.containers[id].linux_phys_offset = int(val, 0)
             self.containers[id].pager_lma += int(val, 0)
-        elif param[:len("LINUX_ZRELADDR")] == "LINUX_ZRELADDR":
+        elif param[: len("LINUX_ZRELADDR")] == "LINUX_ZRELADDR":
             self.containers[id].linux_zreladdr = int(val, 0)
-        elif param[:len("LINUX_ROOTFS_ADDRESS")] == "LINUX_ROOTFS_ADDRESS":
+        elif param[: len("LINUX_ROOTFS_ADDRESS")] == "LINUX_ROOTFS_ADDRESS":
             self.containers[id].linux_rootfs_address += int(val, 0)
-        elif re.match(r"(PAGER_){0,1}(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param):
-            matchobj = re.match(r"(PAGER_){0,1}(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param)
+        elif re.match(
+            r"(PAGER_){0,1}(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param
+        ):
+            matchobj = re.match(
+                r"(PAGER_){0,1}(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param
+            )
             pager, virtphys, regionidstr, discard1, startend = matchobj.groups()
             regionid = int(regionidstr)
-	    if pager == "PAGER_":
-	        owner = "PAGER"
-	    elif pager == None:
-	        owner = "CONTAINER"
+            if pager == "PAGER_":
+                owner = "PAGER"
+            elif pager == None:
+                owner = "CONTAINER"
             else:
-	        print "Pager is neither None nor PAGER_, it is: " + pager
+                print("Pager is neither None nor PAGER_, it is: " + pager)
 
             if virtphys == "VIRT":
                 self.containers[id].caplist[owner].virtmem[startend][regionid] = val
@@ -204,17 +229,17 @@ class configuration:
                 if regionid + 1 > self.containers[id].caplist[owner].phys_regions:
                     self.containers[id].caplist[owner].phys_regions = regionid + 1
 
-        elif param[:len("OPT_NAME")] == "OPT_NAME":
+        elif param[: len("OPT_NAME")] == "OPT_NAME":
             name = val[1:-1].lower()
             self.containers[id].name = name
-        elif param[:len("BAREMETAL_PROJ_")] == "BAREMETAL_PROJ_":
+        elif param[: len("BAREMETAL_PROJ_")] == "BAREMETAL_PROJ_":
             param1 = param.split("_", 2)
             self.containers[id].dirname = param1[2].lower()
-        elif param[:len("CAP_")] == "CAP_":
-            prefix, param_rest = param.split('_', 1)
+        elif param[: len("CAP_")] == "CAP_":
+            prefix, param_rest = param.split("_", 1)
             prepare_capability(self.containers[id], "CONTAINER", param_rest, val)
-	elif param[:len("PAGER_CAP_")] == "PAGER_CAP_":
-            parts = param.split('_', 2)
+        elif param[: len("PAGER_CAP_")] == "PAGER_CAP_":
+            parts = param.split("_", 2)
             prepare_capability(self.containers[id], "PAGER", parts[2], val)
         else:
             param1, param2 = param.split("_", 1)
@@ -243,7 +268,7 @@ class configuration:
 
         # Check and store info on this parameter
         self.get_container_parameter(id, param, val)
-        #self.containers_print(self.containers)
+        # self.containers_print(self.containers)
 
     # Used for sorting container members,
     # with this we are sure containers are sorted by id value
@@ -252,7 +277,7 @@ class configuration:
         if cont.id < cont2.id:
             return -1
         if cont.id == cont2.id:
-            print "compare_containers: Error, containers have same id."
+            print("compare_containers: Error, containers have same id.")
             exit(1)
         if cont.id > cont2.id:
             return 1
@@ -274,20 +299,21 @@ class configuration:
         self.containers.append(container)
 
         # Make sure elements in order for indexed accessing
-        self.containers.sort(self.compare_containers)
+        self.containers.sort(key=cmp_to_key(self.compare_containers))
 
     def config_print(self):
-        print '\nConfiguration'
-        print '-------------'
-        print 'Arch:        %s, %s' % (self.arch, self.subarch)
-        print 'Platform:    %s' % self.platform
-        #print 'Symbols:    %s' % self.all
-        print 'Containers:  %d' % self.ncontainers
+        print("\nConfiguration")
+        print("-------------")
+        print("Arch:        %s, %s" % (self.arch, self.subarch))
+        print("Platform:    %s" % self.platform)
+        # print('Symbols:    %s' % self.all)
+        print("Containers:  %d" % self.ncontainers)
         self.containers_print()
 
     def containers_print(self):
         for c in self.containers:
             c.print_self()
+
 
 def configuration_save(config):
     if not os.path.exists(CONFIG_SHELVE_DIR):
@@ -302,6 +328,7 @@ def configuration_save(config):
     config_shelve["cpu"] = config.cpu
     config_shelve["all_symbols"] = config.all
     config_shelve.close()
+
 
 def configuration_retrieve():
     # Get configuration information

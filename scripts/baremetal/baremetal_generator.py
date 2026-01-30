@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
 #
 #  Codezero -- Virtualization microkernel for embedded systems.
@@ -8,7 +8,7 @@
 import os, sys, shelve, glob
 from os.path import join
 
-PROJRELROOT = '../../'
+PROJRELROOT = "../../"
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), PROJRELROOT)))
 sys.path.append(os.path.abspath("../"))
@@ -19,27 +19,28 @@ from scripts.config.projpaths import *
 from scripts.config.configuration import *
 from scripts.config.lib import *
 
+
 class BaremetalContGenerator:
     def __init__(self):
-        self.CONT_SRC_DIR = ''   # Set when container is selected
-        self.BAREMETAL_SRC_BASEDIR = join(PROJROOT, 'conts')
-        self.BAREMETAL_PROJ_SRC_DIR = join(PROJROOT, 'conts/baremetal')
+        self.CONT_SRC_DIR = ""  # Set when container is selected
+        self.BAREMETAL_SRC_BASEDIR = join(PROJROOT, "conts")
+        self.BAREMETAL_PROJ_SRC_DIR = join(PROJROOT, "conts/baremetal")
 
-        self.main_builder_name = 'build.py'
-        self.main_configurator_name = 'configure.py'
-        self.mailing_list_url = 'http://lists.l4dev.org/mailman/listinfo/codezero-devel'
+        self.main_builder_name = "build.py"
+        self.main_configurator_name = "configure.py"
+        self.mailing_list_url = "http://lists.l4dev.org/mailman/listinfo/codezero-devel"
 
-        self.build_script_in = join(SCRIPTROOT, 'files/SConstruct.in')
-        self.build_readme_in = join(SCRIPTROOT, 'files/build.readme.in')
-        self.build_desc_in = join(SCRIPTROOT, 'files/container.desc.in')
-        self.linker_lds_in = join(SCRIPTROOT, 'files/linker.lds.in')
-        self.container_h_in = join(SCRIPTROOT, 'files/container.h.in')
+        self.build_script_in = join(SCRIPTROOT, "files/SConstruct.in")
+        self.build_readme_in = join(SCRIPTROOT, "files/build.readme.in")
+        self.build_desc_in = join(SCRIPTROOT, "files/container.desc.in")
+        self.linker_lds_in = join(SCRIPTROOT, "files/linker.lds.in")
+        self.container_h_in = join(SCRIPTROOT, "files/container.h.in")
 
-        self.build_script_name = 'SConstruct'
-        self.build_readme_name = 'build.readme'
-        self.build_desc_name = '.container'
-        self.linker_lds_name = 'linker.lds'
-        self.container_h_name = 'container.h'
+        self.build_script_name = "SConstruct"
+        self.build_readme_name = "build.readme"
+        self.build_desc_name = ".container"
+        self.linker_lds_name = "linker.lds"
+        self.container_h_name = "container.h"
 
         self.container_h_out = None
         self.build_script_out = None
@@ -49,53 +50,70 @@ class BaremetalContGenerator:
 
     def create_baremetal_srctree(self, config, cont):
         # First, create the base project directory and sources
-        shutil.copytree(join(self.BAREMETAL_PROJ_SRC_DIR, cont.dirname), self.CONT_SRC_DIR)
+        shutil.copytree(
+            join(self.BAREMETAL_PROJ_SRC_DIR, cont.dirname), self.CONT_SRC_DIR
+        )
 
     def copy_baremetal_build_desc(self, config, cont):
-        id_header = '[Container ID]\n'
-        type_header = '\n[Container Type]\n'
-        name_header = '\n[Container Name]\n'
-        pager_lma_header = '\n[Container Pager LMA]\n'
-        pager_vma_header = '\n[Container Pager VMA]\n'
-        pager_virtmem_header = '\n[Container Virtmem Region %s]\n'
-        pager_physmem_header = '\n[Container Physmem Region %s]\n'
+        id_header = "[Container ID]\n"
+        type_header = "\n[Container Type]\n"
+        name_header = "\n[Container Name]\n"
+        pager_lma_header = "\n[Container Pager LMA]\n"
+        pager_vma_header = "\n[Container Pager VMA]\n"
+        pager_virtmem_header = "\n[Container Virtmem Region %s]\n"
+        pager_physmem_header = "\n[Container Physmem Region %s]\n"
 
-        with open(self.build_desc_out, 'w+') as fout:
+        with open(self.build_desc_out, "w+") as fout:
             fout.write(id_header)
-            fout.write('\t' + str(cont.id) + '\n')
+            fout.write("\t" + str(cont.id) + "\n")
             fout.write(type_header)
-            fout.write('\t' + cont.type + '\n')
+            fout.write("\t" + cont.type + "\n")
             fout.write(name_header)
-            fout.write('\t' + cont.name + '\n')
+            fout.write("\t" + cont.name + "\n")
             fout.write(pager_lma_header)
-            fout.write('\t' + conv_hex(cont.pager_lma) + '\n')
+            fout.write("\t" + conv_hex(cont.pager_lma) + "\n")
             fout.write(pager_vma_header)
-            fout.write('\t' + conv_hex(cont.pager_vma) + '\n')
+            fout.write("\t" + conv_hex(cont.pager_vma) + "\n")
             for ireg in range(cont.caplist["PAGER"].virt_regions):
                 fout.write(pager_virtmem_header % ireg)
-                fout.write('\t' + cont.caplist["PAGER"].virtmem["START"][ireg] + \
-			   ' - ' + cont.caplist["PAGER"].virtmem["END"][ireg] + '\n')
+                fout.write(
+                    "\t"
+                    + cont.caplist["PAGER"].virtmem["START"][ireg]
+                    + " - "
+                    + cont.caplist["PAGER"].virtmem["END"][ireg]
+                    + "\n"
+                )
             for ireg in range(cont.caplist["PAGER"].phys_regions):
                 fout.write(pager_physmem_header % ireg)
-                fout.write('\t' + cont.caplist["PAGER"].physmem["START"][ireg] + \
-			   ' - ' + cont.caplist["PAGER"].physmem["END"][ireg] + '\n')
+                fout.write(
+                    "\t"
+                    + cont.caplist["PAGER"].physmem["START"][ireg]
+                    + " - "
+                    + cont.caplist["PAGER"].physmem["END"][ireg]
+                    + "\n"
+                )
 
     def copy_baremetal_build_readme(self, config, cont):
         with open(self.build_readme_in) as fin:
             str = fin.read()
-            with open(self.build_readme_out, 'w+') as fout:
+            with open(self.build_readme_out, "w+") as fout:
                 # Make any manipulations here
-                fout.write(str % (self.mailing_list_url, \
-                                  cont.name, \
-                                  self.build_desc_name, \
-                                  self.main_builder_name, \
-                                  self.main_configurator_name, \
-                                  self.main_configurator_name))
+                fout.write(
+                    str
+                    % (
+                        self.mailing_list_url,
+                        cont.name,
+                        self.build_desc_name,
+                        self.main_builder_name,
+                        self.main_configurator_name,
+                        self.main_configurator_name,
+                    )
+                )
 
     def copy_baremetal_container_h(self, config, cont):
         with open(self.container_h_in) as fin:
             str = fin.read()
-            with open(self.container_h_out, 'w+') as fout:
+            with open(self.container_h_out, "w+") as fout:
                 # Make any manipulations here
                 fout.write(str % (cont.name, cont.id, cont.id))
 
@@ -103,7 +121,7 @@ class BaremetalContGenerator:
         if cont.duplicate == 1:
             self.create_baremetal_srctree(config, cont)
         else:
-            os.makedirs(join(self.CONT_SRC_DIR, 'include'))
+            os.makedirs(join(self.CONT_SRC_DIR, "include"))
         self.copy_baremetal_build_readme(config, cont)
         self.copy_baremetal_build_desc(config, cont)
         self.generate_linker_script(config, cont)
@@ -120,16 +138,20 @@ class BaremetalContGenerator:
 
                 # Determine container directory name.
                 if cont.duplicate == 0:
-                    self.CONT_SRC_DIR = join(join(BUILDDIR, 'cont' + str(cont.id)), cont.name)
+                    self.CONT_SRC_DIR = join(
+                        join(BUILDDIR, "cont" + str(cont.id)), cont.name
+                    )
                 else:
                     self.CONT_SRC_DIR = join(self.BAREMETAL_SRC_BASEDIR, cont.name)
 
                 self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
                 self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
-                self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), \
-                                           self.linker_lds_name)
-                self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), \
-                                            self.container_h_name)
+                self.linker_lds_out = join(
+                    join(self.CONT_SRC_DIR, "include"), self.linker_lds_name
+                )
+                self.container_h_out = join(
+                    join(self.CONT_SRC_DIR, "include"), self.container_h_name
+                )
 
                 if not os.path.exists(self.CONT_SRC_DIR):
                     self.create_baremetal_sources(config, cont)
@@ -140,30 +162,33 @@ class BaremetalContGenerator:
     def generate_linker_script(self, config, cont):
         with open(self.linker_lds_in) as fin:
             str = fin.read()
-            with open(self.linker_lds_out, 'w+') as fout:
-                fout.write(str % (conv_hex(cont.pager_vma), \
-                                  conv_hex(cont.pager_lma)))
+            with open(self.linker_lds_out, "w+") as fout:
+                fout.write(str % (conv_hex(cont.pager_vma), conv_hex(cont.pager_lma)))
 
     def baremetal_container_generate(self, config):
         self.check_create_baremetal_sources(config)
 
     def baremetal_del_dynamic_files(self, cont):
-        self.CONT_SRC_DIR = join(join(BUILDDIR, 'cont' + str(cont.id)), cont.name)
+        self.CONT_SRC_DIR = join(join(BUILDDIR, "cont" + str(cont.id)), cont.name)
         self.build_readme_out = join(self.CONT_SRC_DIR, self.build_readme_name)
         self.build_desc_out = join(self.CONT_SRC_DIR, self.build_desc_name)
-        self.linker_lds_out = join(join(self.CONT_SRC_DIR, 'include'), self.linker_lds_name)
-        self.container_h_out = join(join(self.CONT_SRC_DIR, 'include'), self.container_h_name)
+        self.linker_lds_out = join(
+            join(self.CONT_SRC_DIR, "include"), self.linker_lds_name
+        )
+        self.container_h_out = join(
+            join(self.CONT_SRC_DIR, "include"), self.container_h_name
+        )
 
         if cont.duplicate == 0:
-            os.system('rm -f ' + self.build_readme_out)
-            os.system('rm -f ' + self.build_desc_out)
-            os.system('rm -f ' + self.linker_lds_out)
-            os.system('rm -f ' + self.container_h_out)
+            os.system("rm -f " + self.build_readme_out)
+            os.system("rm -f " + self.build_desc_out)
+            os.system("rm -f " + self.linker_lds_out)
+            os.system("rm -f " + self.container_h_out)
         return None
+
 
 if __name__ == "__main__":
     config = configuration_retrieve()
     config.config_print()
     baremetal_cont = BaremetalContGenerator()
     baremetal_cont.baremetal_container_generate(config)
-

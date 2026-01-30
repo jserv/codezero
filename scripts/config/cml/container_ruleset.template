@@ -1,5 +1,4 @@
 symbols
-
 CONT%(cn)d_TYPE_LINUX		'Linux Container'	text
 Virtualized linux container.
 .

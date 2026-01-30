@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Merge a Configure.help file into a file of CML2 symbol declarations
 #
@@ -10,11 +10,12 @@
 
 import sys, string, re, os, os.path
 
-if sys.version[0] < '2':
-    print "Python 2.0 or later is required for this program."
+if sys.version_info[0] < 3:
+    print("Python 3.0 or later is required for this program.")
     sys.exit(0)
 
 directory = ""
+
 
 def extract_dir(line, splitlocs):
     global directory
@@ -29,6 +30,7 @@ def extract_dir(line, splitlocs):
     else:
         return 0
 
+
 def help_scan(file, prefix):
     # This assumes the format of Axel Boldt's Configure.help file
     global directory
@@ -42,44 +44,45 @@ def help_scan(file, prefix):
     lastline = ""
     start = 0
     while 1:
-	line = stream.readline()
+        line = stream.readline()
         if extract_dir(line, splitlocs):
             continue
         # Now everything else
-	if line and line[0] == '#':
+        if line and line[0] == "#":
             if line.find("Choice:") > -1:
                 choiceflag = 1
-	    continue
-	ringbuffer[ringindex] = here = stream.tell()
-	ringindex = (ringindex + 1) % 5
-	if line and line[0] in string.whitespace:
-	    continue
-	if not line or line[0:7] == prefix:
-	    if name:
-                if dict.has_key(name):
+            continue
+        ringbuffer[ringindex] = here = stream.tell()
+        ringindex = (ringindex + 1) % 5
+        if line and line[0] in string.whitespace:
+            continue
+        if not line or line[0:7] == prefix:
+            if name:
+                if name in dict:
                     sys.stderr.write("Duplicate help text for %s\n" % name)
-		dict[name] = (file, start, ringbuffer[(ringindex - 4) % 5], prompt)
+                dict[name] = (file, start, ringbuffer[(ringindex - 4) % 5], prompt)
                 if directory != "UNKNOWN":
                     splitlocs[name] = directory
                 directory = "UNKNOWN"
-	    if line:
-		name = string.strip(line[7:])
-		start = here
+            if line:
+                name = string.strip(line[7:])
+                start = here
                 if choiceflag:
-                    prompt = None	# Disable prompt checking
+                    prompt = None  # Disable prompt checking
                 else:
                     prompt = lastline.strip()
                 choiceflag = 0
-	    else:
-		break
+            else:
+                break
         lastline = line
     stream.close()
     return (dict, splitlocs)
 
+
 def fetch_help(symbol, helpdict):
     "Fetch help text associated with given symbol, if any."
-    if helpdict.has_key(symbol):
-        (file, start, end, prompt) = helpdict[symbol]
+    if symbol in helpdict:
+        file, start, end, prompt = helpdict[symbol]
         stream = open(file)
         stream.seek(start)
         help = stream.read(end - start)
@@ -90,16 +93,17 @@ def fetch_help(symbol, helpdict):
     else:
         return None
 
+
 def merge(helpfile, templatefile):
     "Merge a Configure.help with a symbols file, write to stdout."
-    (helpdict, splitlocs) = help_scan(helpfile, "CONFIG_")
+    helpdict, splitlocs = help_scan(helpfile, "CONFIG_")
     template = open(templatefile, "r")
     promptre = re.compile("(?<=['\"])[^'\"]*(?=['\"])")
 
-    os.system('rm -f `find kernel-tree -name "*symbols.cml"`')
+    os.system('rm -f repr(find kernel-tree -name "*symbols.cml")')
 
     trim = re.compile("^  ", re.M)
-    trailing_comment = re.compile("\s*#[^#']*$")
+    trailing_comment = re.compile(r"\s*#[^#']*$")
     outfp = None
     lineno = 0
     while 1:
@@ -116,7 +120,7 @@ def merge(helpfile, templatefile):
         prompt = promptre.search(line)
         if not prompt:
             sys.stderr.write("Malformed line %s: %s" % (lineno, line))
-            raise SystemExit, 1
+            raise SystemExit(1)
         # We've hit something that ought to be a symbol line
         fields = line.split()
         symbol = fields[0]
@@ -126,7 +130,7 @@ def merge(helpfile, templatefile):
         if checkonly:
             # Consistency-check the prompts
             prompt = prompt.group(0)
-            if helpdict.has_key(symbol):
+            if symbol in helpdict:
                 oldprompt = helpdict[symbol][3]
                 if oldprompt == None:
                     continue
@@ -148,19 +152,21 @@ def merge(helpfile, templatefile):
             # Now splice in the actual help text
             helptext = fetch_help(symbol, helpdict)
             if helptext and template_has_text:
-                print line
-                sys.stderr.write("Template already contains help text for %s!\n" % symbol)
-                raise SystemExit, 1
+                print(line)
+                sys.stderr.write(
+                    "Template already contains help text for %s!\n" % symbol
+                )
+                raise SystemExit(1)
         if outfp:
             outfp.close()
-        if splitlocs.has_key(symbol):
+        if symbol in splitlocs:
             dest = splitlocs[symbol]
         else:
-             dest = directory
+            dest = directory
         if dest == "UNKNOWN":
             sys.stderr.write("No directory for %s\n" % symbol)
             sys.exit(1)
-        #print "%s -> %s" % (symbol, dest)
+        # print "%s -> %s" % (symbol, dest)
         dest = os.path.join("kernel-tree", dest[1:], "symbols.cml")
         exists = os.path.exists(dest)
         if exists:
@@ -173,7 +179,7 @@ def merge(helpfile, templatefile):
             comment_match = trailing_comment.search(leader)
             if comment_match:
                 comment = comment_match.group(0)
-                leader = leader[:comment_match.start(0)]
+                leader = leader[: comment_match.start(0)]
             else:
                 comment = ""
             if len(leader) < 68:
@@ -194,15 +200,20 @@ def merge(helpfile, templatefile):
         else:
             outfp.write(line)
 
+
 def conditionalize(file, optset):
     "Handle conditional inclusions and drop out choice lines."
     import re
+
     cond = re.compile(r"^#% (\S*) only$")
     infp = open(file)
     if optset:
-        sys.stdout.write("## This version generated for " + " with ".join(optset) + "\n")
+        sys.stdout.write(
+            "## This version generated for " + " with ".join(optset) + "\n"
+        )
     while 1:
         import re
+
         line = infp.readline()
         if not line:
             break
@@ -217,9 +228,10 @@ def conditionalize(file, optset):
                 if line == "\n":
                     line = infp.readline()
                     break
-        if line[:2] == "#%":		# Drop out other directives
+        if line[:2] == "#%":  # Drop out other directives
             continue
         sys.stdout.write(line)
+
 
 def dump_symbol(symbol, helpdict):
     "Dump a help entry."
@@ -228,22 +240,24 @@ def dump_symbol(symbol, helpdict):
     sys.stdout.write(fetch_help(symbol, helpdict))
     sys.stdout.write("\n")
 
+
 if __name__ == "__main__":
     import getopt
 
     checkonly = sort = 0
     optset = []
-    (options, arguments) = getopt.getopt(sys.argv[1:], "D:Ecns")
-    for (switch, val) in options:
+    options, arguments = getopt.getopt(sys.argv[1:], "D:Ecns")
+    for switch, val in options:
         if switch == "-D":
             optset.append(val)
-        elif switch == '-E':	# Process conditionals
+        elif switch == "-E":  # Process conditionals
             conditionalize(arguments[0], optset)
             sys.exit(0)
-        elif switch == '-c':	# Consistency check
+        elif switch == "-c":  # Consistency check
             checkonly = 1
-        elif switch == '-n':	# List symbols with no match in second arg
+        elif switch == "-n":  # List symbols with no match in second arg
             import cmlsystem
+
             configuration = cmlsystem.CMLSystem(arguments[1])
             helpdict = help_scan(arguments[0], "CONFIG_")
             keys = helpdict.keys()
@@ -252,7 +266,7 @@ if __name__ == "__main__":
                 if not configuration.dictionary.get(symbol):
                     dump_symbol(symbol, helpdict)
             sys.exit(0)
-        elif switch == '-s':	# Emit sorted version
+        elif switch == "-s":  # Emit sorted version
             helpdict = help_scan(arguments[0], "CONFIG_")
             keys = helpdict.keys()
             keys.sort()

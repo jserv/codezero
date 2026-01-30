@@ -1,17 +1,16 @@
-from aistruct import AIStruct
-import elf, sys
+from .aistruct import AIStruct
+from . import elf
+import sys
 from optparse import OptionParser
 
 
 class AfterBurner(AIStruct):
-	def __init__(self, *args, **kwargs):
-		AIStruct.__init__(self, AIStruct.SIZE32)
-		self.setup(
-			('UINT32', 'addr')
-		)
+    def __init__(self, *args, **kwargs):
+        AIStruct.__init__(self, AIStruct.SIZE32)
+        self.setup(("UINT32", "addr"))
 
-        def __str__(self):
-            return "0x%x" % self.ai.addr.get()
+    def __str__(self):
+        return "0x%x" % self.ai.addr.get()
 
 
 def arch_perms(rwx):
@@ -20,11 +19,13 @@ def arch_perms(rwx):
         rwx |= 1
     return rwx
 
+
 def align_up(value, align):
     mod = value % align
     if mod != 0:
-        value += (align - mod)
+        value += align - mod
     return value
+
 
 def gen_pheaders(elf):
     old_rwx = 0
@@ -43,7 +44,7 @@ def gen_pheaders(elf):
         offset = section.ai.sh_offset.get()
         al = section.ai.sh_addralign.get()
         size = section.ai.sh_size.get()
-        
+
         if old_rwx != rwx:
             new = 1
         if addr != align_up(old_size + old_addr, al):
@@ -52,7 +53,7 @@ def gen_pheaders(elf):
             new = 3
 
         if new != 0:
-            #print hex(new_offset), hex(new_addr), hex(new_size)
+            # print(hex(new_offset), hex(new_addr), hex(new_size))
             new_size = size
             new_addr = addr
             new_offset = offset
@@ -64,21 +65,23 @@ def gen_pheaders(elf):
         old_bits = 0
         old_offset = offset
         old_addr = addr
-        #print section.ai.sh_name, section.ai.sh_addr, section.ai.sh_offset, section.ai.sh_size, section.ai.sh_flags, rwx
-    print hex(new_offset), hex(new_addr), hex(new_size)
+        # print(section.ai.sh_name, section.ai.sh_addr, section.ai.sh_offset, section.ai.sh_size, section.ai.sh_flags, rwx)
+    print(hex(new_offset), hex(new_addr), hex(new_size))
+
 
 def main():
     wedge = elf.ElfFile.from_file(sys.argv[1])
     guest = elf.ElfFile.from_file(sys.argv[2])
-    print wedge.pheaders
+    print(wedge.pheaders)
     for section in wedge.sheaders:
-        print section.name
+        print(section.name)
         section.name += ".linux"
-        print section.name
-    #del wedge.pheaders[:]
-    #print wedge.pheaders
+        print(section.name)
+    # del wedge.pheaders[:]
+    # print(wedge.pheaders)
     wedge.write_file("foobar")
     gen_pheaders(wedge)
+
 
 if __name__ == "__main__":
     main()

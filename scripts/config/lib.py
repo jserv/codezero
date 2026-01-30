@@ -1,10 +1,8 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
 #
 
-def conv_hex(val):
-    hexval = hex(val)
-    if hexval[-1:] == 'L':
-        hexval = hexval[:-1]
-    return hexval
 
+def conv_hex(val):
+    # Python 3: hex() never produces trailing 'L'
+    return hex(val)

@@ -15,31 +15,33 @@
 # Most of the smarts in this script is in the file of probe rules
 # maintained by Giacomo Catenazzi and brought in by execfile.
 
-import sys, getopt, os, glob, commands, re
+import sys, getopt, os, glob, subprocess, re
 import cml, cmlsystem
-from cml import y, m, n	# For use in the autoprobe rules
+from cml import y, m, n  # For use in the autoprobe rules
 
 lang = {
-    "COMPLETE":"Configuration complete.",
-    "COMPLEMENT":"* Computing complement sets",
-    "DERIVED":"Symbol %s is derived and cannot be set.",
-    "DONE":"Done",
-    "EFFECTS":"Side effects:",
-    "NOCMDLINE":"%s is the wrong type to be set from the command line",
-    "OPTUNKNOWN":"autoconfigure: unknown option.\n",
-    "ROOTFS":"* %s will be hard-compiled in for the root filesystem\n",
-    "ROOTHW":"* %s will be hard-compiled in to run the root device\n",
-    "ROOTLOOK":"# Looking for your root filesystem...\n",
-    "ROOTWARN":"** Warning: I could not identify the " \
-    			"bus type of your root drive!\n",
-    "SETFAIL" : "%s failed while %s was being set to %s\n",
-    "SYMUNKNOWN":"cmlconfigure: unknown symbol %s\n",
-    "TURNOFF":"# Turning off unprobed device symbols",
-    "UNAME":"Can't determine ARCH, uname failed.",
-    }
+    "COMPLETE": "Configuration complete.",
+    "COMPLEMENT": "* Computing complement sets",
+    "DERIVED": "Symbol %s is derived and cannot be set.",
+    "DONE": "Done",
+    "EFFECTS": "Side effects:",
+    "NOCMDLINE": "%s is the wrong type to be set from the command line",
+    "OPTUNKNOWN": "autoconfigure: unknown option.\n",
+    "ROOTFS": "* %s will be hard-compiled in for the root filesystem\n",
+    "ROOTHW": "* %s will be hard-compiled in to run the root device\n",
+    "ROOTLOOK": "# Looking for your root filesystem...\n",
+    "ROOTWARN": "** Warning: I could not identify the "
+    "bus type of your root drive!\n",
+    "SETFAIL": "%s failed while %s was being set to %s\n",
+    "SYMUNKNOWN": "cmlconfigure: unknown symbol %s\n",
+    "TURNOFF": "# Turning off unprobed device symbols",
+    "UNAME": "Can't determine ARCH, uname failed.",
+}
+
 
 class ConfigFile:
     "Object that represents a generated configuration."
+
     def __init__(self, myconfiguration, hardcompile, debuglevel=0):
         # Prepare an output object to accept the configuration file
         self.hardcompile = hardcompile
@@ -68,7 +70,7 @@ class ConfigFile:
             return
         # If no value specified, play some tricks.
         if val == None:
-            if symbol.type=="bool" or (self.hardcompile and symbol.type=="trit"):
+            if symbol.type == "bool" or (self.hardcompile and symbol.type == "trit"):
                 val = cml.y
             elif symbol.type == "trit":
                 val = cml.m
@@ -76,23 +78,30 @@ class ConfigFile:
                 val = 0
             elif symbol.type == "string":
                 val = ""
-        if not self.modified.has_key(symbol) or symbol.eval() < val:
+        if symbol not in self.modified or symbol.eval() < val:
             self.myconfiguration.set_symbol(symbol, val)
             self.modified[symbol] = 1
-            (ok, effects, violations) = self.myconfiguration.set_symbol(symbol, val)
+            ok, effects, violations = self.myconfiguration.set_symbol(symbol, val)
             if ok:
                 if label:
                     symbol.setprop(label)
             else:
                 for violation in violations:
-                    sys.stderr.write(lang["SETFAIL"] % (`violation`, symbol.name, val))
+                    sys.stderr.write(
+                        lang["SETFAIL"] % (repr(violation), symbol.name, val)
+                    )
 
-    def found_y(self, var, label=None): self.found(var, cml.y, label) 
-    def found_m(self, var, label=None): self.found(var, cml.m, label) 
-    def found_n(self, var, label=None): self.found(var, cml.n, label) 
+    def found_y(self, var, label=None):
+        self.found(var, cml.y, label)
+
+    def found_m(self, var, label=None):
+        self.found(var, cml.m, label)
+
+    def found_n(self, var, label=None):
+        self.found(var, cml.n, label)
 
     def yak(self, symbol):
-        if not self.emitted.has_key(symbol):
+        if symbol not in self.emitted:
             try:
                 entry = self.myconfiguration.dictionary[symbol]
                 if entry.prompt:
@@ -107,11 +116,15 @@ class ConfigFile:
         if not symbol.eval():
             return
         for driver in self.myconfiguration.dictionary.values():
-            if baton: baton.twirl()
-            if driver.is_symbol() and driver.is_logical() \
-                    and self.myconfiguration.is_visible(driver) \
-                    and driver.setcount == 0 \
-                    and symbol.ancestor_of(driver):
+            if baton:
+                baton.twirl()
+            if (
+                driver.is_symbol()
+                and driver.is_logical()
+                and self.myconfiguration.is_visible(driver)
+                and driver.setcount == 0
+                and symbol.ancestor_of(driver)
+            ):
                 set_to = value
                 if driver.type == "bool" and value == cml.m:
                     set_to = cml.y
@@ -121,10 +134,13 @@ class ConfigFile:
         "Force all trit-valued dependents of a symbol to be modular."
         net_ethernet = self.myconfiguration.dictionary[symbol]
         for driver in self.myconfiguration.dictionary.values():
-            if driver.is_symbol() and driver.type == "trit" \
-            		and driver.eval() == cml.y \
-			and self.myconfiguration.is_visible(driver) \
-        		and net_ethernet.ancestor_of(driver):
+            if (
+                driver.is_symbol()
+                and driver.type == "trit"
+                and driver.eval() == cml.y
+                and self.myconfiguration.is_visible(driver)
+                and net_ethernet.ancestor_of(driver)
+            ):
                 driver.setprop(legend)
                 self.found(driver, cml.m)
 
@@ -132,10 +148,13 @@ class ConfigFile:
         "Is a given symbol enabled?"
         return self.myconfiguration.dictionary[symbol]
 
+
 # Now define classes for probing and reporting the system state
+
 
 class PCIDevice:
     "Identification data for a device on the PCI bus."
+
     def __init__(self, procdata):
         "Initialize PCI device ID data based on what's in a /proc entry."
         procdata = map(ord, procdata)
@@ -160,12 +179,19 @@ class PCIDevice:
         self.digest = self.vendor + "," + self.device
         if self.subvendor:
             self.digest += "," + self.subvendor + "," + self.subdevice
-        self.digest += ",%s;Class:%s,%s\n" % (self.revision,self.deviceclass,self.interface)
+        self.digest += ",%s;Class:%s,%s\n" % (
+            self.revision,
+            self.deviceclass,
+            self.interface,
+        )
+
     def __repr__(self):
         return "pci: " + self.digest
 
+
 class PCIScanner:
     "Encapsulate the PCI hardware registry state."
+
     def __init__(self):
         "Unpack data from the PCI hardware registry."
         self.devices = []
@@ -173,15 +199,19 @@ class PCIScanner:
             dfp = open(f)
             self.devices.append(PCIDevice(dfp.read()))
             dfp.close()
+
     def search(self, pattern):
         "Search for a device match by prefix in the digest."
         pattern = re.compile(pattern, re.I)
         return not not filter(lambda x, p=pattern: p.search(x.digest), self.devices)
+
     def __repr__(self):
         return "".join(map(repr, self.devices))
 
+
 class FieldParser:
     "Parse entire lines, or a given field, out of a file or command output."
+
     def __init__(self, sources):
         self.items = []
         for item in sources:
@@ -192,12 +222,12 @@ class FieldParser:
                 file = item
                 field = None
             try:
-                if file[0] == '/':
+                if file[0] == "/":
                     ifp = open(file, "r")
                     lines = ifp.readlines()
                     ifp.close()
                 else:
-                    (status, output) = commands.getstatusoutput(file)
+                    status, output = subprocess.getstatusoutput(file)
                     if status:
                         raise IOError
                     lines = output.split("\n")
@@ -211,8 +241,8 @@ class FieldParser:
             elif type(field) == type(0):
                 for line in lines:
                     fields = line.split()
-                    if len(fields) >= field and fields[field-1] not in self.items:
-                        self.items.append(fields[field-1])
+                    if len(fields) >= field and fields[field - 1] not in self.items:
+                        self.items.append(fields[field - 1])
             # Regexp specified, collect group 1
             else:
                 for line in lines:
@@ -222,6 +252,7 @@ class FieldParser:
                         res = match.group(1)
                         if res not in self.items:
                             self.items.append(res)
+
     def find(self, str, ind=0):
         "Is given string or regexp pattern found in the file?"
         match = re.compile(str)
@@ -231,26 +262,32 @@ class FieldParser:
             if result.groups():
                 result = ",".join(result.groups())
         return result
+
     def __repr__(self):
-        return `self.items`
+        return repr(self.items)
+
 
 #
 # Main sequence begins here
 #
 
+
 def get_arch():
     # Get the architecture (taken from top-level Unix makefile).
-    (error, ARCH) = commands.getstatusoutput('uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/')
+    error, ARCH = subprocess.getstatusoutput(
+        "uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/"
+    )
     if error:
         sys.stderr.write(lang["UNAME"])
-        raise SystemExit, 1
+        raise SystemExit(1)
     # A platform symbol has to be set, otherwise many assignments will fail
     ARCHSYMBOL = re.compile("i.86").sub("x86", ARCH)
     ARCHSYMBOL = ARCHSYMBOL.replace("superh", "sh")
     ARCHSYMBOL = ARCHSYMBOL.replace("sparc32", "sparc")
     ARCHSYMBOL = ARCHSYMBOL.replace("sparc64", "sparc")
     ARCHSYMBOL = ARCHSYMBOL.upper()
-    return(ARCH, ARCHSYMBOL)
+    return (ARCH, ARCHSYMBOL)
+
 
 # We can't assume 2.1 nested scopes, so refer shared stuff to global level.
 config = cpu = cpu_id = pci = isapnp = mca = usbp = usbc = usbi = None
@@ -259,55 +296,77 @@ modules = cpu_latch = None
 fsmap = {}
 reliable = {}
 
+
 def autoconfigure(configuration, hardcompile, debuglevel):
     global config, cpu, cpu_id, pci, isapnp, mca, usbp, usbc, usbi, fs
     global devices, m_devices, misc, net, ide, dmesg, modules, cpu_latch
     global fsmap, reliable
-    configuration.interactive = 0	# Don't deduce from visibility.
+    configuration.interactive = 0  # Don't deduce from visibility.
 
     config = ConfigFile(configuration, hardcompile, debuglevel)
 
     #
     # Here is where we query the system state.
     #
-    (ARCH, ARCHSYMBOL) = get_arch()
+    ARCH, ARCHSYMBOL = get_arch()
     config.found_y(ARCHSYMBOL)
     config.yak(ARCHSYMBOL)
 
     # Get the processor type
-    cpu     = FieldParser(("/proc/cpuinfo",))
-    if ARCHSYMBOL == 'SPARC':
-      processors = int(cpu.find("^ncpus active.*: *([0-9]*)"))
-      vendor     = cpu.find("^cpu.*: *(.*)")
-      cpufam     = cpu.find("^type.*: *([-A-Za-z0-9_]*)")
-      mod        = cpu.find("^fpu.*: *(.*)")
-      name       = cpu.find("^MMU Type.*: *(.*)")
+    cpu = FieldParser(("/proc/cpuinfo",))
+    if ARCHSYMBOL == "SPARC":
+        processors = int(cpu.find("^ncpus active.*: *([0-9]*)"))
+        vendor = cpu.find("^cpu.*: *(.*)")
+        cpufam = cpu.find("^type.*: *([-A-Za-z0-9_]*)")
+        mod = cpu.find("^fpu.*: *(.*)")
+        name = cpu.find("^MMU Type.*: *(.*)")
     else:
-      processors = int(cpu.find("^processor.*: *([0-9]*)", -1)) + 1
-      vendor  = cpu.find("^vendor_id.*: *([-A-Za-z0-9_]*)")
-      cpufam  = cpu.find("^cpu family.*: *([-A-Za-z0-9_]*)")
-      mod     = cpu.find("^model.*: *([-A-Za-z0-9_]*)")
-      name    = cpu.find("^model name.*: *(.*)")
+        processors = int(cpu.find("^processor.*: *([0-9]*)", -1)) + 1
+        vendor = cpu.find("^vendor_id.*: *([-A-Za-z0-9_]*)")
+        cpufam = cpu.find("^cpu family.*: *([-A-Za-z0-9_]*)")
+        mod = cpu.find("^model.*: *([-A-Za-z0-9_]*)")
+        name = cpu.find("^model name.*: *(.*)")
 
     cpu_id = vendor + ":" + cpufam + ":" + mod + ":" + name
     cpu_latch = 0
 
     # Now query for features
-    pci     = PCIScanner()
-    isapnp  = FieldParser((("/proc/bus/isapnp/devices", 2),))
-    mca     = FieldParser(("/proc/mca/pos",))
-    usbp    = FieldParser((("/proc/bus/usb/devices", "^P:.*Vendor=([A-Fa-f0-9]*)\s.*ProdID=\([A-Fa-f0-9]*\)"),))
-    usbc    = FieldParser((("/proc/bus/usb/devices", "^D:.*Cls=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Sub=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Prot=([A-Fa-f0-9]*)"),))
-    usbi    = FieldParser((("/proc/bus/usb/devices", "^I:.*Cls=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Sub=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Prot=([A-Fa-f0-9]*)"),))
-    fs      = FieldParser((("/proc/mounts",3),
-                           ("/etc/mtab", 3),
-                           ("/etc/fstab", 3)))
+    pci = PCIScanner()
+    isapnp = FieldParser((("/proc/bus/isapnp/devices", 2),))
+    mca = FieldParser(("/proc/mca/pos",))
+    usbp = FieldParser(
+        (
+            (
+                "/proc/bus/usb/devices",
+                "^P:.*Vendor=([A-Fa-f0-9]*)\s.*ProdID=\([A-Fa-f0-9]*\)",
+            ),
+        )
+    )
+    usbc = FieldParser(
+        (
+            (
+                "/proc/bus/usb/devices",
+                "^D:.*Cls=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Sub=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Prot=([A-Fa-f0-9]*)",
+            ),
+        )
+    )
+    usbi = FieldParser(
+        (
+            (
+                "/proc/bus/usb/devices",
+                "^I:.*Cls=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Sub=([A-Fa-f0-9]*)[^A-Fa-f0-9].*Prot=([A-Fa-f0-9]*)",
+            ),
+        )
+    )
+    fs = FieldParser((("/proc/mounts", 3), ("/etc/mtab", 3), ("/etc/fstab", 3)))
     devices = FieldParser((("/proc/devices", "[0-9]+ (.*)"),))
     m_devices = FieldParser((("/proc/misc", "[0-9]+ (.*)"),))
-    misc    = FieldParser(("/proc/iomem", "/proc/ioports", "/proc/dma", "/proc/interrupts"))
-    net     = FieldParser((("/proc/net/sockstat","^([A-Z0-9]*): inuse [1-9]"),))
-    ide     = FieldParser(glob.glob('/proc/ide/hd?/media'))
-    dmesg   = FieldParser(("/var/log/dmesg", "dmesg"))
+    misc = FieldParser(
+        ("/proc/iomem", "/proc/ioports", "/proc/dma", "/proc/interrupts")
+    )
+    net = FieldParser((("/proc/net/sockstat", "^([A-Z0-9]*): inuse [1-9]"),))
+    ide = FieldParser(glob.glob("/proc/ide/hd?/media"))
+    dmesg = FieldParser(("/var/log/dmesg", "dmesg"))
     modules = FieldParser((("/proc/modules", 1),))
 
     #
@@ -316,9 +375,9 @@ def autoconfigure(configuration, hardcompile, debuglevel):
 
     # Source: linux/i386/kernel/setup.c
     if dmesg.find("Use a PAE"):
-        config.found_y("HIGHMEM64G")	
+        config.found_y("HIGHMEM64G")
     elif dmesg.find("Use a HIGHMEM"):
-        config.found_y("HIGHMEM4G")	##Source: linux/i386/kernel/setup.c
+        config.found_y("HIGHMEM4G")  ##Source: linux/i386/kernel/setup.c
     else:
         highmem = dmesg.find("([0-9]*)MB HIGHMEM avail.")
         if not highmem:
@@ -330,7 +389,7 @@ def autoconfigure(configuration, hardcompile, debuglevel):
 
     # SMP?  This test is reliable.
     if processors == 0:
-      processors = len(filter(lambda x: x.find('processor') > -1, cpu.items))
+        processors = len(filter(lambda x: x.find("processor") > -1, cpu.items))
 
     if processors > 1:
         config.found_y("SMP")
@@ -346,7 +405,7 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     FALSE = 0
     PRESENT = 1
     ABSENT = 0
-    
+
     def DEBUG(str):
         sys.stderr.write("# " + str + "\n")
 
@@ -359,7 +418,6 @@ def autoconfigure(configuration, hardcompile, debuglevel):
         if pci.search("^" + prefix):
             config.yak(symbol)
             config.found(symbol, None, "PCI")
-
 
     def PCI_CLASS(match, symbol):
         global pci, config
@@ -495,7 +553,7 @@ def autoconfigure(configuration, hardcompile, debuglevel):
         if re.compile(pattern).search(fp.read()):
             config.found(symbol, None, "GREP")
             config.yak(symbol)
-        fp.close()  
+        fp.close()
 
     def LINKTO(file, pattern, symbol):
         global config
@@ -510,12 +568,12 @@ def autoconfigure(configuration, hardcompile, debuglevel):
 
     def PRIORITY(symbols, cnf=configuration):
         global config
-        legend = "PRIORITY" + `symbols`
+        legend = "PRIORITY" + repr(symbols)
         dict = cnf.dictionary
         symbols = map(lambda x, d=dict: d[x], symbols)
         for i in range(len(symbols) - 1):
             if cml.evaluate(symbols[i]):
-                for j in range(i+1, len(symbols)):
+                for j in range(i + 1, len(symbols)):
                     cnf.set_symbol(symbols[j], n)
                     symbols[j].setprop(legend)
                 break
@@ -524,31 +582,31 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     ##
     ## Section            Command         Version        Status
     ## ------------------------------------------------------------------
-    ##  /proc features     EXISTS          2.5.2-pre7     Partial 
+    ##  /proc features     EXISTS          2.5.2-pre7     Partial
 
     ########################################################################
     ## Section: System Features
     ## KernelOutput: /proc/*, /dev/*
-    ## Detect system features based on existence of /proc and /dev/* files 
+    ## Detect system features based on existence of /proc and /dev/* files
     DEBUG("autoconfigure.rules: EXISTS")
 
     ## These tests are unreliable; they depend on the current kernel config.
-    EXISTS("/proc/sysvipc",		'SYSVIPC')
-    EXISTS("/proc/sys",			'SYSCTL')
-    EXISTS("/proc/scsi/ide-scsi",	'BLK_DEV_IDESCSI')
-    EXISTS("/proc/scsi/imm",		'SCSI_IMM')
-    EXISTS("/proc/scsi/ppa",		'SCSI_PPA')
-    EXISTS("/dev/.devfsd",		'DEVFS_FS')
+    EXISTS("/proc/sysvipc", "SYSVIPC")
+    EXISTS("/proc/sys", "SYSCTL")
+    EXISTS("/proc/scsi/ide-scsi", "BLK_DEV_IDESCSI")
+    EXISTS("/proc/scsi/imm", "SCSI_IMM")
+    EXISTS("/proc/scsi/ppa", "SCSI_PPA")
+    EXISTS("/dev/.devfsd", "DEVFS_FS")
     # Giacomo does not have these yet.
-    EXISTS("/proc/sys/net/khttpd",	'KHTTPD')
-    EXISTS("/proc/sys/kernel/acct",	'BSD_PROCESS_ACCT')
+    EXISTS("/proc/sys/net/khttpd", "KHTTPD")
+    EXISTS("/proc/sys/kernel/acct", "BSD_PROCESS_ACCT")
     # This one is reliable, according to the MCA port documentation.
-    EXISTS("/proc/mca",			'MCA')
+    EXISTS("/proc/mca", "MCA")
     # This one is reliable too
-    EXISTS("/proc/bus/isapnp/devices",	'ISAPNP')
+    EXISTS("/proc/bus/isapnp/devices", "ISAPNP")
 
     # Test the new probe function.
-    GREP("scsi0", "/proc/scsi/scsi",	'SCSI')
+    GREP("scsi0", "/proc/scsi/scsi", "SCSI")
 
     # These can be bogus because the file or directory in question
     # is empty, or consists of a banner string that does not describe
@@ -556,7 +614,7 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     # EXISTS("/proc/bus/pci",		'PCI')
     # EXISTS("/proc/bus/usb",		'USB')
     # EXISTS("/proc/net",		'NET')
-    # EXISTS("/proc/scsi",		'SCSI')		
+    # EXISTS("/proc/scsi",		'SCSI')
 
     # These look tempting, but they're no good unless we're on a pure
     # devfs system, without support for old devices, where devices
@@ -565,85 +623,84 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     # EXISTS("/dev/floppy",		'BLK_DEV_FD')
     # EXISTS("/dev/fd0",		'BLK_DEV_FD')
 
-    
     ########################################################################
     ## Section: Mice
     ## Detect the mouse type by looking at what's behind the /dev/mouse link.
     ## These are probes for 2.4 with the old input core
-    LINKTO("/dev/mouse", "psaux",	'PSMOUSE')
-    LINKTO("/dev/mouse", "ttyS",	'SERIAL')
-    LINKTO("/dev/mouse", "logibm",	'LOGIBUSMOUSE')
-    LINKTO("/dev/mouse", "inportbm",	'MS_BUSMOUSE')
-    LINKTO("/dev/mouse", "atibm",	'ATIXL_BUSMOUSE')
+    LINKTO("/dev/mouse", "psaux", "PSMOUSE")
+    LINKTO("/dev/mouse", "ttyS", "SERIAL")
+    LINKTO("/dev/mouse", "logibm", "LOGIBUSMOUSE")
+    LINKTO("/dev/mouse", "inportbm", "MS_BUSMOUSE")
+    LINKTO("/dev/mouse", "atibm", "ATIXL_BUSMOUSE")
     ## These are probes for 2.5 with the new input core
-    LINKTO("/dev/mouse", "psaux",	'MOUSE_PS2')
-    LINKTO("/dev/mouse", "ttyS",	'MOUSE_SERIAL')
-    LINKTO("/dev/mouse", "logibm",	'MOUSE_LOGIBM')
-    LINKTO("/dev/mouse", "inportbm",	'MOUSE_INPORT')
-    LINKTO("/dev/mouse", "atibm",	'MOUSE_ATIXL')
+    LINKTO("/dev/mouse", "psaux", "MOUSE_PS2")
+    LINKTO("/dev/mouse", "ttyS", "MOUSE_SERIAL")
+    LINKTO("/dev/mouse", "logibm", "MOUSE_LOGIBM")
+    LINKTO("/dev/mouse", "inportbm", "MOUSE_INPORT")
+    LINKTO("/dev/mouse", "atibm", "MOUSE_ATIXL")
 
     ########################################################################
     ## Section: IDE devices
     ## KernelOutput: /proc/ide/hd?/media
     ## Detect IDE devices based on contents of /proc files
     ## These tests are unreliable; they depend on the current kernel config.
-    IDE('disk', 'BLK_DEV_IDEDISK')
-    IDE('cdrom', 'BLK_DEV_IDECD')
-    IDE('tape', 'BLK_DEV_IDETAPE')
-    IDE('floppy', 'BLK_DEV_FLOPPY')
-    EXISTS("/dev/ide/ide0",		'BLK_DEV_IDE')
-    EXISTS("/dev/ide/ide1",		'BLK_DEV_IDE')
-    EXISTS('/proc/ide/piix',		'PIIX_TUNING')
+    IDE("disk", "BLK_DEV_IDEDISK")
+    IDE("cdrom", "BLK_DEV_IDECD")
+    IDE("tape", "BLK_DEV_IDETAPE")
+    IDE("floppy", "BLK_DEV_FLOPPY")
+    EXISTS("/dev/ide/ide0", "BLK_DEV_IDE")
+    EXISTS("/dev/ide/ide1", "BLK_DEV_IDE")
+    EXISTS("/proc/ide/piix", "PIIX_TUNING")
 
     ########################################################################
     # Miscellaneous tests that replace Giacomo's ad-hoc ones.
-    DEV('pty', 'UNIX98_PTYS')
-    REQ('SMBus', 'I2C')
-    REQ('ATI.*Mach64', 'FB_ATY')
-    #FS(r'xfs', 'XFS_FS')
+    DEV("pty", "UNIX98_PTYS")
+    REQ("SMBus", "I2C")
+    REQ("ATI.*Mach64", "FB_ATY")
+    # FS(r'xfs', 'XFS_FS')
 
     ########################################################################
     # This is a near complete set of MCA probes for hardware supported under
     # Linux, according to MCA maintainer David Weinehall.  The exception is
     # the IBMTR card, which cannot be probed reliably.
     if config.enabled("MCA"):
-        MCA("ddff", 'BLK_DEV_PS2')
-        MCA("df9f", 'BLK_DEV_PS2')
-        MCA("628b", 'EEXPRESS')
-        MCA("627[cd]", 'EL3')
-        MCA("62db", 'EL3')
-        MCA("62f6", 'EL3')
-        MCA("62f7", 'EL3')
-        MCA("6042", 'ELMC')
-        MCA("0041", 'ELMC_II')
-        MCA("8ef5", 'ELMC_II')
-        MCA("61c[89]", 'ULTRAMCA')
-        MCA("6fc[012]", 'ULTRAMCA')
-        MCA("efd[45]", 'ULTRAMCA')
-        MCA("efe5", 'ULTRAMCA')
-        MCA("641[036]", 'AT1700')
-        MCA("6def", 'DEPCA')
-        MCA("6afd", 'SKMC')
-        MCA("6be9", 'SKMC')
-        MCA("6354", 'NE2_MCA')
-        MCA("7154", 'NE2_MCA')
-        MCA("56ea", 'NE2_MCA')
-        MCA("ffe0", 'IBMLANA')
-        MCA("8ef[8cdef]", 'SCSI_IBMMCA')
-        MCA("5137", 'SCSI_FD_MCS')
-        MCA("60e9", 'SCSI_FD_MCS')
-        MCA("6127", 'SCSI_FD_MCS')
-        MCA("0092", 'SCSI_NCR_D700')
-        MCA("7f4c", 'SCSI_MCA_53C9X')
-        MCA("0f1f", 'SCSI_AHA_1542')
-        MCA("002d", 'MADGEMC')
-        MCA("6ec6", 'SMCTR')
-        MCA("62f3", 'SOUND_SB')
-        MCA("7113", 'SOUND_SB')
+        MCA("ddff", "BLK_DEV_PS2")
+        MCA("df9f", "BLK_DEV_PS2")
+        MCA("628b", "EEXPRESS")
+        MCA("627[cd]", "EL3")
+        MCA("62db", "EL3")
+        MCA("62f6", "EL3")
+        MCA("62f7", "EL3")
+        MCA("6042", "ELMC")
+        MCA("0041", "ELMC_II")
+        MCA("8ef5", "ELMC_II")
+        MCA("61c[89]", "ULTRAMCA")
+        MCA("6fc[012]", "ULTRAMCA")
+        MCA("efd[45]", "ULTRAMCA")
+        MCA("efe5", "ULTRAMCA")
+        MCA("641[036]", "AT1700")
+        MCA("6def", "DEPCA")
+        MCA("6afd", "SKMC")
+        MCA("6be9", "SKMC")
+        MCA("6354", "NE2_MCA")
+        MCA("7154", "NE2_MCA")
+        MCA("56ea", "NE2_MCA")
+        MCA("ffe0", "IBMLANA")
+        MCA("8ef[8cdef]", "SCSI_IBMMCA")
+        MCA("5137", "SCSI_FD_MCS")
+        MCA("60e9", "SCSI_FD_MCS")
+        MCA("6127", "SCSI_FD_MCS")
+        MCA("0092", "SCSI_NCR_D700")
+        MCA("7f4c", "SCSI_MCA_53C9X")
+        MCA("0f1f", "SCSI_AHA_1542")
+        MCA("002d", "MADGEMC")
+        MCA("6ec6", "SMCTR")
+        MCA("62f3", "SOUND_SB")
+        MCA("7113", "SOUND_SB")
 
     ########################################################################
     ## This requires Paul Gortmaker's EISA ID patch.
-    REQ("EISA", "EISA")	# Someday, IOPORTS()
+    REQ("EISA", "EISA")  # Someday, IOPORTS()
 
     ########################################################################
     ## The rest of the table is read in from Giacomo's Catenazzi's rulesfile.
@@ -655,16 +712,21 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     baton = cml.Baton(lang["TURNOFF"])
     for symbol in configuration.dictionary.values():
         baton.twirl()
-        if symbol.is_symbol() and configuration.saveable(symbol) \
-           and reliable.has_key(symbol.name) and not cml.evaluate(symbol):
+        if (
+            symbol.is_symbol()
+            and configuration.saveable(symbol)
+            and symbol.name in reliable
+            and not cml.evaluate(symbol)
+        ):
             config.found(symbol.name, n, reliable[symbol.name])
     baton.end()
 
     ########################################################################
     ## Resolve conflicts.
 
-    PRIORITY(("SCSI_SYM53C8XX_2", "SCSI_SYM53C8XX", \
-                                 "SCSI_NCR53C8XX", "SCSI_GENERIC_NCR5380"))
+    PRIORITY(
+        ("SCSI_SYM53C8XX_2", "SCSI_SYM53C8XX", "SCSI_NCR53C8XX", "SCSI_GENERIC_NCR5380")
+    )
     PRIORITY(("DE2104X", "TULIP"))
 
     ## End of probe logic.
@@ -676,10 +738,10 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     # Filesystem, bus, and controller for root cannot be modules.
     sys.stderr.write(lang["ROOTLOOK"])
     fstab_to_bus_map = {
-        r"^/dev/sd" : ("SCSI",),
-        r"^/dev/hd" : ("IDE",),
-        r"\bnfs\b" : ("NFS_FS", "NFS_ROOT", "NET"),
-        }
+        r"^/dev/sd": ("SCSI",),
+        r"^/dev/hd": ("IDE",),
+        r"\bnfs\b": ("NFS_FS", "NFS_ROOT", "NET"),
+    }
     ifp = open("/etc/mtab", "r")
     while 1:
         line = ifp.readline()
@@ -691,10 +753,10 @@ def autoconfigure(configuration, hardcompile, debuglevel):
         if mountpoint == "/":
             # Figure out the drive type of the root partition.
             rootsymbols = []
-            for (pattern, symbols) in fstab_to_bus_map.items():
+            for pattern, symbols in fstab_to_bus_map.items():
                 if re.compile(pattern).search(line):
                     rootsymbols = list(symbols)
-            if fsmap.has_key(fstype):
+            if fstype in fsmap:
                 rootsymbols.append(fsmap[fstype])
             if not rootsymbols:
                 sys.stderr.write(lang["ROOTWARN"])
@@ -708,15 +770,17 @@ def autoconfigure(configuration, hardcompile, debuglevel):
                 # dependent on this bus to y.
                 bus = configuration.dictionary[roottype]
                 for symbol in configuration.dictionary.values():
-                    if cml.evaluate(symbol) == m \
-                       and symbol.hasprop("BOOTABLE") \
-                       and bus.ancestor_of(symbol):
+                    if (
+                        cml.evaluate(symbol) == m
+                        and symbol.hasprop("BOOTABLE")
+                        and bus.ancestor_of(symbol)
+                    ):
                         config.found(symbol.name, y, "Root filesystem")
                         sys.stderr.write(lang["ROOTHW"] % symbol.name)
     ifp.close()
 
     # PTY devices
-    ptycount = dmesg.find('pty: ([0-9]*) Unix98 ptys')
+    ptycount = dmesg.find("pty: ([0-9]*) Unix98 ptys")
     if ptycount:
         config.found("UNIX98_PTY_COUNT", int(ptycount))
 
@@ -724,15 +788,14 @@ def autoconfigure(configuration, hardcompile, debuglevel):
 
     def grepcmd(pattern, cmd):
         "Test for PATTERN in the output of COMMAND."
-        (status, output) = commands.getstatusoutput(cmd)
+        status, output = subprocess.getstatusoutput(cmd)
         return status == 0 and re.compile(pattern).search(output)
 
     # Apply those sanity checks
 
     # Handle a subtle gotcha: if there are multiple NICs, they must be modular.
     if grepcmd("eth[1-3]", "/sbin/ifconfig -a"):
-        config.force_dependents_modular("NET_ETHERNET",
-                                        "Multiple NICs must be modular")
+        config.force_dependents_modular("NET_ETHERNET", "Multiple NICs must be modular")
 
     # Now freeze complement sets.  With any luck, this will reduce the
     # set of drivers the user actually has to specify to zero.
@@ -750,63 +813,64 @@ def autoconfigure(configuration, hardcompile, debuglevel):
     # So far I have not done anything about this.
     if not hardcompile:
         b = cml.Baton(lang["COMPLEMENT"])
-        config.complement("HOTPLUG_PCI",cml.m, b, "PCI_HOTPLUG is a hot-plug bus")
-        config.complement("USB",        cml.m, b, "USB is a hot-plug bus")
-        config.complement("PCMCIA",     cml.m, b, "PCMCIA is a hot-plug bus")
-        config.complement("IEEE1394",   cml.m, b, "IEEE1394 ia a hot-plug bus")
+        config.complement("HOTPLUG_PCI", cml.m, b, "PCI_HOTPLUG is a hot-plug bus")
+        config.complement("USB", cml.m, b, "USB is a hot-plug bus")
+        config.complement("PCMCIA", cml.m, b, "PCMCIA is a hot-plug bus")
+        config.complement("IEEE1394", cml.m, b, "IEEE1394 ia a hot-plug bus")
         b.end(lang["DONE"])
 
     DEBUG(lang["COMPLETE"])
+
 
 def process_define(myconfiguration, val, freeze):
     "Process a -d=xxx or -D=xxx option."
     parts = val.split("=")
     sym = parts[0]
-    if myconfiguration.dictionary.has_key(sym):
+    if sym in myconfiguration.dictionary:
         sym = myconfiguration.dictionary[sym]
     else:
-        myconfiguration.errout.write(lang["SYMUNKNOWN"] % (`sym`,))
+        myconfiguration.errout.write(lang["SYMUNKNOWN"] % (repr(sym),))
         sys.exit(1)
     if sym.is_derived():
-        myconfiguration.debug_emit(1, lang["DERIVED"] % (`sym`,))
+        myconfiguration.debug_emit(1, lang["DERIVED"] % (repr(sym),))
         sys.exit(1)
     elif sym.is_logical():
         if len(parts) == 1:
-            val = 'y'
-        elif parts[1] == 'y':
-            val = 'y'
-        elif parts[1] == 'm':
+            val = "y"
+        elif parts[1] == "y":
+            val = "y"
+        elif parts[1] == "m":
             myconfiguration.trits_enabled = 1
-            val = 'm'
-        elif parts[1] == 'n':
-            val = 'n'
+            val = "m"
+        elif parts[1] == "n":
+            val = "n"
     elif len(parts) == 1:
-        print lang["NOCMDLINE"] % (`sym`,)
+        print(lang["NOCMDLINE"] % (repr(sym),))
         sys.exit(1)
     else:
         val = parts[1]
-    (ok, effects, violation) = myconfiguration.set_symbol(sym,
-                                     myconfiguration.value_from_string(sym, val),
-                                     freeze)
+    ok, effects, violation = myconfiguration.set_symbol(
+        sym, myconfiguration.value_from_string(sym, val), freeze
+    )
     if effects:
         sys.stderr.write(lang["EFFECTS"] + "\n")
         sys.stderr.write("\n".join(effects) + "\n\n")
     if not ok:
         sys.stderr.write((lang["ROLLBACK"] % (sym.name, val)) + "\n")
-        sys.stderr.write("\n".join(violation)+"\n")
+        sys.stderr.write("\n".join(violation) + "\n")
+
 
 if __name__ == "__main__":
     # Process command-line options
     try:
-        (options, arguments) = getopt.getopt(sys.argv[1:], "d:D:hr:st:v",
-                                             ("hardcompile",
-                                              "rules=",
-                                              "standalone",
-                                              "target=",
-                                              "verbose"))
+        options, arguments = getopt.getopt(
+            sys.argv[1:],
+            "d:D:hr:st:v",
+            ("hardcompile", "rules=", "standalone", "target=", "verbose"),
+        )
     except getopt.GetoptError:
         sys.stderr.write(lang["OPTUNKNOWN"])
-        raise SystemExit, 2
+        raise SystemExit(2)
 
     autoprobe_debug = hardcompile = standalone = 0
     objtree = os.environ.get("KBUILD_OBJTREE")
@@ -814,10 +878,10 @@ if __name__ == "__main__":
     freeze_em = []
     set_em = []
 
-    for (opt, val) in options:
-	if opt == '-D':
+    for opt, val in options:
+        if opt == "-D":
             freeze_em.append(val)
-	elif opt == '-d':
+        elif opt == "-d":
             set_em.append(val)
         elif opt in ("-v", "--verbose"):
             autoprobe_debug += 1
@@ -839,11 +903,11 @@ if __name__ == "__main__":
     rulebase = os.path.join(objtree, "rules.out")
     if not os.path.exists(rulebase):
         sys.stderr.write("autoconfigure: rulebase %s does not exist!\n" % rulebase)
-        raise SystemExit, 1
+        raise SystemExit(1)
     configuration = cmlsystem.CMLSystem(rulebase)
     if not cmlsystem:
         sys.stderr.write("autoconfigure: rulebase %s could not be read!\n" % rulebase)
-        raise SystemExit, 1
+        raise SystemExit(1)
 
     # Autoconfigure into the configuration object.
     for sym in freeze_em:

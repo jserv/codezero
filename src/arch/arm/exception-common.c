@@ -41,7 +41,12 @@ struct ipc_state {
 
 void ipc_save_state(struct ipc_state *state)
 {
-	unsigned int *mr0_current = KTCB_REF_MR0(current);
+	unsigned int *mr0_current;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+	mr0_current = KTCB_REF_MR0(current);
+#pragma GCC diagnostic pop
 
 	BUG_ON(!mr0_current);
 
@@ -55,7 +60,12 @@ void ipc_save_state(struct ipc_state *state)
 
 void ipc_restore_state(struct ipc_state *state)
 {
-	unsigned int *mr0_current = KTCB_REF_MR0(current);
+	unsigned int *mr0_current;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
+	mr0_current = KTCB_REF_MR0(current);
+#pragma GCC diagnostic pop
 
 	BUG_ON(!mr0_current);
 

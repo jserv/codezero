@@ -243,7 +243,7 @@ require NCPU <= 4
 derive RAM_BASE_PLAT from 0
 
 # Toolchains:
-default TOOLCHAIN_USERSPACE from 'arm-none-linux-gnueabi-'
+default TOOLCHAIN_USERSPACE from 'arm-none-eabi-'
 default TOOLCHAIN_KERNEL from 'arm-none-eabi-'
 
 prefix CONFIG_

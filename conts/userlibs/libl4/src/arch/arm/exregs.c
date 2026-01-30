@@ -51,7 +51,10 @@ void exregs_print_registers(void)
 void exregs_set_mr(struct exregs_data *s, int offset, unsigned long val)
 {
 	/* Get MR0 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	u32 *mr = &s->context.MR0_REGISTER;
+#pragma GCC diagnostic pop
 
 	/* Sanity check */
 	BUG_ON(offset > MR_TOTAL || offset < 0);

@@ -43,7 +43,10 @@ void __l4_init(void)
 	kip = l4_kernel_interface(0, 0, 0);
 
 	/* Reference to utcb field of KIP */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	kip_utcb_ref = (struct utcb **)&kip->utcb;
+#pragma GCC diagnostic pop
 
 	__l4_ipc =		(__l4_ipc_t)kip->ipc;
 	__l4_map =		(__l4_map_t)kip->map;
