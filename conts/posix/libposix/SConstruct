@@ -4,7 +4,6 @@
 
 import os, glob, sys
 from os.path import join
-from string import split
 from scripts.config.config_invoke import *
 from scripts.config.projpaths import *
 
@@ -29,15 +28,15 @@ def extract_arch_subarch_plat(config_header):
 	plat = None
 
 	if not os.path.exists(config_header):
-		print "\n\nconfig.h does not exist. "\
-		      "Please run: `scons configure' first\n\n"
+		print("\n\nconfig.h does not exist. "
+		      "Please run: `scons configure' first\n\n")
 		sys.exit()
 	f = open(CONFIG_H, "r")
 	while True:
 		line = f.readline()
 		if line == "":
 			break
-		parts = split(line)
+		parts = line.split()
 		if len(parts) > 0:
 			if parts[0] == "#define":
 				if parts[1] == "__ARCH__":
@@ -47,14 +46,14 @@ def extract_arch_subarch_plat(config_header):
 			   	elif parts[1] == "__SUBARCH__":
 					subarch = parts[2]
 	f.close()
-	if arch == None:
-		print "Error: No config symbol found for architecture"
+	if arch is None:
+		print("Error: No config symbol found for architecture")
 		sys.exit()
-	if subarch == None:
-		print "Error: No config symbol found for subarchitecture"
+	if subarch is None:
+		print("Error: No config symbol found for subarchitecture")
 		sys.exit()
-	if plat == None:
-		print "Error: No config symbol found for platform"
+	if plat is None:
+		print("Error: No config symbol found for platform")
 		sys.exit()
 	return arch, subarch, plat
 

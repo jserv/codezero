@@ -10,6 +10,7 @@
 
 int thread_create(int (*func)(void *), void *args, unsigned int flags,
 		  struct task_ids *new_ids);
+void thread_exit(int exitcode);
 
 /* For same space */
 #define STACK_SIZE	0x1000

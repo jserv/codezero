@@ -1,0 +1,53 @@
+#
+# Codezero L4 Microkernel Configuration
+#
+
+mainmenu "Codezero Microkernel Configurator"
+
+config CODEZERO_VERSION
+	string
+	default "0.1"
+	help
+	  Version string for the Codezero microkernel.
+
+source "arch/Kconfig"
+source "platform/Kconfig"
+source "kernel/Kconfig"
+source "conts/Kconfig"
+
+menu "Toolchain"
+
+config TOOLCHAIN_USERSPACE
+	string "Toolchain prefix for userspace"
+	default "arm-none-eabi-"
+	help
+	  Toolchain used for compiling userspace libraries and containers.
+
+	  Userspace is tested for an up-to-date CodeSourcery NONE-EABI-LINUX
+	  toolchain.
+
+	  To specify a custom toolchain, use:
+	    path/to/toolchain/toolchain-prefix
+
+config TOOLCHAIN_KERNEL
+	string "Toolchain prefix for kernel"
+	default "arm-none-eabi-"
+	help
+	  Toolchain used for compiling kernel and loader.
+
+	  Kernel is tested for an up-to-date CodeSourcery EABI toolchain.
+
+	  To specify a custom toolchain, use:
+	    path/to/toolchain/toolchain-prefix
+
+endmenu
+
+config CAPABILITIES
+	bool "Enable capability checking"
+	default y
+	help
+	  Enable or disable capability checking by the kernel.
+
+	  Capabilities provide fine-grained access control for kernel
+	  resources including threads, address spaces, IPC endpoints,
+	  and memory regions.

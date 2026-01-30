@@ -6,6 +6,7 @@
 #include <macros.h>
 #include <l4lib/exregs.h>
 #include <fault.h>
+#include <stdio.h>
 #include INC_SUBARCH(mm.h)
 #include INC_SUBARCH(exception.h)
 

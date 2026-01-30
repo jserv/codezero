@@ -1,10 +1,14 @@
 #! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
-import os, sys, shelve, shutil, re
+import glob
+import os
+import re
+import shelve
 from functools import cmp_to_key
-from .projpaths import *
-from .lib import *
-from .caps import *
+
+from .caps import prepare_capability, create_default_capabilities
+from .lib import conv_hex
+from .projpaths import CONFIG_SHELVE, CONFIG_SHELVE_DIR
 
 
 class CapabilityList:
@@ -121,135 +125,135 @@ class configuration:
     # Convert line to name value pair, if possible
     def line_to_name_value(self, line):
         parts = line.split()
-        if len(parts) > 0:
+        if len(parts) >= 3:
             if parts[0] == "#define":
                 return parts[1], parts[2]
         return None
 
-    # Check if SMP enable, and get NCPU if SMP
     def get_ncpu(self, name, value):
-        if name[: len("CONFIG_SMP")] == "CONFIG_SMP":
+        """Check if SMP enabled and get NCPU count."""
+        if name.startswith("CONFIG_SMP"):
             self.smp = bool(value)
-        if name[: len("CONFIG_NCPU")] == "CONFIG_NCPU":
+        elif name.startswith("CONFIG_NCPU"):
             self.ncpu = int(value)
 
-    # Extract architecture from a name value pair
     def get_arch(self, name, val):
-        if name[: len("CONFIG_ARCH_")] == "CONFIG_ARCH_":
-            parts = name.split("_", 3)
-            self.arch = parts[2].lower()
+        """Extract architecture from a name value pair."""
+        if name.startswith("CONFIG_ARCH_"):
+            self.arch = name.split("_", 3)[2].lower()
 
-    # Extract subarch from a name value pair
     def get_subarch(self, name, val):
-        if name[: len("CONFIG_SUBARCH_")] == "CONFIG_SUBARCH_":
-            parts = name.split("_", 3)
-            self.subarch = parts[2].lower()
+        """Extract subarch from a name value pair."""
+        if name.startswith("CONFIG_SUBARCH_"):
+            self.subarch = name.split("_", 3)[2].lower()
 
-    # Extract platform from a name value pair
     def get_platform(self, name, val):
-        if name[: len("CONFIG_PLATFORM_")] == "CONFIG_PLATFORM_":
-            parts = name.split("_", 3)
-            self.platform = parts[2].lower()
+        """Extract platform from a name value pair."""
+        if name.startswith("CONFIG_PLATFORM_"):
+            self.platform = name.split("_", 3)[2].lower()
 
-    # Extract cpu from a name value pair
     def get_cpu(self, name, val):
-        if name[: len("CONFIG_CPU_")] == "CONFIG_CPU_":
-            parts = name.split("_", 3)
-            self.cpu = parts[2].lower()
-
-            # derive gcc "-march" flag
+        """Extract cpu from a name value pair."""
+        if name.startswith("CONFIG_CPU_"):
+            cpu_type = name.split("_", 3)[2]
+            self.cpu = cpu_type.lower()
+            # Derive gcc "-march" flag
             for cputype, archflag in self.arch_to_gcc_flag:
-                if cputype == parts[2]:
+                if cputype == cpu_type:
                     self.gcc_arch_flag = archflag
+                    break
 
-    # Extract kernel space toolchain from a name value pair
     def get_toolchain(self, name, val):
-        if name[: len("CONFIG_TOOLCHAIN_USERSPACE")] == "CONFIG_TOOLCHAIN_USERSPACE":
-            parts = val.split('"', 2)
-            self.toolchain_userspace = parts[1]
+        """Extract toolchain paths from name value pair."""
+        if name.startswith("CONFIG_TOOLCHAIN_USERSPACE"):
+            self.toolchain_userspace = val.split('"', 2)[1]
+        elif name.startswith("CONFIG_TOOLCHAIN_KERNEL"):
+            self.toolchain_kernel = val.split('"', 2)[1]
 
-        if name[: len("CONFIG_TOOLCHAIN_KERNEL")] == "CONFIG_TOOLCHAIN_KERNEL":
-            parts = val.split('"', 2)
-            self.toolchain_kernel = parts[1]
-
-    # Extract number of containers
     def get_ncontainers(self, name, val):
-        if name[: len("CONFIG_CONTAINERS")] == "CONFIG_CONTAINERS":
+        """Extract number of containers."""
+        if name.startswith("CONFIG_CONTAINERS"):
             self.ncontainers = int(val)
 
-    # TODO: Carry this over to Container() as static method???
+    # Memory region pattern: [PAGER_]VIRT|PHYS{n}_START|END
+    _MEM_REGION_PATTERN = re.compile(
+        r"(PAGER_)?(VIRT|PHYS)(\d)_(START|END)"
+    )
+
     def get_container_parameter(self, id, param, val):
-        if param[: len("PAGER_LMA")] == "PAGER_LMA":
-            self.containers[id].pager_lma = int(val, 0)
-        elif param[: len("PAGER_VMA")] == "PAGER_VMA":
-            self.containers[id].pager_vma = int(val, 0)
-        elif param[: len("PAGER_UTCB_START")] == "PAGER_UTCB_START":
-            self.containers[id].pager_utcb_region_start = int(val, 0)
-        elif param[: len("PAGER_UTCB_END")] == "PAGER_UTCB_END":
-            self.containers[id].pager_utcb_region_end = int(val, 0)
-        elif param[: len("PAGER_SHM_START")] == "PAGER_SHM_START":
-            self.containers[id].pager_shm_region_start = int(val, 0)
-        elif param[: len("PAGER_SHM_END")] == "PAGER_SHM_END":
-            self.containers[id].pager_shm_region_end = int(val, 0)
-        elif param[: len("PAGER_TASK_START")] == "PAGER_TASK_START":
-            self.containers[id].pager_task_region_start = int(val, 0)
-        elif param[: len("PAGER_TASK_END")] == "PAGER_TASK_END":
-            self.containers[id].pager_task_region_end = int(val, 0)
-        elif param[: len("LINUX_PAGE_OFFSET")] == "LINUX_PAGE_OFFSET":
-            self.containers[id].linux_page_offset = int(val, 0)
-            self.containers[id].pager_vma += int(val, 0)
-        elif param[: len("LINUX_PHYS_OFFSET")] == "LINUX_PHYS_OFFSET":
-            self.containers[id].linux_phys_offset = int(val, 0)
-            self.containers[id].pager_lma += int(val, 0)
-        elif param[: len("LINUX_ZRELADDR")] == "LINUX_ZRELADDR":
-            self.containers[id].linux_zreladdr = int(val, 0)
-        elif param[: len("LINUX_ROOTFS_ADDRESS")] == "LINUX_ROOTFS_ADDRESS":
-            self.containers[id].linux_rootfs_address += int(val, 0)
-        elif re.match(
-            r"(PAGER_){0,1}(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param
-        ):
-            matchobj = re.match(
-                r"(PAGER_){0,1}(VIRT|PHYS){1}([0-9]){1}(_){1}(START|END){1}", param
-            )
-            pager, virtphys, regionidstr, discard1, startend = matchobj.groups()
-            regionid = int(regionidstr)
-            if pager == "PAGER_":
-                owner = "PAGER"
-            elif pager == None:
-                owner = "CONTAINER"
+        """Parse and store a container configuration parameter."""
+        cont = self.containers[id]
+
+        # Simple prefix-based parameters
+        simple_params = {
+            "PAGER_LMA": ("pager_lma", int, 0),
+            "PAGER_VMA": ("pager_vma", int, 0),
+            "PAGER_UTCB_START": ("pager_utcb_region_start", int, 0),
+            "PAGER_UTCB_END": ("pager_utcb_region_end", int, 0),
+            "PAGER_SHM_START": ("pager_shm_region_start", int, 0),
+            "PAGER_SHM_END": ("pager_shm_region_end", int, 0),
+            "PAGER_TASK_START": ("pager_task_region_start", int, 0),
+            "PAGER_TASK_END": ("pager_task_region_end", int, 0),
+            "LINUX_ZRELADDR": ("linux_zreladdr", int, 0),
+        }
+
+        for prefix, (attr, conv, base) in simple_params.items():
+            if param.startswith(prefix):
+                setattr(cont, attr, conv(val, base))
+                return
+
+        # Linux offset params with side effects
+        if param.startswith("LINUX_PAGE_OFFSET"):
+            offset = int(val, 0)
+            cont.linux_page_offset = offset
+            cont.pager_vma += offset
+            return
+        if param.startswith("LINUX_PHYS_OFFSET"):
+            offset = int(val, 0)
+            cont.linux_phys_offset = offset
+            cont.pager_lma += offset
+            return
+        if param.startswith("LINUX_ROOTFS_ADDRESS"):
+            cont.linux_rootfs_address += int(val, 0)
+            return
+
+        # Memory region parameters
+        match = self._MEM_REGION_PATTERN.match(param)
+        if match:
+            pager, memtype, regionid, startend = match.groups()
+            regionid = int(regionid)
+            owner = "PAGER" if pager else "CONTAINER"
+            caplist = cont.caplist[owner]
+
+            if memtype == "VIRT":
+                caplist.virtmem[startend][regionid] = val
+                caplist.virt_regions = max(caplist.virt_regions, regionid + 1)
             else:
-                print("Pager is neither None nor PAGER_, it is: " + pager)
+                caplist.physmem[startend][regionid] = val
+                caplist.phys_regions = max(caplist.phys_regions, regionid + 1)
+            return
 
-            if virtphys == "VIRT":
-                self.containers[id].caplist[owner].virtmem[startend][regionid] = val
-                if regionid + 1 > self.containers[id].caplist[owner].virt_regions:
-                    self.containers[id].caplist[owner].virt_regions = regionid + 1
-            if virtphys == "PHYS":
-                self.containers[id].caplist[owner].physmem[startend][regionid] = val
-                if regionid + 1 > self.containers[id].caplist[owner].phys_regions:
-                    self.containers[id].caplist[owner].phys_regions = regionid + 1
+        # Name and project parameters
+        if param.startswith("OPT_NAME"):
+            cont.name = val[1:-1].lower()
+            return
+        if param.startswith("BAREMETAL_PROJ_"):
+            cont.dirname = param.split("_", 2)[2].lower()
+            return
 
-        elif param[: len("OPT_NAME")] == "OPT_NAME":
-            name = val[1:-1].lower()
-            self.containers[id].name = name
-        elif param[: len("BAREMETAL_PROJ_")] == "BAREMETAL_PROJ_":
-            param1 = param.split("_", 2)
-            self.containers[id].dirname = param1[2].lower()
-        elif param[: len("CAP_")] == "CAP_":
-            prefix, param_rest = param.split("_", 1)
-            prepare_capability(self.containers[id], "CONTAINER", param_rest, val)
-        elif param[: len("PAGER_CAP_")] == "PAGER_CAP_":
-            parts = param.split("_", 2)
-            prepare_capability(self.containers[id], "PAGER", parts[2], val)
-        else:
-            param1, param2 = param.split("_", 1)
-            if param1 == "TYPE":
-                if param2 == "LINUX":
-                    self.containers[id].type = "linux"
-                elif param2 == "POSIX":
-                    self.containers[id].type = "posix"
-                elif param2 == "BAREMETAL":
-                    self.containers[id].type = "baremetal"
+        # Capability parameters
+        if param.startswith("PAGER_CAP_"):
+            prepare_capability(cont, "PAGER", param.split("_", 2)[2], val)
+            return
+        if param.startswith("CAP_"):
+            prepare_capability(cont, "CONTAINER", param.split("_", 1)[1], val)
+            return
+
+        # Container type
+        if param.startswith("TYPE_"):
+            if val == "1" or val == 1:
+                type_name = param.split("_", 1)[1]
+                cont.type = type_name.lower()
 
     # Extract parameters for containers
     def get_container_parameters(self, name, val):
@@ -331,9 +335,15 @@ def configuration_save(config):
 
 
 def configuration_retrieve():
-    # Get configuration information
-    if not os.path.exists(CONFIG_SHELVE):
+    """Get configuration from shelve storage.
+
+    Shelve creates files with various extensions (.db, .dir, .bak)
+    depending on the underlying database module.
+    """
+    if not glob.glob(CONFIG_SHELVE + "*"):
         return None
-    config_shelve = shelve.open(CONFIG_SHELVE)
-    config = config_shelve["configuration"]
-    return config
+    try:
+        with shelve.open(CONFIG_SHELVE) as config_shelve:
+            return config_shelve["configuration"]
+    except Exception:
+        return None

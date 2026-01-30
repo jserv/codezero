@@ -1,0 +1,68 @@
+# Codezero Container Manifest
+# PB926 Threads Demo Configuration
+
+schemaVersion: 1
+
+kconfig: pb926
+
+containers:
+  - id: 0
+    name: "threads_demo0"
+    type: baremetal
+    project: threads_demo
+
+    pager:
+      lma: 0x100000
+      vma: 0xa0000000
+
+    memory:
+      physical:
+        - start: 0x100000
+          end: 0xe00000
+
+      virtual:
+        - start: 0xa0000000
+          end: 0xb0000000
+
+    capabilities:
+      pools:
+        thread:
+          enabled: true
+          size: 64
+        space:
+          enabled: true
+          size: 64
+        mutex:
+          enabled: true
+          size: 100
+        map:
+          enabled: true
+          size: 800
+        cap:
+          enabled: true
+          size: 32
+
+      tctrl:
+        enabled: true
+        target: current_container
+
+      exregs:
+        enabled: true
+        target: current_container
+
+      ipc:
+        enabled: true
+        target: current_container
+
+      capctrl:
+        enabled: true
+        target: current_container
+
+      umutex:
+        enabled: true
+        target: current_container
+
+      irqctrl:
+        enabled: true
+
+    devices: []

@@ -100,43 +100,22 @@ cap_physmem = """
 """
 
 
-pager_ifdefs_todotext = """
-/*
- * TODO:
- * This had to be defined this way because in CML2 there
- * is no straightforward way to derive symbols from expressions, even
- * if it is stated in the manual that it can be done.
- * As a workaround, a ternary expression of (? : ) was tried but this
- * complains that type deduction could not be done.
- */"""
-
-# This will be filled after the containers are compiled
-# and pager binaries are formed
+# Pager size macro - filled after containers are compiled
 pager_mapsize = """
 #define CONT%d_PAGER_SIZE     %s
 """
 
-pager_ifdefs = """
-#if defined(CONFIG_CONT%(cn)d_TYPE_LINUX)
-    #define CONT%(cn)d_PAGER_MAPSIZE \\
-                (CONT%(cn)d_PAGER_SIZE + CONFIG_CONT%(cn)d_LINUX_ZRELADDR - \\
-                 CONFIG_CONT%(cn)d_LINUX_PHYS_OFFSET)
-#else
-    #define CONT%(cn)d_PAGER_MAPSIZE (CONT%(cn)d_PAGER_SIZE)
-#endif
+pager_mapsize_def = """
+#define CONT%(cn)d_PAGER_MAPSIZE (CONT%(cn)d_PAGER_SIZE)
 """
 
 
 def generate_pager_memory_ifdefs(config, containers):
+    """Generate pager size macros for each container."""
     pager_ifdef_string = ""
-    linux = 0
     for c in containers:
-        if c.type == "linux":
-            if linux == 0:
-                pager_ifdef_string += pager_ifdefs_todotext
-                linux = 1
         pager_ifdef_string += pager_mapsize % (c.id, c.pager_size)
-        pager_ifdef_string += pager_ifdefs % {"cn": c.id}
+        pager_ifdef_string += pager_mapsize_def % {"cn": c.id}
     return pager_ifdef_string
 
 

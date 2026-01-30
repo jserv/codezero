@@ -53,3 +53,4 @@ objs = SConscript('SConscript', exports = { 'env' : env },
 Depends(objs, join(PROJROOT, CONFIG_H))
 prog = env.Program(join(builddir, 'main.elf'), objs)
 Depends(prog, linker_lds)
+Default(prog)

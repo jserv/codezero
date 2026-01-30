@@ -282,6 +282,9 @@ void handle_requests(void)
 	for (int i = 0; i < MR_UNUSED_TOTAL; i++)
 		mr[i] = read_mr(MR_UNUSED_START + i);
 
+	/* Suppress unused variable warning - mr reserved for future use */
+	(void)mr;
+
 	/*
 	 * TODO:
 	 *

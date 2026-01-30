@@ -1,0 +1,22 @@
+#
+# Architecture Configuration
+#
+
+choice
+	prompt "Main architecture"
+	default ARCH_ARM
+	help
+	  Select the main processor architecture.
+
+config ARCH_ARM
+	bool "ARM"
+	help
+	  ARM architecture support.
+
+	  Supports ARMv5, ARMv6 variants.
+
+endchoice
+
+if ARCH_ARM
+source "arch/arm/Kconfig"
+endif

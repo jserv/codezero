@@ -1,8 +1,6 @@
 #! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
-import os, sys, shelve, shutil, re
 from .projpaths import *
-from .lib import *
 from string import Template
 
 cap_strings = {
@@ -89,112 +87,112 @@ cap_strings = {
 \t\t\t\t.size = ${size},
 \t\t\t},
 """,
+    "capctrl": """
+\t\t\t[${idx}] = {
+\t\t\t\t.target = ${cid},
+\t\t\t\t.type = CAP_TYPE_CAP | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_CAP_GRANT | CAP_CAP_READ
+\t\t\t\t          | CAP_CAP_SHARE | CAP_CAP_REPLICATE
+\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE
+\t\t\t\t          | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+""",
+    "umutex": """
+\t\t\t[${idx}] = {
+\t\t\t\t.target = ${cid},
+\t\t\t\t.type = CAP_TYPE_UMUTEX | CAP_RTYPE_CONTAINER,
+\t\t\t\t.access = CAP_UMUTEX_LOCK | CAP_UMUTEX_UNLOCK
+\t\t\t\t          | CAP_CHANGEABLE | CAP_REPLICABLE
+\t\t\t\t          | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0, .size = 0,
+\t\t\t},
+""",
+    "cappool": """
+\t\t\t[${idx}] = {
+\t\t\t\t.target = ${cid},
+\t\t\t\t.type = CAP_TYPE_QUANTITY | CAP_RTYPE_CAPPOOL,
+\t\t\t\t.access = CAP_CHANGEABLE | CAP_TRANSFERABLE,
+\t\t\t\t.start = 0, .end = 0,
+\t\t\t\t.size = ${size},
+\t\t\t},
+""",
 }
 
 
-#
-# These are carefully crafted functions, touch with care.
-#
+# Target type to rtype mapping
+TARGET_RTYPE_MAP = {
+    "CURRENT_CONTAINER": ("CAP_RTYPE_CONTAINER", True),
+    "CURRENT_PAGER_SPACE": ("CAP_RTYPE_SPACE", True),
+    "OTHER_CONTAINER": ("CAP_RTYPE_CONTAINER", False),
+    "OTHER_PAGER": ("CAP_RTYPE_THREAD", False),
+}
+
+
+def _apply_target_type(caplist, capkey, ttype, cont):
+    """Apply target type substitution to a capability template."""
+    templ = Template(caplist.caps[capkey])
+    if ttype not in TARGET_RTYPE_MAP:
+        return
+    rtype, use_cont_id = TARGET_RTYPE_MAP[ttype]
+    if use_cont_id:
+        caplist.caps[capkey] = templ.safe_substitute(target_rtype=rtype, cid=cont.id)
+    else:
+        caplist.caps[capkey] = templ.safe_substitute(target_rtype=rtype)
+
+
 def prepare_custom_capability(cont, caplist, param, val):
     if "TYPE" in param:
-        capkey, captype, rest = param.split("_", 2)
-        capkey = capkey.lower()
-        captype = captype.lower()
-        caplist.caps[capkey] = cap_strings[captype]
+        capkey, captype, _ = param.split("_", 2)
+        caplist.caps[capkey.lower()] = cap_strings[captype.lower()]
     elif "TARGET" in param:
         target_parts = param.split("_", 2)
+        capkey = target_parts[0].lower()
+        templ = Template(caplist.caps[capkey])
         if len(target_parts) == 2:
-            capkey = target_parts[0].lower()
-            templ = Template(caplist.caps[capkey])
             caplist.caps[capkey] = templ.safe_substitute(cid=val)
         elif len(target_parts) == 3:
-            capkey = target_parts[0].lower()
-            ttype = target_parts[2]
-            templ = Template(caplist.caps[capkey])
+            _apply_target_type(caplist, capkey, target_parts[2], cont)
 
-            # On current container, provide correct rtype and current containerid.
-            # Else we leave container id to user-supplied value
-            if ttype == "CURRENT_CONTAINER":
-                caplist.caps[capkey] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_CONTAINER", cid=cont.id
-                )
-            elif ttype == "CURRENT_PAGER_SPACE":
-                caplist.caps[capkey] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_SPACE", cid=cont.id
-                )
-            elif ttype == "OTHER_CONTAINER":
-                caplist.caps[capkey] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_CONTAINER"
-                )
-            elif ttype == "OTHER_PAGER":
-                caplist.caps[capkey] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_THREAD"
-                )
-    else:  # Ignore custom_use symbol
-        return
-    # print capkey
-    # print caplist.caps[capkey]
+
+def _init_capability(caplist, captype, cont):
+    """Initialize a capability with default container id for pools/irqctrl."""
+    caplist.caps[captype] = cap_strings[captype]
+    if captype.endswith("pool") or captype.endswith("irqctrl"):
+        templ = Template(caplist.caps[captype])
+        caplist.caps[captype] = templ.safe_substitute(cid=cont.id)
 
 
 def prepare_typed_capability(cont, caplist, param, val):
     captype, params = param.split("_", 1)
     captype = captype.lower()
 
+    # Skip unknown capability types (e.g., "device" mappings are not kernel caps)
+    if captype not in cap_strings:
+        return
+
+    # Auto-initialize capability if not yet seen (handles out-of-order symbols)
+    if captype not in caplist.caps:
+        _init_capability(caplist, captype, cont)
+
     # USE makes us assign the initial cap string with blank fields
     if "USE" in params:
-        caplist.caps[captype] = cap_strings[captype]
-
-        # Prepare string template from capability type
-        templ = Template(caplist.caps[captype])
-
-        # If it is a pool, tctrl, exregs, irqctrl, amend current container id as default
-        if captype[-len("pool") :] == "pool" or captype[-len("irqctrl") :] == "irqctrl":
-            caplist.caps[captype] = templ.safe_substitute(cid=cont.id)
+        if captype not in caplist.caps:
+            _init_capability(caplist, captype, cont)
 
     # Fill in the blank size field
     elif "SIZE" in params:
-        # Get reference to capability string template
         templ = Template(caplist.caps[captype])
         caplist.caps[captype] = templ.safe_substitute(size=val)
 
     # Fill in capability target type and target id fields
     elif "TARGET" in params:
-        # Get reference to capability string template
-        templ = Template(caplist.caps[captype])
-
-        # Two types of strings are expected here: TARGET or TARGET_TARGETTYPE
-        # If TARGET, the corresponding value is in val
         target_parts = params.split("_", 1)
-
-        # Target type
         if len(target_parts) == 2:
-            ttype = target_parts[1]
-
-            # On current container, provide correct rtype and current containerid.
-            # Else we leave container id to user-supplied value
-            if ttype == "CURRENT_CONTAINER":
-                caplist.caps[captype] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_CONTAINER", cid=cont.id
-                )
-            elif ttype == "CURRENT_PAGER_SPACE":
-                caplist.caps[captype] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_SPACE", cid=cont.id
-                )
-            elif ttype == "OTHER_CONTAINER":
-                caplist.caps[captype] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_CONTAINER"
-                )
-            elif ttype == "OTHER_PAGER":
-                caplist.caps[captype] = templ.safe_substitute(
-                    target_rtype="CAP_RTYPE_THREAD"
-                )
-
-        # Get target value supplied by user in val
+            _apply_target_type(caplist, captype, target_parts[1], cont)
         else:
+            templ = Template(caplist.caps[captype])
             caplist.caps[captype] = templ.safe_substitute(cid=val)
-
-    # print captype
-    # print caplist.caps[captype]
 
 
 def prepare_capability(cont, cap_owner, param, val):

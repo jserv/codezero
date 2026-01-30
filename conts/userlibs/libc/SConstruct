@@ -20,7 +20,7 @@ arch = config.arch
 # variant can be specified from cmdline using
 # scons variant=xxx
 variant = ARGUMENTS.get('variant', 'userspace')
-print '\nCompiling for variant: ' + variant + '\n'
+print('\nCompiling for variant: ' + variant + '\n')
 
 builddir = join(BUILDDIR, LIBC_RELDIR)
 VariantDir(builddir, os.getcwd(), 0)

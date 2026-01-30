@@ -1,0 +1,25 @@
+#
+# Codezero PB926 KMI Service Configuration
+#
+
+# Architecture
+CONFIG_ARCH_ARM=y
+
+# CPU
+CONFIG_CPU_ARM926=y
+
+# Platform
+CONFIG_PLATFORM_PB926=y
+
+# Toolchain
+CONFIG_TOOLCHAIN_USERSPACE="arm-none-eabi-"
+CONFIG_TOOLCHAIN_KERNEL="arm-none-eabi-"
+
+# Capabilities
+CONFIG_CAPABILITIES=y
+
+# Kernel properties
+CONFIG_SCHED_TICKS=1000
+
+# Containers
+CONFIG_CONT_BAREMETAL_KMI_SERVICE=y

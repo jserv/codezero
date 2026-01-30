@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- mode: python; coding: utf-8; -*-
 
-import os, sys, shelve, shutil
+import os
 from os.path import join
 
 # Way to get project root from any script importing this one :-)
@@ -39,14 +39,16 @@ LIBMEM_DIR = join(PROJROOT, LIBMEM_RELDIR)
 LIBMEM_LIBPATH = join(BUILDDIR, LIBMEM_RELDIR)
 LIBMEM_INCLUDE = join(LIBMEM_DIR, "include")
 
-CML2_CONFIG_SRCDIR = join(SCRIPTS_DIR, "config/cml")
-CML2_CONT_DEFFILE = join(CML2_CONFIG_SRCDIR, "container_ruleset.template")
-CML2TOOLSDIR = join(TOOLSDIR, "cml2-tools")
-CML2_COMPILED_RULES = join(BUILDDIR, "rules.compiled")
-CML2_CONFIG_FILE = join(BUILDDIR, "config.cml")
-CML2_CONFIG_H = join(BUILDDIR, "config.h")
-CML2_AUTOGEN_RULES = join(BUILDDIR, "config.rules")
+# Configuration output
 CONFIG_H = join(PROJROOT, "include/l4/config.h")
+
+# Kconfig + YAML configuration paths
+# Kconfiglib from https://github.com/sysprog21/Kconfiglib (fetched by build.py)
+KCONFIG_DIR = join(TOOLSDIR, "kconfiglib")
+KCONFIG_DOT_CONFIG = join(BUILDDIR, ".config")
+KCONFIG_HEADER = join(BUILDDIR, "kconfig.h")
+CONFIGS_DIR = join(PROJROOT, "configs")
+KCONFIG_DEFCONFIG_DIR = CONFIGS_DIR  # defconfigs colocated with YAML manifests
 CONFIG_SHELVE_DIR = join(BUILDDIR, "configdata")
 CONFIG_SHELVE_FILENAME = "configuration"
 CONFIG_SHELVE = join(CONFIG_SHELVE_DIR, CONFIG_SHELVE_FILENAME)

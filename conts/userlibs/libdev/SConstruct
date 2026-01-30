@@ -19,7 +19,7 @@ gcc_arch_flag = config.gcc_arch_flag
 # variant can be specified from cmdline using
 # scons variant=xxx
 variant = ARGUMENTS.get('variant', 'userspace')
-print '\nCompiling for variant: ' + variant + '\n'
+print('\nCompiling for variant: ' + variant + '\n')
 
 builddir = join(join(BUILDDIR, LIBDEV_RELDIR), 'sys-' + variant)
 VariantDir(builddir, os.getcwd())

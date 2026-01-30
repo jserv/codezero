@@ -4,7 +4,6 @@
 
 import os, glob, sys
 from os.path import join
-from string import split
 
 PROJRELROOT = '../../..'
 sys.path.append(PROJRELROOT)
@@ -43,10 +42,10 @@ env = Environment(CC = config.toolchain_userspace + 'gcc',
                   CPPPATH = ['.', KERNEL_HEADERS, LIBL4_INCLUDE])
 
 if not os.path.exists(CONFIG_H):
-    print "\nThis build requires a valid kernel configuration header."
-    print "Please run `scons configure' in the kernel root directory."
-    print "Choose the `tests' target to build memory allocator tests,"
-    print "or any other target for real use.\n"
+    print("\nThis build requires a valid kernel configuration header.")
+    print("Please run `scons configure' in the kernel root directory.")
+    print("Choose the `tests' target to build memory allocator tests,")
+    print("or any other target for real use.\n")
     sys.exit()
 
 mm_src          = glob.glob("%s/*.c" % mm_dir)
@@ -55,7 +54,7 @@ memcache_src    = glob.glob("%s/*.c" % memcache_dir)
 tests_src       = glob.glob ("%s/*.c" % tests_dir)
 
 if "tests" in COMMAND_LINE_TARGETS:
-	print "WARNING!!! Did you configure the kernel with test target first???"
+	print("WARNING!!! Did you configure the kernel with test target first???")
 	libmem = test_env.StaticLibrary(mm, mm_src + kmalloc_src + memcache_src)
 	#libkmalloc = test_env.StaticLibrary("km", kmalloc_src)
 	#libmemcache = test_env.StaticLibrary("mc", memcache_src)

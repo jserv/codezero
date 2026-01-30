@@ -1,0 +1,116 @@
+#
+# Generic Kernel Properties
+#
+
+menu "Generic Processor Properties"
+
+config SMP
+	bool "Enable SMP Support"
+	default y
+	depends on CPU_ARM11MPCORE
+	help
+	  Enable or disable SMP (Symmetric Multi-Processing) support.
+
+	  Only available for multiprocessor cores like ARM11 MPCore.
+
+config NCPU
+	int "Number of SMP CPUs"
+	default 4
+	range 1 4
+	depends on SMP
+	help
+	  Configure the number of CPUs in case of multiprocessor cores.
+
+	  Maximum supported is 4 CPUs.
+
+config ICACHE_DISABLE
+	bool "Disable the L1 instruction cache"
+	default n
+	help
+	  Disable usage of L1 instruction cache by the processor.
+
+	  This is primarily useful for debugging cache-related issues.
+
+config DCACHE_DISABLE
+	bool "Disable the L1 data cache"
+	default n
+	help
+	  Disable usage of L1 data cache by the processor.
+
+	  This is primarily useful for debugging cache-related issues.
+
+endmenu
+
+menu "Generic Kernel Properties"
+
+config PREEMPT_DISABLE
+	bool "Disable Kernel Preemption"
+	default n
+	help
+	  Disable preemption of the kernel.
+
+	  When enabled, the kernel will not be preempted by higher priority
+	  tasks while executing kernel code.
+
+config SCHED_TICKS
+	int "Scheduler ticks per second"
+	default 1000
+	range 100 10000
+	help
+	  Configure the number of ticks generated per second by the timer
+	  source of the scheduler.
+
+	  Higher values provide finer-grained scheduling but increase
+	  timer interrupt overhead.
+
+endmenu
+
+menu "Debug Options"
+
+config DEBUG_ACCOUNTING
+	bool "Enable system operations accounting"
+	default n
+	help
+	  Enable or disable system operations accounting.
+
+	  By default, operation accounting in kernel is enabled.
+	  To enable operation accounting in userspace, enable
+	  DEBUG_PERFMON_USER.
+
+config DEBUG_PERFMON
+	bool "Enable performance monitoring"
+	default n
+	depends on DEBUG_ACCOUNTING
+	help
+	  Enable or disable system performance monitoring.
+
+	  Requires DEBUG_ACCOUNTING to be enabled.
+
+config DEBUG_PERFMON_USER
+	bool "Userspace access to perfmon registers"
+	default n
+	depends on DEBUG_PERFMON
+	help
+	  Enable or disable userspace access to processor's performance
+	  registers.
+
+	  Enabling this option will automatically disable in-kernel
+	  measurements.
+
+# Derived symbol: kernel perfmon active when accounting enabled but not user
+config DEBUG_PERFMON_KERNEL
+	bool
+	default y if DEBUG_PERFMON && !DEBUG_PERFMON_USER
+	help
+	  Internal symbol: kernel performance monitoring is active.
+
+config DEBUG_SPINLOCKS
+	bool "Debug spinlocks"
+	default n
+	help
+	  Enable or disable spinlock debugging by the kernel.
+
+	  Detects recursive locks, double unlocks, and other
+	  spinlock-related bugs.
+
+endmenu

@@ -73,7 +73,7 @@ struct memfs_superblock {
 	struct id_pool *bpool;			/* Index pool for blocks */
 	struct memfs_inode *inode[MEMFS_TOTAL_INODES];	/* Table of inodes */
 	void *block[MEMFS_TOTAL_BLOCKS]; 	/* Table of fs blocks */
-} __attribute__ ((__packed__));
+};
 
 #define MEMFS_DNAME_MAX			32
 struct memfs_dentry {

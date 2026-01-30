@@ -82,10 +82,6 @@ def build_system(opts, args):
     print("\nBuild complete...")
     print("\nRun qemu with following command: ./tools/run-qemu\n")
 
-    renamed_cml = rename_config_cml(opts)
-    if renamed_cml:
-        print("CML configuration file saved as " + renamed_cml + "\n")
-
     return None
 
 

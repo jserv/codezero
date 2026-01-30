@@ -1,0 +1,83 @@
+# Codezero Container Manifest
+# PB926 Hello World Configuration
+#
+# This manifest defines a single baremetal container running the hello_world
+# demo on the PB926 Versatile platform.
+
+schemaVersion: 1
+
+# Reference to kernel Kconfig defconfig
+kconfig: pb926
+
+containers:
+  - id: 0
+    name: "hello_world0"
+    type: baremetal
+    project: hello_world
+
+    # Pager configuration
+    pager:
+      lma: 0x100000          # Physical load address
+      vma: 0xa0000000        # Virtual memory address
+
+    # Physical memory regions
+    memory:
+      physical:
+        - start: 0x100000
+          end: 0xe00000
+
+      # Virtual memory regions
+      virtual:
+        - start: 0xa0000000
+          end: 0xb0000000
+
+    # Capability pools
+    capabilities:
+      pools:
+        thread:
+          enabled: true
+          size: 64
+        space:
+          enabled: true
+          size: 64
+        mutex:
+          enabled: true
+          size: 100
+        map:
+          enabled: true
+          size: 800
+        cap:
+          enabled: true
+          size: 32
+
+      # Thread control capability
+      tctrl:
+        enabled: true
+        target: current_container
+
+      # Exchange registers capability
+      exregs:
+        enabled: true
+        target: current_container
+
+      # IPC capability
+      ipc:
+        enabled: true
+        target: current_container
+
+      # Capability control
+      capctrl:
+        enabled: true
+        target: current_container
+
+      # Userspace mutex
+      umutex:
+        enabled: true
+        target: current_container
+
+      # IRQ control
+      irqctrl:
+        enabled: true
+
+    # Device capabilities (none for hello_world)
+    devices: []

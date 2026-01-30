@@ -1,0 +1,46 @@
+#
+# ARM Architecture Configuration
+#
+
+menu "ARM Architecture Configuration"
+
+choice
+	prompt "ARM CPU type"
+	default CPU_ARM926
+	help
+	  Select the type of ARM CPU/processor to be used.
+
+config CPU_ARM926
+	bool "ARM926EJ-S"
+	depends on PLATFORM_PB926
+	help
+	  ARMv5/ARM9 series based uniprocessor CPU.
+
+config CPU_ARM1136
+	bool "ARM1136 (Experimental)"
+	depends on PLATFORM_EB
+	help
+	  ARMv6/ARM11 series based uniprocessor CPU.
+
+config CPU_ARM11MPCORE
+	bool "ARM11 MPCore (Experimental)"
+	depends on PLATFORM_EB
+	help
+	  ARMv6/ARM11 series based multiprocessor CPU.
+
+endchoice
+
+# Derived sub-architecture symbols (computed, not user-selectable)
+config SUBARCH_V5
+	bool
+	default y if CPU_ARM926
+	help
+	  ARMv5 sub-architecture. Automatically selected based on CPU type.
+
+config SUBARCH_V6
+	bool
+	default y if CPU_ARM1136 || CPU_ARM11MPCORE
+	help
+	  ARMv6 sub-architecture. Automatically selected based on CPU type.
+
+endmenu

@@ -14,3 +14,5 @@ conts/linux
 src/generic/cinfo.c
 .gdbinit
 *.swp
+tools/kconfiglib/
+tools/.kconfiglib.lock

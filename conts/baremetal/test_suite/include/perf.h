@@ -59,6 +59,7 @@ void platform_measure_cpu_cycles(void);
 void perf_measure_getid_ticks(void);
 void perf_measure_cpu_cycles(void);
 void perf_measure_getid(void);
+void perf_measure_tswitch(void);
 void perf_measure_tctrl(void);
 int perf_measure_exregs(void);
 void perf_measure_ipc(void);

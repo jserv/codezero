@@ -1,0 +1,35 @@
+#
+# Codezero Realview EB Default Configuration
+#
+
+# Architecture
+CONFIG_ARCH_ARM=y
+
+# CPU (ARM11 MPCore for SMP testing)
+CONFIG_CPU_ARM11MPCORE=y
+
+# Platform
+CONFIG_PLATFORM_EB=y
+
+# Toolchain
+CONFIG_TOOLCHAIN_USERSPACE="arm-none-eabi-"
+CONFIG_TOOLCHAIN_KERNEL="arm-none-eabi-"
+
+# Capabilities
+CONFIG_CAPABILITIES=y
+
+# Processor properties (SMP enabled for MPCore)
+CONFIG_SMP=y
+CONFIG_NCPU=4
+# CONFIG_ICACHE_DISABLE is not set
+# CONFIG_DCACHE_DISABLE is not set
+
+# Kernel properties
+# CONFIG_PREEMPT_DISABLE is not set
+CONFIG_SCHED_TICKS=1000
+
+# Debug options
+# CONFIG_DEBUG_ACCOUNTING is not set
+# CONFIG_DEBUG_PERFMON is not set
+# CONFIG_DEBUG_PERFMON_USER is not set
+# CONFIG_DEBUG_SPINLOCKS is not set

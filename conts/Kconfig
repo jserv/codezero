@@ -1,0 +1,94 @@
+#
+# Container Selection
+#
+# Select which container to build and include in the final image.
+#
+
+menu "Containers"
+
+choice
+	prompt "Container to build"
+	default CONT_BAREMETAL_HELLO_WORLD
+	help
+	  Select which container to build and run.
+	  Only one container can be selected at a time.
+
+comment "Baremetal Containers"
+
+config CONT_BAREMETAL_EMPTY
+	bool "empty - Minimal container template"
+	help
+	  A minimal baremetal container that does nothing.
+	  Useful as a template for new container development.
+
+config CONT_BAREMETAL_HELLO_WORLD
+	bool "hello_world - Hello World demo"
+	help
+	  Simple hello world container demonstrating basic L4 functionality.
+	  Prints a message via UART and exercises basic syscalls.
+
+config CONT_BAREMETAL_IPC_DEMO
+	bool "ipc_demo - IPC demonstration"
+	help
+	  Demonstrates inter-process communication between threads
+	  using L4 IPC primitives (send, receive, call).
+
+config CONT_BAREMETAL_KMI_SERVICE
+	bool "kmi_service - Keyboard/Mouse interface service"
+	help
+	  PS/2 keyboard and mouse interface service container.
+	  Handles KMI hardware and provides input events.
+
+config CONT_BAREMETAL_MUTEX_DEMO
+	bool "mutex_demo - Mutex demonstration"
+	help
+	  Demonstrates mutex synchronization primitives.
+	  Shows proper locking between concurrent threads.
+
+config CONT_BAREMETAL_TEST_SUITE
+	bool "test_suite - Kernel test suite"
+	help
+	  Comprehensive test suite for kernel functionality.
+	  Tests IPC, memory management, scheduling, and capabilities.
+
+config CONT_BAREMETAL_THREADS_DEMO
+	bool "threads_demo - Threading demonstration"
+	help
+	  Demonstrates thread creation and management.
+	  Shows thread lifecycle, priorities, and scheduling.
+
+config CONT_BAREMETAL_TIMER_SERVICE
+	bool "timer_service - Timer service"
+	help
+	  System timer service container.
+	  Provides timing services to other containers.
+
+config CONT_BAREMETAL_UART_SERVICE
+	bool "uart_service - UART service"
+	help
+	  UART driver service container.
+	  Provides serial I/O services to other containers.
+
+comment "POSIX Containers"
+
+config CONT_POSIX_MM0
+	bool "mm0 - POSIX memory manager"
+	help
+	  POSIX-compatible memory manager (pager).
+	  Provides virtual memory services for POSIX containers.
+
+config CONT_POSIX_TEST0
+	bool "test0 - POSIX test container"
+	help
+	  Test container for POSIX compatibility layer.
+	  Note: Also requires mm0 for full POSIX support.
+
+endchoice
+
+config NCONTAINERS
+	int
+	default 1
+	help
+	  Number of containers in the final image.
+
+endmenu

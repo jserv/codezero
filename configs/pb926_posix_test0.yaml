@@ -1,0 +1,106 @@
+# Codezero Container Manifest
+# PB926 Test0 POSIX Configuration
+#
+# Auto-generated manifest for test0 POSIX container.
+# Modify as needed for specific requirements.
+
+schemaVersion: 1
+
+# Reference to kernel Kconfig defconfig
+kconfig: pb926
+
+containers:
+  - id: 0
+    name: "test00"
+    type: posix
+
+    # Pager configuration
+    pager:
+      lma: 0x100000          # Physical load address
+      vma: 0xa0000000        # Virtual memory address
+
+    # Physical memory regions
+    memory:
+      physical:
+        - start: 0x100000
+          end: 0xe00000
+
+      # Virtual memory regions
+      # POSIX containers need multiple virtual regions:
+      # - Region 0: Pager code/data (0xa0000000-0xb0000000)
+      # - Region 1: Shared memory (0x80000000-0x90000000)
+      # - Region 2: Task space (0x40000000-0x80000000)
+      # - Region 3: UTCB region (0xf8100000-0xf8200000)
+      virtual:
+        - start: 0xa0000000
+          end: 0xb0000000
+        - start: 0x80000000
+          end: 0x90000000
+        - start: 0x40000000
+          end: 0x80000000
+        - start: 0xf8100000
+          end: 0xf8200000
+
+    # POSIX pager regions (required for mm0)
+    # These define where mm0 manages different memory types
+    pager_regions:
+      shm:
+        start: 0x80000000
+        end: 0x90000000
+      task:
+        start: 0x40000000
+        end: 0x80000000
+      utcb:
+        start: 0xf8100000
+        end: 0xf8200000
+
+    # Capability pools
+    capabilities:
+      pools:
+        thread:
+          enabled: true
+          size: 64
+        space:
+          enabled: true
+          size: 64
+        mutex:
+          enabled: true
+          size: 100
+        map:
+          enabled: true
+          size: 800
+        cap:
+          enabled: true
+          size: 32
+
+      # Thread control capability
+      tctrl:
+        enabled: true
+        target: current_container
+
+      # Exchange registers capability
+      exregs:
+        enabled: true
+        target: current_container
+
+      # IPC capability
+      ipc:
+        enabled: true
+        target: current_container
+
+      # Capability control
+      capctrl:
+        enabled: true
+        target: current_container
+
+      # Userspace mutex
+      umutex:
+        enabled: true
+        target: current_container
+
+      # IRQ control
+      irqctrl:
+        enabled: true
+
+    # Device capabilities (add device mappings here if needed)
+    devices: []

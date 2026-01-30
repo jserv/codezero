@@ -1,0 +1,59 @@
+#
+# Platform Configuration
+#
+
+menu "Platform Selection"
+
+choice
+	prompt "ARM Platform Type"
+	default PLATFORM_PB926
+	depends on ARCH_ARM
+	help
+	  Select the type of ARM platform to be used.
+
+config PLATFORM_PB926
+	bool "PB926 Versatile Platform"
+	help
+	  ARMv5 based Versatile PB platform.
+
+	  This platform uses the ARM926EJ-S processor.
+
+config PLATFORM_EB
+	bool "Realview EB Platform"
+	help
+	  ARMv6 based Realview EB platform.
+
+	  Supported CPUs:
+	    - ARM1136
+	    - ARM11 MPCore
+
+endchoice
+
+# Driver auto-selection based on platform
+config DRIVER_UART_PL011
+	bool
+	default y if PLATFORM_PB926 || PLATFORM_EB
+	help
+	  PL011 UART driver. Automatically selected for supported platforms.
+
+config DRIVER_TIMER_SP804
+	bool
+	default y if PLATFORM_PB926 || PLATFORM_EB
+	help
+	  SP804 timer driver. Automatically selected for supported platforms.
+
+config DRIVER_IRQ_PL190
+	bool
+	default y if PLATFORM_PB926
+	help
+	  PL190 VIC (Vectored Interrupt Controller) driver.
+	  Automatically selected for PB926 platform.
+
+config DRIVER_IRQ_GIC
+	bool
+	default y if PLATFORM_EB
+	help
+	  GIC (Generic Interrupt Controller) driver.
+	  Automatically selected for EB platform.
+
+endmenu
